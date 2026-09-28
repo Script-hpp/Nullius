@@ -82,6 +82,7 @@ class LLMClient:
         messages: list[dict],
         temperature: float = 0.2,
         max_tokens: int | None = None,
+        timeout_s: float | None = None,
     ) -> LLMResponse:
         model = self._model_for_role(role)
         cache_key = self._cache_key(role, messages, temperature)
@@ -92,7 +93,7 @@ class LLMClient:
             self._log_cost(response)
             return response
 
-        response = self._call_with_retry(model, messages, temperature, max_tokens)
+        response = self._call_with_retry(model, messages, temperature, max_tokens, timeout_s)
         self._log_cost(response)
 
         if self.settings.llm_cache:
@@ -106,6 +107,7 @@ class LLMClient:
         messages: list[dict],
         temperature: float,
         max_tokens: int | None,
+        timeout_s: float | None = None,
     ) -> LLMResponse:
         last_error: Exception | None = None
         for attempt in range(MAX_RETRIES):
@@ -114,7 +116,9 @@ class LLMClient:
                 if max_tokens is not None:
                     body["max_tokens"] = max_tokens
 
-                resp = self._client.post("/chat/completions", json=body)
+                resp = self._client.post(
+                    "/chat/completions", json=body, timeout=timeout_s or httpx.USE_CLIENT_DEFAULT
+                )
                 resp.raise_for_status()
                 data = resp.json()
 

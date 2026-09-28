@@ -54,6 +54,7 @@ class Dossier:
     attempts: list[Attempt] = field(default_factory=list)
     verdicts: list[Verdict] = field(default_factory=list)
     isolation: list[str] = field(default_factory=list)  # aktive Schutzschichten gegen Leaks
+    setup_details: list[dict] = field(default_factory=list)  # Tavily-Rolle 4: belegte Angaben im Prompt
 
     def save(self, timestamp: str) -> Path:
         run_dir = REPO_ROOT / "runs" / self.paper_id / timestamp
@@ -71,6 +72,7 @@ class Dossier:
             attempts=[Attempt(**a) for a in data["attempts"]],
             verdicts=[Verdict(**v) for v in data["verdicts"]],
             isolation=data.get("isolation", []),
+            setup_details=data.get("setup_details", []),
         )
 
     def condensed_for_reasoning(self) -> str:

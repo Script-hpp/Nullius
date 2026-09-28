@@ -24,7 +24,7 @@ from pathlib import Path
 
 import yaml
 
-from .claims_source import extract_target, fetch_paper_text
+from .claims_source import PaperText, extract_target, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
@@ -32,6 +32,7 @@ from .harness.verify import judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, get_sandbox
+from .setup_details import SetupDetail, extract_setup_details, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
@@ -93,8 +94,17 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 
 
 class Orchestrator:
-    def __init__(self, use_tavily: bool = True, fresh: bool = False) -> None:
+    def __init__(
+        self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
+        seeds: int | None = None,
+    ) -> None:
         self.use_tavily = use_tavily
+        self.use_setup_details = use_tavily and setup_details   # Rolle 4 haengt am Paper-Text
+        self.seeds = seeds
+        self.details: list[SetupDetail] = []
+        self.paper_text: PaperText | None = None
+        self.last_run_dir: Path | None = None
+        self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
         if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
             self.settings = dataclasses.replace(self.settings, llm_cache=False)
@@ -120,7 +130,7 @@ class Orchestrator:
         return self._ask(
             "reasoning", PLAN_SYSTEM,
             f"Paper: {paper['title']}\nClaim: {claim.text} (target {claim.target}, {claim.metric})\n\n"
-            f"{task.data_description}\n\n"
+            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             "Write a short reproduction plan: model architecture, all hyperparameters and training "
             "protocol as described in the paper. Mark every value you are NOT sure about with "
             "'(uncertain)'. Max 15 lines.",
@@ -129,7 +139,8 @@ class Orchestrator:
     def write_code(self, plan: str, task: Task) -> str:
         resp = self._ask(
             "code", CODE_SYSTEM,
-            f"{task.data_description}\n\nReproduction plan:\n{plan}\n\n"
+            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
+            f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
             "processes or use eval/exec; use only /data/cora_public.npz. "
             "Write train.py implementing this plan. Implement the model yourself in PyTorch "
@@ -140,7 +151,8 @@ class Orchestrator:
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
         resp = self._ask(
             "code", CODE_SYSTEM,
-            f"{task.data_description}\n\nReproduction plan:\n{plan}\n\nThis script failed:\n"
+            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
+            f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script.",
         )
         return extract_code(resp.content)
@@ -205,6 +217,7 @@ class Orchestrator:
             if not spec:
                 continue
             text = fetch_paper_text(arxiv_id, get_tavily)
+            self.paper_text = text
             ev = extract_target(self.llm, text, spec["method"], spec["dataset"], spec["metric"])
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
@@ -219,7 +232,7 @@ class Orchestrator:
         plan = self.plan(paper, claim, task)
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
         code = self.write_code(plan, task)
-        seeds = list(range(paper.get("seeds", DEFAULT_SEEDS)))
+        seeds = list(range(self.seeds or paper.get("seeds", DEFAULT_SEEDS)))
         # Seeds parallel; jeder Seed repariert den Code fuer sich (kein geteilter Zustand).
         with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(seeds))) as pool:
             results = list(pool.map(
@@ -297,13 +310,25 @@ class Orchestrator:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
+        self.last_run_dir = run_dir
         if self.use_tavily:
             self.resolve_targets(paper, claims)
-        dossier = Dossier(paper_id=paper_id, claims=claims, isolation=list(ISOLATION))
+        if self.use_setup_details and self.paper_text is not None:
+            self.details, dropped = extract_setup_details(
+                self.llm, self.paper_text, claims[0].text, paper["dataset"]
+            )
+            print(f"Setup-Details (Rolle 4): {len(self.details)} belegt, {dropped} verworfen", flush=True)
+        dossier = Dossier(
+            paper_id=paper_id, claims=claims, isolation=list(ISOLATION),
+            setup_details=[dataclasses.asdict(d) for d in self.details],
+        )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
         print(f"Basis-Snapshot bauen ({label}) ...")
-        snapshot = self.sandbox.base_snapshot(task.image, task.setup_cmds, label=label)
+        key = paper["dataset"]
+        if key not in self._snapshots:
+            self._snapshots[key] = self.sandbox.base_snapshot(task.image, task.setup_cmds, label=label)
+        snapshot = self._snapshots[key]
         try:
             for claim in claims:
                 self.run_claim(paper, claim, task, snapshot, dossier, run_dir)
@@ -319,7 +344,11 @@ def main() -> None:
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     paper_id = args[0] if args else "kipf_gcn_2017"
-    Orchestrator(use_tavily="--no-tavily" not in sys.argv, fresh="--fresh" in sys.argv).run(paper_id)
+    Orchestrator(
+        use_tavily="--no-tavily" not in sys.argv,
+        fresh="--fresh" in sys.argv,
+        setup_details="--no-setup-details" not in sys.argv,
+    ).run(paper_id)
 
 
 if __name__ == "__main__":

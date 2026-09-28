@@ -28,6 +28,10 @@ def render_markdown(dossier: Dossier) -> str:
             for src in verdict.sources:
                 lines.append(f"- {src}")
         lines.append("")
+    if dossier.setup_details:
+        lines.append("## Setup-Details aus dem Paper (Tavily-Rolle 4, wörtlich belegt)")
+        lines.extend(f"- {d['topic']}: {d['value']} — \"{d['quote']}\"" for d in dossier.setup_details)
+        lines.append("")
     if dossier.isolation:
         lines.append("## Isolation (aktive Schutzschichten)")
         lines.extend(f"- {layer}" for layer in dossier.isolation)
