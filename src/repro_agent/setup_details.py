@@ -12,7 +12,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from .claims_source import PaperText, _norm
+from .claims_source import _norm
 from .llm import LLMClient
 
 MAX_TEXT_CHARS = 60_000
@@ -25,10 +25,17 @@ SYSTEM = (
 
 
 @dataclass(frozen=True)
+class Doc:
+    name: str      # "paper" | "repo-readme" | "repo:<pfad>@<commit>"
+    text: str
+
+
+@dataclass(frozen=True)
 class SetupDetail:
     topic: str
     value: str
     quote: str
+    source: str = "paper"
 
 
 def _chunks(text: str, size: int = CHUNK_CHARS) -> list[str]:
@@ -58,15 +65,16 @@ def _parse_list(content: str) -> list:
 
 
 def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str) -> list:
-    resp = llm.complete("reasoning", [
+    resp = llm.complete("extract", [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": (
             f"Goal: reproduce this result: {claim_text} (dataset: {dataset}).\n"
-            "From the text excerpt below, list every statement about how the experiment is set "
-            "up that a reproducer needs: data preprocessing, data splits, model architecture, "
-            "initialisation, hyperparameters, optimiser, regularisation, training length and "
-            "stopping, evaluation protocol. Only what this excerpt says. If there is none, "
-            "answer [].\n"
+            "From the excerpt below (paper prose, README or source code), list every statement or "
+            "setting about how the experiment is set up that a reproducer needs: data preprocessing, "
+            "data splits, model architecture, initialisation, hyperparameters and their defaults, "
+            "optimiser, learning-rate schedule, regularisation, training length and stopping, "
+            "evaluation protocol. Only what this excerpt says; in code, report values exactly as "
+            "written. If there is none, answer [].\n"
             'Answer with a JSON list of {"topic": short label, "value": the setting, "quote": a '
             "VERBATIM excerpt (max 300 chars) copied from the excerpt}. Keep your reasoning "
             "short and end with the JSON list.\n\n"
@@ -77,29 +85,31 @@ def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str) ->
 
 
 def extract_setup_details(
-    llm: LLMClient, paper: PaperText, claim_text: str, dataset: str
+    llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str
 ) -> tuple[list[SetupDetail], int]:
-    """Gibt (verifizierte Details, Anzahl verworfener Angaben) zurueck."""
-    chunks = _chunks(paper.text[:MAX_TEXT_CHARS])
+    """Gibt (verifizierte Details, Anzahl verworfener Angaben) zurueck. Zitat muss im Dokument stehen."""
+    jobs = [(doc, chunk) for doc in docs for chunk in _chunks(doc.text[:MAX_TEXT_CHARS])]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw_lists = list(pool.map(lambda c: _extract_chunk(llm, c, claim_text, dataset), chunks))
-    haystack = _norm(paper.text)
+        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset), jobs))
+    haystacks = {d.name: _norm(d.text) for d in docs}
     kept, dropped, seen = [], 0, set()
-    for item in (x for lst in raw_lists for x in lst):
-        if not isinstance(item, dict):
-            dropped += 1
-            continue
-        topic, value, quote = (str(item.get(k, "")).strip() for k in ("topic", "value", "quote"))
-        if not (topic and value and quote and _norm(quote) in haystack):
-            dropped += 1
-        elif _norm(quote) not in seen:
-            seen.add(_norm(quote))
-            kept.append(SetupDetail(topic, value, quote))
+    for (doc, _), lst in zip(jobs, raw_lists):
+        for item in lst:
+            if not isinstance(item, dict):
+                dropped += 1
+                continue
+            topic, value, quote = (str(item.get(k, "")).strip() for k in ("topic", "value", "quote"))
+            nq = _norm(quote)
+            if not (topic and value and quote and nq in haystacks[doc.name]):
+                dropped += 1
+            elif (doc.name, nq) not in seen:
+                seen.add((doc.name, nq))
+                kept.append(SetupDetail(topic, value, quote, doc.name))
     return kept, dropped
 
 
 def format_for_prompt(details: list[SetupDetail]) -> str:
     if not details:
         return ""
-    lines = [f"- {d.topic}: {d.value}  (paper: \"{d.quote}\")" for d in details]
-    return "Setup details stated in the paper (verified quotes):\n" + "\n".join(lines)
+    lines = [f"- {d.topic}: {d.value}  ({d.source}: \"{d.quote}\")" for d in details]
+    return "Setup details from the paper and its code repository (verified quotes):\n" + "\n".join(lines)

@@ -17,7 +17,8 @@ import httpx
 
 from .config import Settings, load_settings
 
-Role = Literal["fast", "code", "reasoning"]
+# "extract": strukturierte Extraktion (Rollen 2/4). Braucht kein Ultra, nutzt das code-Modell (Super).
+Role = Literal["fast", "code", "reasoning", "extract"]
 
 # USD pro Token (Token Factory, GET /v1/models am 2026-09-28). OpenRouter meldet Kosten selbst.
 TF_PRICES = {
@@ -84,6 +85,7 @@ class LLMClient:
         return {
             "fast": self.settings.llm.model_fast,
             "code": self.settings.llm.model_code,
+            "extract": self.settings.llm.model_code,
             "reasoning": self.settings.llm.model_reasoning,
         }[role]
 

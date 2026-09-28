@@ -55,6 +55,8 @@ class Dossier:
     verdicts: list[Verdict] = field(default_factory=list)
     isolation: list[str] = field(default_factory=list)  # aktive Schutzschichten gegen Leaks
     setup_details: list[dict] = field(default_factory=list)  # Tavily-Rolle 4: belegte Angaben im Prompt
+    repo: dict | None = None      # {url, commit}: Repo, aus dem Setup-Details gelesen wurden
+    mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
 
     def save(self, timestamp: str) -> Path:
         run_dir = REPO_ROOT / "runs" / self.paper_id / timestamp
@@ -73,6 +75,8 @@ class Dossier:
             verdicts=[Verdict(**v) for v in data["verdicts"]],
             isolation=data.get("isolation", []),
             setup_details=data.get("setup_details", []),
+            repo=data.get("repo"),
+            mode=data.get("mode", "nachbau"),
         )
 
     def condensed_for_reasoning(self) -> str:

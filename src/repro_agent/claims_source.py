@@ -52,6 +52,7 @@ class TargetEvidence:
     retrieved_at: str
     sha256: str
     arxiv_version: str | None
+    caveat: str | None = None   # z. B. Spaltenzuordnung nicht belegt
 
 
 class ExtractionInvalid(RuntimeError):
@@ -128,7 +129,7 @@ def _windows(text: str, keyword: str, width: int = 2500, max_chars: int = 14000)
     return "\n...\n".join(text[a:b] for a, b in spans)[:max_chars]
 
 
-def verify_extraction(data: dict, paper_text: str) -> float:
+def verify_extraction(data: dict, paper_text: str, percent: bool = True) -> float:
     """Deterministischer Check. Gibt den Wert als Bruch (0..1) zurueck oder wirft ExtractionInvalid."""
     quote, number = str(data.get("quote", "")), data.get("value")
     if not quote or number is None:
@@ -142,7 +143,7 @@ def verify_extraction(data: dict, paper_text: str) -> float:
     printed = re.findall(r"\d+(?:[.,]\d+)?", _norm(quote))
     if not any(abs(float(p.replace(",", ".")) - value) < 1e-9 for p in printed):
         raise ExtractionInvalid(f"Zahl {value} steht nicht im Textausschnitt {quote!r}")
-    return value / 100 if value > 1 else value  # Prozentangabe -> Bruch
+    return value / 100 if percent and value > 1 else value  # Prozentangabe -> Bruch (Accuracy)
 
 
 def _last_json_object(content: str) -> dict | None:
@@ -158,8 +159,17 @@ def _last_json_object(content: str) -> dict | None:
     return None
 
 
+def _column_caveat(method: str, quote: str) -> str | None:
+    if _norm(method.split(" (")[0]) in _norm(quote):
+        return None
+    return (
+        f"Methodenname '{method}' steht nicht im Zitat: Der Check belegt nur, dass die Zahl im "
+        "Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Tabellenkopf fehlt)."
+    )
+
+
 def extract_target(
-    llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str
+    llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str, percent: bool = True
 ) -> TargetEvidence:
     context = _windows(paper.text, dataset)
     if not context:
@@ -183,34 +193,40 @@ def extract_target(
             last = ExtractionInvalid("Modellantwort enthaelt kein JSON")
             continue
         try:
-            value = verify_extraction(data, paper.text)
+            value = verify_extraction(data, paper.text, percent)
             break
         except ExtractionInvalid as exc:
             last = exc
     else:
         raise last  # type: ignore[misc]
+    quote = str(data["quote"])
+    caveat = _column_caveat(method, quote)
     return TargetEvidence(
-        value=value, quote=str(data["quote"]), table=data.get("table"), url=paper.url,
+        value=value, quote=quote, table=data.get("table"), url=paper.url,
         source_kind=paper.source_kind, retrieved_at=paper.retrieved_at, sha256=paper.sha256,
-        arxiv_version=paper.arxiv_version,
+        arxiv_version=paper.arxiv_version, caveat=caveat,
     )
 
 
 def extract_target_cached(
     llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str,
-    fixture_dir: Path = FIXTURE_DIR,
+    fixture_dir: Path = FIXTURE_DIR, percent: bool = True,
 ) -> TargetEvidence:
     """Verifizierten Zielwert pro (Paper-Text, Methode, Datensatz, Metrik) einmal speichern.
 
     Der Wert wird bei jedem Laden erneut gegen den Quelltext geprueft (Zitat + Zahl), der Cache
     ersetzt also nur den LLM-Aufruf, nicht die Pruefung. Spart Anfragen auf Free-Endpunkten.
     """
-    key = hashlib.sha256(f"{paper.sha256}|{method}|{dataset}|{metric}".encode()).hexdigest()[:16]
+    raw = f"{paper.sha256}|{method}|{dataset}|{metric}" + ("" if percent else "|raw")
+    key = hashlib.sha256(raw.encode()).hexdigest()[:16]
     path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
     if path.exists():
         ev = TargetEvidence(**json.loads(path.read_text()))
-        verify_extraction({"value": ev.value * 100 if ev.value <= 1 else ev.value, "quote": ev.quote}, paper.text)
+        ev.caveat = _column_caveat(method, ev.quote)   # immer neu berechnen, auch fuer alte Fixtures
+        verify_extraction(
+            {"value": ev.value * 100 if percent else ev.value, "quote": ev.quote}, paper.text, percent
+        )
         return ev
-    ev = extract_target(llm, paper, method, dataset, metric)
+    ev = extract_target(llm, paper, method, dataset, metric, percent)
     path.write_text(json.dumps(asdict(ev), ensure_ascii=False, indent=1))
     return ev

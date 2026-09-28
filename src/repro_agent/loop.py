@@ -32,7 +32,8 @@ from .harness.verify import judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, get_sandbox
-from .setup_details import SetupDetail, extract_setup_details, format_for_prompt
+from .repo_source import fetch_readme, find_repo_url, read_repo
+from .setup_details import Doc, SetupDetail, extract_setup_details, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
@@ -118,14 +119,16 @@ class Orchestrator:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
 
     # ---- LLM ----------------------------------------------------------------
-    def _ask(self, role, system: str, user: str, max_tokens: int | None = None) -> LLMResponse:
+    def _ask(
+        self, role, system: str, user: str, max_tokens: int | None = None, temperature: float = 0.2
+    ) -> LLMResponse:
         if self.spent_usd >= self.settings.max_cost_per_run_usd:
             raise CostLimitExceeded(f"MAX_COST_PER_RUN_USD erreicht ({self.spent_usd:.4f} $)")
         with self._lock:
             resp = self.llm.complete(
                 role,
                 [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                max_tokens=max_tokens,
+                max_tokens=max_tokens, temperature=temperature,
             )
         return resp
 
@@ -139,24 +142,34 @@ class Orchestrator:
             "'(uncertain)'. Max 15 lines.",
         ).content
 
+    def _code_from_llm(self, system: str, user: str) -> str:
+        """Code-Block aus der Antwort; bei fehlendem Block bis zu 3 Versuche mit hoeherer
+        Temperatur (gleicher Prompt + gleiche Temperatur gaebe aus dem Cache dieselbe Antwort)."""
+        last: ValueError | None = None
+        for i in range(3):
+            resp = self._ask("code", system, user, temperature=0.2 + 0.3 * i)
+            try:
+                return extract_code(resp.content)
+            except ValueError as exc:
+                last = exc
+        raise last  # type: ignore[misc]
+
     def write_code(self, plan: str, task: Task) -> str:
-        resp = self._ask(
-            "code", CODE_SYSTEM,
+        return self._code_from_llm(
+            CODE_SYSTEM,
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
             f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan.",
         )
-        return extract_code(resp.content)
 
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
-        resp = self._ask(
-            "code", CODE_SYSTEM,
+        return self._code_from_llm(
+            CODE_SYSTEM,
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script.",
         )
-        return extract_code(resp.content)
 
     def triage(self, text: str) -> str:
         return self._ask("fast", TRIAGE_SYSTEM, text[-4000:], max_tokens=300).content.strip()
@@ -221,12 +234,43 @@ class Orchestrator:
                 continue
             text = fetch_paper_text(arxiv_id, get_tavily)
             self.paper_text = text
-            ev = extract_target_cached(self.llm, text, spec["method"], spec["dataset"], spec["metric"])
+            ev = extract_target_cached(
+                self.llm, text, spec["method"], spec["dataset"], spec["metric"],
+                percent=spec.get("percent", True),
+            )
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]
             claim.target_evidence = dataclasses.asdict(ev)
             print(f"[{claim.id}] Zielwert {ev.value} belegt: {ev.quote!r}")
+
+    def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
+        """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
+        docs = [Doc("paper", self.paper_text.text)]
+        url = find_repo_url(self.paper_text.text)
+        if not url:
+            return docs, None
+        get_tavily = self._tavily_getter()
+        readme = fetch_readme(url, get_tavily)
+        if readme:
+            docs.append(Doc("repo-readme", readme))
+        dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
+        for path, text in dump.files.items():
+            docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
+        return docs, {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
+
+    def _tavily_getter(self):
+        if not hasattr(self, "_tavily"):
+            self._tavily = None
+
+        def get():
+            if self._tavily is None:
+                from .tavily_tools import TavilyTools
+
+                self._tavily = TavilyTools(self.settings)
+            return self._tavily
+
+        return get
 
     # ---- Loop pro Claim -----------------------------------------------------
     def run_claim(
@@ -279,7 +323,10 @@ class Orchestrator:
             if status == "timeout":
                 return None, f"Seed {seed}: Timeout, kein Reparaturversuch"
             if n < self.settings.max_attempts_per_claim:
-                code = self.repair_code(plan, task, code, summary or "")
+                try:
+                    code = self.repair_code(plan, task, code, summary or "")
+                except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
+                    return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen"
         return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})"
 
     def _verdict(
@@ -317,13 +364,19 @@ class Orchestrator:
         self._cost_base = self.llm.total_cost_usd
         if self.use_tavily:
             self.resolve_targets(paper, claims)
+        repo_info = None
         if self.use_setup_details and self.paper_text is not None:
+            docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])
             self.details, dropped = extract_setup_details(
-                self.llm, self.paper_text, claims[0].text, paper["dataset"]
+                self.llm, docs, claims[0].text, paper["dataset"]
             )
-            print(f"Setup-Details (Rolle 4): {len(self.details)} belegt, {dropped} verworfen", flush=True)
+            by_src: dict[str, int] = {}
+            for d in self.details:
+                by_src[d.source.split("@")[0]] = by_src.get(d.source.split("@")[0], 0) + 1
+            print(f"Setup-Details (Rolle 4): {len(self.details)} belegt, {dropped} verworfen, "
+                  f"nach Quelle {by_src}", flush=True)
         dossier = Dossier(
-            paper_id=paper_id, claims=claims, isolation=list(ISOLATION),
+            paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info,
             setup_details=[dataclasses.asdict(d) for d in self.details],
         )
 

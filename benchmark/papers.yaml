@@ -27,6 +27,24 @@ papers:
     arxiv_url: "https://arxiv.org/abs/2205.13504"
     dataset: "ETTh1"
     expectation: "reproduziert"
+    seeds: 5
+    claims:
+      # Zielwerte manuell (ohne Tavily) aus Table 2, ungeprueft; mit Tavily belegt ersetzt.
+      # Toleranz vorab festgelegt: paper nennt keine Streuung im Haupttext -> feste Regel 0,01 absolut.
+      - id: dlinear_etth1_96_mse
+        text: "DLinear erreicht MSE 0,375 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.375
+        tolerance: 0.01
+        source: "manuell (Gedaechtnis, ungeprueft)"
+        extract: {method: "DLinear", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+      - id: dlinear_etth1_96_mae
+        text: "DLinear erreicht MAE 0,399 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mae
+        target: 0.399
+        tolerance: 0.01
+        source: "manuell (Gedaechtnis, ungeprueft)"
+        extract: {method: "DLinear", dataset: "ETTh1", metric: "MAE for prediction length 96", percent: false}
 
   - id: dacrema_progress_2019
     title: "Are We Really Making Much Progress? A Worrying Analysis of Recent Neural Recommendation Approaches"

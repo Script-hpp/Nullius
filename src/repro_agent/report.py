@@ -21,6 +21,8 @@ def render_markdown(dossier: Dossier) -> str:
                 f"{ev['url']}, Version {ev['arxiv_version']}, abgerufen {ev['retrieved_at']}, "
                 f"SHA-256 {ev['sha256'][:12]})"
             )
+            if ev.get("caveat"):
+                lines.append(f"ACHTUNG Zielwert: {ev['caveat']}")
         elif claim:
             lines.append(f"Zielwert {claim.target}: {claim.source}")
         if verdict.sources:
@@ -28,9 +30,16 @@ def render_markdown(dossier: Dossier) -> str:
             for src in verdict.sources:
                 lines.append(f"- {src}")
         lines.append("")
+    lines.append(f"Modus: {dossier.mode} (Agent schreibt eigenen Code, nur belegte Angaben aus Paper/Repo)")
+    if dossier.repo:
+        lines.append(f"Repo gelesen: {dossier.repo['url']} @ {dossier.repo['commit'][:10]}")
+    lines.append("")
     if dossier.setup_details:
         lines.append("## Setup-Details aus dem Paper (Tavily-Rolle 4, wörtlich belegt)")
-        lines.extend(f"- {d['topic']}: {d['value']} — \"{d['quote']}\"" for d in dossier.setup_details)
+        lines.extend(
+            f"- [{d.get('source', 'paper')}] {d['topic']}: {d['value']} — \"{d['quote']}\""
+            for d in dossier.setup_details
+        )
         lines.append("")
     if dossier.isolation:
         lines.append("## Isolation (aktive Schutzschichten)")
