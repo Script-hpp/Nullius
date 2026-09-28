@@ -20,6 +20,7 @@ class Task:
     harness_files: list[str]        # Dateien aus harness/, die in den Branch kopiert werden
     eval_cmd: str                   # Template mit {harness_dir}; gibt eine JSON-Zeile aus
     data_description: str           # fuer den `code`-Prompt
+    code_notes: str                 # aufgabenspezifische Hinweise fuer `code` (Bibliotheken, Ausgabe)
 
 
 def _file_cmd(path: Path, dest: str) -> str:
@@ -53,7 +54,50 @@ def cora_task() -> Task:
         harness_files=["cora_data.py", "metrics.py", "verify.py", "cora_eval.py"],
         eval_cmd="python {harness_dir}/cora_eval.py",
         data_description=CORA_DATA_DESCRIPTION,
+        code_notes=(
+            "Implement the model yourself in PyTorch (no torch_geometric available). "
+            "Print the final validation accuracy to stdout. Use only /data/cora_public.npz."
+        ),
     )
 
 
-TASKS = {"Cora": cora_task}
+ETTH1_DATA_DESCRIPTION = """\
+Dataset: ETTh1 (electricity transformer temperature, hourly), 7 channels, multivariate forecasting.
+File /data/etth1_public.npz (numpy.load), all values already z-score standardised with the
+mean/std of the training rows:
+- train: float32 [8640, 7] (first 12 months)
+- val: float32 [2880, 7] (next 4 months)
+- test_inputs: float32 [2785, 720, 7]; test_inputs[i] is the 720 hourly steps just before the
+  forecast start of test window i (window i forecasts hours i .. i+95 of the 4-month test period).
+Task: for every test window i in 0..2784 forecast the next 96 hours of all 7 channels. You may
+use only the last L steps of each test_inputs[i] (L <= 720 is your choice).
+Never use one window's input to predict another window (each forecast must depend only on its
+own history).
+Output: write /output/predictions.csv with header `id,prediction`, one row per value:
+id = "{window}_{step}_{channel}" (window 0..2784, step 0..95, channel 0..6), prediction = float in
+standardised units. 2785*96*7 = 1871520 rows. Nothing else is scored (MSE and MAE over all values).
+Environment: Python 3.11, CPU only, numpy and torch preinstalled. Read the random seed from the
+env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
+
+
+def etth1_task() -> Task:
+    prep = [
+        _file_cmd(HARNESS_DIR / "etth1_data.py", "/opt/prep/etth1_data.py"),
+        "pip install -q numpy torch --extra-index-url https://download.pytorch.org/whl/cpu",
+        "python /opt/prep/etth1_data.py && rm -rf /opt/prep",
+    ]
+    return Task(
+        image="python:3.11-slim",
+        setup_cmds=prep,
+        harness_files=["etth1_data.py", "metrics.py", "verify.py", "etth1_eval.py"],
+        eval_cmd="python {harness_dir}/etth1_eval.py",
+        data_description=ETTH1_DATA_DESCRIPTION,
+        code_notes=(
+            "Implement the model yourself in PyTorch. Write predictions.csv efficiently (numpy "
+            "to text, not per-row Python objects). Print the final validation MSE to stdout. "
+            "Use only /data/etth1_public.npz."
+        ),
+    )
+
+
+TASKS = {"Cora": cora_task, "ETTh1": etth1_task}

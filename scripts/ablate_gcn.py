@@ -44,7 +44,7 @@ def main() -> None:
 
     def run(job):
         name, c, seed = job
-        res = orch._run_and_eval(orch.sandbox.branch(snap), c, seed, task)
+        res = orch._run_and_eval(orch.sandbox.branch(snap), c, seed, task, "accuracy")
         return name, res.get("measured"), res
 
     with ThreadPoolExecutor(8) as pool:

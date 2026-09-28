@@ -142,9 +142,7 @@ class Orchestrator:
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
-            "processes or use eval/exec; use only /data/cora_public.npz. "
-            "Write train.py implementing this plan. Implement the model yourself in PyTorch "
-            "(no torch_geometric available). Print the final validation accuracy to stdout.",
+            f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan.",
         )
         return extract_code(resp.content)
 
@@ -161,7 +159,7 @@ class Orchestrator:
         return self._ask("fast", TRIAGE_SYSTEM, text[-4000:], max_tokens=300).content.strip()
 
     # ---- Sandbox ------------------------------------------------------------
-    def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task) -> dict:
+    def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task, metric: str) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
         violations = find_violations(code)
@@ -196,7 +194,9 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": f"Harness-Ausgabe unlesbar: {e.stdout[-300:]}"}
         if out["status"] != "ok":
             return {"status": "ungueltig", "detail": out.get("reason", "")}
-        return {"status": "ok", "measured": float(out["measured"])}
+        if metric not in out.get("metrics", {}):
+            return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
+        return {"status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"]}
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
     def resolve_targets(self, paper: dict, claims: list[Claim]) -> None:
@@ -253,7 +253,7 @@ class Orchestrator:
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
             branch = self.sandbox.branch(snapshot)
             t0 = time.time()
-            res = self._run_and_eval(branch, code, seed, task)
+            res = self._run_and_eval(branch, code, seed, task, claim.metric)
             status, value = res["status"], res.get("measured")
             summary = None
             if status == "ok":

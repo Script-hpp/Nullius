@@ -43,7 +43,7 @@ def main() -> None:
         print(json.dumps({"status": "ungueltig", "reason": "Vorhersagen sind keine ganzen Zahlen"}))
         return
     acc = metrics.accuracy(pred_list, [int(labels[i]) for i in ids])
-    print(json.dumps({"status": "ok", "measured": acc}))
+    print(json.dumps({"status": "ok", "metrics": {"accuracy": acc}}))
 
 
 main()
