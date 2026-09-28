@@ -94,11 +94,12 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
-        seeds: int | None = None,
+        seeds: int | None = None, claim_ids: list[str] | None = None,
     ) -> None:
         self.use_tavily = use_tavily
         self.use_setup_details = use_tavily and setup_details   # Rolle 4 haengt am Paper-Text
         self.seeds = seeds
+        self.claim_ids = claim_ids   # nur diese Claims des Papers laufen lassen (None = alle)
         self.details: list[SetupDetail] = []
         self.paper_text: PaperText | None = None
         self.last_run_dir: Path | None = None
@@ -339,7 +340,8 @@ class Orchestrator:
                     code = self.repair_code(plan, task, code, summary or "")
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
-        return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})", code
+        last_line = (summary or "").strip().splitlines()[-1][:200] if summary else ""
+        return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen (letzter Fehler: {last_line})", code
 
     def _verdict(
         self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str]
@@ -368,6 +370,8 @@ class Orchestrator:
     # ---- Einstieg -----------------------------------------------------------
     def run(self, paper_id: str) -> Dossier:
         paper, claims = load_claims(paper_id)
+        if self.claim_ids:
+            claims = [c for c in claims if c.id in self.claim_ids]
         task = TASKS[paper["dataset"]]()
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_dir = REPO_ROOT / "runs" / paper_id / ts
