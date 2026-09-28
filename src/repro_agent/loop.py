@@ -15,7 +15,10 @@ import hashlib
 import json
 import re
 import statistics
+import threading
 import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -32,6 +35,7 @@ from .sandbox.base import Branch, get_sandbox
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
+MAX_PARALLEL = 4  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 WORKDIR = "/work"
@@ -89,23 +93,27 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 
 
 class Orchestrator:
-    def __init__(self, use_tavily: bool = True) -> None:
+    def __init__(self, use_tavily: bool = True, fresh: bool = False) -> None:
         self.use_tavily = use_tavily
         self.settings = load_settings()
+        if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
+            self.settings = dataclasses.replace(self.settings, llm_cache=False)
         self.llm = LLMClient(self.settings)
         self.sandbox = get_sandbox(self.settings.sandbox_backend)
         self.spent_usd = 0.0
+        self._lock = threading.Lock()  # LLM-Aufrufe/Kostenzaehler/Dossier aus Seed-Threads
 
     # ---- LLM ----------------------------------------------------------------
     def _ask(self, role, system: str, user: str, max_tokens: int | None = None) -> LLMResponse:
         if self.spent_usd >= self.settings.max_cost_per_run_usd:
             raise CostLimitExceeded(f"MAX_COST_PER_RUN_USD erreicht ({self.spent_usd:.4f} $)")
-        resp = self.llm.complete(
-            role,
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            max_tokens=max_tokens,
-        )
-        self.spent_usd += resp.cost_usd
+        with self._lock:
+            resp = self.llm.complete(
+                role,
+                [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                max_tokens=max_tokens,
+            )
+            self.spent_usd += resp.cost_usd
         return resp
 
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
@@ -161,11 +169,13 @@ class Orchestrator:
         if r.exit_code != 0:
             return {"status": "fehler", "detail": (r.stderr or r.stdout)}
 
-        # Harness frisch aus unserem Repo kopieren -- Agent konnte ihn vorher nicht aendern.
-        sb.run(branch, f"rm -rf {SANDBOX_HARNESS_DIR} && mkdir -p {SANDBOX_HARNESS_DIR}", 60)
-        for name in task.harness_files:
-            sb.put_file(branch, f"{SANDBOX_HARNESS_DIR}/{name}", (HARNESS_DIR / name).read_bytes())
-        e = sb.run(branch, task.eval_cmd, EVAL_TIMEOUT_S)
+        # Harness frisch aus unserem Repo kopieren, in ein Verzeichnis mit Zufallsnamen: der
+        # Agent-Code ist schon gelaufen und kannte den Pfad nicht, kann ihn also nicht vorbelegt haben.
+        harness_dir = f"{SANDBOX_HARNESS_DIR}-{uuid.uuid4().hex[:10]}"
+        sb.put_files(branch, {
+            f"{harness_dir}/{name}": (HARNESS_DIR / name).read_bytes() for name in task.harness_files
+        })
+        e = sb.run(branch, task.eval_cmd.format(harness_dir=harness_dir), EVAL_TIMEOUT_S)
         if e.timed_out or e.exit_code != 0:
             return {"status": "ungueltig", "detail": f"Harness-Lauf fehlgeschlagen: {e.stderr[-500:]}"}
         try:
@@ -209,44 +219,52 @@ class Orchestrator:
         plan = self.plan(paper, claim, task)
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
         code = self.write_code(plan, task)
-        measured: list[float] = []
-        notes: list[str] = []
-
         seeds = list(range(paper.get("seeds", DEFAULT_SEEDS)))
-        for seed in seeds:
-            for n in range(1, self.settings.max_attempts_per_claim + 1):
-                code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
-                (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
-                branch = self.sandbox.branch(snapshot)
-                t0 = time.time()
-                res = self._run_and_eval(branch, code, seed, task)
-                status, value = res["status"], res.get("measured")
-                summary = None
-                if status == "ok":
-                    status = "stabil" if abs(value - claim.target) <= claim.tolerance else "abweichung"
-                else:
-                    summary = (
-                        res["detail"] if res.get("static") or status == "timeout"
-                        else self.triage(res["detail"])
-                    )
+        # Seeds parallel; jeder Seed repariert den Code fuer sich (kein geteilter Zustand).
+        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(seeds))) as pool:
+            results = list(pool.map(
+                lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd), seeds
+            ))
+        measured = [v for v, _ in results if v is not None]
+        notes = [n for _, n in results if n]
+        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes))
+
+    def _run_seed(
+        self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
+        plan: str, code: str, seed: int,
+    ) -> tuple[float | None, str | None]:
+        """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis)."""
+        summary = None
+        for n in range(1, self.settings.max_attempts_per_claim + 1):
+            code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+            (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
+            branch = self.sandbox.branch(snapshot)
+            t0 = time.time()
+            res = self._run_and_eval(branch, code, seed, task)
+            status, value = res["status"], res.get("measured")
+            summary = None
+            if status == "ok":
+                status = "stabil" if abs(value - claim.target) <= claim.tolerance else "abweichung"
+            else:
+                summary = (
+                    res["detail"] if res.get("static") or status == "timeout"
+                    else self.triage(res["detail"])
+                )
+            with self._lock:
                 dossier.attempts.append(Attempt(
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
                     cost_usd=self.spent_usd,
                 ))
-                print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)")
-                if value is not None:
-                    measured.append(value)
-                    break
-                if status == "timeout":
-                    notes.append(f"Seed {seed}: Timeout, kein Reparaturversuch")
-                    break
-                if n < self.settings.max_attempts_per_claim:
-                    code = self.repair_code(plan, task, code, summary or "")
-            else:
-                notes.append(f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})")
-
-        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes))
+            print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
+                  flush=True)
+            if value is not None:
+                return value, None
+            if status == "timeout":
+                return None, f"Seed {seed}: Timeout, kein Reparaturversuch"
+            if n < self.settings.max_attempts_per_claim:
+                code = self.repair_code(plan, task, code, summary or "")
+        return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})"
 
     def _verdict(
         self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str]
@@ -301,7 +319,7 @@ def main() -> None:
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     paper_id = args[0] if args else "kipf_gcn_2017"
-    Orchestrator(use_tavily="--no-tavily" not in sys.argv).run(paper_id)
+    Orchestrator(use_tavily="--no-tavily" not in sys.argv, fresh="--fresh" in sys.argv).run(paper_id)
 
 
 if __name__ == "__main__":

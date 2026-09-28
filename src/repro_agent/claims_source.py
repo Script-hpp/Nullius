@@ -38,7 +38,7 @@ class PaperText:
     source_kind: str            # arxiv_html | ar5iv | pdf
     retrieved_at: str
     sha256: str
-    arxiv_version: str | None   # neueste Version laut arXiv-API (Inhalt von ar5iv = irgendeine davon)
+    arxiv_version: str | None   # Version, deren URL abgerufen wurde (None = unversioniert, z. B. ar5iv)
     text: str
 
 
@@ -58,12 +58,18 @@ class ExtractionInvalid(RuntimeError):
     pass
 
 
-def _source_urls(arxiv_id: str) -> list[tuple[str, str]]:
+def _source_urls(arxiv_id: str, version: str | None) -> list[tuple[str, str]]:
+    """Versionierte URLs (z. B. .../pdf/1609.02907v4), damit Text und Version belegt zusammenpassen.
+    ar5iv kennt keine Versionen -> dort bleibt die Version unbelegt (steht so im Beleg)."""
+    v = version or ""
     urls = []
     if arxiv_id[:4] >= ARXIV_HTML_MIN_ID:
-        urls.append(("arxiv_html", f"https://arxiv.org/html/{arxiv_id}"))
-    urls.append(("ar5iv", f"https://ar5iv.labs.arxiv.org/html/{arxiv_id}"))
-    urls.append(("pdf", f"https://arxiv.org/pdf/{arxiv_id}"))
+        urls.append(("arxiv_html", f"https://arxiv.org/html/{arxiv_id}{v}"))
+    if version:
+        urls.append(("pdf", f"https://arxiv.org/pdf/{arxiv_id}{v}"))
+    urls.append(("ar5iv", f"https://ar5iv.labs.arxiv.org/html/{arxiv_id}"))  # unversioniert: letzter Ausweg
+    if not version:
+        urls.append(("pdf", f"https://arxiv.org/pdf/{arxiv_id}"))
     return urls
 
 
@@ -86,7 +92,8 @@ def fetch_paper_text(
         return PaperText(**json.loads(fixture.read_text()))
     tavily = get_tavily()
 
-    for kind, url in _source_urls(arxiv_id):
+    version = latest_arxiv_version(arxiv_id)
+    for kind, url in _source_urls(arxiv_id, version):
         result = tavily.read_claims(url)
         for item in result.get("results", []):
             text = item.get("raw_content") or ""
@@ -95,12 +102,12 @@ def fetch_paper_text(
                     arxiv_id=arxiv_id, url=url, source_kind=kind,
                     retrieved_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     sha256=hashlib.sha256(text.encode()).hexdigest(),
-                    arxiv_version=latest_arxiv_version(arxiv_id), text=text,
+                    arxiv_version=version if kind != "ar5iv" else None, text=text,
                 )
                 fixture_dir.mkdir(parents=True, exist_ok=True)
                 fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
                 return paper
-    raise ExtractionInvalid(f"Kein Volltext fuer {arxiv_id} ueber {[k for k, _ in _source_urls(arxiv_id)]}")
+    raise ExtractionInvalid(f"Kein Volltext fuer {arxiv_id} ueber {[k for k, _ in _source_urls(arxiv_id, version)]}")
 
 
 def _norm(s: str) -> str:

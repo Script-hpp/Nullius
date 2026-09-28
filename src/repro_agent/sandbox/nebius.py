@@ -83,6 +83,11 @@ class NebiusSandbox:
         session = self._sessions[branch]
         self._sessions[branch] = session.apply_files({path: content})
 
+    def put_files(self, branch: Branch, files: dict[str, bytes]) -> None:
+        # Ein apply_files-Aufruf = eine Sandbox-Operation statt einer pro Datei.
+        session = self._sessions[branch]
+        self._sessions[branch] = session.apply_files(files)
+
     def get_file(self, branch: Branch, path: str) -> bytes:
         # `session.read()` liest das Ausgangsimage (Session-uuid wird nie aktualisiert),
         # nicht den Branch-Stand. Daher ueber `run`: gzip nach /tmp, Hash und Groesse im

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 HARNESS_DIR = Path(__file__).resolve().parent / "harness"
-SANDBOX_HARNESS_DIR = "/opt/harness"  # wird pro Pruefung frisch ueberschrieben
+SANDBOX_HARNESS_DIR = "/opt/harness"  # + zufaelliges Suffix pro Pruefung (Agent kennt den Pfad nicht)
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class Task:
     image: str
     setup_cmds: list[str]
     harness_files: list[str]        # Dateien aus harness/, die in den Branch kopiert werden
-    eval_cmd: str                   # gibt eine JSON-Zeile aus (siehe cora_eval.py)
+    eval_cmd: str                   # Template mit {harness_dir}; gibt eine JSON-Zeile aus
     data_description: str           # fuer den `code`-Prompt
 
 
@@ -51,7 +51,7 @@ def cora_task() -> Task:
         image="python:3.11-slim",
         setup_cmds=prep,
         harness_files=["cora_data.py", "metrics.py", "verify.py", "cora_eval.py"],
-        eval_cmd=f"python {SANDBOX_HARNESS_DIR}/cora_eval.py",
+        eval_cmd="python {harness_dir}/cora_eval.py",
         data_description=CORA_DATA_DESCRIPTION,
     )
 

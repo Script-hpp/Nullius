@@ -36,6 +36,10 @@ class LLMResponse:
     cached: bool
 
 
+class BadResponse(Exception):
+    """HTTP 200, aber kein nutzbarer Inhalt (z. B. Rate-Limit-Fehler im Body). Wird wiederholt."""
+
+
 class LLMClient:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or load_settings()
@@ -115,7 +119,12 @@ class LLMClient:
                 data = resp.json()
 
                 usage = data.get("usage", {})
-                content = data["choices"][0]["message"]["content"]
+                try:
+                    content = data["choices"][0]["message"]["content"]
+                except (KeyError, IndexError, TypeError):
+                    content = None
+                if not content:
+                    raise BadResponse(f"Antwort ohne Inhalt: {str(data.get('error', data))[:200]}")
 
                 return LLMResponse(
                     content=content,
@@ -125,7 +134,7 @@ class LLMClient:
                     cost_usd=usage.get("cost", 0.0) or 0.0,
                     cached=False,
                 )
-            except (httpx.HTTPStatusError, httpx.TransportError) as exc:
+            except (httpx.HTTPStatusError, httpx.TransportError, BadResponse, ValueError) as exc:
                 last_error = exc
                 if attempt == MAX_RETRIES - 1:
                     break

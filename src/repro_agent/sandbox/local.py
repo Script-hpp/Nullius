@@ -58,6 +58,10 @@ class LocalSandbox:
                 timed_out=True,
             )
 
+    def put_files(self, branch: Branch, files: dict[str, bytes]) -> None:
+        for path, content in files.items():
+            self.put_file(branch, path, content)
+
     def put_file(self, branch: Branch, path: str, content: bytes) -> None:
         with tempfile.NamedTemporaryFile() as tmp:
             tmp.write(content)
