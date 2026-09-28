@@ -21,12 +21,24 @@ NORM = re.compile(r"F\.normalize|row.?sum|\.sum\((?:axis|dim)\s*=\s*1[^)]*keepdi
 def main() -> None:
     n_gen = int(sys.argv[1]) if len(sys.argv) > 1 else 5
     n_seeds = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    rows, snapshots = [], {}
+    only = sys.argv[3] if len(sys.argv) > 3 else "AB"   # z. B. "B": nur Arm B
+    # Ergebnisse stehen in einer JSONL-Datei; ein Neustart macht dort weiter (Tageslimit der
+    # Free-Endpunkte: 50 Anfragen/Tag). Abgebrochene Generierungen zaehlen nicht.
+    store = REPO_ROOT / "runs" / "experiment_role4.jsonl"
+    rows = [json.loads(x) for x in store.read_text().splitlines()] if store.exists() else []
+    snapshots: dict = {}
     for arm, with_details in (("A_ohne_rolle4", False), ("B_mit_rolle4", True)):
+        if arm[0] not in only:
+            continue
         orch = Orchestrator(use_tavily=True, fresh=True, setup_details=with_details, seeds=n_seeds)
         orch._snapshots = snapshots            # Basis-Snapshot ueber Arme teilen
-        for g in range(n_gen):
-            d = orch.run(PAPER)
+        done = sum(r["arm"] == arm for r in rows)
+        for g in range(done, n_gen):
+            try:
+                d = orch.run(PAPER)
+            except RuntimeError as exc:         # z. B. 429 Tageslimit
+                print(f"ABBRUCH bei {arm} Generierung {g}: {exc}", flush=True)
+                break
             v = d.verdicts[0]
             run_dir = orch.last_run_dir
             code = next(run_dir.glob("gcn_cora_acc_*.py")).read_text()
@@ -36,9 +48,9 @@ def main() -> None:
                 "n_details": len(d.setup_details), "run_dir": str(run_dir.relative_to(REPO_ROOT)),
             }
             rows.append(row)
+            with store.open("a") as f:
+                f.write(json.dumps(row) + "\n")
             print("ERGEBNIS", json.dumps(row), flush=True)
-    out = REPO_ROOT / "runs" / f"experiment_role4_{time.strftime('%Y%m%d-%H%M%S')}.json"
-    out.write_text(json.dumps(rows, indent=1))
     for arm in ("A_ohne_rolle4", "B_mit_rolle4"):
         r = [x for x in rows if x["arm"] == arm]
         ok = sum(x["urteil"] == "reproduziert" for x in r)

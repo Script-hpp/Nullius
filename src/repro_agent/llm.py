@@ -18,6 +18,14 @@ from .config import Settings, load_settings
 
 Role = Literal["fast", "code", "reasoning"]
 
+# USD pro Token (Token Factory, GET /v1/models am 2026-09-28). OpenRouter meldet Kosten selbst.
+TF_PRICES = {
+    "nvidia/Nemotron-3_5-Lightning": (0.06e-6, 0.24e-6),
+    "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B": (0.06e-6, 0.24e-6),
+    "nvidia/nemotron-3-super-120b-a12b": (0.3e-6, 0.9e-6),
+    "nvidia/Nemotron-3-Ultra-550b-a55b": (1.0e-6, 3.0e-6),
+}
+
 MAX_RETRIES = 5
 BACKOFF_BASE_S = 1.0
 
@@ -135,7 +143,7 @@ class LLMClient:
                     model=model,
                     prompt_tokens=usage.get("prompt_tokens", 0),
                     completion_tokens=usage.get("completion_tokens", 0),
-                    cost_usd=usage.get("cost", 0.0) or 0.0,
+                    cost_usd=usage.get("cost") or self._estimate_cost(model, usage),
                     cached=False,
                 )
             except (httpx.HTTPStatusError, httpx.TransportError, BadResponse, ValueError) as exc:
@@ -147,6 +155,11 @@ class LLMClient:
         raise RuntimeError(
             f"LLM-Aufruf fehlgeschlagen nach {MAX_RETRIES} Versuchen (Modell {model}): {last_error}"
         )
+
+    @staticmethod
+    def _estimate_cost(model: str, usage: dict) -> float:
+        p_in, p_out = TF_PRICES.get(model, (0.0, 0.0))
+        return usage.get("prompt_tokens", 0) * p_in + usage.get("completion_tokens", 0) * p_out
 
     def _log_cost(self, response: LLMResponse) -> None:
         COST_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)

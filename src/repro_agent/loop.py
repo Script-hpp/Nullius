@@ -24,7 +24,7 @@ from pathlib import Path
 
 import yaml
 
-from .claims_source import PaperText, extract_target, fetch_paper_text
+from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
@@ -218,7 +218,7 @@ class Orchestrator:
                 continue
             text = fetch_paper_text(arxiv_id, get_tavily)
             self.paper_text = text
-            ev = extract_target(self.llm, text, spec["method"], spec["dataset"], spec["metric"])
+            ev = extract_target_cached(self.llm, text, spec["method"], spec["dataset"], spec["metric"])
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]

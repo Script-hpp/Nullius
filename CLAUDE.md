@@ -43,9 +43,9 @@ OR_MODEL_REASONING=nvidia/nemotron-3-super-120b-a12b:free   # Ultra wäre auch :
 # ---- Token Factory (Prod) ----
 NEBIUS_API_KEY=
 NEBIUS_PROJECT_ID=
-TF_MODEL_FAST=TODO               # Nano oder 3.5 Lightning, ID via GET /v1/models prüfen
-TF_MODEL_CODE=TODO               # Super
-TF_MODEL_REASONING=TODO          # Ultra
+TF_MODEL_FAST=nvidia/Nemotron-3_5-Lightning        # geprueft via GET /v1/models, 2026-09-28
+TF_MODEL_CODE=nvidia/nemotron-3-super-120b-a12b
+TF_MODEL_REASONING=nvidia/Nemotron-3-Ultra-550b-a55b
 
 # ---- Tavily ----
 TAVILY_API_KEY=
@@ -310,7 +310,7 @@ Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer 
 
 - [x] Sandbox-Beta-Freigabe abwarten (genehmigt, kostenlos)
 - [x] Rate-Limits von Nebius-Sandbox prüfen (2026-09-28: 20 parallele Branches ohne Fehler; höher nicht getestet, Semaphor im Orchestrator trotzdem sinnvoll)
-- [ ] Exakte Modell-IDs auf OpenRouter und Token Factory (`GET /v1/models`) eintragen
+- [x] Exakte Modell-IDs auf OpenRouter und Token Factory eintragen (TF geprüft 2026-09-28: Lightning 0,06/0,24 $, Super 0,30/0,90 $, Ultra 1/3 $ pro Mio. Tokens)
 - [ ] Builders-Program-Codes einlösen
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren
 - [ ] Benchmark-Liste auf 8–10 Papers mit belegten Ergebnissen erweitern

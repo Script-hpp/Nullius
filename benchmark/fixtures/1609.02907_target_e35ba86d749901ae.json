@@ -1,0 +1,10 @@
+{
+ "value": 0.815,
+ "quote": "GCN (this paper) 70 .3 (7s) 81 .5 (4s) 79 .0 (38s) 66 .0 (48s)",
+ "table": "Table 2",
+ "url": "https://arxiv.org/pdf/1609.02907",
+ "source_kind": "pdf",
+ "retrieved_at": "2026-09-28T19:12:22+00:00",
+ "sha256": "818c55c77cfd0da2ad56ff325255c527378e0137d52580ccca55bccfacdec3fa",
+ "arxiv_version": "v4"
+}

@@ -145,32 +145,72 @@ def verify_extraction(data: dict, paper_text: str) -> float:
     return value / 100 if value > 1 else value  # Prozentangabe -> Bruch
 
 
+def _last_json_object(content: str) -> dict | None:
+    """Letztes gueltiges JSON-Objekt (Modelle schreiben Denkprozess davor)."""
+    dec = json.JSONDecoder()
+    for m in reversed(list(re.finditer(r"\{", content))):
+        try:
+            value, _ = dec.raw_decode(content[m.start():])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and "quote" in value:
+            return value
+    return None
+
+
 def extract_target(
     llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str
 ) -> TargetEvidence:
     context = _windows(paper.text, dataset)
     if not context:
         raise ExtractionInvalid(f"'{dataset}' kommt im Quelltext nicht vor")
-    resp = llm.complete("fast", [
+    prompt = [
         {"role": "system", "content": EXTRACT_SYSTEM},
         {"role": "user", "content": (
             f"Find the reported {metric} of method '{method}' on dataset '{dataset}'.\n"
             'JSON keys: "value" (number exactly as printed, e.g. 81.5), "table" (e.g. "Table 2"), '
             '"quote" (a VERBATIM excerpt copied from the text that contains the number, ideally the '
-            "table row). Do not compute or guess; if not printed, use null for value.\n\n"
+            "table row). Do not compute or guess; if not printed, use null for value. Keep your "
+            "reasoning short and end with the JSON object.\n\n"
             f"TEXT:\n{context}"
         )},
-    ], temperature=0.0)
-    m = re.search(r"\{.*\}", resp.content, flags=re.S)
-    if not m:
-        raise ExtractionInvalid("Modellantwort enthaelt kein JSON")
-    try:
-        data = json.loads(m.group(0))
-    except json.JSONDecodeError as exc:
-        raise ExtractionInvalid(f"JSON ungueltig: {exc}") from exc
-    value = verify_extraction(data, paper.text)
+    ]
+    last: ExtractionInvalid | None = None
+    for _ in range(3):  # Free-Modelle antworten gelegentlich ohne nutzbares JSON
+        resp = llm.complete("fast", prompt, temperature=0.0, max_tokens=6000, timeout_s=400)
+        data = _last_json_object(resp.content)
+        if data is None:
+            last = ExtractionInvalid("Modellantwort enthaelt kein JSON")
+            continue
+        try:
+            value = verify_extraction(data, paper.text)
+            break
+        except ExtractionInvalid as exc:
+            last = exc
+    else:
+        raise last  # type: ignore[misc]
     return TargetEvidence(
         value=value, quote=str(data["quote"]), table=data.get("table"), url=paper.url,
         source_kind=paper.source_kind, retrieved_at=paper.retrieved_at, sha256=paper.sha256,
         arxiv_version=paper.arxiv_version,
     )
+
+
+def extract_target_cached(
+    llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str,
+    fixture_dir: Path = FIXTURE_DIR,
+) -> TargetEvidence:
+    """Verifizierten Zielwert pro (Paper-Text, Methode, Datensatz, Metrik) einmal speichern.
+
+    Der Wert wird bei jedem Laden erneut gegen den Quelltext geprueft (Zitat + Zahl), der Cache
+    ersetzt also nur den LLM-Aufruf, nicht die Pruefung. Spart Anfragen auf Free-Endpunkten.
+    """
+    key = hashlib.sha256(f"{paper.sha256}|{method}|{dataset}|{metric}".encode()).hexdigest()[:16]
+    path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
+    if path.exists():
+        ev = TargetEvidence(**json.loads(path.read_text()))
+        verify_extraction({"value": ev.value * 100 if ev.value <= 1 else ev.value, "quote": ev.quote}, paper.text)
+        return ev
+    ev = extract_target(llm, paper, method, dataset, metric)
+    path.write_text(json.dumps(asdict(ev), ensure_ascii=False, indent=1))
+    return ev
