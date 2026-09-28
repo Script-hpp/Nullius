@@ -171,6 +171,8 @@ Jeder Aufruf muss Frage beantworten, die Agent sonst nicht beantworten könnte.
 
 Kernidee für Tavily-Preis: Tavily-Funde werden zu Experimenten. Beispiel: Issue meldet Seed-Abhängigkeit → 5 Branches mit verschiedenen Seeds.
 
+> **Tavily-Key sparsam benutzen.** Free/Trial-Kontingent begrenzt (Credits pro Monat), kein unlimitiertes Guthaben wie bei OpenRouter Free. Jeder Aufruf muss Frage beantworten, die sonst nicht beantwortbar ist (siehe Tabelle oben) — kein Testen/Debuggen mit echten Tavily-Calls, wenn Mock/Fixture reicht. Crawl immer mit `limit`, Research max 1× pro Paper (siehe Rolle 7). Bei Unsicherheit: erst Dossier/Cache prüfen, ob Frage schon beantwortet wurde, bevor neuer Call.
+
 ## Unabhängiger Prüf-Harness
 
 Grundsatz: Agent liefert Vorhersagen, keine Zahlen.
@@ -249,6 +251,7 @@ Verfügbar: 25 $ Token Factory, Tavily-Key. Builders Program beantragt (+25 $ TF
 - Kosten-Log: jeder Aufruf mit Modell, Tokens, geschätzten Kosten in `logs/costs.jsonl`
 - Ultra nur für Plan und Endurteil
 - Tavily Crawl immer mit `limit`, Research max 1× pro Paper
+- Tavily-Key ist scharf (echtes Kontingent) — auch beim Entwickeln/Testen sparsam einsetzen, nicht in Schleifen oder Smoke-Tests verballern
 - Usage-Seite in TF-Konsole wöchentlich prüfen
 
 ## Benchmark
