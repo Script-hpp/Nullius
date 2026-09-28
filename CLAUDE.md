@@ -37,8 +37,8 @@ SANDBOX_BACKEND=nebius           # local | nebius (Beta genehmigt, kostenlos)
 # ---- OpenRouter (Prototyp) ----
 OPENROUTER_API_KEY=
 OR_MODEL_FAST=nvidia/nemotron-3.5-lightning:free
-OR_MODEL_CODE=TODO               # freie Super-Variante, ID auf openrouter.ai prüfen
-OR_MODEL_REASONING=TODO          # = Super, da Ultra nicht kostenlos verfügbar
+OR_MODEL_CODE=nvidia/nemotron-3-super-120b-a12b:free
+OR_MODEL_REASONING=nvidia/nemotron-3-super-120b-a12b:free   # Ultra wäre auch :free verfügbar (PRD-Annahme war falsch), bewusst Super gewählt
 
 # ---- Token Factory (Prod) ----
 NEBIUS_API_KEY=
