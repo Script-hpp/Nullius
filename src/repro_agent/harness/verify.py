@@ -60,21 +60,41 @@ def judge(measured: float, target: float, tolerance: float) -> Urteil:
 LOWER_IS_BETTER = {"mse", "mae"}
 
 
-def agent_fault_suspected(metric: str, measured: float, target: float, baselines: dict | None) -> str | None:
-    """Deterministische Plausibilitaet: schlechter als die beste triviale Baseline, obwohl der
-    Paperwert besser als diese Baseline ist. Dann ist ein Fehler im Agenten-Code wahrscheinlicher als
-    ein Befund ueber das Paper. (Ist schon der Paperwert nicht besser als die Baseline, gilt der Schutz
-    nicht, sonst wuerde ein Paper mit wirklich schwacher Methode dem Agenten angelastet.)"""
+def _best_baseline(metric: str, baselines: dict | None) -> tuple[str, float] | None:
     values = {name: b[metric] for name, b in (baselines or {}).items() if metric in b}
     if not values:
         return None
-    lower = metric in LOWER_IS_BETTER
-    name, best = (min if lower else max)(values.items(), key=lambda kv: kv[1])
-    worse = measured > best if lower else measured < best
-    target_better = target < best if lower else target > best
-    if worse and target_better:
-        return (f"Messwert {measured:.4f} ist schlechter als die triviale Baseline '{name}' "
-                f"({best:.4f}), der Paperwert {target} ist besser")
+    return (min if metric in LOWER_IS_BETTER else max)(values.items(), key=lambda kv: kv[1])
+
+
+def _worse(metric: str, measured: float, reference: float) -> bool:
+    return measured > reference if metric in LOWER_IS_BETTER else measured < reference
+
+
+def agent_fault_suspected(
+    metric: str, measured: float, target: float, baselines: dict | None,
+    all_metrics: dict | None = None,
+) -> str | None:
+    """Deterministische Plausibilitaet: schlechter als die beste triviale Baseline auf der Metrik des
+    Claims ODER auf einer anderen Harness-Metrik mit Baseline, obwohl der Paperwert die Baseline auf
+    der Claim-Metrik schlaegt. Dann ist ein Fehler im Agenten-Code wahrscheinlicher als ein Befund
+    ueber das Paper. Schlaegt schon der Paperwert die Baseline nicht, gilt der Schutz nicht (sonst
+    wuerde ein Paper mit wirklich schwacher Methode dem Agenten angelastet).
+
+    `all_metrics`: Mittelwerte aller Harness-Metriken derselben Laeufe (z. B. mse und mae).
+    """
+    best = _best_baseline(metric, baselines)
+    if best is None:
+        return None
+    name, ref = best
+    if not _worse(metric, ref, target):
+        return None   # Paperwert schlaegt die Baseline nicht: kein Schutz
+    checks = {metric: measured, **{m: v for m, v in (all_metrics or {}).items() if m != metric}}
+    for m, value in checks.items():
+        b = _best_baseline(m, baselines)
+        if b and _worse(m, value, b[1]):
+            return (f"{m.upper()} {value:.4f} ist schlechter als die triviale Baseline '{b[0]}' "
+                    f"({b[1]:.4f}), der Paperwert {target} ({metric.upper()}) schlaegt sie")
     return None
 
 

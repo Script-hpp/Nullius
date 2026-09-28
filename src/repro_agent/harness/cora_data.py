@@ -64,11 +64,32 @@ def prepare_public(raw_dir: Path, out_npz: Path) -> None:
 
 
 def majority_baseline(raw_dir: Path) -> float:
-    """Accuracy auf dem Test, wenn immer die haeufigste Klasse der 140 Trainingsknoten vorhergesagt wird."""
+    """Accuracy auf dem Test, wenn immer die haeufigste Klasse der dem Agenten bekannten Labels
+    (Training + Validierung, 640 Knoten) vorhergesagt wird. Die 140 Trainingsknoten allein sind mit
+    20 pro Klasse ausgeglichen: ihre 'Mehrheitsklasse' waere ein Gleichstand (Klasse 0, nur 13 % Test)."""
     _, labels_onehot, _, test_idx = load_raw(raw_dir)
     labels = labels_onehot.argmax(1)
-    majority = int(np.bincount(labels[:N_TRAIN]).argmax())
+    majority = int(np.bincount(labels[:N_TRAIN + N_VAL]).argmax())
     return float((labels[test_idx] == majority).mean())
+
+
+def no_graph_baseline(raw_dir: Path, steps: int = 300, lr: float = 0.5, l2: float = 5e-3) -> float:
+    """Accuracy einer Softmax-Regression NUR auf Knotenmerkmalen (kein Graph), trainiert auf den 140
+    Trainingsknoten. Deterministisch (Null-Initialisierung, Vollbatch). Ein Modell, das den Graphen
+    nutzt, muss deutlich besser sein; ein Code, der ihn ignoriert, landet in dieser Naehe."""
+    features, labels_onehot, _, test_idx = load_raw(raw_dir)
+    labels = labels_onehot.argmax(1)
+    x = features / np.maximum(features.sum(1, keepdims=True), 1e-12)   # Zeilennormalisierung
+    tr = np.arange(N_TRAIN)
+    n_cls = labels_onehot.shape[1]
+    w = np.zeros((x.shape[1], n_cls))
+    y = np.eye(n_cls)[labels[tr]]
+    for _ in range(steps):
+        logits = x[tr] @ w
+        p = np.exp(logits - logits.max(1, keepdims=True))
+        p /= p.sum(1, keepdims=True)
+        w -= lr * (x[tr].T @ (p - y) / len(tr) + l2 * w)
+    return float(((x[test_idx] @ w).argmax(1) == labels[test_idx]).mean())
 
 
 def test_labels(raw_dir: Path) -> dict[str, str]:

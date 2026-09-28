@@ -31,6 +31,7 @@ def main() -> None:
         cora_data.download_raw(raw)
         labels = cora_data.test_labels(raw)
         majority = cora_data.majority_baseline(raw)
+        no_graph = cora_data.no_graph_baseline(raw)
 
     error = verify.check_plausibility(preds, set(labels))
     if error:
@@ -46,7 +47,7 @@ def main() -> None:
     acc = metrics.accuracy(pred_list, [int(labels[i]) for i in ids])
     print(json.dumps({
         "status": "ok", "metrics": {"accuracy": acc},
-        "baselines": {"majority": {"accuracy": majority}},
+        "baselines": {"majority": {"accuracy": majority}, "no_graph": {"accuracy": no_graph}},
     }))
 
 

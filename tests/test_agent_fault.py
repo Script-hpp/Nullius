@@ -1,30 +1,42 @@
 from repro_agent.harness.verify import agent_fault_suspected
 
 ETT = {"repeat": {"mse": 1.2944, "mae": 0.7132}, "zero": {"mse": 1.1099, "mae": 0.7960}}
+# Echte Wertepaare (Seed 0) der Experiment-Codes, im Harness gemessen
+A1 = {"mse": 1.3944, "mae": 0.9845}     # schlechter als jede Baseline
+B2 = {"mse": 1.0436, "mae": 0.7728}     # MSE unter Null, MAE ueber Repeat
+A6 = {"mse": 0.8092, "mae": 0.6766}     # schwach, aber besser als alle Baselines
+SMOKE = {"mse": 1.1606, "mae": 0.8599}  # kaputter Code aus dem Probelauf
 
 
-def test_bad_code_from_smoke_run_is_flagged_on_mae_and_mse():
-    assert agent_fault_suspected("mae", 0.8599, 0.399, ETT)
-    assert agent_fault_suspected("mse", 1.1606, 0.375, ETT)   # schlechter als Nullvorhersage
+def flag(m, target=0.375):
+    return agent_fault_suspected("mse", m["mse"], target, ETT, m)
 
 
-def test_repeat_only_would_miss_it_but_best_baseline_catches():
-    only_repeat = {"repeat": ETT["repeat"]}
-    assert agent_fault_suspected("mse", 1.1606, 0.375, only_repeat) is None
+def test_real_pairs():
+    assert flag(A1)
+    assert flag(SMOKE)
+    assert flag(B2)                # nur ueber den MAE
+    assert flag(A6) is None
+
+
+def test_b2_is_missed_when_only_claim_metric_is_checked():
+    assert agent_fault_suspected("mse", B2["mse"], 0.375, ETT) is None
+    assert "MAE" in flag(B2)
+
+
+def test_repeat_only_baseline_would_miss_smoke_mse_but_all_baselines_catch():
+    assert agent_fault_suspected("mse", 1.1606, 0.375, {"repeat": ETT["repeat"]}) is None
     assert agent_fault_suspected("mse", 1.1606, 0.375, ETT)
 
 
-def test_weak_but_valid_model_not_flagged():
-    assert agent_fault_suspected("mse", 0.858, 0.375, ETT) is None
-
-
 def test_paper_that_does_not_beat_baseline_is_not_blamed_on_agent():
-    assert agent_fault_suspected("mse", 1.3, 1.25, ETT) is None      # Paperwert selbst schlechter als Baseline
+    assert agent_fault_suspected("mse", 1.3, 1.25, ETT, {"mse": 1.3, "mae": 0.9}) is None
 
 
 def test_accuracy_majority_baseline():
-    assert agent_fault_suspected("accuracy", 0.10, 0.815, {"majority": {"accuracy": 0.316}})
-    assert agent_fault_suspected("accuracy", 0.80, 0.815, {"majority": {"accuracy": 0.316}}) is None
+    base = {"majority": {"accuracy": 0.316}}
+    assert agent_fault_suspected("accuracy", 0.10, 0.815, base)
+    assert agent_fault_suspected("accuracy", 0.80, 0.815, base) is None
 
 
 def test_no_baselines_no_flag():

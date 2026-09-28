@@ -303,7 +303,15 @@ class Orchestrator:
                     ))
                 measured += [v for v, _, _ in results if v is not None]
                 notes += [n for _, n, _ in results if n]
-        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes, dossier.baselines))
+        per_metric: dict[str, list[float]] = {}
+        for a in dossier.attempts:
+            if a.claim_id == claim.id and a.metrics and a.measured is not None:
+                for name, value in a.metrics.items():
+                    per_metric.setdefault(name, []).append(value)
+        all_metrics = {name: statistics.mean(v) for name, v in per_metric.items()}
+        dossier.verdicts.append(
+            self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
+        )
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
@@ -350,7 +358,7 @@ class Orchestrator:
 
     def _verdict(
         self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str],
-        baselines: dict | None = None,
+        baselines: dict | None = None, all_metrics: dict | None = None,
     ) -> Verdict:
         tried = "; ".join(notes)
         if not measured:
@@ -362,7 +370,7 @@ class Orchestrator:
         mean = statistics.mean(measured)
         std = statistics.stdev(measured) if len(measured) > 1 else 0.0
         urteil = judge(mean, claim.target, claim.tolerance)
-        fault = agent_fault_suspected(claim.metric, mean, claim.target, baselines)
+        fault = agent_fault_suspected(claim.metric, mean, claim.target, baselines, all_metrics)
         if fault:
             urteil = "Agenten-Fehler vermutet"
         text = (
