@@ -13,6 +13,16 @@ def render_markdown(dossier: Dossier) -> str:
             f"Gemessen: {verdict.measured_mean:.4f} (std {verdict.measured_std:.4f})"
         )
         lines.append(verdict.explanation)
+        claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
+        ev = claim.target_evidence if claim else None
+        if ev:
+            lines.append(
+                f"Zielwert {claim.target} belegt: \"{ev['quote']}\" ({ev['table']}, "
+                f"{ev['url']}, Version {ev['arxiv_version']}, abgerufen {ev['retrieved_at']}, "
+                f"SHA-256 {ev['sha256'][:12]})"
+            )
+        elif claim:
+            lines.append(f"Zielwert {claim.target}: {claim.source}")
         if verdict.sources:
             lines.append("Quellen:")
             for src in verdict.sources:

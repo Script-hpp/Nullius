@@ -20,6 +20,7 @@ class Claim:
     source: str                # "Tabelle 2, arXiv v1"
     origin: Literal["paper", "einwand"]
     evidence_urls: list[str] = field(default_factory=list)
+    target_evidence: dict | None = None   # Beleg fuer Zielwert (URL, Hash, Zitat), None = manuell
 
 
 @dataclass

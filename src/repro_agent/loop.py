@@ -10,6 +10,7 @@ TODO Meilenstein 3: Abweichungs-Loop, Einwaende als Branches, Seeds parallel (Se
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import re
@@ -20,6 +21,7 @@ from pathlib import Path
 
 import yaml
 
+from .claims_source import extract_target, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
@@ -67,6 +69,10 @@ def extract_code(text: str) -> str:
     return max(blocks, key=len)
 
 
+def claim_specs(paper: dict) -> dict[str, dict]:
+    return {c["id"]: c for c in paper.get("claims", [])}
+
+
 def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
     papers = yaml.safe_load(PAPERS_YAML.read_text())["papers"]
     paper = next(p for p in papers if p["id"] == paper_id)
@@ -83,7 +89,8 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 
 
 class Orchestrator:
-    def __init__(self) -> None:
+    def __init__(self, use_tavily: bool = True) -> None:
+        self.use_tavily = use_tavily
         self.settings = load_settings()
         self.llm = LLMClient(self.settings)
         self.sandbox = get_sandbox(self.settings.sandbox_backend)
@@ -169,6 +176,32 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": out.get("reason", "")}
         return {"status": "ok", "measured": float(out["measured"])}
 
+    # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
+    def resolve_targets(self, paper: dict, claims: list[Claim]) -> None:
+        """Ersetzt den manuellen Zielwert durch den belegten. Ungueltige Extraktion = Abbruch."""
+        arxiv_id = paper["arxiv_url"].rstrip("/").split("/abs/")[-1]
+        tavily = None
+
+        def get_tavily():
+            nonlocal tavily
+            if tavily is None:
+                from .tavily_tools import TavilyTools
+
+                tavily = TavilyTools(self.settings)
+            return tavily
+
+        for claim in claims:
+            spec = claim_specs(paper).get(claim.id, {}).get("extract")
+            if not spec:
+                continue
+            text = fetch_paper_text(arxiv_id, get_tavily)
+            ev = extract_target(self.llm, text, spec["method"], spec["dataset"], spec["metric"])
+            claim.target = ev.value
+            claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
+            claim.evidence_urls = [ev.url]
+            claim.target_evidence = dataclasses.asdict(ev)
+            print(f"[{claim.id}] Zielwert {ev.value} belegt: {ev.quote!r}")
+
     # ---- Loop pro Claim -----------------------------------------------------
     def run_claim(
         self, paper: dict, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path
@@ -235,6 +268,7 @@ class Orchestrator:
         )
         return Verdict(
             claim_id=claim.id, urteil=urteil, measured_mean=mean, measured_std=std,
+            sources=list(claim.evidence_urls),
             explanation=text + (f" {tried}" if tried else ""),
         )
 
@@ -245,6 +279,8 @@ class Orchestrator:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
+        if self.use_tavily:
+            self.resolve_targets(paper, claims)
         dossier = Dossier(paper_id=paper_id, claims=claims, isolation=list(ISOLATION))
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
@@ -263,8 +299,9 @@ class Orchestrator:
 def main() -> None:
     import sys
 
-    paper_id = sys.argv[1] if len(sys.argv) > 1 else "kipf_gcn_2017"
-    Orchestrator().run(paper_id)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    paper_id = args[0] if args else "kipf_gcn_2017"
+    Orchestrator(use_tavily="--no-tavily" not in sys.argv).run(paper_id)
 
 
 if __name__ == "__main__":
