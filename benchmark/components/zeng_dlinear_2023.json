@@ -1,0 +1,59 @@
+{
+ "meta": {
+  "paper_id": "zeng_dlinear_2023",
+  "source": "https://arxiv.org/pdf/2205.13504v3",
+  "sha256": "93bdde5362cb5af76ceac37c8f56de351c7d14f2c7c1daa1eef86339388b834d",
+  "dropped": 0,
+  "extracted_at": "2026-09-28",
+  "cost_usd": 0.0,
+  "reviewed_by": "Handpruefung durch Claude Code gegen den Paper-Text (Zitate programmatisch als Teilstring gezogen), noch nicht vom Projektteam gegengelesen",
+  "reviewed_on": "2026-09-28"
+ },
+ "components": [
+  {
+   "id": "seasonal_trend_decomposition",
+   "name": "Seasonal-Trend Decomposition via Moving Average Kernel",
+   "description": "Decompose each input variate's raw sequence into a trend component using a moving average kernel and a seasonal component as the remainder (original minus trend).",
+   "quote": "It first decomposes a raw data input into a trend component by a moving average kernel and a remainder (seasonal) component.",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "dual_linear_layers",
+   "name": "Two Independent One-Layer Linear Layers",
+   "description": "Apply a separate linear layer (weight matrix W ∈ ℝ^{T×L}) to the trend component and another to the seasonal component, sharing weights across variates.",
+   "quote": "Then, two one-layer linear layers are applied to each component, and we sum up the two features to get the final prediction.",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "summation_fusion",
+   "name": "Summation of Component Predictions",
+   "description": "Add the outputs of the two linear layers (trend and seasonal) element-wise to produce the final forecast.",
+   "quote": "Then, two one-layer linear layers are applied to each component, and we sum up the two features to get the final prediction.",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "shared_weights_across_variates",
+   "name": "Shared Weights Across Variates (No Spatial Modeling)",
+   "description": "Use the same linear-layer weights for all variates; do not model cross-variate (spatial) correlations.",
+   "quote": "Note that LTSF-Linear shares weights across different variates and does not model any spatial correlations.",
+   "critical": false,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "moving_average_kernel_25",
+   "name": "Moving-Average-Kernel 25",
+   "description": "The moving average used for the decomposition has kernel size 25.",
+   "quote": "For DLinear , the moving average kernel size for decomposition is 25,",
+   "critical": true,
+   "value": "25",
+   "reviewed": true
+  }
+ ]
+}

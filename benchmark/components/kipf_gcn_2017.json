@@ -1,0 +1,77 @@
+{
+ "meta": {
+  "paper_id": "kipf_gcn_2017",
+  "source": "https://arxiv.org/pdf/1609.02907v4",
+  "sha256": "818c55c77cfd0da2ad56ff325255c527378e0137d52580ccca55bccfacdec3fa",
+  "dropped": 8,
+  "extracted_at": "2026-09-28",
+  "cost_usd": 0.0,
+  "reviewed_by": "Handpruefung durch Claude Code gegen den Paper-Text (Zitate programmatisch als Teilstring gezogen), noch nicht vom Projektteam gegengelesen",
+  "reviewed_on": "2026-09-28"
+ },
+ "components": [
+  {
+   "id": "full_batch_gradient_descent",
+   "name": "Full-Batch Gradient Descent",
+   "description": "Training uses batch gradient descent with the full dataset per iteration (no mini-batches), leveraging sparse matrix operations for memory efficiency.",
+   "quote": "In this work, we perform batch gradient descent using the full dataset for every training iteration, which is a viable option as long as datasets fit in memory.",
+   "critical": false,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "dropout_regularization",
+   "name": "Dropout Regularization",
+   "description": "Dropout is applied to all layers during training to introduce stochasticity and reduce overfitting.",
+   "quote": "Stochasticity in the training process is introduced via dropout (Srivastava et al., 2014).",
+   "critical": false,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "precomputed_normalized_adjacency",
+   "name": "Precomputed Normalized Adjacency",
+   "description": "The normalized adjacency matrix  is computed once in a preprocessing step before training, not recomputed each layer.",
+   "quote": "We first calculate ˆA = ˜D− 12 ˜A ˜D− 12 in a pre-processing step.",
+   "critical": false,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "renormalized_adjacency",
+   "name": "Renormalisierte Adjazenz",
+   "description": "The propagation matrix is D~^-1/2 A~ D~^-1/2 with A~ = A + I (renormalization trick).",
+   "quote": "renormalization trick : IN + D− 12 AD − 12 → ˜D− 12 ˜A ˜D− 12",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "self_loops",
+   "name": "Selbstschleifen",
+   "description": "Self-loops are added to the adjacency matrix: A~ = A + I.",
+   "quote": "˜A = A + IN and ˜Dii = ∑",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "propagation_rule",
+   "name": "Propagationsregel",
+   "description": "Each layer multiplies the normalised adjacency with the layer input before the weight matrix: H' = sigma(A_hat H W).",
+   "quote": "layer-wise propagation rule:   H(l+1) = σ  ( ˜D− 12 ˜A ˜D− 12 H(l)W (l)  )  . (2) Here, ˜A = A + IN is the adjacency mat",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  },
+  {
+   "id": "two_graph_conv_layers",
+   "name": "Zwei Graph-Faltungsschichten",
+   "description": "The model has two graph convolution layers (the adjacency is applied in both).",
+   "quote": "we consider a two-layer GCN for semi-supervised node classification",
+   "critical": true,
+   "value": null,
+   "reviewed": true
+  }
+ ]
+}

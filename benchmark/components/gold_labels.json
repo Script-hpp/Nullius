@@ -1,0 +1,53 @@
+{
+ "dlinear_A7_ridge": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "geschlossene Ridge-Regression, keine Zerlegung, keine zwei Zweige"
+ },
+ "dlinear_A6_flat_linear": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "eine grosse nn.Linear(L*C, H*C) ueber alle Kanaele, keine Zerlegung"
+ },
+ "dlinear_A2_faithful": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "AvgPool1d k=25, zwei Linear-Zweige, Summe (Nullpadding statt Randpadding)"
+ },
+ "dlinear_B5_faithful": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "MovingAvg k=25, Linear_Trend/Linear_Seasonal, Summe"
+ },
+ "dlinear_variant_kernel_5": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "A2 mit Kernel 5 statt 25: Wertpruefung muss anschlagen"
+ },
+ "gcn_cached_faithful": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "A+I, D^-1/2, zwei torch.mm(adj, .), ReLU"
+ },
+ "gcn_sparse_selfloop": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "adj + sparse.eye(N), symmetrische Normalisierung, zwei mm"
+ },
+ "gcn_edge_selfloop": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "Selbstschleifen als Kanten angehaengt, spmm-Schichten"
+ },
+ "gcn_variant_no_selfloops": {
+  "paper": "kipf_gcn_2017",
+  "gold": "teilweise",
+  "why": "ohne A+I: Selbstschleifen und Renormalisierung fehlen"
+ },
+ "gcn_variant_adjacency_unused": {
+  "paper": "kipf_gcn_2017",
+  "gold": "nein",
+  "hard": true,
+  "why": "Adjazenz wird gebaut, aber nie multipliziert (MLP). Ein reiner Existenz-Check kann das verfehlen: Grenze, erwartet fuer Abdeckung/Identitaetstest"
+ }
+}
