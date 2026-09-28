@@ -40,3 +40,12 @@ def test_get_file_large(nebius, mb):
     sb.run(a, f"head -c {mb * 1024 * 1024} /dev/urandom > /tmp/big.bin", 120)  # inkompressibel
     data = sb.get_file(a, "/tmp/big.bin")
     assert len(data) == mb * 1024 * 1024
+
+
+def test_unshare_blocks_network(nebius):
+    sb, snap = nebius
+    b = sb.branch(snap)
+    py = "import socket;s=socket.socket();s.settimeout(5);s.connect(('140.82.112.3',443));print('CONNECTED')"
+    assert "CONNECTED" in sb.run(b, f'python -c "{py}"', 60).stdout  # ohne unshare: Netz da
+    r = sb.run(b, f'unshare -n python -c "{py}"', 60)
+    assert "CONNECTED" not in r.stdout and r.exit_code != 0

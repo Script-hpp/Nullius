@@ -84,7 +84,9 @@ class LLMClient:
 
         if self.settings.llm_cache and cache_key in self._cache:
             cached = self._cache[cache_key]
-            return LLMResponse(**{**cached, "cached": True})
+            response = LLMResponse(**{**cached, "cached": True})
+            self._log_cost(response)
+            return response
 
         response = self._call_with_retry(model, messages, temperature, max_tokens)
         self._log_cost(response)
@@ -140,7 +142,8 @@ class LLMClient:
             "model": response.model,
             "prompt_tokens": response.prompt_tokens,
             "completion_tokens": response.completion_tokens,
-            "cost_usd": response.cost_usd,
+            "cost_usd": 0.0 if response.cached else response.cost_usd,
+            "cache_hit": response.cached,
         }
         with COST_LOG_PATH.open("a") as f:
             f.write(json.dumps(entry) + "\n")

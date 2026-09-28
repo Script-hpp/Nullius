@@ -22,13 +22,14 @@ import yaml
 
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
+from .harness.code_check import find_violations
 from .harness.verify import judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, get_sandbox
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
-SEEDS = [0, 1, 2]
+DEFAULT_SEEDS = 5
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 WORKDIR = "/work"
@@ -46,6 +47,13 @@ TRIAGE_SYSTEM = (
     "Summarise this Python crash in at most 3 lines: root cause and the line/module involved. "
     "No fix suggestions."
 )
+
+
+ISOLATION = [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch",
+]
 
 
 class CostLimitExceeded(RuntimeError):
@@ -107,6 +115,8 @@ class Orchestrator:
         resp = self._ask(
             "code", CODE_SYSTEM,
             f"{task.data_description}\n\nReproduction plan:\n{plan}\n\n"
+            "The script runs WITHOUT network access and must not download anything, spawn "
+            "processes or use eval/exec; use only /data/cora_public.npz. "
             "Write train.py implementing this plan. Implement the model yourself in PyTorch "
             "(no torch_geometric available). Print the final validation accuracy to stdout.",
         )
@@ -127,9 +137,16 @@ class Orchestrator:
     def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
+        violations = find_violations(code)
+        if violations:
+            return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
+                    "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
+        # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
+        # Agenten-Codes (Setup ist vorher im Basis-Snapshot abgeschlossen).
         r = sb.run(
-            branch, f"mkdir -p /output && cd {WORKDIR} && SEED={seed} python train.py",
+            branch,
+            f"mkdir -p /output && cd {WORKDIR} && SEED={seed} unshare -n python train.py",
             TRAIN_TIMEOUT_S,
         )
         if r.timed_out:
@@ -162,7 +179,8 @@ class Orchestrator:
         measured: list[float] = []
         notes: list[str] = []
 
-        for seed in SEEDS:
+        seeds = list(range(paper.get("seeds", DEFAULT_SEEDS)))
+        for seed in seeds:
             for n in range(1, self.settings.max_attempts_per_claim + 1):
                 code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
                 (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
@@ -174,7 +192,10 @@ class Orchestrator:
                 if status == "ok":
                     status = "stabil" if abs(value - claim.target) <= claim.tolerance else "abweichung"
                 else:
-                    summary = self.triage(res["detail"]) if status in ("fehler", "ungueltig") else res["detail"]
+                    summary = (
+                        res["detail"] if res.get("static") or status == "timeout"
+                        else self.triage(res["detail"])
+                    )
                 dossier.attempts.append(Attempt(
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
@@ -192,9 +213,11 @@ class Orchestrator:
             else:
                 notes.append(f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})")
 
-        dossier.verdicts.append(self._verdict(claim, measured, notes))
+        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes))
 
-    def _verdict(self, claim: Claim, measured: list[float], notes: list[str]) -> Verdict:
+    def _verdict(
+        self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str]
+    ) -> Verdict:
         tried = "; ".join(notes)
         if not measured:
             return Verdict(
@@ -206,7 +229,8 @@ class Orchestrator:
         std = statistics.stdev(measured) if len(measured) > 1 else 0.0
         urteil = judge(mean, claim.target, claim.tolerance)
         text = (
-            f"Mit unserem Setup gemessen ({len(measured)} von {len(SEEDS)} Seeds, Zielwert "
+            f"Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) {std:.4f}. "
+            f"Mit unserem Setup gemessen ({len(measured)} von {n_seeds} Seeds, Zielwert "
             f"{claim.target} +/- {claim.tolerance}, {claim.source}): Mittel {mean:.4f}."
         )
         return Verdict(
@@ -221,7 +245,7 @@ class Orchestrator:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
-        dossier = Dossier(paper_id=paper_id, claims=claims)
+        dossier = Dossier(paper_id=paper_id, claims=claims, isolation=list(ISOLATION))
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
         print(f"Basis-Snapshot bauen ({label}) ...")

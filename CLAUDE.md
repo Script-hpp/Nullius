@@ -188,6 +188,13 @@ Ablauf im Branch, nach Agenten-Lauf:
 
 Toleranz: Streuung aus Paper, sonst feste Regel (z. B. ±1 Prozentpunkt bei Genauigkeit). Wird vor Lauf festgelegt und im Bericht genannt.
 
+Das Urteil beruht auf dem **Mittelwert** über alle Seeds, nicht auf einzelnen Seeds. Die Streuung (std) wird immer berichtet. Einzelne Seeds außerhalb der Toleranz sind normal. Seed-Anzahl steht pro Paper in `benchmark/papers.yaml` (`seeds`, Default 5).
+
+Leak-Schutz (Schichten, im Dossier unter `isolation` festgehalten und im Zeugnis genannt):
+1. Trainingslauf des Agenten-Codes ohne Netz (`unshare -n`). Das SDK bietet keine Netz-Option, `resolv.conf` im Snapshot bleibt nicht erhalten.
+2. Statische Codeprüfung (`harness/code_check.py`) auf Netz, Download, Prozessstart, dynamischen Code. Treffer = Versuch `ungueltig`.
+3. Testlabels nie im Agenten-Datensatz, Harness lädt sie frisch.
+
 | Abstand | Urteil |
 |---|---|
 | ≤ Toleranz | reproduziert |

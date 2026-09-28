@@ -18,4 +18,7 @@ def render_markdown(dossier: Dossier) -> str:
             for src in verdict.sources:
                 lines.append(f"- {src}")
         lines.append("")
+    if dossier.isolation:
+        lines.append("## Isolation (aktive Schutzschichten)")
+        lines.extend(f"- {layer}" for layer in dossier.isolation)
     return "\n".join(lines)

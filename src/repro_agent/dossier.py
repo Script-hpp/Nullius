@@ -52,6 +52,7 @@ class Dossier:
     claims: list[Claim] = field(default_factory=list)
     attempts: list[Attempt] = field(default_factory=list)
     verdicts: list[Verdict] = field(default_factory=list)
+    isolation: list[str] = field(default_factory=list)  # aktive Schutzschichten gegen Leaks
 
     def save(self, timestamp: str) -> Path:
         run_dir = REPO_ROOT / "runs" / self.paper_id / timestamp
@@ -68,6 +69,7 @@ class Dossier:
             claims=[Claim(**c) for c in data["claims"]],
             attempts=[Attempt(**a) for a in data["attempts"]],
             verdicts=[Verdict(**v) for v in data["verdicts"]],
+            isolation=data.get("isolation", []),
         )
 
     def condensed_for_reasoning(self) -> str:

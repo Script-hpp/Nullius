@@ -5,6 +5,7 @@ papers:
     arxiv_url: "https://arxiv.org/abs/1609.02907"
     dataset: "Cora"
     expectation: "reproduziert"
+    seeds: 10   # pro Task festgelegt: GCN ~25 s pro Seed; teurere Experimente weniger
     claims:
       # TODO: Zielwert gegen Tabelle 2 im Paper pruefen (spaeter via Tavily Rolle 2 automatisch).
       - id: gcn_cora_acc
