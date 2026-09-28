@@ -173,6 +173,18 @@ Kernidee für Tavily-Preis: Tavily-Funde werden zu Experimenten. Beispiel: Issue
 
 > **Tavily-Key sparsam benutzen.** Free/Trial-Kontingent begrenzt (Credits pro Monat), kein unlimitiertes Guthaben wie bei OpenRouter Free. Jeder Aufruf muss Frage beantworten, die sonst nicht beantwortbar ist (siehe Tabelle oben) — kein Testen/Debuggen mit echten Tavily-Calls, wenn Mock/Fixture reicht. Crawl immer mit `limit`, Research max 1× pro Paper (siehe Rolle 7). Bei Unsicherheit: erst Dossier/Cache prüfen, ob Frage schon beantwortet wurde, bevor neuer Call.
 
+## Modus und Rolle 4 (Stand Meilenstein 2)
+
+**Modus „Nachbau“** (einziger gebauter Modus): Der Agent schreibt eigenen Code und übernimmt nur belegte Angaben aus Paper und Repo. Das Original-Repo liegt nie in einem Agenten-Branch, es wird nur in einem eigenen Lese-Snapshot des Orchestrators geklont (Commit im Dossier). „Nachlauf“ (Original-Code ausführen) prüft etwas anderes und ist nicht gebaut. Modus steht im Dossier und im Zeugnis.
+
+**Rolle 4 (Setup-Details):** Quellen sind Paper-Text, README (Tavily Extract) und vom LLM gewählte Repo-Dateien (Sandbox-`git clone`). Extraktion abschnittsweise mit Rolle `extract` (= Modell von `code`, Super; Ultra nur für Plan und Endurteil). Jede Angabe braucht ein wörtliches Zitat, das im jeweiligen Dokument vorkommt, sonst wird sie verworfen. Jede Angabe trägt ihre Quelle.
+
+**Rolle 2 Grenze:** Der Check belegt, dass Zitat und Zahl im Text stehen, nicht die Spalten-/Zeilenzuordnung. Fehlt der Methodenname im Zitat, steht im Zeugnis eine Warnung.
+
+**Fehlertext für Reparatur:** Ende von stderr (1500 Zeichen), keine LLM-Zusammenfassung. `fast` schreibt seinen Denkprozess in die Antwort und liefert abgeschnitten keinen Fehler. Modelle, die im Antworttext „denken“, brauchen bei Extraktionen viel `max_tokens` und Zerlegung in kleine Abschnitte.
+
+**Kosten (Token Factory, GCN mit Rolle 2 und 4, ein Paper): ca. 0,09 $** (vor Umstellung von Rolle 4 auf Super, bei Ultra). Der Kostenzähler liegt im LLM-Client und zählt alle Aufrufe.
+
 ## Unabhängiger Prüf-Harness
 
 Grundsatz: Agent liefert Vorhersagen, keine Zahlen.

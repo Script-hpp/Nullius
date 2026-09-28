@@ -40,6 +40,7 @@ DEFAULT_SEEDS = 5
 MAX_PARALLEL = 4  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
+TRIAGE_CHARS = 1500
 WORKDIR = "/work"
 PAPERS_YAML = REPO_ROOT / "benchmark" / "papers.yaml"
 
@@ -50,10 +51,6 @@ PLAN_SYSTEM = (
 CODE_SYSTEM = (
     "You write a single self-contained Python script for an ML reproduction. "
     "Reply with exactly one ```python code block and no other prose."
-)
-TRIAGE_SYSTEM = (
-    "Summarise this Python crash in at most 3 lines: root cause and the line/module involved. "
-    "No fix suggestions."
 )
 
 
@@ -172,7 +169,12 @@ class Orchestrator:
         )
 
     def triage(self, text: str) -> str:
-        return self._ask("fast", TRIAGE_SYSTEM, text[-4000:], max_tokens=300).content.strip()
+        """Fehlertext fuer die Reparatur: Ende von stderr/stdout (dort steht der Traceback).
+
+        Eine LLM-Zusammenfassung durch `fast` taugt nicht: Die Free- und TF-Modelle schreiben
+        ihren Denkprozess in die Antwort, abgeschnitten bei max_tokens kam kein Fehler an.
+        """
+        return text.strip()[-TRIAGE_CHARS:]
 
     # ---- Sandbox ------------------------------------------------------------
     def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task, metric: str) -> dict:
