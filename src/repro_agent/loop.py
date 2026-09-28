@@ -282,20 +282,30 @@ class Orchestrator:
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
         code = self.write_code(plan, task)
         seeds = list(range(self.seeds or paper.get("seeds", DEFAULT_SEEDS)))
-        # Seeds parallel; jeder Seed repariert den Code fuer sich (kein geteilter Zustand).
-        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(seeds))) as pool:
-            results = list(pool.map(
-                lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd), seeds
-            ))
-        measured = [v for v, _ in results if v is not None]
-        notes = [n for _, n in results if n]
+        # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
+        # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
+        v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
+        measured = [] if v0 is None else [v0]
+        notes = [] if note0 is None else [note0]
+        if v0 is None:
+            notes.append("Restliche Seeds nicht gestartet: kein lauffaehiger Code")
+        else:
+            rest = seeds[1:]
+            if rest:
+                with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(rest))) as pool:
+                    results = list(pool.map(
+                        lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd),
+                        rest,
+                    ))
+                measured += [v for v, _, _ in results if v is not None]
+                notes += [n for _, n, _ in results if n]
         dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes))
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
         plan: str, code: str, seed: int,
-    ) -> tuple[float | None, str | None]:
-        """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis)."""
+    ) -> tuple[float | None, str | None, str]:
+        """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis, letzter Code)."""
         summary = None
         for n in range(1, self.settings.max_attempts_per_claim + 1):
             code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
@@ -321,15 +331,15 @@ class Orchestrator:
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)
             if value is not None:
-                return value, None
+                return value, None, code
             if status == "timeout":
-                return None, f"Seed {seed}: Timeout, kein Reparaturversuch"
+                return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
             if n < self.settings.max_attempts_per_claim:
                 try:
                     code = self.repair_code(plan, task, code, summary or "")
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
-                    return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen"
-        return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})"
+                    return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
+        return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen ({summary})", code
 
     def _verdict(
         self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str]
