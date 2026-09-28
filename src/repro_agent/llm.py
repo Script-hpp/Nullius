@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,6 +58,8 @@ class LLMClient:
             timeout=120.0,
         )
         self._cache: dict[str, dict] = {}
+        self.total_cost_usd = 0.0   # alle Aufrufe dieser Instanz (Rollen 2/4 eingeschlossen)
+        self._cost_lock = threading.Lock()
         if self.settings.llm_cache:
             self._load_cache()
 
@@ -102,6 +105,8 @@ class LLMClient:
             return response
 
         response = self._call_with_retry(model, messages, temperature, max_tokens, timeout_s)
+        with self._cost_lock:
+            self.total_cost_usd += response.cost_usd
         self._log_cost(response)
 
         if self.settings.llm_cache:

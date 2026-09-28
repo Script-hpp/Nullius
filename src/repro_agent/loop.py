@@ -104,14 +104,18 @@ class Orchestrator:
         self.details: list[SetupDetail] = []
         self.paper_text: PaperText | None = None
         self.last_run_dir: Path | None = None
+        self._cost_base = 0.0
         self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
         if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
             self.settings = dataclasses.replace(self.settings, llm_cache=False)
         self.llm = LLMClient(self.settings)
         self.sandbox = get_sandbox(self.settings.sandbox_backend)
-        self.spent_usd = 0.0
         self._lock = threading.Lock()  # LLM-Aufrufe/Kostenzaehler/Dossier aus Seed-Threads
+
+    @property
+    def spent_usd(self) -> float:
+        return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
 
     # ---- LLM ----------------------------------------------------------------
     def _ask(self, role, system: str, user: str, max_tokens: int | None = None) -> LLMResponse:
@@ -123,7 +127,6 @@ class Orchestrator:
                 [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 max_tokens=max_tokens,
             )
-            self.spent_usd += resp.cost_usd
         return resp
 
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
@@ -311,6 +314,7 @@ class Orchestrator:
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
         self.last_run_dir = run_dir
+        self._cost_base = self.llm.total_cost_usd
         if self.use_tavily:
             self.resolve_targets(paper, claims)
         if self.use_setup_details and self.paper_text is not None:
@@ -335,7 +339,7 @@ class Orchestrator:
         finally:
             dossier.save(ts)
             (run_dir / "zeugnis.md").write_text(render_markdown(dossier))
-        print(f"Fertig. Bericht: {run_dir / 'zeugnis.md'}")
+        print(f"Fertig. Bericht: {run_dir / 'zeugnis.md'} | Kosten: {self.spent_usd:.4f} $", flush=True)
         return dossier
 
 

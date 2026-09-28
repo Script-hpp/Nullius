@@ -6,11 +6,14 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-# override=True: leere/alte Shell-Variablen duerfen .env nicht still ueberdecken.
-load_dotenv(ENV_PATH, override=True)
+# Nicht-leere Shell-Variablen gewinnen (z. B. `LLM_PROVIDER=tokenfactory repro-agent ...`).
+# Leere oder fehlende Variablen fuellt .env, damit ein leerer Key nichts still ueberdeckt.
+for _key, _value in dotenv_values(ENV_PATH).items():
+    if _value is not None and not os.environ.get(_key):
+        os.environ[_key] = _value
 
 
 def require_env(*names: str) -> None:
