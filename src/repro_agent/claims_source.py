@@ -164,7 +164,8 @@ def _column_caveat(method: str, quote: str) -> str | None:
         return None
     return (
         f"Methodenname '{method}' steht nicht im Zitat: Der Check belegt nur, dass die Zahl im "
-        "Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Tabellenkopf fehlt)."
+        "Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Zuordnung nicht automatisch "
+        "geprueft, Kopfzeile ggf. von Hand gegenlesen)."
     )
 
 

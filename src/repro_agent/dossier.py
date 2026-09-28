@@ -35,12 +35,16 @@ class Attempt:
     error_summary: str | None  # verdichtet von `fast`
     tavily_queries: list[str] = field(default_factory=list)
     cost_usd: float = 0.0
+    metrics: dict | None = None   # alle Metriken des Harness (nicht nur die des Claims)
 
 
 @dataclass
 class Verdict:
     claim_id: str
-    urteil: Literal["reproduziert", "teilweise", "nicht reproduziert", "nicht reproduzierbar (Setup)"]
+    urteil: Literal[
+        "reproduziert", "teilweise", "nicht reproduziert", "nicht reproduzierbar (Setup)",
+        "Agenten-Fehler vermutet",
+    ]
     measured_mean: float
     measured_std: float
     explanation: str
@@ -56,6 +60,7 @@ class Dossier:
     isolation: list[str] = field(default_factory=list)  # aktive Schutzschichten gegen Leaks
     setup_details: list[dict] = field(default_factory=list)  # Tavily-Rolle 4: belegte Angaben im Prompt
     repo: dict | None = None      # {url, commit}: Repo, aus dem Setup-Details gelesen wurden
+    baselines: dict | None = None  # triviale Vergleichswerte des Harness (ohne Training)
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
 
     def save(self, timestamp: str) -> Path:
@@ -77,6 +82,7 @@ class Dossier:
             setup_details=data.get("setup_details", []),
             repo=data.get("repo"),
             mode=data.get("mode", "nachbau"),
+            baselines=data.get("baselines"),
         )
 
     def condensed_for_reasoning(self) -> str:

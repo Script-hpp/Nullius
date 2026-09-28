@@ -30,6 +30,7 @@ def main() -> None:
         raw = Path(tmp)
         cora_data.download_raw(raw)
         labels = cora_data.test_labels(raw)
+        majority = cora_data.majority_baseline(raw)
 
     error = verify.check_plausibility(preds, set(labels))
     if error:
@@ -43,7 +44,10 @@ def main() -> None:
         print(json.dumps({"status": "ungueltig", "reason": "Vorhersagen sind keine ganzen Zahlen"}))
         return
     acc = metrics.accuracy(pred_list, [int(labels[i]) for i in ids])
-    print(json.dumps({"status": "ok", "metrics": {"accuracy": acc}}))
+    print(json.dumps({
+        "status": "ok", "metrics": {"accuracy": acc},
+        "baselines": {"majority": {"accuracy": majority}},
+    }))
 
 
 main()

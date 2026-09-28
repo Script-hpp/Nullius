@@ -55,11 +55,14 @@ def main() -> None:
         return fail("Alle Vorhersagen (fast) identisch -- verdaechtig")
 
     with tempfile.TemporaryDirectory() as tmp:
-        truth = etth1_data.targets(etth1_data.download(Path(tmp)), PRED_LEN)
+        csv_path = etth1_data.download(Path(tmp))
+        truth = etth1_data.targets(csv_path, PRED_LEN)
+        base = etth1_data.baselines(csv_path, PRED_LEN)
     p, t = pred.reshape(-1).tolist(), truth.reshape(-1).tolist()
     print(json.dumps({
         "status": "ok",
         "metrics": {"mse": metrics.mse(p, t), "mae": metrics.mae(p, t)},
+        "baselines": base,
     }))
 
 

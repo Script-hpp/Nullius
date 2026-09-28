@@ -44,6 +44,7 @@ class LLMResponse:
     completion_tokens: int
     cost_usd: float
     cached: bool
+    finish_reason: str | None = None
 
 
 class BadResponse(Exception):
@@ -152,6 +153,7 @@ class LLMClient:
                     completion_tokens=usage.get("completion_tokens", 0),
                     cost_usd=usage.get("cost") or self._estimate_cost(model, usage),
                     cached=False,
+                    finish_reason=data["choices"][0].get("finish_reason"),
                 )
             except (httpx.HTTPStatusError, httpx.TransportError, BadResponse, ValueError) as exc:
                 last_error = exc
@@ -177,6 +179,7 @@ class LLMClient:
             "completion_tokens": response.completion_tokens,
             "cost_usd": 0.0 if response.cached else response.cost_usd,
             "cache_hit": response.cached,
+            "finish_reason": response.finish_reason,
         }
         with COST_LOG_PATH.open("a") as f:
             f.write(json.dumps(entry) + "\n")

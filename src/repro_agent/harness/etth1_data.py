@@ -52,6 +52,19 @@ def targets(csv_path: Path, pred_len: int = PRED_LEN) -> np.ndarray:
     return z[idx]
 
 
+def baselines(csv_path: Path, pred_len: int = PRED_LEN) -> dict:
+    """Triviale Vorhersagen ohne Training: letzten Wert fortschreiben (Repeat) und Null.
+    Repeat entspricht der Baseline in Table 2 des DLinear-Papers (1,295 / 0,713 bei Horizont 96)."""
+    z = load_standardized(csv_path)
+    starts = VAL_END + np.arange(n_windows(pred_len))
+    truth = z[starts[:, None] + np.arange(pred_len)[None, :]]
+    repeat = np.repeat(z[starts - 1][:, None, :], pred_len, axis=1)
+    return {
+        "repeat": {"mse": float(((repeat - truth) ** 2).mean()), "mae": float(np.abs(repeat - truth).mean())},
+        "zero": {"mse": float((truth ** 2).mean()), "mae": float(np.abs(truth).mean())},
+    }
+
+
 def prepare_public(csv_path: Path, out_npz: Path, pred_len: int = PRED_LEN) -> None:
     """Schreibt Train/Val und die Testeingaben. Die Zielwerte der Testfenster fehlen."""
     z = load_standardized(csv_path)

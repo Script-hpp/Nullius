@@ -57,6 +57,27 @@ def judge(measured: float, target: float, tolerance: float) -> Urteil:
     return "nicht reproduziert"
 
 
+LOWER_IS_BETTER = {"mse", "mae"}
+
+
+def agent_fault_suspected(metric: str, measured: float, target: float, baselines: dict | None) -> str | None:
+    """Deterministische Plausibilitaet: schlechter als die beste triviale Baseline, obwohl der
+    Paperwert besser als diese Baseline ist. Dann ist ein Fehler im Agenten-Code wahrscheinlicher als
+    ein Befund ueber das Paper. (Ist schon der Paperwert nicht besser als die Baseline, gilt der Schutz
+    nicht, sonst wuerde ein Paper mit wirklich schwacher Methode dem Agenten angelastet.)"""
+    values = {name: b[metric] for name, b in (baselines or {}).items() if metric in b}
+    if not values:
+        return None
+    lower = metric in LOWER_IS_BETTER
+    name, best = (min if lower else max)(values.items(), key=lambda kv: kv[1])
+    worse = measured > best if lower else measured < best
+    target_better = target < best if lower else target > best
+    if worse and target_better:
+        return (f"Messwert {measured:.4f} ist schlechter als die triviale Baseline '{name}' "
+                f"({best:.4f}), der Paperwert {target} ist besser")
+    return None
+
+
 def verify(
     predictions_csv: str,
     labels: dict[str, str | float],

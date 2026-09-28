@@ -63,6 +63,14 @@ def prepare_public(raw_dir: Path, out_npz: Path) -> None:
     )
 
 
+def majority_baseline(raw_dir: Path) -> float:
+    """Accuracy auf dem Test, wenn immer die haeufigste Klasse der 140 Trainingsknoten vorhergesagt wird."""
+    _, labels_onehot, _, test_idx = load_raw(raw_dir)
+    labels = labels_onehot.argmax(1)
+    majority = int(np.bincount(labels[:N_TRAIN]).argmax())
+    return float((labels[test_idx] == majority).mean())
+
+
 def test_labels(raw_dir: Path) -> dict[str, str]:
     _, labels_onehot, _, test_idx = load_raw(raw_dir)
     labels = labels_onehot.argmax(1)

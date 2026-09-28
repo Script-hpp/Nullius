@@ -28,7 +28,7 @@ from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
-from .harness.verify import judge
+from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, get_sandbox
@@ -215,7 +215,10 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": out.get("reason", "")}
         if metric not in out.get("metrics", {}):
             return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
-        return {"status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"]}
+        return {
+            "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
+            "baselines": out.get("baselines"),
+        }
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
     def resolve_targets(self, paper: dict, claims: list[Claim]) -> None:
@@ -300,7 +303,7 @@ class Orchestrator:
                     ))
                 measured += [v for v, _, _ in results if v is not None]
                 notes += [n for _, n, _ in results if n]
-        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes))
+        dossier.verdicts.append(self._verdict(claim, measured, len(seeds), notes, dossier.baselines))
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
@@ -327,10 +330,12 @@ class Orchestrator:
                 dossier.attempts.append(Attempt(
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
-                    cost_usd=self.spent_usd,
+                    cost_usd=self.spent_usd, metrics=res.get("metrics"),
                 ))
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)
+            if res.get("baselines"):
+                dossier.baselines = res["baselines"]
             if value is not None:
                 return value, None, code
             if status == "timeout":
@@ -344,7 +349,8 @@ class Orchestrator:
         return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen (letzter Fehler: {last_line})", code
 
     def _verdict(
-        self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str]
+        self, claim: Claim, measured: list[float], n_seeds: int, notes: list[str],
+        baselines: dict | None = None,
     ) -> Verdict:
         tried = "; ".join(notes)
         if not measured:
@@ -356,11 +362,19 @@ class Orchestrator:
         mean = statistics.mean(measured)
         std = statistics.stdev(measured) if len(measured) > 1 else 0.0
         urteil = judge(mean, claim.target, claim.tolerance)
+        fault = agent_fault_suspected(claim.metric, mean, claim.target, baselines)
+        if fault:
+            urteil = "Agenten-Fehler vermutet"
         text = (
             f"Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) {std:.4f}. "
             f"Mit unserem Setup gemessen ({len(measured)} von {n_seeds} Seeds, Zielwert "
             f"{claim.target} +/- {claim.tolerance}, {claim.source}): Mittel {mean:.4f}."
         )
+        if fault:
+            text += f" Agenten-Fehler vermutet, kein Befund ueber das Paper: {fault}."
+        if len(measured) > 1 and std == 0.0:
+            text += (" WARNUNG: alle Seeds liefern denselben Wert, der Lauf ist vermutlich "
+                     "deterministisch, die Seeds tragen keine Information.")
         return Verdict(
             claim_id=claim.id, urteil=urteil, measured_mean=mean, measured_std=std,
             sources=list(claim.evidence_urls),
