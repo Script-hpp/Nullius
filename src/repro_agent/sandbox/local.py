@@ -11,7 +11,9 @@ from .base import Branch, RunResult, SnapshotId
 
 
 class LocalSandbox:
-    def base_snapshot(self, image: str, setup_cmds: list[str]) -> SnapshotId:
+    def base_snapshot(
+        self, image: str, setup_cmds: list[str], label: str | None = None
+    ) -> SnapshotId:
         container_name = f"repro-base-{uuid.uuid4().hex[:8]}"
         subprocess.run(
             ["docker", "run", "-d", "--name", container_name, image, "sleep", "infinity"],
@@ -20,7 +22,7 @@ class LocalSandbox:
         try:
             for cmd in setup_cmds:
                 subprocess.run(["docker", "exec", container_name, "sh", "-c", cmd], check=True)
-            snapshot_tag = f"repro-snapshot:{uuid.uuid4().hex[:12]}"
+            snapshot_tag = f"repro-snapshot:{label or uuid.uuid4().hex[:12]}"
             subprocess.run(["docker", "commit", container_name, snapshot_tag], check=True)
             return snapshot_tag
         finally:

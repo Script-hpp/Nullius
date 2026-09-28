@@ -30,6 +30,7 @@ from contree_sdk.sdk.exceptions import OperationTimedOutError
 from .base import Branch, RunResult, SnapshotId
 
 # SDK-Default (64 KiB) schneidet stdout still ab, Server-Maximum ist < 10 MiB.
+SNAPSHOT_PREFIX = "repro-snapshot-"
 _MAX_OUTPUT = 10 * 1024 * 1024 - 1
 _CHUNK = 7 * 1024 * 1024  # base64 -> ~9.3 MiB
 
@@ -39,11 +40,14 @@ class NebiusSandbox:
         self._client = ContreeSync()
         self._sessions: dict[Branch, object] = {}
 
-    def base_snapshot(self, image: str, setup_cmds: list[str]) -> SnapshotId:
+    def base_snapshot(
+        self, image: str, setup_cmds: list[str], label: str | None = None
+    ) -> SnapshotId:
         img = self._client.images.oci(image)
         for cmd in setup_cmds:
             img = img.run(shell=cmd, disposable=False).wait()
-        tag = f"repro-snapshot-{uuid_lib.uuid4().hex[:12]}"
+        # label = Lauf-ID/Claim, damit cleanup_snapshots.py gezielt aufraeumen kann.
+        tag = f"{SNAPSHOT_PREFIX}{label or uuid_lib.uuid4().hex[:12]}"
         img = img.tag_as(tag)
         return tag
 

@@ -2,6 +2,9 @@
 
 TODO Meilenstein 1: erster Durchlauf GCN/Cora end-to-end.
 TODO Meilenstein 2: Fehler-Rollback, Tavily-Rollen 1-5 verdrahten.
+  Timeout (RunResult.timed_out) ist eigener Status "timeout", KEIN "fehler": keine
+  Tavily-Fehlersuche, kein Code-Reparaturversuch; stattdessen Datenmenge verkleinern
+  oder Experiment verwerfen.
 TODO Meilenstein 3: Abweichungs-Loop, Einwaende als Branches, Seeds.
 """
 

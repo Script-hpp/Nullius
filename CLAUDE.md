@@ -220,7 +220,7 @@ class Attempt:
     parent_snapshot: str
     code_hash: str
     seed: int
-    status: Literal["fehler", "abweichung", "stabil", "ungueltig"]
+    status: Literal["fehler", "abweichung", "stabil", "ungueltig", "timeout"]
     measured: float | None
     error_summary: str | None  # verdichtet von `fast`
     tavily_queries: list[str]
@@ -302,7 +302,7 @@ Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer 
 ## Offene Punkte
 
 - [x] Sandbox-Beta-Freigabe abwarten (genehmigt, kostenlos)
-- [ ] Rate-Limits von Nebius-Sandbox prüfen
+- [x] Rate-Limits von Nebius-Sandbox prüfen (2026-09-28: 20 parallele Branches ohne Fehler; höher nicht getestet, Semaphor im Orchestrator trotzdem sinnvoll)
 - [ ] Exakte Modell-IDs auf OpenRouter und Token Factory (`GET /v1/models`) eintragen
 - [ ] Builders-Program-Codes einlösen
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren

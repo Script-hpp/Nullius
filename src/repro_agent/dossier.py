@@ -29,7 +29,7 @@ class Attempt:
     parent_snapshot: str
     code_hash: str
     seed: int
-    status: Literal["fehler", "abweichung", "stabil", "ungueltig"]
+    status: Literal["fehler", "abweichung", "stabil", "ungueltig", "timeout"]
     measured: float | None
     error_summary: str | None  # verdichtet von `fast`
     tavily_queries: list[str] = field(default_factory=list)
