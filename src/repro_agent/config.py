@@ -1,0 +1,77 @@
+"""Liest .env, waehlt Anbieter (openrouter | tokenfactory) und Sandbox-Backend."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(ENV_PATH)
+
+
+def _get(name: str, default: str | None = None) -> str:
+    value = os.getenv(name, default)
+    if value is None:
+        raise RuntimeError(f"Fehlende Umgebungsvariable: {name}")
+    return value
+
+
+def _get_optional(name: str, default: str = "") -> str:
+    return os.getenv(name, default)
+
+
+@dataclass(frozen=True)
+class LLMConfig:
+    provider: str            # "openrouter" | "tokenfactory"
+    base_url: str
+    api_key: str
+    model_fast: str
+    model_code: str
+    model_reasoning: str
+
+
+@dataclass(frozen=True)
+class Settings:
+    llm: LLMConfig
+    sandbox_backend: str      # "local" | "nebius"
+    tavily_api_key: str
+    max_cost_per_run_usd: float
+    max_attempts_per_claim: int
+    llm_cache: bool
+
+
+def load_settings() -> Settings:
+    provider = _get_optional("LLM_PROVIDER", "openrouter").lower()
+
+    if provider == "openrouter":
+        llm = LLMConfig(
+            provider="openrouter",
+            base_url="https://openrouter.ai/api/v1",
+            api_key=_get("OPENROUTER_API_KEY"),
+            model_fast=_get("OR_MODEL_FAST"),
+            model_code=_get("OR_MODEL_CODE"),
+            model_reasoning=_get("OR_MODEL_REASONING"),
+        )
+    elif provider == "tokenfactory":
+        llm = LLMConfig(
+            provider="tokenfactory",
+            base_url="https://api.tokenfactory.nebius.com/v1/",
+            api_key=_get("NEBIUS_API_KEY"),
+            model_fast=_get("TF_MODEL_FAST"),
+            model_code=_get("TF_MODEL_CODE"),
+            model_reasoning=_get("TF_MODEL_REASONING"),
+        )
+    else:
+        raise RuntimeError(f"Unbekannter LLM_PROVIDER: {provider}")
+
+    return Settings(
+        llm=llm,
+        sandbox_backend=_get_optional("SANDBOX_BACKEND", "nebius").lower(),
+        tavily_api_key=_get_optional("TAVILY_API_KEY"),
+        max_cost_per_run_usd=float(_get_optional("MAX_COST_PER_RUN_USD", "0.50")),
+        max_attempts_per_claim=int(_get_optional("MAX_ATTEMPTS_PER_CLAIM", "4")),
+        llm_cache=_get_optional("LLM_CACHE", "on").lower() == "on",
+    )
