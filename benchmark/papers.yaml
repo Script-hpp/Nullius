@@ -5,6 +5,9 @@ papers:
     arxiv_url: "https://arxiv.org/abs/1609.02907"
     dataset: "Cora"
     expectation: "reproduziert"
+    fidelity:   # Methodentreue-Pruefung: Bausteine werden einmal aus dem Paper extrahiert und eingefroren
+      method: "Graph Convolutional Network (GCN) for semi-supervised node classification"
+      keywords: ["renormalization trick", "layer-wise propagation", "two-layer", "graph convolution"]
     seeds: 10   # pro Task festgelegt: GCN ~25 s pro Seed; teurere Experimente weniger
     claims:
       # TODO: Zielwert gegen Tabelle 2 im Paper pruefen (spaeter via Tavily Rolle 2 automatisch).
@@ -27,6 +30,9 @@ papers:
     arxiv_url: "https://arxiv.org/abs/2205.13504"
     dataset: "ETTh1"
     expectation: "reproduziert"
+    fidelity:
+      method: "DLinear (decomposition linear model for long-term time series forecasting)"
+      keywords: ["DLinear", "moving average", "decomposition"]
     seeds: 5
     claims:
       # Zielwerte manuell (ohne Tavily) aus Table 2, ungeprueft; mit Tavily belegt ersetzt.

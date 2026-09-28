@@ -114,7 +114,8 @@ def fetch_paper_text(
 def _norm(s: str) -> str:
     """Whitespace glaetten. PDF-Extraktion liefert Zahlen als '81 .5' -> '81.5'."""
     s = re.sub(r"\s+", " ", s.replace(chr(0xA0), " ")).strip().lower()
-    return re.sub(r"(\d) \.(\d)", r"\1.\2", s)
+    s = re.sub(r"(\d) \.(\d)", r"\1.\2", s)
+    return re.sub(r"(?<=[a-z])-\s?(?=[a-z])", "", s)   # Silbentrennung der PDF-Extraktion ("prop-agation")
 
 
 def _windows(text: str, keyword: str, width: int = 2500, max_chars: int = 14000) -> str:
