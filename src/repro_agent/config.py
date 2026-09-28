@@ -9,7 +9,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(ENV_PATH)
+# override=True: leere/alte Shell-Variablen duerfen .env nicht still ueberdecken.
+load_dotenv(ENV_PATH, override=True)
+
+
+def require_env(*names: str) -> None:
+    missing = [n for n in names if not os.getenv(n)]
+    if missing:
+        raise RuntimeError(f"Fehlt oder leer: {', '.join(missing)} (.env pruefen)")
 
 
 def _get(name: str, default: str | None = None) -> str:
@@ -45,6 +52,9 @@ class Settings:
 
 def load_settings() -> Settings:
     provider = _get_optional("LLM_PROVIDER", "openrouter").lower()
+
+    if _get_optional("SANDBOX_BACKEND", "nebius").lower() == "nebius":
+        require_env("NEBIUS_API_KEY", "NEBIUS_PROJECT_ID")
 
     if provider == "openrouter":
         llm = LLMConfig(
