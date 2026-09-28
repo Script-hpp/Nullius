@@ -47,6 +47,16 @@ def check_plausibility(predictions: dict[str, str], expected_ids: set[str]) -> s
     return None
 
 
+def judge(measured: float, target: float, tolerance: float) -> Urteil:
+    """Abstandstabelle aus CLAUDE.md: <= Toleranz, <= 3x Toleranz, darueber."""
+    distance = abs(measured - target)
+    if distance <= tolerance:
+        return "reproduziert"
+    if distance <= 3 * tolerance:
+        return "teilweise"
+    return "nicht reproduziert"
+
+
 def verify(
     predictions_csv: str,
     labels: dict[str, str | float],
@@ -68,11 +78,4 @@ def verify(
     measured = metric_fn(preds, truth)
     distance = abs(measured - target)
 
-    if distance <= tolerance:
-        urteil: Urteil = "reproduziert"
-    elif distance <= 3 * tolerance:
-        urteil = "teilweise"
-    else:
-        urteil = "nicht reproduziert"
-
-    return VerifyResult(urteil=urteil, measured=measured, reason=f"Abstand zu Ziel: {distance:.4f}")
+    return VerifyResult(urteil=judge(measured, target, tolerance), measured=measured, reason=f"Abstand zu Ziel: {distance:.4f}")

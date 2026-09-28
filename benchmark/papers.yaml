@@ -5,6 +5,14 @@ papers:
     arxiv_url: "https://arxiv.org/abs/1609.02907"
     dataset: "Cora"
     expectation: "reproduziert"
+    claims:
+      # TODO: Zielwert gegen Tabelle 2 im Paper pruefen (spaeter via Tavily Rolle 2 automatisch).
+      - id: gcn_cora_acc
+        text: "GCN erreicht 81,5 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.815
+        tolerance: 0.01   # feste Regel: +-1 Prozentpunkt bei Accuracy
+        source: "Tabelle 2, arXiv v1"
 
   - id: shchur_pitfalls_2018
     title: "Pitfalls of Graph Neural Network Evaluation"

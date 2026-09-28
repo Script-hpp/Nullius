@@ -1,2 +1,4 @@
 def main() -> None:
-    print("Hello from repro-agent!")
+    from .loop import main as loop_main
+
+    loop_main()
