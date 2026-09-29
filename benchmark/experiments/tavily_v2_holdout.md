@@ -21,3 +21,12 @@ Alle Prüffälle laufen wie die Entwicklungsmenge auf **Cora**. Eine Verbesserun
 - Papers-Eintrag: `velickovic_dgi_2019` mit Echt- und Placebo-Claim in `benchmark/papers.yaml` (10 Seeds statt 50 Läufe; Toleranz ±0,01 wie bei allen Accuracy-Claims).
 - Zielwert-Prüfung: Die Spaltenprüfung erkennt die DGI-Zeile (Cora Position 1 von 3, ohne LLM geprüft). Dabei wurde ein Fehler der Spaltenprüfung behoben (Kopf mit Zeilennamen „Raw features“ wurde als fünf Spalten gelesen).
 - Für GAT und DGI müssen Referenzurteile vor den Läufen stehen (GAT-Referenzlösung fehlt noch).
+
+## Nachtrag: Referenzlösungen der Prüfmenge (ohne LLM, vor jedem v2-Lauf; `results/cora_references_holdout.txt`)
+| Paper | Referenz (Mittel, 10 Seeds) | Zielwert ± Toleranz | Abstand | Referenzurteil |
+|---|---|---|---|---|
+| GAT (`tests/reference/gat_cora_reference.py`) | **0,8280** (Std 0,0050) | 0,830 ± 0,01 | 0,002 | reproduziert |
+| DGI (`tests/reference/dgi_cora_reference.py`) | **0,8047** (Std 0,0077) | 0,823 ± 0,01 | 0,0183 | teilweise |
+
+- **GAT:** Die 83,0 % sind im Harness auf CPU erreichbar: Eine sorgfältige menschliche Referenz nach Paper und Original-Code (8 Köpfe × 8 Merkmale, ELU, Dropout 0,6 auf Eingaben und Attention-Koeffizienten, L2 5e-4, Adam 0,005, Early Stopping auf Validierungsloss und -accuracy mit Geduld 100) landet bei 0,828. Die Lücke des Agentenlaufs (0,8036) liegt damit am Agenten-Code, nicht an Protokoll oder Umgebung. GAT ist als Prüffall brauchbar (halb sauber, siehe oben).
+- **DGI:** Meine Referenz erreicht den Paperwert nicht ganz (0,8047 gegen 0,823, Referenzurteil „teilweise“). Das Referenzurteil ist damit „teilweise“, nicht „reproduziert“; ein Agent, der „teilweise“ erreicht, stimmt überein. Ich habe die Referenz nicht nachträglich auf den Paperwert hingetrimmt (Lernschritte der logistischen Regression stehen nicht im Paper-Text). Ob die Lücke an meiner Referenz oder am Protokoll liegt, ist offen; das ist eine Schwäche des DGI-Prüffalls und wird so berichtet.

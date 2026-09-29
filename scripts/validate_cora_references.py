@@ -18,7 +18,8 @@ from repro_agent.tasks import cora_task
 
 def main() -> None:
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    refs = {name: (REPO_ROOT / "tests" / "reference" / f"{name}_cora_reference.py").read_text() for name in ("gcn", "sgc")}
+    names = sys.argv[2:] or ["gcn", "sgc"]     # z. B. `... 10 gat dgi`
+    refs = {name: (REPO_ROOT / "tests" / "reference" / f"{name}_cora_reference.py").read_text() for name in names}
     orch = Orchestrator.__new__(Orchestrator)
     orch.sandbox = get_sandbox("nebius")
     orch._smoke_ok = {hashlib.sha256(c.encode()).hexdigest() for c in refs.values()}
