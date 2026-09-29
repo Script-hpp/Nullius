@@ -121,8 +121,12 @@ def _norm(s: str) -> str:
     return re.sub(r"(?<=[a-z])-\s?(?=[a-z])", "", s)   # Silbentrennung der PDF-Extraktion ("prop-agation")
 
 
-def _windows(text: str, keyword: str, width: int = 2500, max_chars: int = 14000) -> str:
-    """Nur Textstellen um das Stichwort an das Modell geben (Tabellen), nicht das ganze Paper."""
+def _windows(text: str, keyword: str, width: int = 2500, max_chars: int = 14000, prefer: str | None = None) -> str:
+    """Nur Textstellen um das Stichwort an das Modell geben (Tabellen), nicht das ganze Paper.
+
+    Passt mehr Text um das Stichwort, als `max_chars` erlaubt (Datensatzname steht im ganzen Paper), wuerde der Anfang
+    des Papers die Tabelle verdraengen (GAT: Tabelle 2 stand hinter der Grenze). Mit `prefer` (Methodenname) kommen
+    zuerst die Fenster, die ihn enthalten und viele Dezimalzahlen tragen; die Reihenfolge im Text bleibt erhalten."""
     spans: list[tuple[int, int]] = []
     for m in re.finditer(re.escape(keyword), text, flags=re.I):
         lo, hi = max(0, m.start() - width), min(len(text), m.end() + width)
@@ -130,6 +134,18 @@ def _windows(text: str, keyword: str, width: int = 2500, max_chars: int = 14000)
             spans[-1] = (spans[-1][0], hi)
         else:
             spans.append((lo, hi))
+    if prefer:
+        def score(span: tuple[int, int]) -> tuple[int, int]:
+            chunk = text[span[0]:span[1]]
+            return (int(prefer.lower() in chunk.lower()), len(re.findall(r"\d+ ?\.\d", chunk)))
+
+        chosen, used = [], 0
+        for span in sorted(spans, key=score, reverse=True):
+            if used and used + (span[1] - span[0]) > max_chars:
+                continue
+            chosen.append(span)
+            used += span[1] - span[0]
+        spans = sorted(chosen)
     return "\n...\n".join(text[a:b] for a, b in spans)[:max_chars]
 
 
@@ -189,7 +205,7 @@ def _column_status(
 def extract_target(
     llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str, percent: bool = True
 ) -> TargetEvidence:
-    context = _windows(paper.text, dataset)
+    context = _windows(paper.text, dataset, prefer=method)
     if not context:
         raise ExtractionInvalid(f"'{dataset}' kommt im Quelltext nicht vor")
     prompt = [

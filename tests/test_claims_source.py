@@ -32,3 +32,19 @@ def test_missing_fields_rejected():
 
 def test_fixture_is_valid_papertext():
     PaperText(**json.loads(FIXTURE.read_text()))
+
+
+def test_windows_keep_the_result_table_when_the_dataset_name_fills_the_paper():
+    import json
+    from pathlib import Path
+
+    from repro_agent.claims_source import _windows
+
+    fix = Path(__file__).resolve().parents[1] / "benchmark" / "fixtures"
+    gat = json.loads((fix / "1710.10903.json").read_text())["text"]
+    assert "GAT (ours) 83.0" not in _windows(gat, "Cora")[:14000]          # altes Verhalten: Tabelle abgeschnitten
+    assert "GAT (ours) 83.0" in _windows(gat, "Cora", prefer="GAT")        # mit Methodenname bleibt sie drin
+    for fixture, kw, method, needle in [("1609.02907", "Cora", "GCN (this paper)", "81 .5"), ("1811.05868", "CORA", "GCN", "81 .5"),
+                                        ("1902.07153", "Cora", "SGC", "81 .0")]:
+        text = json.loads((fix / f"{fixture}.json").read_text())["text"]
+        assert needle in _windows(text, kw, prefer=method)                  # bisherige Papers weiter abgedeckt
