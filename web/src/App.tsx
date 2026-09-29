@@ -7,7 +7,7 @@ import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
 import { Badge, Section, Stat, fmt } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
-import { METHOD, OVERALL, RESULT, de2en } from './labels'
+import { METHOD, OVERALL, RESULT, de2en, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const useHash = () => {
@@ -25,6 +25,25 @@ function parseDate(ts: string) {
   if (dateStr.length !== 8) return ts
   const d = new Date(parseInt(dateStr.slice(0,4)), parseInt(dateStr.slice(4,6))-1, parseInt(dateStr.slice(6,8)))
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function translateClaim(text: string) {
+  if (!text) return text
+  let t = text
+  t = t.replace(/erreicht/g, 'achieves')
+  t = t.replace(/Accuracy auf/g, 'accuracy on')
+  t = t.replace(/groesste Komponente/g, 'largest component')
+  t = t.replace(/zufaellige/g, 'random')
+  t = t.replace(/,(\d) %/g, '.$1%') // "81,0 %" -> "81.0%"
+  return t
+}
+
+function colorForTone(tone: Tone) {
+  if (tone === 'green') return 'text-emerald-400'
+  if (tone === 'amber') return 'text-amber-400'
+  if (tone === 'red') return 'text-rose-400'
+  if (tone === 'violet') return 'text-violet-400'
+  return 'text-zinc-400'
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -61,7 +80,7 @@ function DashboardHeader({ count }: { count: number }) {
             <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
-            Reproduced
+            Verified
           </div>
           <span className="font-mono text-2xl font-semibold text-zinc-100">2</span>
         </div>
@@ -70,7 +89,7 @@ function DashboardHeader({ count }: { count: number }) {
             <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
               <AlertCircle className="w-3.5 h-3.5" />
             </div>
-            Partially
+            Partial
           </div>
           <span className="font-mono text-2xl font-semibold text-zinc-100">2</span>
         </div>
@@ -96,7 +115,7 @@ function Home({ runs }: { runs: RunRef[] }) {
       <DashboardHeader count={runs.length} />
       
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold tracking-wider uppercase text-zinc-500">Recent Evaluations</h2>
+        <h2 className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500">Recent Evaluations</h2>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -110,28 +129,36 @@ function Home({ runs }: { runs: RunRef[] }) {
             <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="flex flex-col p-6 rounded-xl border border-zinc-800 bg-zinc-950/50 no-underline transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/80 group">
               <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium font-mono">
+                <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-medium font-mono uppercase tracking-wider">
                   <BookOpen className="w-3.5 h-3.5" />
                   {r.paper_id}
                 </div>
-                <div className="text-xs text-zinc-500">{parseDate(r.timestamp)}</div>
+                <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">{parseDate(r.timestamp)}</div>
               </div>
               
               <h3 className="mt-1 text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
-              {claim && <p className="mt-2 text-sm text-zinc-400 line-clamp-2 leading-relaxed">{claim.text}</p>}
+              {claim && <p className="mt-2 text-[13px] text-zinc-400 line-clamp-2 leading-relaxed">{translateClaim(claim.text)}</p>}
               
-              <div className="mt-auto pt-6 flex items-center justify-between">
+              <div className="mt-auto pt-6 flex items-end justify-between">
                 {v ? (
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-col gap-3">
                     <Badge tone={res!.tone}>{res!.label}</Badge>
-                    <span className="font-mono flex items-baseline gap-1.5">
-                      <span className="text-emerald-400 font-bold">{fmt(v.measured_mean, 3)}</span>
-                      <span className="text-zinc-600 text-xs">vs</span>
-                      <span className="text-zinc-500 text-xs">{claim?.target}</span>
-                    </span>
+                    <div className="flex items-center gap-4 border-l-2 border-zinc-800 pl-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Claimed</span>
+                        <span className="font-mono text-sm text-zinc-400">{claim?.target}</span>
+                      </div>
+                      <div className="text-zinc-700">
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Measured</span>
+                        <span className={`font-mono text-sm font-bold ${colorForTone(res!.tone)}`}>{fmt(v.measured_mean, 3)}</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <span className="text-xs text-zinc-500">Evaluating...</span>
+                  <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Evaluating...</span>
                 )}
                 
                 <div className="text-zinc-600 group-hover:text-zinc-300 transition-all duration-200 group-hover:translate-x-1">
@@ -158,7 +185,7 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   const v: Json = d.verdicts?.[0]
   if (!claim) return <main className="mx-auto max-w-6xl px-8 py-10 muted">Empty run.</main>
   
-  const res = v ? de2en(RESULT, v.urteil) : { label: 'no verdict', tone: 'gray' as const }
+  const res = v ? de2en(RESULT, v.urteil) : { label: 'NO VERDICT', tone: 'gray' as const }
   const meth = v ? de2en(METHOD, v.methode) : { label: '–', tone: 'gray' as const }
   const attempts: Json[] = (d.attempts ?? []).filter((a: Json) => a.claim_id === claim.id)
   const end = run.events.find((e) => e.type === 'run_end')
@@ -169,24 +196,24 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-8 pb-20">
       <div className="pt-2">
-        <a href="#" className="inline-flex items-center gap-1.5 text-zinc-500 text-sm font-medium hover:text-zinc-200 transition-colors">
-          <ArrowRight className="w-4 h-4 rotate-180" /> Back to Overview
+        <a href="#" className="inline-flex items-center gap-1.5 text-zinc-500 text-xs font-medium uppercase tracking-wider hover:text-zinc-200 transition-colors">
+          <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Overview
         </a>
       </div>
       
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8 border-b border-zinc-800">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8 border-b border-zinc-800/50">
         <div className="flex items-center gap-3 text-zinc-500 text-xs mb-3 font-mono">
           <span>{run.ref.paper_id}</span>
           <span>•</span>
           <span>{parseDate(run.ref.timestamp)}</span>
           <span>•</span>
-          <span className="uppercase tracking-wider">{d.mode === 'nachbau' ? 'rebuild (own code)' : d.mode}</span>
+          <span className="uppercase tracking-wider">{d.mode === 'nachbau' ? 'REBUILD (OWN CODE)' : d.mode.toUpperCase()}</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-100 leading-tight">{run.ref.title}</h1>
-        <p className="mt-4 text-lg text-zinc-400 max-w-3xl leading-relaxed">{claim.text}</p>
+        <p className="mt-4 text-lg text-zinc-400 max-w-3xl leading-relaxed">{translateClaim(claim.text)}</p>
         
         {paperUrl && (
-          <a className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors" href={paperUrl} target="_blank" rel="noreferrer">
+          <a className="inline-flex items-center gap-2 mt-5 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors" href={paperUrl} target="_blank" rel="noreferrer">
             <BookOpen className="w-4 h-4" />
             View Source Paper
           </a>
@@ -194,59 +221,59 @@ function RunView({ ref_ }: { ref_: RunRef }) {
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Final Verdict" hint="Evaluation result" className="lg:col-span-1 border-t-4" style={{ borderTopColor: `var(--${res.tone})` }}>
-          <div className="space-y-4">
+        <Section title="Final Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
+          <div className="space-y-6">
             <div>
-              <div className="text-zinc-500 mb-2 text-xs font-semibold uppercase tracking-wider">1 · Reproducibility</div>
+              <div className="text-zinc-500 mb-2 text-[10px] font-semibold uppercase tracking-widest">1 · Reproducibility</div>
               <Badge tone={res.tone}>{res.label}</Badge>
             </div>
             <div>
-              <div className="text-zinc-500 mb-2 text-xs font-semibold uppercase tracking-wider">2 · Method fidelity</div>
+              <div className="text-zinc-500 mb-2 text-[10px] font-semibold uppercase tracking-widest">2 · Method Fidelity</div>
               <Badge tone={meth.tone}>{meth.label}</Badge>
             </div>
-            <div className="pt-2">
-              <div className="text-zinc-500 mb-1 text-xs font-semibold uppercase tracking-wider">Overall Statement</div>
-              <span className="text-sm font-medium text-zinc-200">{OVERALL[v?.gesamt ?? ''] ?? (v?.methode === 'nicht geprueft' ? 'provisional' : '–')}</span>
+            <div className="pt-3 border-t border-zinc-800/50">
+              <div className="text-zinc-500 mb-1 text-[10px] font-semibold uppercase tracking-widest">Overall Statement</div>
+              <span className="text-sm font-medium text-zinc-200">{OVERALL[v?.gesamt ?? ''] ?? (v?.methode === 'nicht geprueft' ? 'Provisional' : '–')}</span>
             </div>
-            <p className="text-zinc-500 text-xs leading-relaxed pt-3 border-t border-zinc-800 mt-4">
+            <p className="text-zinc-600 text-[11px] leading-relaxed">
               A hit on the number alone proves nothing about the method: a closed-form regression can hit a target value, so the second axis exists.
             </p>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/50">
-            <Stat label="measured" value={fmt(v?.measured_mean, 4)} sub={`± ${fmt(v?.measured_std, 4)} std`} />
-            <Stat label="target" value={claim.target} sub={`± ${claim.tolerance}`} />
+          <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800/30">
+            <Stat label="Measured" value={fmt(v?.measured_mean, 4)} sub={`± ${fmt(v?.measured_std, 4)} std`} />
+            <Stat label="Claimed" value={claim.target} sub={`± ${claim.tolerance}`} />
           </div>
           <div className="mt-4 text-right">
-             <span className="text-xs text-zinc-500 font-mono">Cost: {cost != null ? `$${Number(cost).toFixed(3)} net` : '–'}</span>
+             <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-mono">Cost: {cost != null ? `$${Number(cost).toFixed(3)} net` : '–'}</span>
           </div>
         </Section>
-        <Section title="Measurements" hint={`${attempts.length} runs, one bar each`} className="lg:col-span-2">
+        <Section title="Measurements" hint={`${attempts.length} runs`} className="lg:col-span-2">
           <AttemptChart dossier={d} claimId={claim.id} />
         </Section>
       </div>
 
-      <Section title="Evidence" hint="left: what Tavily found · right: what the sandbox measured">
+      <Section title="Evidence" hint="Left: Extracted from paper · Right: Measured in sandbox">
         <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />
       </Section>
 
-      <Section title="Branch Tree" hint="click a run for details · violet edges = repair after an error">
+      <Section title="Branch Tree" hint="Violet edges indicate agent repairs">
         <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />
       </Section>
 
-      <Section title="Run Log" hint="Live event stream">
+      <Section title="Execution Log" hint="Live event stream">
         <Replay events={run.events} />
       </Section>
 
       <Section title="Source Files">
-        <div className="mb-4 flex gap-2 border-b border-zinc-800 pb-3">
+        <div className="mb-4 flex gap-2 border-b border-zinc-800/50 pb-3">
           {(['zeugnis', 'code', 'plan'] as const).map((t) => tabs[t] != null && (
             <button key={t} onClick={() => setTab(t)} 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${tab === t ? 'bg-zinc-100 text-zinc-900 shadow-sm' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}>
+              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors cursor-pointer ${tab === t ? 'bg-zinc-100 text-zinc-900 shadow-sm' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}>
               {t === 'zeugnis' ? 'Certificate' : t === 'code' ? 'Agent Code' : 'Execution Plan'}
             </button>
           ))}
         </div>
-        <pre className="font-mono max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-zinc-950 border border-zinc-800 text-zinc-300 text-[13px] leading-relaxed">
+        <pre className="font-mono max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-[#0a0a0a] border border-zinc-800/50 text-zinc-300 text-[13px] leading-relaxed">
           {tabs[tab] ?? 'not available'}
         </pre>
       </Section>
@@ -268,7 +295,7 @@ export default function App() {
         {runs === null ? (
           <div className="mx-auto max-w-6xl px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-zinc-600 animate-pulse" />
-            <span className="text-zinc-500 font-medium">Loading evaluation data...</span>
+            <span className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
           </div>
         ) : ref ? <RunView ref_={ref} key={ref.id} /> : <Home runs={runs} />}
       </div>
