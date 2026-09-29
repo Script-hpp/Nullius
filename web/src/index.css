@@ -1,33 +1,39 @@
 @import "tailwindcss";
 
-:root {
-  --bg: #0b0f14;
-  --panel: #121821;
-  --panel-2: #172030;
-  --line: #243044;
-  --text: #e6edf6;
-  --muted: #8a9bb3;
-  --green: #3ddc97;
-  --amber: #f5b841;
-  --red: #ff6b6b;
-  --blue: #5ab0ff;
-  --violet: #b394ff;
+html, body, #root { 
+  min-height: 100%; 
+  height: 100%;
 }
 
-html, body, #root { min-height: 100%; }
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 10% -10%, #14213a 0%, var(--bg) 55%);
-  color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: #000000;
+  color: #ededed;
+  font-family: 'Geist Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
-.panel-2 { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; }
-.muted { color: var(--muted); }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Transitions */
+a, button, .panel { transition: all 0.2s ease-out; }
+
+/* React Flow customization */
 .react-flow__attribution { display: none; }
-.react-flow { --xy-background-color: transparent; --xy-controls-button-background-color: var(--panel-2);
-  --xy-controls-button-color: var(--text); --xy-controls-button-border-color: var(--line); }
-::selection { background: #2b4a7a; }
+.react-flow { 
+  --xy-background-color: transparent; 
+  --xy-controls-button-background-color: #111111;
+  --xy-controls-button-color: #ededed; 
+  --xy-controls-button-border-color: #27272a; /* zinc-800 */
+}
+::selection { background: #3b82f6; color: #fff; }
 .react-flow__handle { opacity: 0; pointer-events: none; }
+
+/* Scrollbar styling for a cleaner look */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
