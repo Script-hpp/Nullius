@@ -1,5 +1,5 @@
 """Menschliche Referenzloesung Cora-LCC (Shchur et al. 2018, Tabelle 4/Anhang C): GCN, Hidden 64, lr 0.01, Dropout 0.8,
-L2 1e-3 auf der ersten Schicht, Adam, Early Stopping (Validierungsloss, Geduld 50), beste Gewichte zuruecksetzen.
+L2 1e-3 auf der ersten Schicht, Adam, Early Stopping (Gesamt-Validierungsloss inkl. Regularisierung, Geduld 50, max. 10000 Epochen), beste Gewichte zuruecksetzen.
 Dient nur als Selbsttest der Pipeline, nie als Agenten-Ergebnis. Aufruf im Branch: SPLIT=0 SEED=0 python train.py
 """
 
@@ -42,12 +42,13 @@ def forward(train):
 
 
 best, best_state, wait = 1e9, None, 0
-for epoch in range(1000):
+for epoch in range(10000):
     opt.zero_grad()
     F.cross_entropy(forward(True)[tr], y[tr]).backward()
     opt.step()
     with torch.no_grad():
-        v = F.cross_entropy(forward(False)[va], y[va]).item()
+        # Anhang C: Early Stopping auf dem GESAMT-Validierungsloss (Datenloss + Regularisierungsloss, TF-l2_loss = 0,5 * lambda * ||W||^2)
+        v = F.cross_entropy(forward(False)[va], y[va]).item() + 0.5 * 1e-3 * (W1 ** 2).sum().item()
     if v < best:
         best, best_state, wait = v, [p.detach().clone() for p in (W1, b1, W2, b2)], 0
     else:

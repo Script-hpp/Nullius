@@ -98,10 +98,11 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
-        seeds: int | None = None, claim_ids: list[str] | None = None,
+        seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
     ) -> None:
         self.use_tavily = use_tavily
         self.use_setup_details = use_tavily and setup_details   # Rolle 4 haengt am Paper-Text
+        self.paper_only = paper_only   # Rolle 4 liest nur den Paper-Text, kein Repo/README (Shchur-Experiment)
         self.seeds = seeds
         self.claim_ids = claim_ids   # nur diese Claims des Papers laufen lassen (None = alle)
         self.details: list[SetupDetail] = []
@@ -348,6 +349,8 @@ class Orchestrator:
     def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
         """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
         docs = [Doc("paper", self.paper_text.text)]
+        if self.paper_only:
+            return docs, None
         url = find_repo_url(self.paper_text.text)
         if not url:
             return docs, None
@@ -546,6 +549,7 @@ def main() -> None:
             use_tavily="--no-tavily" not in sys.argv,
             fresh="--fresh" in sys.argv,
             setup_details="--no-setup-details" not in sys.argv,
+            paper_only="--paper-only" in sys.argv,
         ).run(paper_id)
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")

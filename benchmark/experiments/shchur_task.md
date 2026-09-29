@@ -32,3 +32,11 @@ Die Aussage des Papers ist eigentlich eine Rangfolge (GCN vorn bei zufälligen S
 - Baselines Split 0: Mehrheitsklasse 0,138, Softmax ohne Graph 0,509 (Paper: LogReg 57,1, MLP 58,2 mit Tuning).
 - Dauer: 8,5 Minuten für 30 Läufe (5 parallel).
 Das ist ein Selbsttest der Pipeline, kein Reproduktionsurteil für den Agenten.
+
+## 3. Nachtrag: Referenz mit 30 Splits (90 Läufe) und mit Anhang-C-Stoppkriterium
+- Referenz angepasst auf Anhang C (Early Stopping auf Gesamt-Validierungsloss inkl. Regularisierung, max. 10000 Epochen): 10 Splits Mittel **0,8065**
+  (vorher 0,8068, `results/lcc_harness_reference_v1.txt`). Das Stoppkriterium erklärt den Abstand zu 81,5 nicht.
+- **30 Splits × 3 Initialisierungen (90 Läufe, `results/lcc_harness_reference_90runs.txt`): Mittel 0,8111, Std 0,0124.** Der Abstand zum Paperwert schrumpft
+  von 0,85 auf 0,39 Prozentpunkte. Die ersten 10 Splits liegen also etwa 0,5 Punkte unter dem Mittel aller 30; ein Teil des Abstands ist Stichprobe der 10 Splits.
+- Folge: Mit den festen 10 Splits (`seeds: 30`) erreicht selbst die Referenz nur 0,8065, Abweichung 0,0085 von 0,815 bei Toleranz 0,01. Der Spielraum für Agenten-Codes ist klein.
+  Bewusst unverändert (Vorab-Festlegung); Alternative wäre mehr Splits (Kosten: 8,5 Minuten je 10 Splits).
