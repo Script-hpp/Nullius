@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code } from 'lucide-react'
+import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Info } from 'lucide-react'
 import { Section } from './ui'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
@@ -17,6 +17,49 @@ const PURPOSE_TITLE: Record<string, string> = { find_papers: 'Find papers', read
 
 const fmtDate = (ts: number) => new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const fmtSec = (s: number) => `${Math.max(0, s).toFixed(1)}s`
+
+// Info icon with a short explanation: hover (mouse), tap (touch) and keyboard focus; Escape or a second tap closes it.
+function Hint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ left: 0, width: 240 })
+  const ref = useRef<HTMLButtonElement>(null)
+  // Keep the popover inside the viewport (16 px margin), also on narrow phones.
+  const show = (on: boolean) => {
+    if (on && ref.current) {
+      const r = ref.current.getBoundingClientRect()
+      const width = Math.min(240, window.innerWidth - 32)
+      setPos({ width, left: Math.min(Math.max(r.left, 16), window.innerWidth - 16 - width) - r.left })
+    }
+    setOpen(on)
+  }
+  return (
+    <span className="relative inline-flex align-middle normal-case tracking-normal font-normal">
+      <button ref={ref} type="button" aria-label={text} aria-expanded={open}
+        onClick={(e) => { e.stopPropagation(); show(!open) }}
+        onPointerEnter={(e) => { if (e.pointerType === 'mouse') show(true) }}
+        onPointerLeave={(e) => { if (e.pointerType === 'mouse') show(false) }}
+        onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) show(true) }}
+        onBlur={() => show(false)}
+        onKeyDown={(e) => { if (e.key === 'Escape') show(false) }}
+        className="p-0.5 text-zinc-500 hover:text-zinc-300 focus-visible:text-zinc-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-zinc-500 rounded cursor-pointer">
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <span role="tooltip" style={{ left: pos.left, width: pos.width }}
+          className="absolute top-full z-20 mt-1.5 rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-[11px] leading-relaxed text-zinc-300 shadow-lg">
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
+const HINTS = {
+  protocol: 'Protocol = how the paper split the data (and, for forecasting, input length and horizon). Numbers are only comparable when our re-run uses the same split.',
+  column: "We check that the number sits in the proposed method's column of the results table, not in a baseline column.",
+  unverified: 'Nullius has only read this claim. It has not re-run the experiment yet.',
+  cache: 'Read in an earlier run; no new API calls.',
+}
 
 function useTween() {
   const reduce = useReducedMotion()
@@ -165,7 +208,10 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-300">
             <CircleDashed className="w-3.5 h-3.5" />
             Unverified candidate
-            {p.cached && <span className="font-normal normal-case tracking-normal text-zinc-600">from cache</span>}
+            <Hint text={HINTS.unverified} />
+            {p.cached && (
+              <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-zinc-600">from cache<Hint text={HINTS.cache} /></span>
+            )}
           </div>
         </div>
       )}
@@ -184,7 +230,9 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
           </div>
           <QuoteView quote={c.quote} target={c.target} />
           {c.column_check && (
-            <p className="text-[11px] text-zinc-500">{c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}</p>
+            <p className="inline-flex items-center gap-1 text-[11px] text-zinc-500">
+              {c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}<Hint text={HINTS.column} />
+            </p>
           )}
         </div>
       )}
@@ -192,9 +240,9 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
       {p.state === 'candidate' && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/60 pt-3">
           {p.protocol === 'passt' ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" />Protocol confirmed by quote</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" />Protocol confirmed by quote<Hint text={HINTS.protocol} /></span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-400"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-400"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text<Hint text={HINTS.protocol} /></span>
           )}
           <span className="flex items-center gap-4 text-[11px] text-zinc-500">
             <span><span className="font-mono text-zinc-300">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
@@ -407,6 +455,7 @@ export function Discovery() {
             <Funnel funnel={view.funnel} />
           </Section>
           <Section title="Papers" hint={`${papers.length} seen`}>
+            <p className="mb-4 text-[12px] leading-relaxed text-zinc-500">Candidates are claims we can re-run. None of them has been re-run yet.</p>
             <div className="space-y-3">
               {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} />)}
               {!papers.length && <p className="text-[13px] text-zinc-600">Papers appear here as Tavily finds and reads them.</p>}
