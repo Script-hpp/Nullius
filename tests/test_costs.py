@@ -175,3 +175,17 @@ def test_budget_since_counts_only_newer_entries(tmp_path):
     assert costs.logged_gross_total(path, 0.19, "2026-09-29T08:00Z") == pytest.approx(1.19)
     assert costs.logged_gross_total(path, 0.19) == pytest.approx(6 * 1.19)
     assert costs.parse_since("2026-09-29T08:00:00") == costs.parse_since("2026-09-29T08:00Z")
+
+
+def test_truncated_response_is_not_cached(tmp_path, monkeypatch):
+    monkeypatch.setattr(llm_mod, "CACHE_PATH", tmp_path / "cache.jsonl")
+    cut = httpx.Response(200, json={
+        "choices": [{"message": {"content": "thinking..."}, "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 6000},
+    })
+    c, calls = _client(tmp_path, monkeypatch, [cut, _ok()])
+    c.settings = __import__("dataclasses").replace(c.settings, llm_cache=True)
+    assert c.complete("code", MSG).finish_reason == "length"
+    assert not (tmp_path / "cache.jsonl").exists()
+    assert c.complete("code", MSG).content == "hi"      # zweiter Aufruf geht wieder ans Netz
+    assert len(calls) == 2

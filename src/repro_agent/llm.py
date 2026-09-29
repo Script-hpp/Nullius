@@ -136,7 +136,7 @@ class LLMClient:
         response = self._call_with_retry(model, messages, temperature, max_tokens, timeout_s)
         self._book(response)
 
-        if self.settings.llm_cache:
+        if self.settings.llm_cache and response.finish_reason != "length":   # abgeschnittene Antworten nie cachen
             self._append_cache(cache_key, response)
 
         return response

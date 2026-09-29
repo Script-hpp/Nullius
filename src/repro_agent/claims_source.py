@@ -203,11 +203,15 @@ def extract_target(
         )},
     ]
     last: ExtractionInvalid | None = None
-    for _ in range(3):  # Free-Modelle antworten gelegentlich ohne nutzbares JSON
-        resp = llm.complete("fast", prompt, temperature=0.0, max_tokens=6000, timeout_s=400)
+    max_tokens = 6000
+    for attempt in range(3):  # Free-Modelle antworten gelegentlich ohne nutzbares JSON
+        # Wiederholung mit anderer Temperatur (sonst kaeme dieselbe Antwort aus dem Cache) und bei Abschnitt doppelter Grenze
+        resp = llm.complete("fast", prompt, temperature=0.1 * attempt, max_tokens=max_tokens, timeout_s=400)
         data = _last_json_object(resp.content)
         if data is None:
             last = ExtractionInvalid("Modellantwort enthaelt kein JSON")
+            if resp.finish_reason == "length":
+                max_tokens *= 2
             continue
         try:
             value = verify_extraction(data, paper.text, percent)
