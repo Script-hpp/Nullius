@@ -15,7 +15,7 @@ nicht, ein Misserfolg widerlegt sie nicht.
 
 ## Aufbau
 - Ein Claim `shchur_gcn_cora_acc`: GCN, Cora (größte Komponente), zufällige 20/30/Rest-Splits, Accuracy, Ziel 0,815 (Tabelle 1, Rolle 2), Toleranz 0,01.
-- 30 Läufe pro Generierung (10 Splits × 3 Initialisierungen, dieselben 10 Splits in jeder Generierung), Urteil auf dem Mittelwert (`shchur_task.md`).
+- 30 Läufe pro Generierung (30 Splits × 1 Initialisierung, dieselben 30 Splits in jeder Generierung und in beiden Armen = gepaarter Vergleich), Urteil auf dem Mittelwert (`shchur_task.md`, Abschnitt 4).
 - Zwei Arme, je **6 frische** Generierungen (LLM-Cache aus), abwechselnd (A0, B0, A1, B1, …).
   - Arm A: ohne Rolle 4 (`setup_details=False`).
   - Arm B: Rolle 4 **nur aus dem Paper-Text** (`paper_only=True`: kein README, kein Repo, kein Sandbox-Klon).
@@ -39,10 +39,10 @@ Sonst: nicht bestätigt, Ergebnis wird mit allen Zahlen berichtet.
 
 ## Einschränkungen (vorab)
 - 6 Generierungen pro Arm, ein Paper, ein Claim; Modelle nicht deterministisch. Bei 6 gegen 6 sind kleine Unterschiede nicht belastbar.
-- Die menschliche Referenz mit den Werten aus Anhang C liegt bei 0,8065 (Abweichung 0,0085, innerhalb der Toleranz, aber knapp; `shchur_task.md`).
-  Der Spielraum ist klein: schon kleine Abweichungen vom Protokoll führen zu „teilweise“.
+- Die menschliche Referenz mit den Werten aus Anhang C liegt mit den 30 Splits bei 0,8107 (Abweichung 0,0043 von 0,815; `shchur_task.md`, Abschnitt 4).
+  Der Spielraum bis zur Toleranz (0,01) beträgt damit etwa 0,6 Prozentpunkte.
 - Ohne Rolle 4 kennt das Modell die Standard-GCN-Werte (Hidden 16, Dropout 0,5, L2 5e-4, 200 Epochen) womöglich aus dem Gedächtnis; die Unterschiede zu Anhang C
   können klein sein, dann ist der Versuch wenig empfindlich.
-- Die zehn Splits sind in allen Generierungen gleich; ein systematischer Abstand des Mittels zum Paperwert durch diese Stichprobe wirkt auf beide Arme gleich.
+- Die 30 Splits sind in allen Generierungen gleich; ein systematischer Abstand des Mittels zum Paperwert durch diese Stichprobe wirkt auf beide Arme gleich.
 - Arm-Unterschiede können auch vom Umfang der Prompts kommen, nicht nur vom Inhalt.
 - Anhang C steht im extrahierten Paper-Text (Fixture, v2 PDF); Rolle 4 findet ihn nur, wenn die abschnittsweise Extraktion ihn trifft.

@@ -1,6 +1,6 @@
 """Validiert die Cora-LCC-Pipeline (Datenvorbereitung, Harness) mit der menschlichen Referenzloesung, ohne LLM.
 
-  uv run python scripts/validate_lcc_harness.py [n_seeds]     (Standard 30 = 10 Splits x 3 Initialisierungen)
+  uv run python scripts/validate_lcc_harness.py [n_seeds]     (Standard 30 = 30 Splits x 1 Initialisierung; 90 = 30 x 3)
 Ausgabe: Mittel/Std der Accuracy ueber alle Laeufe, je Split-Mittel, Baselines. Kein Paper-Reproduktionsurteil.
 """
 

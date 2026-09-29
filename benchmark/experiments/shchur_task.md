@@ -11,14 +11,14 @@ Belegt im Paper-Text (wörtlich geprüft, nicht aus dem Gedächtnis):
 - Trainingsprotokoll (Anhang C, Tabelle 4): GCN Hidden 64, lr 0,01, Dropout 0,8, L2 0,001, Adam, Early Stopping auf Gesamt-Validierungsloss (Geduld 50), Gewichte des besten Schritts zurücksetzen, Glorot-Init, Nullbias.
 
 Unsere Abweichungen (offen im Zeugnis zu nennen):
-- **30 statt 2000 Läufe: 10 zufällige Splits × 3 Initialisierungen** (`seeds: 30`; Lauf `s` = Split `s // 3`, Initialisierung `s % 3`).
+- **30 statt 2000 Läufe: 30 zufällige Splits × 1 Initialisierung** (`seeds: 30`; Lauf `s` = Split `s`, Initialisierung 0). Ursprünglich 10 Splits × 3 Initialisierungen, vor jedem Agentenlauf umgestellt (siehe Abschnitt 3).
   Splits sind pro Split-Nummer deterministisch (`harness/cora_lcc_data.py`, `RandomState(1000 + k)`), nicht identisch zu denen des Papers.
 - Der Agent bekommt pro Lauf nur die Datei seines Splits (Testlabels fehlen); der Harness erzeugt Split und Testlabels selbst neu.
 - Die Rolle 4 (Setup-Details) darf die Angaben des Papers übernehmen (Anhang C steht im extrahierten Text).
 
 **Claim** `shchur_gcn_cora_acc`: GCN erreicht 81,5 % auf Cora (größte Komponente, zufällige 20/30/Rest-Splits), Tabelle 1.
 **Toleranz ±0,01** (feste Regel für Accuracy). Begründung: Die Std 1,3 des Papers gilt für Einzelläufe; der Mittelwert über 30 Läufe
-streut bei uns grob mit 1,3/√10 ≈ 0,4 Prozentpunkten (Splits dominieren, geschätzt, nicht belegt). Urteil auf dem Mittelwert über alle 30 Läufe.
+streut bei uns mit Std/√30: Die Referenz hat Std 1,18 Prozentpunkte über 30 Läufe (Abschnitt 3), also Standardfehler ≈ 0,22 Prozentpunkte. Urteil auf dem Mittelwert über alle 30 Läufe.
 Nicht aufgenommen: ein MLP-Claim (58,2). Die No-Graph-Baseline des Harness liegt bei ~0,51 und die Fehlerregel „schlechter als Baseline“ könnte für ein
 so schwaches Modell fälschlich „Agenten-Fehler vermutet“ auslösen. Falls später aufgenommen, vorab die Fehlerregel dafür entscheiden.
 Die Aussage des Papers ist eigentlich eine Rangfolge (GCN vorn bei zufälligen Splits, GAT vorn bei Planetoid); dieser Task prüft nur die GCN-Zahl.
@@ -40,3 +40,10 @@ Das ist ein Selbsttest der Pipeline, kein Reproduktionsurteil für den Agenten.
   von 0,85 auf 0,39 Prozentpunkte. Die ersten 10 Splits liegen also etwa 0,5 Punkte unter dem Mittel aller 30; ein Teil des Abstands ist Stichprobe der 10 Splits.
 - Folge: Mit den festen 10 Splits (`seeds: 30`) erreicht selbst die Referenz nur 0,8065, Abweichung 0,0085 von 0,815 bei Toleranz 0,01. Der Spielraum für Agenten-Codes ist klein.
   Bewusst unverändert (Vorab-Festlegung); Alternative wäre mehr Splits (Kosten: 8,5 Minuten je 10 Splits).
+
+## 4. Umstellung auf 30 Splits × 1 Initialisierung (entschieden vor jedem Agentenlauf)
+Begründung (statistisch): Der Referenztest mit 90 Läufen zeigt, dass die Varianz überwiegend zwischen den Splits entsteht (die ersten 10 Splits lagen
+0,5 Punkte unter dem Mittel aller 30, Abschnitt 3). Mehr Splits statt mehr Initialisierungen verbessert die Schätzung des Mittelwerts bei gleichen Kosten (30 Läufe).
+Beide Arme laufen auf denselben 30 Splits (gepaarter Vergleich). Kein Agenten-Ergebnis lag zum Zeitpunkt der Entscheidung vor.
+Prüflauf der neuen Konfiguration (Referenz, `results/lcc_harness_reference_30x1.txt`): 30/30 gültig, **Mittel 0,8107, Std 0,0118**, Abweichung von 0,815: 0,43 Prozentpunkte.
+Das Mittel der 90 Läufe (30 Splits × 3 Init.) war 0,8111; die Initialisierungen ändern es nicht (0,0004).

@@ -24,7 +24,7 @@ papers:
     arxiv_url: "https://arxiv.org/abs/1811.05868"
     dataset: "Cora-LCC"   # Cora, groesste zusammenhaengende Komponente, zufaellige 20/30/Rest-Splits (Paper, Abschnitt 3)
     expectation: "Ranking haengt vom Split ab"
-    seeds: 30   # 10 Splits x 3 Initialisierungen (Paper: 100 x 20 = 2000 Laeufe, nicht bezahlbar), siehe experiments/shchur_task.md
+    seeds: 30   # 30 Splits x 1 Initialisierung (Paper: 100 x 20 = 2000 Laeufe, nicht bezahlbar), siehe experiments/shchur_task.md
     claims:
       # Zielwert Tabelle 1 (Text der Fixture 1811.05868.json v2): GCN CORA 81.5 +- 1.3 (Mittel und Std ueber 100 Splits x 20 Init.)
       # Toleranz vorab: feste Regel +-1 Prozentpunkt bei Accuracy (Std 1,3 des Papers gilt fuer Einzelwerte, nicht fuer den Mittelwert).

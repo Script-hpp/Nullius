@@ -150,7 +150,7 @@ def etth1_task() -> Task:
     )
 
 
-CORA_LCC_SEEDS_PER_SPLIT = 3
+CORA_LCC_SEEDS_PER_SPLIT = 1
 CORA_LCC_DATA_DESCRIPTION = """\
 Dataset: Cora citation graph restricted to its largest connected component (2485 nodes, undirected),
 random split, file /data/cora_lcc_public.npz (numpy.load):
