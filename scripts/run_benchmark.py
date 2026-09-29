@@ -9,6 +9,7 @@ Arm A: ohne Tavily (`use_tavily=False`, keine Rollen 2 und 4). Arm B: mit Tavily
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 
 import yaml
@@ -17,6 +18,8 @@ from repro_agent.dossier import REPO_ROOT
 from repro_agent.llm import BillingBlocked
 from repro_agent.loop import Orchestrator
 
+CODE_COMMIT = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=REPO_ROOT).stdout.strip()
+DIRTY = bool(subprocess.run(["git", "status", "--porcelain", "src"], capture_output=True, text=True, cwd=REPO_ROOT).stdout.strip())
 N_GEN = 3
 STORE = REPO_ROOT / "runs" / "benchmark.jsonl"
 CLAIMS = {   # echter Claim, Placebo-Claim
@@ -45,7 +48,7 @@ def main() -> None:
             for arm, orch in arms.items():
                 if any(r["paper"] == paper and r["arm"] == arm and r["generation"] == g for r in rows):
                     continue
-                base = {"paper": paper, "arm": arm, "generation": g}
+                base = {"paper": paper, "arm": arm, "generation": g, "code_commit": CODE_COMMIT + ("+dirty" if DIRTY else "")}
                 try:
                     d = orch.run(paper)
                 except BillingBlocked:

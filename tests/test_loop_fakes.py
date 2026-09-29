@@ -196,3 +196,56 @@ def test_events_are_written_with_run_facts(tmp_path):
     att = [e for e in ev if e["type"] == "attempt"]
     assert att[0]["status"] == "fehler" and att[0]["branch_id"].startswith("b") and att[0]["parent_snapshot"] == "snap"
     assert next(e for e in ev if e["type"] == "verdict")["methode"] == "nicht geprueft"
+
+
+# ---- Infrastrukturfehler der Sandbox: Versuch auf neuem Branch wiederholen ----
+from repro_agent.sandbox.base import SandboxUnavailable
+
+
+class FlakySandbox(FakeSandbox):
+    """Wirft beim n-ten Aufruf von `run` einen Infrastrukturfehler."""
+
+    def __init__(self, fail_calls, **kw):
+        super().__init__(**kw)
+        self.fail_calls, self.calls = set(fail_calls), 0
+
+    def run(self, branch, cmd, timeout_s):
+        self.calls += 1
+        if self.calls in self.fail_calls:
+            raise SandboxUnavailable("Sandbox-API-Timeout bei run")
+        return super().run(branch, cmd, timeout_s)
+
+
+def test_infra_error_repeats_attempt_on_new_branch_and_gives_no_agent_failure(tmp_path, monkeypatch):
+    import repro_agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod.time, "sleep", lambda s: None)
+    sb = FlakySandbox({1, 2})                      # die ersten beiden Aufrufe scheitern: alter Branch verworfen
+    o, calls = make_orch(sb, seeds=1)
+    d = run_claim(o, tmp_path)
+    assert calls["repair"] == []                   # keine Reparatur: der Agenten-Code war nie schuld
+    assert len(d.attempts) == 1 and d.attempts[0].status in ("stabil", "abweichung")
+    assert d.attempts[0].branch_id not in ("b1", "b2")   # gewertet wurde ein spaeterer, frischer Branch
+
+
+def test_infra_error_after_all_retries_aborts_instead_of_judging(tmp_path, monkeypatch):
+    import repro_agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod.time, "sleep", lambda s: None)
+    sb = FlakySandbox(set(range(1, 1000)))
+    o, _ = make_orch(sb, seeds=1)
+    with pytest.raises(SandboxUnavailable):
+        run_claim(o, tmp_path)
+
+
+def test_nebius_guard_converts_api_timeout():
+    from contree_sdk.sdk.exceptions.api import ApiTimeoutError
+
+    from repro_agent.sandbox.nebius import NebiusSandbox
+
+    def boom():
+        raise ApiTimeoutError(request=None, response=None, timeout_type="read")
+
+    with pytest.raises(SandboxUnavailable, match="Sandbox-API-Timeout bei run"):
+        NebiusSandbox._guard("run", boom)
+    assert NebiusSandbox._guard("run", lambda: 42) == 42

@@ -40,3 +40,11 @@ Referenzlösungen: `tests/reference/*_reference.py`. Sie sind Selbsttests der Pi
 - Arm B unterscheidet sich außer durch Tavily auch durch Promptlänge.
 - Achse 2 fehlt: ein „reproduziert“ heißt „Zielwert erreicht“, nicht „Methode reproduziert“ (Beispiel Ridge-Regression bei DLinear).
 - Rolle 3 (Einwände) ist in diesem Benchmark nicht enthalten.
+
+## Nachtrag vor dem Neustart: Infrastruktur-Abbrüche und Code-Stände
+Festgelegt, ohne Kenntnis von Ergebnissen (es lagen nur die ersten 8 Urteile vor; keins wurde gedeutet).
+- **Was passiert ist:** Beim ersten Start (Commit `c120911`/`4de8caf`) brachen die Benchmark-Prozesse dreimal mit `contree_sdk ApiTimeoutError` (Lese-Timeout beim Statusabfragen einer Sandbox-Operation, SDK 0.3.6) ab: Shchur zweimal, GCN/DLinear/SGC einmal. Ursache: `transport_timeout` des SDK ist standardmäßig 10 s; unter paralleler Last antwortet die Beta-API nicht immer in dieser Zeit. Eine erneute Anfrage auf derselben SDK-Session geht nicht (die Session steht nach dem Fehler auf FAILED, im echten Test bestätigt: `ContreeImageStateError`).
+- **Regel:** Ein Infrastruktur-Abbruch ist **kein Ausfall des Agenten**. Die abgebrochene Generierung wird **vollständig neu gestartet** (Neustart macht bei der ersten fehlenden Generierung weiter, vollständige Generierungen bleiben) und im Bericht als „Infrastruktur-Abbruch, wiederholt“ vermerkt. Halbe Läufe schreiben keine Zeilen.
+- **Änderung der Infrastruktur (ändert keine Messwerte):** `transport_timeout` 60 s statt 10 s; ein Versuch wird bei `SandboxUnavailable` auf einem neuen Branch bis zu 3× wiederholt (kein Urteil über den Agenten); `MAX_PARALLEL_SEEDS` konfigurierbar (Standard 4).
+- **Code-Stand je Generierung:** Jede neue Zeile in `runs/benchmark.jsonl` trägt ein Feld `code_commit`. Zeilen **ohne** dieses Feld liefen mit dem Stand vor dem Nachtrag (Sandbox-Timeout 10 s, kein Wiederholen). Der Bericht nennt, welche Generierungen mit welchem Stand liefen. Der laufende GCN/DLinear/SGC-Prozess (gestartet bei `4de8caf`) läuft ohne Eingriff mit dem alten Stand weiter.
+- Shchur wird mit dem neuen Stand und `MAX_PARALLEL_SEEDS=3` (weniger gleichzeitige Anfragen) neu gestartet.

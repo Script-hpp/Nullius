@@ -14,7 +14,9 @@ import dataclasses
 import hashlib
 import json
 import re
+import os
 import statistics
+import sys
 import threading
 import time
 import uuid
@@ -35,16 +37,18 @@ from .harness.smoke import check_smoke_output
 from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
-from .sandbox.base import Branch, get_sandbox
+from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
 from .repo_source import fetch_readme, find_repo_url, read_repo
 from .setup_details import Doc, SetupDetail, extract_setup_details, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
-MAX_PARALLEL = 4  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
+MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
+INFRA_RETRIES = 3       # Wiederholungen eines Versuchs bei Sandbox-Infrastrukturfehler (neuer Branch je Versuch)
+INFRA_BACKOFF_S = 5.0
 TRIAGE_CHARS = 1500
 WORKDIR = "/work"
 PAPERS_YAML = REPO_ROOT / "benchmark" / "papers.yaml"
@@ -244,9 +248,25 @@ class Orchestrator:
         self._smoke_ok.add(code_hash)
         return None
 
+    def _attempt(self, snapshot: str, code: str, seed: int, task: Task, metric: str, **kw) -> tuple[str, dict]:
+        """Ein Versuch auf einem frischen Branch. Bei Infrastrukturfehler der Sandbox (SandboxUnavailable, z. B. API-Timeout)
+        wird der GANZE Versuch auf einem neuen Branch wiederholt (der alte ist unbrauchbar); nach INFRA_RETRIES Fehlern
+        steigt der Fehler auf und der Lauf bricht ab (kein Urteil ueber den Agenten). Rueckgabe: (Branch-ID, Ergebnis)."""
+        for k in range(INFRA_RETRIES):
+            branch = self.sandbox.branch(snapshot)
+            try:
+                return branch, self._run_and_eval(branch, code, seed, task, metric, **kw)
+            except SandboxUnavailable as exc:
+                self._emit("infra_retry", seed=seed, attempt=k + 1, error=str(exc)[:200])
+                print(f"WARNUNG: {exc} (Infrastruktur-Wiederholung {k + 1}/{INFRA_RETRIES})", file=sys.stderr, flush=True)
+                if k == INFRA_RETRIES - 1:
+                    raise
+                time.sleep(INFRA_BACKOFF_S * 2**k)
+        raise AssertionError("unreachable")
+
     def ablation_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str, acc_full: float) -> dict:
         """Zweiter Lauf desselben Codes auf Daten ohne Kanten (ablation_gcn.md). Deterministisch, kein LLM."""
-        res = self._run_and_eval(self.sandbox.branch(snapshot), code, seed, task, metric, ablate=True)
+        _, res = self._attempt(snapshot, code, seed, task, metric, ablate=True)
         acc_ablated = res.get("measured") if res["status"] == "ok" else None
         return {
             "accuracy_full": acc_full, "accuracy_ablated": acc_ablated,
@@ -447,9 +467,8 @@ class Orchestrator:
         for n in range(1, self.settings.max_attempts_per_claim + 1):
             code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
-            branch = self.sandbox.branch(snapshot)
             t0 = time.time()
-            res = self._run_and_eval(branch, code, seed, task, claim.metric, measure_coverage=seed == 0)
+            branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0)
             status, value = res["status"], res.get("measured")
             summary = None
             if status == "ok":

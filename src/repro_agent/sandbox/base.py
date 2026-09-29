@@ -17,6 +17,11 @@ class RunResult:
     timed_out: bool
 
 
+class SandboxUnavailable(RuntimeError):
+    """Infrastrukturfehler der Sandbox-API (z. B. Lese-Timeout beim Statusabfragen). Der Branch ist danach unbrauchbar
+    (die SDK-Session steht auf FAILED); der Aufrufer wiederholt den Versuch auf einem NEUEN Branch."""
+
+
 class Sandbox(Protocol):
     def base_snapshot(
         self, image: str, setup_cmds: list[str], label: str | None = None

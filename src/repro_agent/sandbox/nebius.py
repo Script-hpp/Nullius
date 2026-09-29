@@ -25,9 +25,15 @@ import shlex
 import uuid as uuid_lib
 
 from contree_sdk import ContreeSync
+from contree_sdk.config import ContreeConfig
 from contree_sdk.sdk.exceptions import OperationTimedOutError
+from contree_sdk.sdk.exceptions.api import ApiTimeoutError
 
-from .base import Branch, RunResult, SnapshotId
+from .base import Branch, RunResult, SandboxUnavailable, SnapshotId
+
+# SDK-Default `transport_timeout` = 10 s (HTTP-Lesetimeout je Anfrage, auch fuers Abfragen des Operationsstatus). Unter
+# paralleler Last antwortete die Beta-API teils nicht in 10 s: ApiTimeoutError beendete ganze Benchmark-Laeufe (3 Abbrueche).
+TRANSPORT_TIMEOUT_S = 60.0
 
 # SDK-Default (64 KiB) schneidet stdout still ab, Server-Maximum ist < 10 MiB.
 SNAPSHOT_PREFIX = "repro-snapshot-"
@@ -37,8 +43,17 @@ _CHUNK = 7 * 1024 * 1024  # base64 -> ~9.3 MiB
 
 class NebiusSandbox:
     def __init__(self) -> None:
-        self._client = ContreeSync()
+        self._client = ContreeSync(config=ContreeConfig(transport_timeout=TRANSPORT_TIMEOUT_S))
         self._sessions: dict[Branch, object] = {}
+
+    @staticmethod
+    def _guard(what: str, call):
+        """ApiTimeoutError -> SandboxUnavailable. Ein erneutes `.run()` auf derselben Session geht nicht (Session ist nach dem
+        Fehler FAILED, `ContreeImageStateError`), die Wiederholung braucht einen neuen Branch (Aufrufer)."""
+        try:
+            return call()
+        except ApiTimeoutError as exc:
+            raise SandboxUnavailable(f"Sandbox-API-Timeout bei {what}: {str(exc)[:200]}") from exc
 
     def base_snapshot(
         self, image: str, setup_cmds: list[str], label: str | None = None
@@ -63,9 +78,9 @@ class NebiusSandbox:
     ) -> RunResult:
         session = self._sessions[branch]
         try:
-            session = session.run(
+            session = self._guard("run", lambda: session.run(
                 shell=cmd, timeout=timeout_s, disposable=False, truncate_output_at=truncate_output_at
-            ).wait()
+            ).wait())
         except OperationTimedOutError:
             return RunResult(exit_code=-1, stdout="", stderr="", timed_out=True)
         self._sessions[branch] = session
@@ -81,12 +96,12 @@ class NebiusSandbox:
 
     def put_file(self, branch: Branch, path: str, content: bytes) -> None:
         session = self._sessions[branch]
-        self._sessions[branch] = session.apply_files({path: content})
+        self._sessions[branch] = self._guard("put_file", lambda: session.apply_files({path: content}))
 
     def put_files(self, branch: Branch, files: dict[str, bytes]) -> None:
         # Ein apply_files-Aufruf = eine Sandbox-Operation statt einer pro Datei.
         session = self._sessions[branch]
-        self._sessions[branch] = session.apply_files(files)
+        self._sessions[branch] = self._guard("put_files", lambda: session.apply_files(files))
 
     def get_file(self, branch: Branch, path: str) -> bytes:
         # `session.read()` liest das Ausgangsimage (Session-uuid wird nie aktualisiert),
