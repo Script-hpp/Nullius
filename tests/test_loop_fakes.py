@@ -179,3 +179,20 @@ def test_cost_limit_is_checked_gross():
     o.llm = SimpleNamespace(total_cost_usd=0.45, gross=lambda x: x * 1.19)   # netto 0,45 -> brutto 0,5355 >= 0,5
     with pytest.raises(CostLimitExceeded):
         o._ask("code", "s", "u")
+
+
+def test_events_are_written_with_run_facts(tmp_path):
+    from repro_agent.events import EventLog
+
+    sb = FakeSandbox(acc=lambda seed, ablated: 0.5 if ablated else 0.81)
+    sb.smoke_results = [RunResult(1, "", "shape error", False)]
+    o, _ = make_orch(sb, seeds=2)
+    o.events = EventLog(tmp_path / "events.jsonl")
+    d = run_claim(o, tmp_path)
+    ev = [json.loads(line) for line in (tmp_path / "events.jsonl").read_text().splitlines()]
+    types = [e["type"] for e in ev]
+    assert types[:3] == ["claim_start", "plan", "code_written"] and types[-1] == "verdict"
+    assert "repair" in types and types.count("attempt") == len(d.attempts)
+    att = [e for e in ev if e["type"] == "attempt"]
+    assert att[0]["status"] == "fehler" and att[0]["branch_id"].startswith("b") and att[0]["parent_snapshot"] == "snap"
+    assert next(e for e in ev if e["type"] == "verdict")["methode"] == "nicht geprueft"

@@ -28,6 +28,7 @@ from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
+from .events import EventLog
 from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
@@ -109,6 +110,7 @@ class Orchestrator:
         self.paper_text: PaperText | None = None
         self.last_run_dir: Path | None = None
         self._cost_base = 0.0
+        self.events = EventLog(None)       # ab run(): runs/<paper>/<ts>/events.jsonl
         self._smoke_ok: set[str] = set()   # Codes, die die Formpruefung bestanden haben
         self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
@@ -121,6 +123,14 @@ class Orchestrator:
     @property
     def spent_usd(self) -> float:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
+
+    def _emit(self, type: str, **data) -> None:
+        ev = getattr(self, "events", None)
+        if ev is not None:
+            ev.write(type, **data)
+
+    def _emit_tavily(self, role: int, endpoint: str, target, n_results: int) -> None:
+        self._emit("tavily_call", role=role, endpoint=endpoint, target=target, n_results=n_results)
 
     @property
     def spent_gross_usd(self) -> float:
@@ -328,6 +338,7 @@ class Orchestrator:
                 from .tavily_tools import TavilyTools
 
                 tavily = TavilyTools(self.settings)
+                tavily.on_call = self._emit_tavily
             return tavily
 
         for claim in claims:
@@ -345,6 +356,8 @@ class Orchestrator:
             claim.evidence_urls = [ev.url]
             claim.target_evidence = dataclasses.asdict(ev)
             print(f"[{claim.id}] Zielwert {ev.value} belegt: {ev.quote!r}")
+            self._emit("target_resolved", claim_id=claim.id, value=ev.value, quote=ev.quote, table=ev.table,
+                       url=ev.url, arxiv_version=ev.arxiv_version, column_check=ev.column_check, caveat=ev.caveat)
 
     def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
         """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
@@ -372,6 +385,7 @@ class Orchestrator:
                 from .tavily_tools import TavilyTools
 
                 self._tavily = TavilyTools(self.settings)
+                self._tavily.on_call = self._emit_tavily
             return self._tavily
 
         return get
@@ -380,9 +394,13 @@ class Orchestrator:
     def run_claim(
         self, paper: dict, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path
     ) -> None:
+        self._emit("claim_start", claim_id=claim.id, text=claim.text, metric=claim.metric, target=claim.target,
+                   tolerance=claim.tolerance)
         plan = self.plan(paper, claim, task)
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
+        self._emit("plan", claim_id=claim.id, text=plan[:1500])
         code = self.write_code(plan, task)
+        self._emit("code_written", claim_id=claim.id, code_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
         seeds = list(range(self.seeds or paper.get("seeds", DEFAULT_SEEDS)))
         # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
         # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
@@ -411,10 +429,14 @@ class Orchestrator:
         if v0 is not None and task.ablation_cmd:
             ab = self.ablation_check(snapshot, code, seeds[0], task, claim.metric, v0)
             dossier.ablations[claim.id] = ab
+            self._emit("ablation", claim_id=claim.id, **ab)
             print(f"[{claim.id}] Graph-Ablation: {ab['verdict']} (mit Graph {v0:.4f}, ohne Kanten {ab['accuracy_ablated']})", flush=True)
             if ab["verdict"] == "Graph nicht genutzt":   # deterministischer Beleg, nur herabstufend
                 verdict.methode = "nein"
         dossier.verdicts.append(verdict)
+        self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
+                   gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
+                   explanation=verdict.explanation)
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
@@ -445,6 +467,9 @@ class Orchestrator:
                 ))
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)
+            self._emit("attempt", claim_id=claim.id, seed=seed, n=n, branch_id=branch, parent_snapshot=snapshot,
+                       code_hash=code_hash, status=status, measured=value, seconds=round(time.time() - t0, 1),
+                       error=(summary or "")[-400:] or None)
             if res.get("baselines"):
                 dossier.baselines = res["baselines"]
             if value is not None:
@@ -453,6 +478,7 @@ class Orchestrator:
                 return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
             if n < self.settings.max_attempts_per_claim:
                 try:
+                    self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
                     code = self.repair_code(plan, task, code, summary or "")
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
@@ -502,6 +528,12 @@ class Orchestrator:
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
         self.last_run_dir = run_dir
+        self.events = EventLog(run_dir / "events.jsonl")
+        self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
+                   use_setup_details=self.use_setup_details, paper_only=self.paper_only,
+                   models={"fast": self.settings.llm.model_fast, "code": self.settings.llm.model_code,
+                           "reasoning": self.settings.llm.model_reasoning},
+                   seeds=self.seeds or paper.get("seeds", DEFAULT_SEEDS), claims=[c.id for c in claims])
         self._cost_base = self.llm.total_cost_usd
         if self.use_tavily:
             self.resolve_targets(paper, claims)
@@ -516,6 +548,8 @@ class Orchestrator:
                 by_src[d.source.split("@")[0]] = by_src.get(d.source.split("@")[0], 0) + 1
             print(f"Setup-Details (Rolle 4): {len(self.details)} belegt, {dropped} verworfen, "
                   f"nach Quelle {by_src}", flush=True)
+            self._emit("setup_details", n=len(self.details), dropped=dropped, by_source=by_src,
+                       repo=repo_info, details=[dataclasses.asdict(d) for d in self.details])
         dossier = Dossier(
             paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info,
             setup_details=[dataclasses.asdict(d) for d in self.details],
@@ -533,6 +567,7 @@ class Orchestrator:
         finally:
             dossier.save(ts)
             (run_dir / "zeugnis.md").write_text(render_markdown(dossier))
+        self._emit("run_end", cost_net_usd=round(self.spent_usd, 4), cost_gross_usd=round(self.spent_gross_usd, 4))
         print(f"Fertig. Bericht: {run_dir / 'zeugnis.md'} | Kosten: {self.spent_usd:.4f} $", flush=True)
         return dossier
 

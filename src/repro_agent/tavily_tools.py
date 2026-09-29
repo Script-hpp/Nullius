@@ -14,17 +14,28 @@ class TavilyTools:
         self.settings = settings or load_settings()
         self._client = TavilyClient(api_key=self.settings.tavily_api_key)
         self._research_calls = 0  # max 1x pro Paper
+        self.on_call = None       # Rueckruf (role, endpoint, target, result) fuers Ereignisprotokoll
+
+    def _note(self, role: int, endpoint: str, target, result):
+        if self.on_call:
+            try:
+                n = len((result or {}).get("results", [])) if isinstance(result, dict) else 0
+            except (TypeError, AttributeError):
+                n = 0
+            self.on_call(role, endpoint, target, n)
+        return result
 
     def find_material(self, paper_title: str) -> dict:
         """Rolle 1: Repo, Datensatz, Projektseite finden."""
-        return self._client.search(
+        return self._note(1, "search", paper_title, self._client.search(
             query=paper_title,
             include_domains=RESEARCH_DOMAINS,
-        )
+        ))
 
     def read_claims(self, arxiv_html_url: str) -> dict:
         """Rolle 2: Tabellen mit Zielwerten aus arXiv-HTML extrahieren."""
-        return self._client.extract(urls=[arxiv_html_url], extract_depth="advanced")
+        return self._note(2, "extract", arxiv_html_url,
+                          self._client.extract(urls=[arxiv_html_url], extract_depth="advanced"))
 
     def collect_objections(self, paper_title: str, repo_url: str | None = None, limit: int = 5) -> dict:
         """Rolle 3: Issues, Gutachten, Kritik-Papers -> neue Einwaende.
@@ -47,11 +58,14 @@ class TavilyTools:
                 )
             except Exception as exc:   # Suchergebnis (schon bezahlt) nicht wegen eines Crawl-Fehlers verlieren
                 crawl = {"error": f"{type(exc).__name__}: {exc}", "results": []}
+        self._note(3, "search", paper_title, search)
+        if repo_url:
+            self._note(3, "crawl", repo_url.rstrip("/") + "/issues", crawl)
         return {"search": search, "crawl": crawl}
 
     def get_setup_details(self, url: str) -> dict:
         """Rolle 4: Hyperparameter, Datenaufteilung aus README/Configs/Anhang."""
-        return self._client.extract(urls=[url], extract_depth="advanced")
+        return self._note(4, "extract", url, self._client.extract(urls=[url], extract_depth="advanced"))
 
     def resolve_error(self, error_text: str) -> dict:
         """Rolle 5: Loesungshinweis fuer `code` bei Fehler."""
