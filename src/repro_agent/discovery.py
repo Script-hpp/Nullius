@@ -204,25 +204,37 @@ class DiscoveryAgent:
         self.llm = llm or LLMClient()
         self.tavily = tavily or TavilyTools()
 
-    def _tavily(self, method: str, role: int, endpoint: str, label: str, *args, top_title: str | None = None, **kwargs) -> dict:
-        """Tavily-Aufruf mit Dauer und Treffern als Ereignis `tavily_call` fuer die Live-UI."""
+    def _tavily(self, method: str, role: int, endpoint: str, label: str, *args, top_title: str | None = None,
+                purpose: str | None = None, **kwargs) -> dict:
+        """Tavily-Aufruf mit Dauer und Treffern als Ereignis `tavily_call` fuer die Live-UI.
+
+        purpose: find_papers | read_paper | find_code | community (Ueberschrift in der UI).
+        """
         import time
         t0 = time.time()
         res = getattr(self.tavily, method)(*args, **kwargs)
         dur = int((time.time() - t0) * 1000)
         hits = res.get("results", []) if isinstance(res, dict) else []
         top_hits = [{"url": r.get("url"), "title": top_title or r.get("title")} for r in hits[:3]]
-        self._emit_tavily(role, endpoint, label, len(hits), top_hits, dur)
+        arxiv_ids = None
+        if purpose == "find_papers":
+            arxiv_ids = list(dict.fromkeys(m.group(1) for r in hits if (m := ARXIV_ID_RE.search(r.get("url", "")))))
+        self._emit_tavily(role, endpoint, label, len(hits), top_hits, dur, purpose, arxiv_ids)
         return res
 
     def _curate_repo(self, title):
-        return self._tavily("curate_repo", 8, "search", title, title)
+        return self._tavily("curate_repo", 8, "search", title, title, purpose="find_code")
 
-    def _emit_tavily(self, role, endpoint, query, hits, top_hits, dur):
+    def _emit_tavily(self, role, endpoint, query, hits, top_hits, dur, purpose=None, arxiv_ids=None):
         if not getattr(self, "_on_event", None):
             return
-        self._on_event({"type": "tavily_call", "role": role, "endpoint": endpoint, "query": query, "hits": hits,
-                        "top_hits": top_hits, "duration_ms": dur, "mode": "live"})
+        evt = {"type": "tavily_call", "role": role, "endpoint": endpoint, "query": query, "hits": hits,
+               "top_hits": top_hits, "duration_ms": dur, "mode": "live"}
+        if purpose:
+            evt["purpose"] = purpose
+        if arxiv_ids is not None:
+            evt["arxiv_ids"] = arxiv_ids
+        self._on_event(evt)
 
     def _find_papers_tavily(self, dataset: str) -> list[dict]:
         """Tavily-Suche -> arXiv-IDs; Metadaten (Titel, Abstract) danach kostenlos von der arXiv-API."""
@@ -231,7 +243,7 @@ class DiscoveryAgent:
             return []
         per_query = []
         for query in queries:
-            res = self._tavily("curate_papers", 8, "search", query, query)
+            res = self._tavily("curate_papers", 8, "search", query, query, purpose="find_papers")
             per_query.append(res.get("results", []))
         # Treffer der Queries abwechselnd einreihen und deduplizieren: der Extract-Deckel trifft so beide Protokolle.
         found = {}
@@ -307,13 +319,15 @@ class DiscoveryAgent:
             # Rolle extract (Super) wie Rollen 2/4: Lightning dachte im Live-Lauf 8000 Tokens ohne Antwort.
             resp = self.llm.complete("extract", messages, temperature=0.0, max_tokens=8000)
             is_truncated = getattr(resp, "finish_reason", "") == "length"
+            cached = bool(getattr(resp, "cached", False))
             if emit_func:
                 emit_func({
                     "type": "llm_call",
                     "role": "extract",
                     "model": getattr(resp, "model", "unknown"),
                     "tokens": getattr(resp, "prompt_tokens", 0) + getattr(resp, "completion_tokens", 0),
-                    "cost_usd": getattr(resp, "cost_usd", 0.0),
+                    "cost_usd": 0.0 if cached else getattr(resp, "cost_usd", 0.0),   # Cache-Treffer kosten nichts
+                    "cached": cached,
                     "duration_ms": int((time.time() - t0) * 1000)
                 })
         except (BillingBlocked, BudgetExceeded):
@@ -349,6 +363,14 @@ class DiscoveryAgent:
                 return "passt_nicht", ""
             return "unklar", "Abweichendes Protokoll ohne gueltiges Zitat"
         return "unklar", ""
+
+    @staticmethod
+    def _candidate_event(paper: "CandidatePaper", cached: bool) -> dict:
+        """Ereignis `candidate` mit allem, was die UI fuer die Karte braucht (Titel, Claim als Objekt, Code-Link)."""
+        return {"type": "candidate", "arxiv_id": paper.arxiv_id, "cached": cached, "title": paper.title,
+                "dataset": paper.dataset, "claim": paper.claim, "reason": paper.reason, "found_by": paper.found_by,
+                "community_hits": len(paper.community), "protocol": paper.protocol,
+                "github_url": paper.github_url, "source_url": paper.source_url}
 
     def _fetch_readme(self, repo_url: str) -> str:
         """Fetch README from github repo."""
@@ -557,8 +579,10 @@ class DiscoveryAgent:
                     import dataclasses
                     valid_keys = {f.name for f in dataclasses.fields(CandidatePaper)}
                     filtered_data = {k: v for k, v in cached_data.items() if k in valid_keys}
-                    candidates.append(CandidatePaper(**filtered_data))
+                    cached_paper = CandidatePaper(**filtered_data)
+                    candidates.append(cached_paper)
                     dataset_candidates += 1
+                    emit(self._candidate_event(cached_paper, cached=True))
                     continue
                     
                 # Tavily-Ausschnitt zaehlt mit: Ergebnisse stehen oft nur in Tabellen, nicht im Abstract.
@@ -582,7 +606,7 @@ class DiscoveryAgent:
                     text = ""
                     for _attempt in range(2):
                         html_data = self._tavily("curate_extract", 2, "extract", html_url, html_url,
-                                                 EXTRACT_QUERIES.get(ds, ds), top_title=p["title"])
+                                                 EXTRACT_QUERIES.get(ds, ds), top_title=p["title"], purpose="read_paper")
                         results = html_data.get("results") or [{}]
                         text = results[0].get("raw_content") or ""
                         if len(text) >= MIN_FULLTEXT_CHARS:
@@ -709,7 +733,7 @@ class DiscoveryAgent:
                 community = []
                 if hasattr(self.tavily, "curate_discussion"):
                     try:
-                        disc = self._tavily("curate_discussion", 8, "search", p["title"], p["title"])
+                        disc = self._tavily("curate_discussion", 8, "search", p["title"], p["title"], purpose="community")
                         community = [{"url": r.get("url"), "title": r.get("title"), "snippet": (r.get("content") or "")[:300]}
                                      for r in disc.get("results", [])]
                         community = [c for c in community
@@ -719,9 +743,6 @@ class DiscoveryAgent:
                     except Exception as e:
                         emit({"type": "warning", "arxiv_id": cache_key, "message": f"Community search failed: {e}"})
 
-                emit({"type": "candidate", "arxiv_id": cache_key, "reason": reason, "found_by": p.get("found_by", "arxiv"),
-                      "community_hits": len(community), "protocol": protocol})
-                
                 paper = CandidatePaper(
                     title=p["title"],
                     arxiv_id=p["arxiv_id"],
@@ -735,6 +756,7 @@ class DiscoveryAgent:
                     community=community,
                     protocol=protocol,
                 )
+                emit(self._candidate_event(paper, cached=False))
                 candidates.append(paper)
                 _update_cache(cache_key, paper.to_dict())
                 dataset_candidates += 1

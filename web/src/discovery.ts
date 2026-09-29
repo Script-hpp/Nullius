@@ -1,0 +1,318 @@
+import type { Json } from './data'
+
+export type DEvent = { type: string; ts: number; seq?: number; [k: string]: Json }
+
+export type PaperState = 'reading' | 'claim' | 'searching' | 'candidate' | 'rejected'
+
+export type DClaim = {
+  method?: string
+  metric?: string
+  target?: number
+  horizon?: number
+  quote?: string
+  matched_task?: string | null
+  protocol?: string
+}
+
+export type DPaper = {
+  id: string
+  title: string
+  dataset?: string
+  state: PaperState
+  stage?: string
+  reason?: string
+  claim?: DClaim
+  communityHits?: number
+  protocol?: string
+  foundBy?: string
+  cached?: boolean
+  githubUrl?: string | null
+}
+
+export type FeedCall = {
+  seq: number
+  purpose?: string
+  endpoint: 'search' | 'extract'
+  query: string
+  hits: number
+  durationMs: number
+  topHits: { url: string; title: string }[]
+}
+
+export type TimelineItem = { kind: 'tavily' | 'llm'; start: number; end: number; label: string }
+
+export type DiscoveryView = {
+  feed: FeedCall[]
+  papers: DPaper[]
+  tavilyCalls: number
+  llmCalls: number
+  cachedLlmCalls: number
+  costUsd: number
+  funnel: { label: string; value: number; note?: string }[]
+  timeline: TimelineItem[]
+  t0: number
+  tEnd: number
+  activeId: string | null
+  notes: { kind: 'warning' | 'error'; message: string }[]
+}
+
+const ARXIV_RE = /arxiv\.org\/(?:abs|html|pdf)\/(\d{4}\.\d{4,5})/
+
+export const arxivIdOf = (url: string | undefined): string | null => {
+  const m = ARXIV_RE.exec(url ?? '')
+  return m ? m[1] : null
+}
+
+export function parseClaim(text: unknown): DClaim | undefined {
+  if (typeof text !== 'string') return undefined
+  try {
+    const c = JSON.parse(text)
+    return typeof c === 'object' && c ? c : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Plain-English wording for the technical rejection reasons of the discovery pipeline.
+export function humanReject(stage: string | undefined, reason: string | undefined): string {
+  const r = reason ?? ''
+  const table: [RegExp, string][] = [
+    [/pre-filter/i, 'The abstract does not mention the benchmark together with a result.'],
+    [/no results found/i, 'No papers were found for this benchmark.'],
+    [/volltext nicht lesbar/i, 'Full text could not be read.'],
+    [/llm_truncated/i, 'Model answer was cut off (not counted against the paper).'],
+    [/nicht lesbar/i, 'Model answer could not be read (not counted against the paper).'],
+    [/no numerical claim/i, 'No checkable number found in the protocol and results sections.'],
+    [/no quote provided/i, 'The model gave no supporting quote.'],
+    [/quote not found/i, 'The quoted sentence does not appear in the paper text.'],
+    [/method missing/i, 'The method behind the number is not named in the quote or the table header.'],
+    [/target missing/i, 'The reported number could not be parsed.'],
+    [/target value not found/i, 'The number is not contained in the quote.'],
+    [/metrik nicht messbar/i, 'The metric cannot be measured by our tasks (for example a relative improvement).'],
+    [/horizont nicht/i, 'The number is not for prediction horizon 96, which is the one we can re-run.'],
+  ]
+  for (const [re, text] of table) if (re.test(r)) return text
+  if (stage === 'protocol') return r || 'The paper uses a different evaluation protocol.'
+  return r || 'Rejected.'
+}
+
+export const STAGE_LABEL: Record<string, string> = {
+  prefilter: 'Prefilter',
+  extract: 'Claim extraction',
+  protocol: 'Protocol check',
+  quote: 'Quote check',
+  number: 'Number check',
+}
+
+export function deriveView(events: DEvent[]): DiscoveryView {
+  const feed: FeedCall[] = []
+  const papers = new Map<string, DPaper>()
+  const titles = new Map<string, string>()
+  const timeline: TimelineItem[] = []
+  const notes: DiscoveryView['notes'] = []
+  const seen = new Set<string>()
+  const foundIds = new Set<string>()
+  let cachedCandidates = 0
+  let legacySearch = true
+  let llmCalls = 0
+  let cachedLlmCalls = 0
+  let costUsd = 0
+  let tavilyCalls = 0
+  const rejects: Record<string, number> = { prefilter: 0, extract: 0, protocol: 0, quote: 0, number: 0 }
+  let extractingCount = 0
+  let candidates = 0
+  let activeId: string | null = null
+
+  const paper = (id: string): DPaper => {
+    let p = papers.get(id)
+    if (!p) {
+      p = { id, title: titles.get(id) ?? `arXiv:${id}`, state: 'reading' }
+      papers.set(id, p)
+    }
+    return p
+  }
+
+  for (const e of events) {
+    if (e.type === 'tavily_call') {
+      tavilyCalls++
+      const hits = Number(e.hits) || 0
+      const dur = Number(e.duration_ms) || 0
+      const endpoint = e.endpoint === 'extract' ? 'extract' : 'search'
+      const topHits = (e.top_hits ?? []).filter((h: Json) => h?.url)
+      feed.push({ seq: e.seq ?? feed.length, purpose: e.purpose, endpoint, query: String(e.query ?? ''), hits, durationMs: dur, topHits })
+      timeline.push({ kind: 'tavily', start: e.ts - dur / 1000, end: e.ts, label: `Tavily ${endpoint}` })
+      if (e.purpose === 'find_papers' && Array.isArray(e.arxiv_ids)) {
+        legacySearch = false
+        for (const id of e.arxiv_ids) foundIds.add(id)
+      }
+      if (endpoint === 'search') {
+        for (const h of topHits) {
+          const id = arxivIdOf(h.url)
+          if (id && h.title && !titles.has(id)) titles.set(id, h.title)
+          if (id && legacySearch) seen.add(id)
+        }
+      } else {
+        const id = arxivIdOf(e.query)
+        const p = id ? papers.get(id) : undefined
+        if (p && p.state === 'reading') p.state = 'claim'
+      }
+    } else if (e.type === 'llm_call') {
+      llmCalls++
+      if (e.cached) cachedLlmCalls++
+      costUsd += e.cached ? 0 : Number(e.cost_usd) || 0
+      const dur = Number(e.duration_ms) || 0
+      timeline.push({ kind: 'llm', start: e.ts - dur / 1000, end: e.ts, label: e.cached ? 'Model call (cached)' : 'Model call' })
+    } else if (e.type === 'extracting') {
+      extractingCount++
+      seen.add(e.arxiv_id)
+      const p = paper(e.arxiv_id)
+      p.title = e.title ?? p.title
+      p.dataset = e.dataset
+      p.state = 'reading'
+      activeId = e.arxiv_id
+    } else if (e.type === 'searching') {
+      const p = paper(e.arxiv_id)
+      p.state = 'searching'
+      p.claim = parseClaim(e.claim?.text)
+      activeId = e.arxiv_id
+    } else if (e.type === 'candidate') {
+      candidates++
+      if (e.cached) { cachedCandidates++; seen.add(e.arxiv_id) }
+      const p = paper(e.arxiv_id)
+      if (e.title) p.title = e.title
+      if (e.dataset) p.dataset = e.dataset
+      if (e.claim && typeof e.claim === 'object' && !p.claim) p.claim = e.claim
+      p.cached = !!e.cached
+      if ('github_url' in e) p.githubUrl = e.github_url
+      p.state = 'candidate'
+      p.reason = e.reason
+      p.communityHits = e.community_hits
+      p.protocol = e.protocol
+      p.foundBy = e.found_by
+      if (activeId === e.arxiv_id) activeId = null
+    } else if (e.type === 'reject') {
+      const stage = String(e.stage ?? '')
+      if (stage in rejects) rejects[stage]++
+      if (e.arxiv_id) {
+        seen.add(e.arxiv_id)
+        const p = paper(e.arxiv_id)
+        p.state = 'rejected'
+        p.stage = stage
+        p.reason = e.reason
+        if (activeId === e.arxiv_id) activeId = null
+      }
+    } else if (e.type === 'warning' || e.type === 'error') {
+      notes.push({ kind: e.type, message: String(e.message ?? '') })
+    }
+  }
+
+  for (const p of papers.values()) if (p.title.startsWith('arXiv:') && titles.has(p.id)) p.title = titles.get(p.id)!
+
+  // Found = unique arXiv ids of the paper searches only (repo and community searches excluded); older recordings: all ids seen.
+  const found = Math.max(foundIds.size, seen.size)
+  // Examined = papers actually read (capped at 3 per benchmark); prefilter rejects are only a note, not a funnel drop.
+  const examined = extractingCount + cachedCandidates
+  const withClaim = Math.max(examined - rejects.extract - rejects.quote - rejects.number, 0)
+  const unclear = [...papers.values()].filter(
+    (p) => (p.state === 'searching' || p.state === 'candidate') && (p.protocol ?? p.claim?.protocol) === 'unklar').length
+  const confirmed = Math.max(withClaim - rejects.protocol - unclear, 0)
+  const funnel = [
+    { label: 'Found by Tavily', value: found },
+    { label: 'Examined (limit 3 per benchmark)', value: examined,
+      note: rejects.prefilter ? `${rejects.prefilter} more dropped by the abstract prefilter` : undefined },
+    { label: 'Claim with quote', value: withClaim },
+    { label: 'Protocol confirmed', value: confirmed, note: unclear ? `${unclear} kept as candidate, protocol not stated` : undefined },
+    { label: 'Candidate', value: candidates },
+  ]
+
+  const t0 = events.length ? Math.min(events[0].ts, ...timeline.map((t) => t.start)) : 0
+  const tEnd = events.length ? events[events.length - 1].ts : 0
+  return {
+    feed, papers: [...papers.values()], tavilyCalls, llmCalls, cachedLlmCalls, costUsd, funnel, timeline, t0, tEnd, activeId, notes,
+  }
+}
+
+// Accuracy is a share and shown as percent; MSE and MAE are plain decimals (never converted to percent).
+export function formatMetric(metric: string | undefined, target: number | undefined): string {
+  if (target === undefined || target === null || Number.isNaN(Number(target))) return '–'
+  const v = Number(target)
+  if (metric === 'accuracy') return `${(v <= 1 ? v * 100 : v).toFixed(2)}%`
+  return `${(metric ?? '').toUpperCase()} ${v.toFixed(3)}`.trim()
+}
+
+// Short excerpt of a quote around the reported number: [before, number, after].
+export function quoteExcerpt(quote: string | undefined, target: number | undefined, radius = 90): [string, string, string] {
+  const q = (quote ?? '').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!q) return ['', '', '']
+  if (target !== undefined) {
+    for (const m of q.matchAll(/\d+(?:\.\d+)?/g)) {
+      const n = Number(m[0])
+      if (Math.abs(n - target) < 1e-9 || Math.abs(n / 100 - target) < 1e-9 || Math.abs(n * 100 - target) < 1e-9) {
+        const i = m.index ?? 0
+        const from = Math.max(0, i - radius)
+        const to = Math.min(q.length, i + m[0].length + radius)
+        return [(from > 0 ? '… ' : '') + q.slice(from, i), m[0], q.slice(i + m[0].length, to) + (to < q.length ? ' …' : '')]
+      }
+    }
+  }
+  return [q.length > 2 * radius ? q.slice(0, 2 * radius) + ' …' : q, '', '']
+}
+
+export const domainOf = (url: string): string => {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+}
+
+export const shorten = (s: string, n = 90): string => (s.length > n ? s.slice(0, n - 1) + '…' : s)
+
+export function parseJsonl(text: string): DEvent[] {
+  return text.split('\n').filter(Boolean).flatMap((l) => {
+    try { return [JSON.parse(l) as DEvent] } catch { return [] }
+  })
+}
+
+
+export type QuoteCells = { head: string[]; before: string[]; cell: [string, string, string]; after: string[]; all: string[]; hasGap: boolean }
+
+// Table quotes: no pipes in the UI. Show row head plus two cells before/after the number; the full row is collapsible.
+export function quoteCells(quote: string | undefined, target: number | undefined): QuoteCells | null {
+  if (!quote || !quote.includes('|')) return null
+  const lines = quote.split('\n').filter((l) => l.includes('|'))
+  const isTarget = (t: string) => {
+    for (const m of t.matchAll(/\d+(?:\.\d+)?/g)) {
+      const n = Number(m[0])
+      if (target !== undefined && (Math.abs(n - target) < 1e-9 || Math.abs(n / 100 - target) < 1e-9 || Math.abs(n * 100 - target) < 1e-9)) return true
+    }
+    return false
+  }
+  const rows = lines.map((l) => l.split('|').map((c) => c.replace(/\s+/g, ' ').trim()).filter(Boolean))
+  const row = rows.find((r) => r.some(isTarget)) ?? rows[rows.length - 1] ?? []
+  const hi = row.findIndex(isTarget)
+  if (hi < 0) return { head: [], before: [], cell: ['', '', ''], after: [], all: row, hasGap: false }
+  const from = Math.max(0, hi - 2)
+  const head = from > 1 ? [row[0]] : []
+  const [b, n, a] = quoteExcerpt(row[hi], target, 40)
+  return {
+    head, before: row.slice(from, hi), cell: [b, n, a], after: row.slice(hi + 1, hi + 3), all: row,
+    hasGap: from > head.length || hi + 3 < row.length,
+  }
+}
+
+// Only an unreadable full text is a reading problem; every other extract-stage reject is about the claim.
+export function stageLabel(stage: string | undefined, reason: string | undefined): string {
+  if (stage === 'extract' && /volltext nicht lesbar/i.test(reason ?? '')) return 'Reading'
+  return STAGE_LABEL[stage ?? ''] ?? stage ?? ''
+}
+
+const TASK_TEXT: Record<string, string> = {
+  Cora: 'Cora · Planetoid split',
+  'Cora-LCC': 'Cora · random splits, largest component',
+}
+
+export function benchmarkText(p: DPaper): string {
+  const c = p.claim
+  const proto = p.protocol ?? c?.protocol
+  const ds = p.dataset ?? c?.matched_task ?? '–'
+  if (proto === 'unklar' || !c?.matched_task) return `${ds} (split not stated)`
+  if (c.matched_task === 'ETTh1') return `ETTh1 · horizon ${c.horizon ?? 96}`
+  return TASK_TEXT[c.matched_task] ?? c.matched_task
+}

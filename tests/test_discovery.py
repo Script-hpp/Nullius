@@ -1075,3 +1075,79 @@ def test_community_related_rules():
     assert _community_related(t, "2511.08094", "Stuart-Landau graph convolutional networks for node classification", "")  # Titel
     assert _community_related(t, "2511.08094", "Stuart Landau convolutional networks", "node")           # 5 von 7 Woertern
     assert not _community_related(t, "2511.08094", "fMRI dynamics", "Stuart-Landau oscillators in the brain")
+
+
+# ---- UI-Felder: purpose, arxiv_ids, Cache-Kandidaten ----
+
+def test_tavily_calls_carry_purpose_and_arxiv_ids(monkeypatch, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    events = []
+    agent.discover(["Cora"], on_event=events.append)
+    calls = [e for e in events if e.get("type") == "tavily_call"]
+    by_purpose = {}
+    for c in calls:
+        by_purpose.setdefault(c["purpose"], []).append(c)
+    assert set(by_purpose) == {"find_papers", "read_paper", "find_code", "community"}
+    assert by_purpose["find_papers"][0]["arxiv_ids"] == ["2101.12345"]      # nur echte arXiv-IDs, dedupliziert
+    assert all("arxiv_ids" not in c for c in calls if c["purpose"] != "find_papers")
+    assert by_purpose["read_paper"][0]["endpoint"] == "extract"
+
+
+def test_cache_hit_emits_candidate_event(monkeypatch, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"1234.5678": {
+        "title": "Cached Paper", "arxiv_id": "1234.5678", "dataset": "Cora", "claim": {"method": "M", "target": 80.0},
+        "reason": "Cached", "github_url": None, "status": "ungeprueft", "cache_version": 2, "protocol": "passt",
+        "community": [{"url": "u"}]}}))
+    monkeypatch.setattr("httpx.get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no network")))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(), cache_path=str(cache_file))
+    agent._search_arxiv = lambda ds, max_results=30: [{"arxiv_id": "1234.5678", "title": "Cached Paper", "abstract": "x", "authors": []}]
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    cand = [e for e in events if e.get("type") == "candidate"]
+    assert len(result) == 1 and len(cand) == 1
+    assert cand[0]["cached"] is True and cand[0]["title"] == "Cached Paper"
+    assert cand[0]["claim"] == {"method": "M", "target": 80.0} and cand[0]["protocol"] == "passt"
+    assert cand[0]["community_hits"] == 1 and cand[0]["dataset"] == "Cora"
+
+
+def test_llm_call_event_cached_costs_nothing(monkeypatch, arxiv_xml, tmp_path):
+    from repro_agent.llm import LLMResponse
+    class CachedLLM:
+        def complete(self, *a, **k):
+            return LLMResponse(content=FakeLLM().claim_content, model="fake", prompt_tokens=100, completion_tokens=50,
+                               cost_usd=0.00385, cached=True, finish_reason="stop")
+    class PaidLLM(CachedLLM):
+        def complete(self, *a, **k):
+            r = super().complete()
+            return LLMResponse(content=r.content, model="fake", prompt_tokens=100, completion_tokens=50,
+                               cost_usd=0.00385, cached=False, finish_reason="stop")
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    seen = {}
+    for name, llm in (("cached", CachedLLM()), ("paid", PaidLLM())):
+        agent = DiscoveryAgent(llm=llm, tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / f"{name}.json"))
+        events = []
+        agent.discover(["Cora"], on_event=events.append)
+        seen[name] = [e for e in events if e.get("type") == "llm_call"][0]
+    assert seen["cached"]["cached"] is True and seen["cached"]["cost_usd"] == 0.0
+    assert seen["paid"]["cached"] is False and seen["paid"]["cost_usd"] == 0.00385
+
+
+def test_fresh_candidate_event_carries_card_fields(monkeypatch, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    events = []
+    agent.discover(["Cora"], on_event=events.append)
+    cand = [e for e in events if e.get("type") == "candidate"][0]
+    assert cand["cached"] is False and cand["title"] == "Sample Paper Title" and cand["dataset"] == "Cora"
+    assert cand["claim"]["method"] == "GraphNet" and cand["claim"]["matched_task"] == "Cora"
+    assert cand["github_url"] == "https://github.com/foo/bar"
+    assert cand["source_url"] == "https://arxiv.org/html/2101.12345v1"
+    assert cand["protocol"] == "passt" and cand["community_hits"] == 1
+
+
+def test_candidate_event_without_repo_has_null_github_url(monkeypatch, arxiv_xml, tmp_path):
+    result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
+    cand = [e for e in events if e.get("type") == "candidate"][0]
+    assert cand["github_url"] is None

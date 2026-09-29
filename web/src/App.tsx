@@ -5,6 +5,7 @@ import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
+import { Discovery } from './components/Discovery'
 import { Badge, Section, toPercent } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
 import { RESULT, de2en, type Tone } from './labels'
@@ -87,14 +88,14 @@ function DashboardHeader({ count }: { count: number }) {
           <button className="px-4 py-2 bg-transparent border border-zinc-800 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer">
             Filter runs
           </button>
-          <button className="px-4 py-2 bg-zinc-100 text-zinc-950 border border-transparent text-sm font-medium rounded-lg hover:bg-white hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer">
+          <a href="#discover" className="px-4 py-2 bg-zinc-100 text-zinc-950 border border-transparent text-sm font-medium rounded-lg hover:bg-white hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer no-underline">
             <PlayCircle className="w-4 h-4" />
-            New Evaluation
-          </button>
+            Discover papers
+          </a>
         </div>
       </div>
       
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
           <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
             <Activity className="w-3.5 h-3.5 text-zinc-400" />
@@ -132,7 +133,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   const [data, setData] = useState<Record<string, RunData>>({})
   useEffect(() => { runs.forEach((r) => loadRun(r).then((d) => setData((x) => ({ ...x, [r.id]: d })))) }, [runs])
   return (
-    <main className="mx-auto max-w-6xl px-8 pb-16">
+    <main className="mx-auto max-w-6xl px-4 md:px-8 pb-16">
       <DashboardHeader count={runs.length} />
       
       <div className="flex items-center justify-between mb-5">
@@ -205,11 +206,11 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>('evidence')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   
-  if (!run) return <main className="mx-auto max-w-6xl px-8 py-10 muted">Loading run data…</main>
+  if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Loading run data…</main>
   const d = run.dossier
   const claim: Json = d.claims?.[0]
   const v: Json = d.verdicts?.[0]
-  if (!claim) return <main className="mx-auto max-w-6xl px-8 py-10 muted">Empty run.</main>
+  if (!claim) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Empty run.</main>
   
   const res = v ? de2en(RESULT, v.urteil) : { label: 'NO VERDICT', tone: 'gray' as const }
   const attempts: Json[] = (d.attempts ?? []).filter((a: Json) => a.claim_id === claim.id)
@@ -227,7 +228,7 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   ] as const
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-8 pb-20">
+    <main className="mx-auto max-w-6xl space-y-8 px-4 md:px-8 pb-20">
       <div className="pt-2">
         <a href="#" className="inline-flex items-center gap-1.5 text-zinc-500 text-xs font-medium uppercase tracking-wider hover:text-zinc-200 transition-colors">
           <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Overview
@@ -337,8 +338,8 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-black">
-        {runs === null ? (
-          <div className="mx-auto max-w-6xl px-8 py-20 flex flex-col items-center justify-center gap-4">
+        {hash === 'discover' ? <Discovery /> : runs === null ? (
+          <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-zinc-600 animate-pulse" />
             <span className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
           </div>
