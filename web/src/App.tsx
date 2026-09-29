@@ -50,12 +50,23 @@ function toPercent(val: string | number | null | undefined): string {
   if (val === null || val === undefined || val === '') return '–'
   const n = Number(val)
   if (Number.isNaN(n)) return String(val)
-  // If the number is likely a fraction (<= 1.0 or similar), convert to percentage
-  // Since the user asked to convert ALL decimals like 0.81 to 81.0%, we assume they are all fractions if < 2
-  if (n <= 2.0 && n > 0) {
-    return (n * 100).toFixed(1) + '%'
-  }
+  if (n <= 2.0 && n > 0) return (n * 100).toFixed(1) + '%'
   return n.toFixed(1) + '%'
+}
+
+function getDelta(measured: any, target: any) {
+  if (measured === null || measured === undefined || target === null || target === undefined) return null
+  const m = Number(measured)
+  let t = Number(target)
+  if (Number.isNaN(m) || Number.isNaN(t)) return null
+  
+  const mVal = (m <= 2.0 && m > 0) ? m * 100 : m
+  const tVal = (t <= 2.0 && t > 0) ? t * 100 : t
+  
+  const diff = mVal - tVal
+  if (Math.abs(diff) < 0.05) return { text: '±0.0%', color: 'text-zinc-500' }
+  if (diff > 0) return { text: `+${diff.toFixed(1)}%`, color: 'text-emerald-400' }
+  return { text: `${diff.toFixed(1)}%`, color: 'text-rose-400' }
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -78,41 +89,33 @@ function DashboardHeader({ count }: { count: number }) {
       
       {/* Quick Stats Row */}
       <div className="grid grid-cols-4 gap-4">
-        <div className="p-5 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium uppercase tracking-wider">
-            <div className="p-1.5 rounded-md bg-zinc-800/50 text-zinc-400 border border-zinc-700/50">
-              <Activity className="w-3.5 h-3.5" />
-            </div>
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
+          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
+            <Activity className="w-3.5 h-3.5 text-zinc-400" />
             Total Runs
           </div>
-          <span className="font-mono text-2xl font-semibold text-zinc-100">{count}</span>
+          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">{count}</span>
         </div>
-        <div className="p-5 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium uppercase tracking-wider">
-            <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
+          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             Verified
           </div>
-          <span className="font-mono text-2xl font-semibold text-zinc-100">2</span>
+          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">2</span>
         </div>
-        <div className="p-5 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium uppercase tracking-wider">
-            <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <AlertCircle className="w-3.5 h-3.5" />
-            </div>
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
+          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
             Partial
           </div>
-          <span className="font-mono text-2xl font-semibold text-zinc-100">2</span>
+          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">2</span>
         </div>
-        <div className="p-5 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium uppercase tracking-wider">
-            <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              <BarChart2 className="w-3.5 h-3.5" />
-            </div>
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
+          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
+            <BarChart2 className="w-3.5 h-3.5 text-blue-400" />
             Datasets
           </div>
-          <span className="font-mono text-2xl font-semibold text-zinc-100">3</span>
+          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">3</span>
         </div>
       </div>
     </div>
@@ -126,7 +129,7 @@ function Home({ runs }: { runs: RunRef[] }) {
     <main className="mx-auto max-w-6xl px-8 pb-16">
       <DashboardHeader count={runs.length} />
       
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500">Recent Evaluations</h2>
       </div>
 
@@ -137,10 +140,14 @@ function Home({ runs }: { runs: RunRef[] }) {
           const claim = d?.dossier?.claims?.[0]
           const res = v ? de2en(RESULT, v.urteil) : null
           
+          let delta = null
+          if (v && claim) delta = getDelta(v.measured_mean, claim.target)
+          
           return (
             <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="flex flex-col p-6 rounded-xl border border-zinc-800 bg-zinc-950/50 no-underline transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/80 group cursor-pointer block">
-              <div className="flex justify-between items-start mb-4">
+              
+              <div className="flex justify-between items-start mb-5">
                 <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-medium font-mono uppercase tracking-wider">
                   <BookOpen className="w-3.5 h-3.5" />
                   {r.paper_id}
@@ -148,27 +155,34 @@ function Home({ runs }: { runs: RunRef[] }) {
                 <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">{parseDate(r.timestamp)}</div>
               </div>
               
-              <h3 className="text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
-              {claim && <p className="mt-2 text-[13px] text-zinc-400 line-clamp-2 leading-relaxed mb-6">{translateClaim(claim.text)}</p>}
+              <div className="flex flex-col gap-2.5 mb-5">
+                {v ? <Badge tone={res!.tone}>{res!.label}</Badge> : <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Evaluating...</span>}
+                <h3 className="text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
+              </div>
               
-              <div className="mt-auto border-t border-zinc-800/50 pt-5">
+              <p className="text-[13px] text-zinc-400 line-clamp-2 leading-relaxed mb-6">
+                {claim ? translateClaim(claim.text) : 'Evaluating target metrics...'}
+              </p>
+              
+              <div className="mt-auto border-t border-zinc-800/50 pt-4 flex flex-col gap-2 w-full text-sm">
                 {v ? (
-                  <div className="flex flex-col gap-4">
-                    <Badge tone={res!.tone}>{res!.label}</Badge>
-                    
-                    <div className="flex flex-col gap-2 w-full bg-[#0a0a0a] rounded-lg p-3 border border-zinc-800/50">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-zinc-500 uppercase tracking-widest font-semibold text-[10px]">Claimed</span>
-                        <span className="font-mono text-zinc-400">{toPercent(claim?.target)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-zinc-500 uppercase tracking-widest font-semibold text-[10px]">Measured</span>
+                  <>
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
+                      <span className="font-mono text-zinc-400">{toPercent(claim?.target)}</span>
+                    </div>
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Measured</span>
+                      <div className="flex items-center gap-3">
+                        {delta && <span className={`font-mono text-xs font-semibold ${delta.color}`}>{delta.text}</span>}
                         <span className={`font-mono font-bold ${colorForTone(res!.tone)}`}>{toPercent(v.measured_mean)}</span>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Evaluating...</span>
+                  <div className="h-10 flex items-center">
+                    <span className="text-xs text-zinc-600 font-mono">Running sandbox...</span>
+                  </div>
                 )}
               </div>
             </motion.a>
@@ -198,6 +212,9 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   const cost = end?.cost_net_usd ?? attempts[attempts.length - 1]?.cost_usd
   const paperUrl = claim.target_evidence?.url
   const tabs = { zeugnis: run.zeugnis, code: run.code, plan: run.plan }
+  
+  let delta = null
+  if (v && claim) delta = getDelta(v.measured_mean, claim.target)
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-8 pb-20">
@@ -245,9 +262,9 @@ function RunView({ ref_ }: { ref_: RunRef }) {
               A hit on the number alone proves nothing about the method: a closed-form regression can hit a target value, so the second axis exists.
             </p>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800/30">
-            <Stat label="Measured" value={toPercent(v?.measured_mean)} />
-            <Stat label="Claimed" value={toPercent(claim.target)} />
+          <div className="mt-6 grid grid-cols-2 gap-4 bg-[#0a0a0a] p-4 rounded-xl border border-zinc-800/50">
+            <Stat label="Measured" value={toPercent(v?.measured_mean)} sub={delta ? <span className={`font-semibold ${delta.color}`}>{delta.text} diff</span> : null} />
+            <Stat label="Claimed" value={toPercent(claim.target)} sub={`± ${toPercent(claim.tolerance)}`} />
           </div>
           <div className="mt-4 text-right">
              <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-mono">Cost: {cost != null ? `$${Number(cost).toFixed(3)} net` : '–'}</span>
