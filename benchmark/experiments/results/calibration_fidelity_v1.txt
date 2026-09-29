@@ -1,0 +1,73 @@
+OK  dlinear_A7_ridge                 Mehrheit: nein      Gold: nein      Urteile: ['nein', 'nein', 'nein']
+      seasonal_trend_decomposition       nicht gefunden   No moving‑average decomposition or trend/seasonal separation is present in the script.
+      dual_linear_layers                 nicht gefunden   The script does not contain any linear layers applied to trend and seasonal components.
+      summation_fusion                   nicht gefunden   There is no element‑wise addition of two layer outputs.
+      shared_weights_across_variates     nicht gefunden   No shared linear‑layer weights across variates are defined.
+      moving_average_kernel_25           nicht gefunden   The script does not implement a moving‑average kernel, let alone of size 25.
+OK  dlinear_A6_flat_linear           Mehrheit: nein      Gold: nein      Urteile: ['nein', 'nein', 'nein']
+      seasonal_trend_decomposition       nicht gefunden   No decomposition using a moving average kernel is present in the script.
+      dual_linear_layers                 nicht gefunden   Only a single linear layer is used; there are no separate layers for trend and seasonal co
+      summation_fusion                   nicht gefunden   No element‑wise addition of two component predictions is performed.
+      shared_weights_across_variates     nicht umgesetzt  The single linear layer shares weights but mixes variates, violating the no spatial‑modeli
+      moving_average_kernel_25           nicht gefunden   No moving‑average decomposition with kernel size 25 is implemented.
+ABW dlinear_A2_faithful              Mehrheit: teilweise Gold: ja        Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       umgesetzt        Trend extracted via moving average; seasonal is the residual.
+      dual_linear_layers                 nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Separate linear layers applied to trend and se
+      summation_fusion                   umgesetzt        Element‑wise sum of trend and seasonal predictions.
+      shared_weights_across_variates     umgesetzt        Same linear weights are used for all variates (no spatial modeling).
+      moving_average_kernel_25           nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Moving‑average kernel size set to 25 for decom
+ABW dlinear_B5_faithful              Mehrheit: teilweise Gold: ja        Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       umgesetzt        The trend is extracted via a moving average and the seasonal component is computed as the 
+      dual_linear_layers                 umgesetzt        Two separate linear layers are defined; when individual=False they are shared across varia
+      summation_fusion                   umgesetzt        The trend and seasonal predictions are added element‑wise to form the final forecast.
+      shared_weights_across_variates     umgesetzt        With individual=False the same weight matrices are used for all variates, avoiding spatial
+      moving_average_kernel_25           nicht gefunden   Code-Zitat steht nicht im Code (verworfen): The moving average kernel size is set to 25 bo
+OK  dlinear_variant_kernel_5         Mehrheit: teilweise Gold: teilweise Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       umgesetzt        The trend is extracted via AvgPool1d and the seasonal component is the residual.
+      dual_linear_layers                 nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Two separate linear layers are applied to the 
+      summation_fusion                   umgesetzt        Element‑wise sum of the trend and seasonal predictions yields the final forecast.
+      shared_weights_across_variates     umgesetzt        The same linear layers are used for all variates; no cross‑variate modeling is present.
+      moving_average_kernel_25           nicht umgesetzt  The moving‑average kernel size is set to 5, not the required 25.
+ABW gcn_cached_faithful              Mehrheit: nein      Gold: ja        Urteile: ['nein', 'ja', 'nein'] JA/NEIN VERTAUSCHT
+      full_batch_gradient_descent        nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      dropout_regularization             nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      precomputed_normalized_adjacency   nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      renormalized_adjacency             nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      self_loops                         nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      propagation_rule                   nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      two_graph_conv_layers              nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+ABW gcn_sparse_selfloop              Mehrheit: nein      Gold: ja        Urteile: ['nein', 'nein', 'nein'] JA/NEIN VERTAUSCHT
+      full_batch_gradient_descent        nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      dropout_regularization             nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      precomputed_normalized_adjacency   nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      renormalized_adjacency             nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      self_loops                         nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      propagation_rule                   nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+      two_graph_conv_layers              nicht gefunden   Pruefer lieferte keine Antwort zu diesem Baustein
+OK  gcn_edge_selfloop                Mehrheit: ja        Gold: ja        Urteile: ['ja', 'ja', 'ja']
+      full_batch_gradient_descent        umgesetzt        Training uses the full feature matrix each iteration; no mini‑batching and sparse mm is us
+      dropout_regularization             nicht umgesetzt  Dropout is applied only between the two GCN layers, not to all layers.
+      precomputed_normalized_adjacency   umgesetzt        The normalized adjacency is computed once before training and reused.
+      renormalized_adjacency             umgesetzt        Self‑loops are added and the symmetric normalization D̃⁻¹/2 Ã D̃⁻¹/2 is performed.
+      self_loops                         umgesetzt        Self‑loop edges are concatenated to the original edge list.
+      propagation_rule                   umgesetzt        Layer computes H' = Â (H W) as required.
+      two_graph_conv_layers              umgesetzt        The model contains two GCNLayer instances, each using the adjacency matrix.
+OK  gcn_variant_no_selfloops         Mehrheit: teilweise Gold: teilweise Urteile: ['teilweise', 'teilweise', 'nein']
+      full_batch_gradient_descent        nicht umgesetzt  Training uses the full batch but does not leverage sparse matrix operations.
+      dropout_regularization             nicht umgesetzt  Dropout is applied only after the first layer, not to all layers.
+      precomputed_normalized_adjacency   umgesetzt        Normalized adjacency is computed once before training and reused.
+      renormalized_adjacency             nicht umgesetzt  Self-loops are not added, so the propagation matrix is not the renormalized form.
+      self_loops                         nicht umgesetzt  The code does not add self-loops to the adjacency matrix.
+      propagation_rule                   umgesetzt        Each layer multiplies the normalized adjacency with the input before the weight matrix.
+      two_graph_conv_layers              nicht gefunden   Code-Zitat steht nicht im Code (verworfen): The model defines two graph convolution layers
+ABW gcn_variant_adjacency_unused     Mehrheit: teilweise Gold: nein      Urteile: ['teilweise', 'teilweise', 'teilweise'] (schwerer Fall)
+      full_batch_gradient_descent        nicht umgesetzt  Training uses the full feature matrix each iteration but does not leverage sparse matrix o
+      dropout_regularization             nicht umgesetzt  Dropout is applied only after the first layer, not to all layers during training.
+      precomputed_normalized_adjacency   umgesetzt        The normalized adjacency is computed once before training and stored in A_norm.
+      renormalized_adjacency             umgesetzt        Implements the renormalization trick Ã = A + I followed by symmetric normalization D^{-1/2
+      self_loops                         umgesetzt        Self-loops are added to the adjacency matrix via Â = A + I.
+      propagation_rule                   nicht umgesetzt  The forward pass does not multiply the normalized adjacency with layer inputs before the w
+      two_graph_conv_layers              nicht umgesetzt  The model contains two linear layers but no graph convolution (adjacency) operations in ei
+
+5/10 Mehrheitsurteile stimmen mit Gold; ja/nein vertauscht: 2; Codes mit uneinigen Urteilen: 2/10; Kosten 0.0780 $ netto
+Eichregel (>= 8/10 und keine Vertauschung): NICHT ERFUELLT
