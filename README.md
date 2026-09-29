@@ -72,7 +72,7 @@ In the DLinear experiment one fresh generation of the agent was judged "reproduc
 
 ## Validating the harness itself
 
-- **DLinear / ETTh1.** The harness' own repeat-last-value baseline gives MSE 1.2944 / MAE 0.7132 on all 2785 test windows; the paper reports 1.295 / 0.713 for `Repeat`. A human reference DLinear reaches MSE 0.428 with a constant learning rate and 0.381 with the per-epoch halving used in the original repository (paper: 0.375).
+- **DLinear / ETTh1.** The harness' own repeat-last-value baseline gives MSE 1.2944 / MAE 0.7132 on all 2785 test windows; the paper reports 1.295 / 0.713 for `Repeat`. A human reference DLinear, re-measured through the pipeline (5 seeds, no LLM): MSE 0.4278 with a constant learning rate and 0.3809 (median 0.3751) with the per-epoch halving used in the original repository (paper: 0.375). [`results/etth1_harness_reference.txt`]
 - **Cora, random splits (Shchur et al. 2018).** A human reference GCN with the paper's Appendix C configuration, run through the same pipeline on 30 random splits × 1 initialisation, reaches accuracy 0.8107 with a standard deviation of 0.0118 (paper: 81.5 ± 1.3 over 100 × 20 runs). The spread across runs matches the paper's. 90 runs (30 × 3) give 0.8111. [`benchmark/experiments/shchur_task.md`, `results/lcc_harness_reference_*.txt`]
 - **Graph ablation** on ten hand-written GCN scripts (eight use the graph, two build it and never multiply with it): 9 of 10 classified as expected; the tenth (no self-loops, no edges → constant output) was "not measurable" by the rule defined beforehand. Thresholds were not adjusted. [`results/ablation_gcn_validation.md`]
 
