@@ -1,0 +1,91 @@
+ABW dl3_module_constant_kernel           Mehrheit: teilweise      Gold: ja        Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       umgesetzt        The model uses a MovingAvg module to compute trend and obtains seasonal as residual.
+      dual_linear_layers                 nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Separate linear layers are defined for trend a
+      summation_fusion                   umgesetzt        The outputs of the trend and seasonal linear layers are summed element‑wise.
+      shared_weights_across_variates     umgesetzt        The same linear‑layer weights are used for all variates, with no spatial modeling.
+      moving_average_kernel_25           umgesetzt        Kernel size is set to 25 via KERNEL = 25 and passed to MovingAvg.
+ABW dl3_default_kernel_effective         Mehrheit: teilweise      Gold: ja        Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Uses moving average to get trend and defines s
+      dual_linear_layers                 umgesetzt        Applies separate linear layers to trend and seasonal components.
+      summation_fusion                   umgesetzt        Element‑wise sum of the trend and seasonal predictions.
+      shared_weights_across_variates     umgesetzt        Same linear‑layer weights are used for all variates; no spatial modeling.
+      moving_average_kernel_25           nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Default kernel_size=25 sets the moving‑average
+ABW dl3_cumsum_moving_average            Mehrheit: teilweise      Gold: ja        Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Trend computed via moving average; seasonal as
+      dual_linear_layers                 umgesetzt        Two separate linear layers applied to trend and seasonal components.
+      summation_fusion                   umgesetzt        Element‑wise sum of trend and seasonal predictions.
+      shared_weights_across_variates     umgesetzt        Same linear‑layer weights are used for all variates; no spatial modeling.
+      moving_average_kernel_25           umgesetzt        Kernel size 25 set as default argument.
+OK  dl3_default_overridden_positional    Mehrheit: teilweise      Gold: teilweise Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       nicht gefunden   Code-Zitat steht nicht im Code (verworfen): The MovingAvg class computes trend via moving 
+      dual_linear_layers                 nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Two separate linear layers are applied to tren
+      summation_fusion                   umgesetzt        Element‑wise addition combines the trend and seasonal predictions.
+      shared_weights_across_variates     umgesetzt        Same linear‑layer weights are used for all variates (no spatial modeling).
+      moving_average_kernel_25           nicht umgesetzt  Kernel size is set to 5 instead of the required 25.
+OK  dl3_default_overridden_keyword       Mehrheit: teilweise      Gold: teilweise Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       umgesetzt        Trend extracted via moving average; seasonal computed as remainder.
+      dual_linear_layers                 nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Separate linear layers applied to trend and se
+      summation_fusion                   umgesetzt        Element‑wise sum of trend and seasonal predictions.
+      shared_weights_across_variates     nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Same weight matrices used for all variates (no
+      moving_average_kernel_25           nicht umgesetzt  Kernel size set to 49, but required value is 25.
+OK  dl3_trend_only                       Mehrheit: teilweise      Gold: teilweise Urteile: ['teilweise', 'teilweise', 'teilweise']
+      seasonal_trend_decomposition       nicht umgesetzt  Only the trend component is extracted via moving average; the seasonal component (original
+      dual_linear_layers                 nicht umgesetzt  Only one linear layer is applied to the trend; there is no separate linear layer for the s
+      summation_fusion                   nicht umgesetzt  The outputs of two linear layers are not summed; only a single linear layer's output is us
+      shared_weights_across_variates     nicht gefunden   Code-Zitat steht nicht im Code (verworfen): The same linear layer weights are applied to a
+      moving_average_kernel_25           umgesetzt        The moving‑average kernel size is set to 25 via the default argument.
+OK  dl3_tiny_transformer                 Mehrheit: nein           Gold: nein      Urteile: ['nein', 'nicht geprueft', 'nein']
+      seasonal_trend_decomposition       nicht gefunden   The script contains no decomposition of input sequences into trend and seasonal components
+      dual_linear_layers                 nicht gefunden   No separate linear layers are applied to trend and seasonal components.
+      summation_fusion                   nicht gefunden   There is no element‑wise addition of two linear‑layer outputs.
+      shared_weights_across_variates     nicht gefunden   The model does not use shared linear weights across variates for trend/seasonal pathways.
+      moving_average_kernel_25           nicht gefunden   No moving‑average kernel of size 25 is defined or used.
+OK  dl3_gru                              Mehrheit: nein           Gold: nein      Urteile: ['nein', 'nein', 'nein']
+      seasonal_trend_decomposition       nicht gefunden   No moving‑average decomposition or trend/seasonal separation is present in the script.
+      dual_linear_layers                 nicht gefunden   The script contains no separate linear layers for trend and seasonal components.
+      summation_fusion                   nicht gefunden   There is no element‑wise addition of two linear‑layer outputs.
+      shared_weights_across_variates     nicht gefunden   Although the final linear layer shares weights across variates, the required dual‑layer st
+      moving_average_kernel_25           nicht gefunden   No moving‑average operation with kernel size 25 appears in the code.
+ABW dl3_decomposition_overwritten        Mehrheit: ja             Gold: nein      Urteile: ['ja', 'ja', 'teilweise'] (dead_code, nur berichtet) JA/NEIN VERTAUSCHT
+      seasonal_trend_decomposition       umgesetzt        The MovingAvg class computes trend via moving average; seasonal is obtained as residual.
+      dual_linear_layers                 umgesetzt        Two independent nn.Linear layers are applied to trend and seasonal components.
+      summation_fusion                   umgesetzt        Element‑wise sum of trend and seasonal predictions is computed.
+      shared_weights_across_variates     umgesetzt        nn.Linear shares weights across variates (channels); no spatial modeling is added.
+      moving_average_kernel_25           umgesetzt        Default argument sets moving‑average kernel size to 25.
+OK  gcn3_sparse_tensor_faithful          Mehrheit: ja             Gold: ja        Urteile: ['ja', 'ja', 'ja']
+      full_batch_gradient_descent        umgesetzt        The training loop processes the entire feature matrix X each epoch, with no mini‑batching,
+      dropout_regularization             umgesetzt        Dropout with probability 0.5 is applied to the input and hidden layer outputs during train
+      precomputed_normalized_adjacency   nicht gefunden   Code-Zitat steht nicht im Code (verworfen): The normalized adjacency matrix A_hat is compu
+      renormalized_adjacency             umgesetzt        The normalization uses D~^‑1/2 A~ D~^‑1/2 where A~ = A + I (self‑loops added).
+      self_loops                         umgesetzt        Self‑loops are added by concatenating node indices to the edge list.
+      propagation_rule                   umgesetzt        Each layer computes σ(Â·(XW)) by first applying the weight matrix then multiplying with t
+      two_graph_conv_layers              umgesetzt        The Net class contains two linear layers (l1, l2) and applies the normalized adjacency in 
+OK  gcn3_no_selfloops_symmetric          Mehrheit: teilweise      Gold: teilweise Urteile: ['teilweise', 'teilweise', 'nein']
+      full_batch_gradient_descent        umgesetzt        Each iteration uses the full feature matrix X, i.e., batch gradient descent over the entir
+      dropout_regularization             umgesetzt        Dropout with probability 0.5 is applied before the first and second graph convolution laye
+      precomputed_normalized_adjacency   umgesetzt        The normalized adjacency matrix A_hat is computed once before training and reused in every
+      renormalized_adjacency             nicht umgesetzt  The code uses D^-1/2 A D^-1/2 without adding self-loops (A+I), so the renormalization tric
+      self_loops                         nicht umgesetzt  No identity matrix is added to the adjacency; self-loops are absent.
+      propagation_rule                   nicht gefunden   Code-Zitat steht nicht im Code (verworfen): Each layer first applies the weight matrix (vi
+      two_graph_conv_layers              umgesetzt        The Net class defines two graph convolution layers (l1 and l2), each with adjacency multip
+OK  gcn3_three_layers                    Mehrheit: teilweise      Gold: teilweise Urteile: ['teilweise', 'teilweise', 'teilweise']
+      full_batch_gradient_descent        umgesetzt        Training loop processes the entire dataset each epoch with no mini‑batching.
+      dropout_regularization             umgesetzt        Dropout with probability 0.5 is applied to the input and between hidden layers during trai
+      precomputed_normalized_adjacency   umgesetzt        The normalized adjacency matrix Â is computed once before training and reused in every lay
+      renormalized_adjacency             umgesetzt        Â is formed as D̃⁻¹/2 Ã D̃⁻¹/2 with Ã = A + I, matching the renormalization trick.
+      self_loops                         umgesetzt        Self‑loops are added by adding the identity matrix to the adjacency.
+      propagation_rule                   umgesetzt        Each layer first applies the weight matrix then multiplies by the normalized adjacency (ÂH
+      two_graph_conv_layers              nicht umgesetzt  The model applies the adjacency matrix three times (before l1, l2, and l3), not exactly tw
+ABW gcn3_propagation_result_discarded    Mehrheit: teilweise      Gold: nein      Urteile: ['teilweise', 'teilweise', 'teilweise'] (dead_code, nur berichtet)
+      full_batch_gradient_descent        nicht umgesetzt  Training uses the full dataset per iteration but does not leverage sparse matrix operation
+      dropout_regularization             nicht umgesetzt  Dropout is applied only after the first hidden layer, not to all layers.
+      precomputed_normalized_adjacency   umgesetzt        The normalized adjacency matrix A_hat is computed once before training.
+      renormalized_adjacency             umgesetzt        Implements the renormalization trick D~^(-1/2) A~ D~^(-1/2).
+      self_loops                         umgesetzt        Self-loops are added via A + I.
+      propagation_rule                   nicht umgesetzt  The adjacency multiplication is overwritten, so the rule H' = σ(ÂHW) is not actually used
+      two_graph_conv_layers              nicht umgesetzt  The model contains only linear layers; adjacency is not applied in two distinct graph conv
+
+Regelmenge: 8/11 Mehrheitsurteile stimmen mit Gold; ja/nein vertauscht: 0; Codes mit uneinigen Urteilen (alle): 3/13; Kosten 0.1071 $ netto
+  dead_code (nicht in der Regel): dl3_decomposition_overwritten: Mehrheit ja, Gold nein
+  dead_code (nicht in der Regel): gcn3_propagation_result_discarded: Mehrheit teilweise, Gold nein
+Eichregel (v3: >= 9 von 11 und keine Vertauschung): NICHT ERFUELLT
