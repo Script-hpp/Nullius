@@ -1,0 +1,1030 @@
+[
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "dataset",
+   "value": "ETTh1",
+   "quote": "ETTh1  96 0.865 0.613 0.454 0.400"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "prediction_horizon",
+   "value": "96",
+   "quote": "ETTh1  96 0.865 0.613 0.454 0.400"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "look_back_window_size",
+   "value": "96",
+   "quote": "The look-back window size is 96."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "model_architecture",
+   "value": "replaced each self-attention layer by a linear layer (Att.-Linear); removed FFN etc (Embed+Linear); finally simplified to one linear layer (Linear)",
+   "quote": "First, we replace each self-attention layer by a linear layer, called Att.-Linear ,since a self-attention layer can be regarded as a fully-connected layer where weights are dynamically changed. Furthermore, we discard other auxiliary designs (e.g., FFN) in Informer to leave embedding layers and linear layers, named Embed + Linear . Finally, we simplify the model to one linear layer."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "evaluation_protocol",
+   "value": "average test MSE of five runs",
+   "quote": "All results are the average test MSE of five runs."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "input length",
+   "value": "L=336 for LTSF-Linear",
+   "quote": "we re-port L=336 for LTSF-Linear and L=96 for Transformers by default."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "normalization method",
+   "value": "normalization via the last value from the lookback window",
+   "quote": "Simply normalization via the last value from the lookback window can greatly relieve the distribution shift problem."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "dataset source",
+   "value": "ETDataset (ETTh1)",
+   "quote": "> 2https://github.com/zhouhaoyi/ETDataset"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "hyperparameters reference",
+   "value": "refer to code for LTSF-Linear hyper-parameters",
+   "quote": "For more hyper-parameters of LTSF-Linear , please refer to our code."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Model Architecture",
+   "value": "Two linear layers at most",
+   "quote": "As LTSF-Linear is a linear model with two linear layers at most"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Weight Initialization",
+   "value": "1/L",
+   "quote": "initialize the weights of the linear layers in DLinear as 1/L rather than random initialization"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Input Length (for weight visualization)",
+   "value": "96",
+   "quote": "we visualize the trend and remainder weights of all datasets with a fixed input length of 96 and four different forecasting horizons"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "seq_len",
+   "value": "336",
+   "quote": "--seq_len $seq_len"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "pred_len",
+   "value": "96",
+   "quote": "--pred_len 96"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "batch_size",
+   "value": "32",
+   "quote": "--batch_size 32"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "learning_rate",
+   "value": "0.005",
+   "quote": "--learning_rate 0.005"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "enc_in",
+   "value": "7",
+   "quote": "--enc_in 7"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "features",
+   "value": "M",
+   "quote": "--features M"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "data",
+   "value": "ETTh1",
+   "quote": "--data ETTh1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "model",
+   "value": "DLinear",
+   "quote": "--model $model_name"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "model_id",
+   "value": "ETTh1_336_96",
+   "quote": "--model_id ETTh1_$seq_len'_'96"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "des",
+   "value": "Exp",
+   "quote": "--des 'Exp'"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "itr",
+   "value": "1",
+   "quote": "--itr 1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "is_training",
+   "value": "1",
+   "quote": "--is_training 1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "root_path",
+   "value": "./dataset/",
+   "quote": "--root_path ./dataset/"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "item": {
+   "topic": "data_path",
+   "value": "ETTh1.csv",
+   "quote": "--data_path ETTh1.csv"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "is_training",
+   "value": "1",
+   "quote": "--is_training 1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "root_path",
+   "value": "./dataset/",
+   "quote": "--root_path ./dataset/"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "data_path",
+   "value": "ETTh1.csv",
+   "quote": "--data_path ETTh1.csv"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "model_id",
+   "value": "ETTh1_336_96",
+   "quote": "--model_id ETTh1_336_96"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "model_name",
+   "value": "DLinear",
+   "quote": "--model $model_name"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "data",
+   "value": "ETTh1",
+   "quote": "--data ETTh1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "seq_len",
+   "value": "336",
+   "quote": "--seq_len 336"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "pred_len",
+   "value": "96",
+   "quote": "--pred_len 96"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "enc_in",
+   "value": "1",
+   "quote": "--enc_in 1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "des",
+   "value": "Exp",
+   "quote": "--des 'Exp'"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "itr",
+   "value": "1",
+   "quote": "--itr 1"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "batch_size",
+   "value": "32",
+   "quote": "--batch_size 32"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "feature",
+   "value": "S",
+   "quote": "--feature S"
+  }
+ },
+ {
+  "doc": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "item": {
+   "topic": "learning_rate",
+   "value": "0.005",
+   "quote": "--learning_rate 0.005"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "optimizer",
+   "value": "Adam",
+   "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "learning_rate",
+   "value": "self.args.learning_rate",
+   "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "loss_function",
+   "value": "MSELoss",
+   "quote": "criterion = nn.MSELoss()"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "early_stopping_patience",
+   "value": "self.args.patience",
+   "quote": "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "training_epochs",
+   "value": "self.args.train_epochs",
+   "quote": "for epoch in range(self.args.train_epochs):"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "use_amp",
+   "value": "self.args.use_amp",
+   "quote": "if self.args.use_amp:"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "prediction_length",
+   "value": "self.args.pred_len",
+   "quote": "dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "label_length",
+   "value": "self.args.label_len",
+   "quote": "dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "model_type_check",
+   "value": "'Linear' in self.args.model",
+   "quote": "if 'Linear' in self.args.model:"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "output_dimension_selection",
+   "value": "self.args.features",
+   "quote": "f_dim = -1 if self.args.features == 'MS' else 0"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "output_attention_flag",
+   "value": "self.args.output_attention",
+   "quote": "if self.args.output_attention:"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "data_loading",
+   "value": "data_provider(self.args, flag)",
+   "quote": "data_set, data_loader = data_provider(self.args, flag)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "model_initialization",
+   "value": "DLinear.Model(self.args)",
+   "quote": "model = model_dict[self.args.model].Model(self.args).float()"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "model_architecture",
+   "value": "Linear model used when 'Linear' in args.model",
+   "quote": "if 'Linear' in self.args.model:\n                            outputs = self.model(batch_x)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "features_setting",
+   "value": "f_dim = -1 if args.features == 'MS' else 0",
+   "quote": "f_dim = -1 if self.args.features == 'MS' else 0"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "prediction_length",
+   "value": "Outputs and targets sliced to last pred_len steps",
+   "quote": "outputs = outputs[:, -self.args.pred_len:, f_dim:]\n                        batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "label_length",
+   "value": "Decoder input built using label_len steps of batch_y",
+   "quote": "dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()\n                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "use_amp",
+   "value": "Automatic mixed precision controlled by args.use_amp",
+   "quote": "if self.args.use_amp:\n                    with torch.cuda.amp.autocast():"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "optimizer_step",
+   "value": "Optimizer step performed via model_optim (with scaler if AMP)",
+   "quote": "if self.args.use_amp:\n                    scaler.scale(loss).backward()\n                    scaler.step(model_optim)\n                    scaler.update()\n                else:\n                    loss.backward()\n                    model_optim.step()"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "learning_rate_schedule",
+   "value": "Learning rate adjusted each epoch by adjust_learning_rate",
+   "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "training_epochs",
+   "value": "Maximum epochs defined by args.train_epochs",
+   "quote": "left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "early_stopping",
+   "value": "Early stopping based on validation loss (or train loss if train_only)",
+   "quote": "early_stopping(vali_loss, self.model, path)\n                ...\n                early_stopping(train_loss, self.model, path)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "validation_test_evaluation",
+   "value": "Validation and test performed each epoch using self.vali",
+   "quote": "vali_loss = self.vali(vali_data, vali_loader, criterion)\n                test_loss = self.vali(test_data, test_loader, criterion)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "test_checkpoint_loading",
+   "value": "Test loads best checkpoint from ./checkpoints/<setting>/checkpoint.pth",
+   "quote": "self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "device_placement",
+   "value": "All tensors moved to self.device",
+   "quote": "batch_x = batch_x.float().to(self.device)\n                batch_y = batch_y.float().to(self.device)\n                batch_x_mark = batch_x_mark.float().to(self.device)\n                batch_y_mark = batch_y_mark.float().to(self.device)"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": {
+   "topic": "logging_frequency",
+   "value": "Training loss printed every 100 iterations",
+   "quote": "if (i + 1) % 100 == 0:\n                    print(\"\\\\\\t iters: {0}, epoch: {1} | loss: {2:.7f}\".format(i + 1, epoch + 1, loss.item()))"
+  }
+ },
+ {
+  "doc": "repo:exp/exp_main.py@0c11366",
+  "item": 0
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "moving_avg block",
+   "value": "kernel_size and stride parameters; AvgPool1d with padding=0",
+   "quote": "def __init__(self, kernel_size, stride):\n        super(moving_avg, self).__init__()\n        self.kernel_size = kernel_size\n        self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=0)"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "series_decomp block",
+   "value": "uses moving_avg with stride=1",
+   "quote": "def __init__(self, kernel_size):\n        super(series_decomp, self).__init__()\n        self.moving_avg = moving_avg(kernel_size, stride=1)"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "Model config usage",
+   "value": "seq_len = configs.seq_len; pred_len = configs.pred_len; kernel_size = 25; individual = configs.individual; channels = configs.enc_in",
+   "quote": "def __init__(self, configs):\n        super(Model, self).__init__()\n        self.seq_len = configs.seq_len\n        self.pred_len = configs.pred_len\n\n        # Decompsition Kernel Size\n        kernel_size = 25\n        self.decompsition = series_decomp(kernel_size)\n        self.individual = configs.individual\n        self.channels = configs.enc_in"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "individual Linear layers (per-channel)",
+   "value": "if self.individual: create ModuleList of nn.Linear(seq_len, pred_len) for each channel",
+   "quote": "if self.individual:\n            self.Linear_Seasonal = nn.ModuleList()\n            self.Linear_Trend = nn.ModuleList()\n\n            for i in range(self.channels):\n                self.Linear_Seasonal.append(nn.Linear(self.seq_len,self.pred_len))\n                self.Linear_Trend.append(nn.Linear(self.seq_len,self.pred_len))"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "shared Linear layers",
+   "value": "else: single nn.Linear(seq_len, pred_len) for seasonal and trend",
+   "quote": "else:\n            self.Linear_Seasonal = nn.Linear(self.seq_len,self.pred_len)\n            self.Linear_Trend = nn.Linear(self.seq_len,self.pred_len)"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "weight initialization comment",
+   "value": "commented-out uniform initialization weight = (1/seq_len)*ones",
+   "quote": "# self.Linear_Seasonal.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n        # self.Linear_Trend.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))"
+  }
+ },
+ {
+  "doc": "repo:models/DLinear.py@0c11366",
+  "item": {
+   "topic": "forward pass shape handling",
+   "value": "permute to [Batch, Channel, Input length]; apply linear; permute back to [Batch, Output length, Channel]",
+   "quote": "seasonal_init, trend_init = self.decompsition(x)\n        seasonal_init, trend_init = seasonal_init.permute(0,2,1), trend_init.permute(0,2,1)\n        ...\n        x = seasonal_output + trend_output\n        return x.permute(0,2,1) # to [Batch, Output length, Channel]"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_loader.py@0c11366",
+  "item": 0
+ },
+ {
+  "doc": "repo:data_provider/data_loader.py@0c11366",
+  "item": 2
+ },
+ {
+  "doc": "repo:data_provider/data_loader.py@0c11366",
+  "item": 2
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "Dataset class mapping for ETTh1",
+   "value": "Dataset_ETT_hour",
+   "quote": "'ETTh1': Dataset_ETT_hour,"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "timeenc calculation based on embed argument",
+   "value": "timeenc = 0 if args.embed != 'timeF' else 1",
+   "quote": "timeenc = 0 if args.embed != 'timeF' else 1"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "train_only flag assignment",
+   "value": "train_only = args.train_only",
+   "quote": "train_only = args.train_only"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "Test split DataLoader settings",
+   "value": "shuffle_flag=False; drop_last=False; batch_size=args.batch_size; freq=args.freq",
+   "quote": "    if flag == 'test':\n        shuffle_flag = False\n        drop_last = False\n        batch_size = args.batch_size\n        freq = args.freq"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "Prediction split DataLoader settings",
+   "value": "shuffle_flag=False; drop_last=False; batch_size=1; freq=args.freq; Data=Dataset_Pred",
+   "quote": "    elif flag == 'pred':\n        shuffle_flag = False\n        drop_last = False\n        batch_size = 1\n        freq = args.freq\n        data_set = Data("
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "Training/validation split DataLoader settings",
+   "value": "shuffle_flag=True; drop_last=True; batch_size=args.batch_size; freq=args.freq",
+   "quote": "    else:\n        shuffle_flag = True\n        drop_last = True\n        batch_size = args.batch_size\n        freq = args.freq"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "Dataset instantiation arguments",
+   "value": "Data(root_path=args.root_path, data_path=args.data_path, flag=flag, size=[args.seq_len, args.label_len, args.pred_len], features=args.features, target=args.target, timeenc=timeenc, freq=freq, train_only=train_only)",
+   "quote": "    data_set = Data(\n        root_path=args.root_path,\n        data_path=args.data_path,\n        flag=flag,\n        size=[args.seq_len, args.label_len, args.pred_len],\n        features=args.features,\n        target=args.target,\n        timeenc=timeenc,\n        freq=freq,\n        train_only=train_only\n    )"
+  }
+ },
+ {
+  "doc": "repo:data_provider/data_factory.py@0c11366",
+  "item": {
+   "topic": "DataLoader creation arguments",
+   "value": "DataLoader(data_set, batch_size=batch_size, shuffle=shuffle_flag, num_workers=args.num_workers, drop_last=drop_last)",
+   "quote": "    data_loader = DataLoader(\n        data_set,\n        batch_size=batch_size,\n        shuffle=shuffle_flag,\n        num_workers=args.num_workers,\n        drop_last=drop_last\n    )"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "seed",
+   "value": "2021",
+   "quote": "fix_seed = 2021\nrandom.seed(fix_seed)\ntorch.manual_seed(fix_seed)\nnp.random.seed(fix_seed)"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "data_file",
+   "value": "ETTh1.csv",
+   "quote": "parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "root_path",
+   "value": "./data/ETT/",
+   "quote": "parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "features",
+   "value": "M",
+   "quote": "parser.add_argument('--features', type=str, default='M', help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "target",
+   "value": "OT",
+   "quote": "parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "freq",
+   "value": "h",
+   "quote": "parser.add_argument('--freq', type=str, default='h', help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "seq_len",
+   "value": "96",
+   "quote": "parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "label_len",
+   "value": "48",
+   "quote": "parser.add_argument('--label_len', type=int, default=48, help='start token length')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "pred_len",
+   "value": "96",
+   "quote": "parser.add_argument('--pred_len', type=int, default=96, help='prediction sequence length')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "individual_flag",
+   "value": "False",
+   "quote": "parser.add_argument('--individual', action='store_true', default=False, help='DLinear: a linear layer for each variate(channel) individually')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "enc_in",
+   "value": "7",
+   "quote": "parser.add_argument('--enc_in', type=int, default=7, help='encoder input size') # DLinear with --individual, use this hyperparameter as the number of channels"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "dec_in",
+   "value": "7",
+   "quote": "parser.add_argument('--dec_in', type=int, default=7, help='decoder input size')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "c_out",
+   "value": "7",
+   "quote": "parser.add_argument('--c_out', type=int, default=7, help='output size')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "embed_type",
+   "value": "0",
+   "quote": "parser.add_argument('--embed_type', type=int, default=0, help='0: default 1: value embedding + temporal embedding + positional embedding 2: value embedding + temporal embedding 3: value embedding + positional embedding 4: value embedding')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "d_model",
+   "value": "512",
+   "quote": "parser.add_argument('--d_model', type=int, default=512, help='dimension of model')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "n_heads",
+   "value": "8",
+   "quote": "parser.add_argument('--n_heads', type=int, default=8, help='num of heads')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "e_layers",
+   "value": "2",
+   "quote": "parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "d_layers",
+   "value": "1",
+   "quote": "parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "d_ff",
+   "value": "2048",
+   "quote": "parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "moving_avg",
+   "value": "25",
+   "quote": "parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "factor",
+   "value": "1",
+   "quote": "parser.add_argument('--factor', type=int, default=1, help='attn factor')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "distil",
+   "value": "True",
+   "quote": "parser.add_argument('--distil', action='store_false', help='whether to use distilling in encoder, using this argument means not using distilling', default=True)"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "dropout",
+   "value": "0.05",
+   "quote": "parser.add_argument('--dropout', type=float, default=0.05, help='dropout')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "embed",
+   "value": "timeF",
+   "quote": "parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "activation",
+   "value": "gelu",
+   "quote": "parser.add_argument('--activation', type=str, default='gelu', help='activation')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "output_attention",
+   "value": "False",
+   "quote": "parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "do_predict",
+   "value": "False",
+   "quote": "parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "num_workers",
+   "value": "10",
+   "quote": "parser.add_argument('--num_workers', type=int, default=10, help='data loader num workers')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "itr",
+   "value": "2",
+   "quote": "parser.add_argument('--itr', type=int, default=2, help='experiments times')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "train_epochs",
+   "value": "10",
+   "quote": "parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "batch_size",
+   "value": "32",
+   "quote": "parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "patience",
+   "value": "3",
+   "quote": "parser.add_argument('--patience', type=int, default=3, help='early stopping patience')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "learning_rate",
+   "value": "0.0001",
+   "quote": "parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "loss",
+   "value": "mse",
+   "quote": "parser.add_argument('--loss', type=str, default='mse', help='loss function')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "lradj",
+   "value": "type1",
+   "quote": "parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "use_amp",
+   "value": "False",
+   "quote": "parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": {
+   "topic": "checkpoints_dir",
+   "value": "./checkpoints/",
+   "quote": "parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')"
+  }
+ },
+ {
+  "doc": "repo:run_longExp.py@0c11366",
+  "item": 0
+ },
+ {
+  "doc": "repo:utils/tools.py@0c11366",
+  "item": {
+   "topic": "data_preprocessing",
+   "value": "StandardScaler (zero‑mean, unit‑variance)",
+   "quote": "class StandardScaler():\n    def __init__(self, mean, std):\n        self.mean = mean\n        self.std = std\n\n    def transform(self, data):\n        return (data - self.mean) / self.std\n\n    def inverse_transform(self, data):\n        return (data * self.std) + self.mean"
+  }
+ },
+ {
+  "doc": "repo:utils/tools.py@0c11366",
+  "item": {
+   "topic": "early_stopping",
+   "value": "patience=7, verbose=False, delta=0",
+   "quote": "def __init__(self, patience=7, verbose=False, delta=0):\n        self.patience = patience\n        self.verbose = verbose\n        self.counter = 0\n        self.best_score = None\n        self.early_stop = False\n        self.val_loss_min = np.Inf\n        self.delta = delta"
+  }
+ },
+ {
+  "doc": "repo:utils/tools.py@0c11366",
+  "item": {
+   "topic": "learning_rate_schedule",
+   "value": "adjust_learning_rate function with lradj options type1‑type6",
+   "quote": "def adjust_learning_rate(optimizer, epoch, args):\n    # lr = args.learning_rate * (0.2 ** (epoch // 2))\n    if args.lradj == 'type1':\n        lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}\n    elif args.lradj == 'type2':\n        lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }"
+  }
+ },
+ {
+  "doc": "repo:README.md@0c11366",
+  "item": {
+   "topic": "data preprocessing",
+   "value": "datasets are well pre-processed and can be used easily",
+   "quote": "All the datasets are well pre-processed and can be used easily."
+  }
+ },
+ {
+  "doc": "repo:README.md@0c11366",
+  "item": {
+   "topic": "data location",
+   "value": "place datasets in ./dataset directory",
+   "quote": "**Please put them in the `./dataset` directory**"
+  }
+ },
+ {
+  "doc": "repo:README.md@0c11366",
+  "item": {
+   "topic": "look-back window default",
+   "value": "336",
+   "quote": "The default look-back window in scripts is 336"
+  }
+ },
+ {
+  "doc": "repo:README.md@0c11366",
+  "item": {
+   "topic": "model default",
+   "value": "train DLinear by default",
+   "quote": "It will start to train DLinear by default"
+  }
+ },
+ {
+  "doc": "repo:README.md@0c11366",
+  "item": {
+   "topic": "initialisation",
+   "value": "use provided initialization in linear models file",
+   "quote": "you can use the initialization we provided in the file of linear models."
+  }
+ }
+]

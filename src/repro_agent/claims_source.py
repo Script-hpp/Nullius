@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import unicodedata
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -114,10 +115,28 @@ def fetch_paper_text(
     raise ExtractionInvalid(f"Kein Volltext fuer {arxiv_id} ueber {[k for k, _ in _source_urls(arxiv_id, version)]}")
 
 
-def _norm(s: str) -> str:
-    """Whitespace glaetten. PDF-Extraktion liefert Zahlen als '81 .5' -> '81.5'."""
+def _norm_v1(s: str) -> str:
+    """Alte Normalisierung (Stand vor Tavily v2), nur fuer Vorher/Nachher-Vergleiche (scripts/measure_role4_drops.py)."""
     s = re.sub(r"\s+", " ", s.replace(chr(0xA0), " ")).strip().lower()
     s = re.sub(r"(\d) \.(\d)", r"\1.\2", s)
+    return re.sub(r"(?<=[a-z])-\s?(?=[a-z])", "", s)
+
+
+_TYPO = str.maketrans({
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-",
+    "\u201c": '"', "\u201d": '"', "\u2018": "'", "\u2019": "'",
+})
+
+
+def _norm(s: str) -> str:
+    """Text fuer den Zitatvergleich glaetten (Tavily v2). Nur Schreibweise, keine Zahlen und Bezeichner:
+    NFKC (Ligaturen fi/fl), typografische Striche und Anfuehrungszeichen, weiche Trennstriche, Leerraum (auch vor
+    Satzzeichen), PDF-Zahlen '81 .5' -> '81.5', Silbentrennung am Zeilenende."""
+    s = unicodedata.normalize("NFKC", s).replace("\u00ad", "").translate(_TYPO)
+    s = re.sub(r"\s+", " ", s.replace(chr(0xA0), " ")).strip().lower()
+    s = re.sub(r"(\d) \.(\d)", r"\1.\2", s)
+    s = re.sub(r"\s+([.,;:!?)\]])", r"\1", s)
+    s = re.sub(r"([(\[])\s+", r"\1", s)
     return re.sub(r"(?<=[a-z])-\s?(?=[a-z])", "", s)   # Silbentrennung der PDF-Extraktion ("prop-agation")
 
 

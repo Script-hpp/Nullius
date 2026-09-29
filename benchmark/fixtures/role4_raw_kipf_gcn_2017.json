@@ -1,0 +1,406 @@
+[
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data_preprocessing",
+   "value": "\\hat{A} = \\tilde{D}^{-1/2} \\tilde{A} \\tilde{D}^{-1/2}",
+   "quote": "We first calculate \\hat{A} = \\tilde{D}^{-1/2} \\tilde{A} \\tilde{D}^{-1/2} in a pre‑processing step."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "model_architecture",
+   "value": "two-layer GCN",
+   "quote": "In the following, we consider a two‑layer GCN for semi‑supervised node classification on a graph with a symmetric adjacency matrix A (binary or weighted)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data_split",
+   "value": "5% of labels used for training",
+   "quote": "... of a two‑layer GCN trained on the Cora dataset (Sen et al., 2008) using 5% of labels."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "optimizer",
+   "value": "batch gradient descent (full dataset)",
+   "quote": "The neural network weights W^{(0)} and W^{(1)} are trained using gradient descent. In this work, we perform batch gradient descent using the full dataset for every training iteration..."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "regularisation",
+   "value": "dropout",
+   "quote": "Stochasticity in the training process is introduced via dropout (Srivastava et al., 2014)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "loss_function",
+   "value": "cross‑entropy over labeled examples",
+   "quote": "For semi‑supervised multi‑class classification, we then evaluate the cross‑entropy error over all labeled examples: L = -\\sum_{l\\in Y_L}\\sum_{f=1}^{F} Y_{lf} \\ln Z_{lf}, where Y_L is the set of node indices that have labels."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "implementation_framework",
+   "value": "TensorFlow",
+   "quote": "In practice, we make use of TensorFlow (Abadi et al., 2015) for an efficient GPU‑based implementation..."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "feature_type",
+   "value": "sparse bag-of-words",
+   "quote": "The datasets contain sparse bag-of-words feature vectors for each document and a list of citation links between documents."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "adjacency_matrix",
+   "value": "binary, symmetric",
+   "quote": "We treat the citation links as (undirected) edges and construct a binary, symmetric adjacency matrix A."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "training_labels_per_class",
+   "value": "20",
+   "quote": "For training, we only use 20 labels per class, but all feature vectors."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data_split_protocol",
+   "value": "follow Yang et al. (2016)",
+   "quote": "We closely follow the experimental setup in Yang et al. (2016)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "model_weight_matrix_per_layer",
+   "value": "single weight matrix per layer",
+   "quote": "Our model instead uses a single weight matrix per layer and deals with varying node degrees through an appropriate normalization of the adjacency matrix (see Section 3.1)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "adjacency_normalization",
+   "value": "appropriate normalization of the adjacency matrix",
+   "quote": "Our model instead uses a single weight matrix per layer and deals with varying node degrees through an appropriate normalization of the adjacency matrix (see Section 3.1)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Model architecture",
+   "value": "two-layer GCN",
+   "quote": "Unless otherwise noted, we train a two-layer GCN as described in Section 3.1"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Data splits (test)",
+   "value": "test set of 1,000 labeled examples",
+   "quote": "evaluate prediction accuracy on a test set of 1,000 labeled examples."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Data splits (validation)",
+   "value": "validation set of 500 labeled examples for hyperparameter optimization",
+   "quote": "We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500 labeled examples for hyperparameter optimization"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Preprocessing",
+   "value": "row-normalize input feature vectors",
+   "quote": "and accordingly (row-)normalize input feature vectors."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Weight initialization",
+   "value": "Glorot & Bengio (2010) initialization",
+   "quote": "We initialize weights using the initialization described in Glorot & Bengio (2010)"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Hyperparameters (Cora)",
+   "value": "dropout rate 0.5, L2 regularization 5e-4, hidden units 16",
+   "quote": "We used the following sets of hyperparameters for Citeseer, Cora and Pubmed: 0.5 (dropout rate), 5 · 10 −4 (L2 regularization) and 16 (number of hid-den units)"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Optimizer",
+   "value": "Adam",
+   "quote": "using Adam (Kingma & Ba, 2015)"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Learning rate",
+   "value": "0.01",
+   "quote": "with a learning rate of 0.01"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Early stopping",
+   "value": "window size 10 epochs",
+   "quote": "early stopping with a window size of 10 , i.e. we stop training if the validation loss does not decrease for 10 consecutive epochs."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Regularisation",
+   "value": "dropout on all layers, L2 on first GCN layer",
+   "quote": "dropout rate for all layers, L2 regularization factor for the first GCN layer and number of hidden units"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Training length",
+   "value": "max 200 epochs with early stopping",
+   "quote": "We train all models for a maximum of 200 epochs (training iterations) using Adam (Kingma & Ba, 2015) with a learning rate of 0.01 and early stopping with a window size of 10"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "Evaluation protocol",
+   "value": "mean accuracy of 100 runs with random weight initializations",
+   "quote": "We trained and tested our model on the same dataset splits as in Yang et al. (2016) and report mean accuracy of 100 runs with random weight initializations."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "model architecture",
+   "value": "two-layer GCN with renormalization trick propagation model",
+   "quote": "The propagation model of our original GCN model is denoted by renormalization trick (in bold). In all other cases, the propagation model of both neural network layers is replaced with the model specified under propagation model."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "weight initialization",
+   "value": "random weight matrix initializations",
+   "quote": "Reported numbers denote mean classification accuracy for 100 repeated runs with random weight matrix initializations."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "number of runs",
+   "value": "100 repeated runs",
+   "quote": "Reported numbers denote mean classification accuracy for 100 repeated runs with random weight matrix initializations."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "regularization",
+   "value": "L2 regularization on all weight matrices of the first layer when multiple variables per layer",
+   "quote": "In case of multiple variables Θi per layer, we impose L2 regularization on all weight matrices of the first layer."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "evaluation metric",
+   "value": "mean classification accuracy",
+   "quote": "Reported numbers denote mean classification accuracy for 100 repeated runs with random weight matrix initializations."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "propagation model (renormalization trick)",
+   "value": "\\tilde{D}^{-1/2} \\tilde{A} \\tilde{D}^{-1/2} X \\Theta",
+   "quote": "Renormalization trick (Eq. 8) \\tilde{D}^{-1/2} \\tilde{A} \\tilde{D}^{-1/2} X\\Theta"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "dataset split",
+   "value": "5-fold cross-validation",
+   "quote": "We report results on a 5-fold cross-validation experiment on the Cora, Citeseer and Pubmed datasets (Sen et al., 2008) using all labels."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "epochs",
+   "value": "400",
+   "quote": "On each cross-validation split, we train for 400 epochs (without early stopping) using the Adam optimizer (Kingma & Ba, 2015) with a learning rate of 0.01 ."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "optimizer",
+   "value": "Adam",
+   "quote": "On each cross-validation split, we train for 400 epochs (without early stopping) using the Adam optimizer (Kingma & Ba, 2015) with a learning rate of 0.01 ."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "learning rate",
+   "value": "0.01",
+   "quote": "On each cross-validation split, we train for 400 epochs (without early stopping) using the Adam optimizer (Kingma & Ba, 2015) with a learning rate of 0.01 ."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "early stopping",
+   "value": "without early stopping",
+   "quote": "On each cross-validation split, we train for 400 epochs (without early stopping) using the Adam optimizer (Kingma & Ba, 2015) with a learning rate of 0.01 ."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "dropout rate",
+   "value": "0.5",
+   "quote": "Other hyperparameters are chosen as follows: 0.5 (dropout rate, first and last layer), 5 · 10 −4 (L2 regularization, first layer), 16 (number of units for each hidden layer) and 0.01 (learning rate)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "L2 regularization",
+   "value": "5 · 10 −4",
+   "quote": "Other hyperparameters are chosen as follows: 0.5 (dropout rate, first and last layer), 5 · 10 −4 (L2 regularization, first layer), 16 (number of units for each hidden layer) and 0.01 (learning rate)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "hidden units",
+   "value": "16",
+   "quote": "Other hyperparameters are chosen as follows: 0.5 (dropout rate, first and last layer), 5 · 10 −4 (L2 regularization, first layer), 16 (number of units for each hidden layer) and 0.01 (learning rate)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "model architecture",
+   "value": "standard GCN model (Eq. 2)",
+   "quote": "In addition to the standard GCN model (Eq. 2), we report results on a model variant where we use residual connections (He et al., 2016) between hidden layers..."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "evaluation protocol",
+   "value": "mean classification accuracy (training vs. testing) for 5-fold cross-validation",
+   "quote": "Markers denote mean classification accuracy (training vs. testing) for 5-fold cross-validation. Shaded areas denote standard error."
+  }
+ },
+ {
+  "doc": "repo:gcn/train.py@39a4089",
+  "item": -1
+ },
+ {
+  "doc": "repo:gcn/utils.py@39a4089",
+  "item": 0
+ },
+ {
+  "doc": "repo:gcn/utils.py@39a4089",
+  "item": -2
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "weight_initialization",
+   "value": "glorot (Xavier) initialization",
+   "quote": "self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],\n                                                        name='weights_' + str(i))"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "bias_initialization",
+   "value": "zeros",
+   "quote": "self.vars['bias'] = zeros([output_dim], name='bias')"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "dropout",
+   "value": "applied to inputs with keep probability 1-self.dropout (sparse_dropout if sparse_inputs else tf.nn.dropout)",
+   "quote": "if self.sparse_inputs:\n            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)\n        else:\n            x = tf.nn.dropout(x, 1-self.dropout)"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "featureless_handling",
+   "value": "if featureless: use weights directly; else: dot product with inputs",
+   "quote": "if not self.featureless:\n                pre_sup = dot(x, self.vars['weights_' + str(i)],\n                              sparse=self.sparse_inputs)\n            else:\n                pre_sup = self.vars['weights_' + str(i)]"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "support_convolution",
+   "value": "dot product of support matrix with pre_sup (sparse=True)",
+   "quote": "support = dot(self.support[i], pre_sup, sparse=True)"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "aggregation",
+   "value": "sum of supports via tf.add_n",
+   "quote": "output = tf.add_n(supports)"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "bias_addition",
+   "value": "add bias vector if bias enabled",
+   "quote": "if self.bias:\n            output += self.vars['bias']"
+  }
+ },
+ {
+  "doc": "repo:gcn/layers.py@39a4089",
+  "item": {
+   "topic": "activation",
+   "value": "apply activation function self.act to output",
+   "quote": "return self.act(output)"
+  }
+ }
+]

@@ -1,0 +1,134 @@
+[
+ {
+  "doc": "paper",
+  "item": 2010
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data splits",
+   "value": "20 labeled nodes per class as training set, 30 nodes per class as validation set, rest as test set",
+   "quote": "In all cases, we use 20 labeled nodes per class as the training set, 30 nodes per class as the validation set, and the rest as the test set."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "number of splits",
+   "value": "100 random train/validation/test splits",
+   "quote": "Table 1: Mean test set accuracy and standard deviation in percent averaged over 100 random train/validation/test splits with 20 random weight initializations each for all models and all datasets."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "weight initializations per split",
+   "value": "20 random weight initializations",
+   "quote": "Table 1: Mean test set accuracy and standard deviation in percent averaged over 100 random train/validation/test splits with 20 random weight initializations each for all models and all datasets."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "hyperparameter search",
+   "value": "extensive grid search for learning rate, size of hidden layer, strength of L2 regularization, and dropout probability",
+   "quote": "We performed an extensive grid search for learning rate, size of the hidden layer, strength of the L2 regularization, and dropout probability (Appendix C)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "hyperparameter selection criterion",
+   "value": "configuration with best average accuracy on Cora and CiteSeer (averaged over 100 splits and 20 initializations)",
+   "quote": "For every model, we picked the hyperparameter configuration that achieved the best average accuracy on Cora and CiteSeer datasets (averaged over 100 train/validation/test splits and 20 random initializations for each)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "search space restriction",
+   "value": "restricted to ensure each model has at most the same number of trainable parameters",
+   "quote": "We restricted the random search space to ensure that every model has at most the same given number of trainable parameters."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data splits",
+   "value": "Train set: 20 per class; validation set: 500 nodes; test set: 1000 (as in the Planetoid split).",
+   "quote": "Train set: 20 per class; validation set: 500 nodes; test set: 1000 (as in the Planetoid split)."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "early stopping criterion",
+   "value": "stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs.",
+   "quote": "Early stopping: stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "maximum epochs",
+   "value": "Maximum number of epochs: 200.",
+   "quote": "Maximum number of epochs: 200."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "full-batch training",
+   "value": "Full-batch training.",
+   "quote": "Full-batch training."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "hidden size",
+   "value": "64",
+   "quote": "GCN 64 0.01 0.8 0.001 92 K"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "learning rate",
+   "value": "0.01",
+   "quote": "GCN 64 0.01 0.8 0.001 92 K"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "dropout probability",
+   "value": "0.8",
+   "quote": "GCN 64 0.01 0.8 0.001 92 K"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "L2 regularization strength",
+   "value": "0.001",
+   "quote": "GCN 64 0.01 0.8 0.001 92 K"
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "unified early stopping criterion",
+   "value": "training stops if the total validation loss (loss on the data plus regularization loss) does not improve for 50 epochs. Once training has stopped, we reset the state of the weights to the step with the lowest validation loss.",
+   "quote": "We train for a maximum of 100 k epochs. However, the actual training time is considerably shorter since we use strict early stopping. Specifically, with our unified early stopping criterion training stops if the total validation loss (loss on the data plus regularization loss) does not improve for 50 epochs. Once training has stopped, we reset the state of the weights to the step with the lowest validation loss."
+  }
+ },
+ {
+  "doc": "paper",
+  "item": {
+   "topic": "data preprocessing",
+   "value": "standardizing the graphs, adding self-loops and removing classes with too few instances from CORA_full.",
+   "quote": "Dataset statistics after standardizing the graphs, adding self-loops and removing classes with too few instances from CORA_full."
+  }
+ }
+]
