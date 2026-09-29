@@ -113,3 +113,19 @@ papers:
         tolerance: 0.01
         origin: placebo   # negative Kontrolle: bewusst falscher Zielwert, nicht aus dem Paper (benchmark_protocol.md)
         source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
+
+  - id: velickovic_gat_2018
+    title: "Graph Attention Networks"
+    arxiv_url: "https://arxiv.org/abs/1710.10903"
+    dataset: "Cora"   # Planetoid-Split, gleicher Task wie Kipf & Welling; Demo fuer den Live-Aufruf von Tavily (nicht im Benchmark-Protokoll)
+    expectation: "reproduziert (Kandidat, falls Zeit bleibt)"
+    seeds: 10
+    claims:
+      # Zielwert: GAT 83,0 +- 0,7 auf Cora (auch in Tabelle 2 von Wu et al. 2019 als Literaturwert belegt); im Lauf mit Tavily aus dem GAT-Paper selbst belegt.
+      - id: gat_cora_acc
+        text: "GAT erreicht 83,0 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.830
+        tolerance: 0.01
+        source: "manuell (Wu et al. 2019, Tabelle 2, Literaturwert); mit Tavily aus dem GAT-Paper belegt ersetzt"
+        extract: {method: "GAT", dataset: "Cora", metric: "accuracy"}
