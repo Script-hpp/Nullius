@@ -5,7 +5,7 @@ import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
-import { Badge, Section, } from './components/ui'
+import { Badge, Section, toPercent } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
 import { RESULT, de2en, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network } from 'lucide-react'
@@ -39,19 +39,11 @@ function translateClaim(text: string) {
 }
 
 function colorForTone(tone: Tone) {
-  if (tone === 'green') return 'text-emerald-400'
-  if (tone === 'amber') return 'text-amber-400'
-  if (tone === 'red') return 'text-rose-400'
-  if (tone === 'violet') return 'text-violet-400'
-  return 'text-zinc-400'
-}
-
-function toPercent(val: string | number | null | undefined): string {
-  if (val === null || val === undefined || val === '') return '–'
-  const n = Number(val)
-  if (Number.isNaN(n)) return String(val)
-  if (n <= 2.0 && n > 0) return (n * 100).toFixed(1) + '%'
-  return n.toFixed(1) + '%'
+  if (tone === 'green') return 'text-emerald-400 border-emerald-500'
+  if (tone === 'amber') return 'text-amber-400 border-amber-500'
+  if (tone === 'red') return 'text-rose-400 border-rose-500'
+  if (tone === 'violet') return 'text-violet-400 border-violet-500'
+  return 'text-zinc-400 border-zinc-500'
 }
 
 function getDelta(measured: any, target: any) {
@@ -64,9 +56,9 @@ function getDelta(measured: any, target: any) {
   const tVal = (t <= 2.0 && t > 0) ? t * 100 : t
   
   const diff = mVal - tVal
-  if (Math.abs(diff) < 0.05) return { text: '±0.0%', color: 'text-zinc-500' }
-  if (diff > 0) return { text: `+${diff.toFixed(1)}%`, color: 'text-emerald-400' }
-  return { text: `${diff.toFixed(1)}%`, color: 'text-rose-400' }
+  if (Math.abs(diff) < 0.05) return { text: '(±0.0% vs. Claimed)', color: 'text-zinc-500' }
+  if (diff > 0) return { text: `(+${diff.toFixed(1)}% vs. Claimed)`, color: 'text-emerald-400' }
+  return { text: `(${diff.toFixed(1)}% vs. Claimed)`, color: 'text-rose-400' }
 }
 
 function getJuryStatement(claimed: string, measured: string, tone: Tone) {
@@ -177,11 +169,11 @@ function Home({ runs }: { runs: RunRef[] }) {
                       <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
                       <span className="font-mono text-zinc-400">{toPercent(claim?.target)}</span>
                     </div>
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Measured</span>
-                      <div className="flex items-center gap-3">
-                        {delta && <span className={`font-mono text-xs font-semibold ${delta.color}`}>{delta.text}</span>}
-                        <span className={`font-mono font-bold ${colorForTone(res!.tone)}`}>{toPercent(v.measured_mean)}</span>
+                    <div className="flex justify-between items-start w-full">
+                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className={`font-mono font-bold text-base leading-none ${colorForTone(res!.tone).split(' ')[0]}`}>{toPercent(v.measured_mean)}</span>
+                        {delta && <span className={`font-mono text-[10px] ${delta.color}`}>{delta.text}</span>}
                       </div>
                     </div>
                   </>
@@ -217,6 +209,7 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   
   let delta = null
   if (v && claim) delta = getDelta(v.measured_mean, claim.target)
+  const resColorClass = colorForTone(res.tone)
 
   const tabs = [
     { id: 'evidence', label: 'Data & Evidence', icon: <FileText className="w-4 h-4" /> },
@@ -254,28 +247,28 @@ function RunView({ ref_ }: { ref_: RunRef }) {
       <div className="grid gap-6 lg:grid-cols-3 items-start">
         <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
           <div className="mb-8">
-            <h3 className={`text-4xl font-bold tracking-tight mt-2 ${colorForTone(res.tone)}`}>{res.label}</h3>
+            <h3 className={`text-4xl font-bold tracking-tight mt-2 ${resColorClass.split(' ')[0]}`}>{res.label}</h3>
           </div>
           
-          <div className="space-y-4 mb-6">
+          <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center w-full">
               <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
               <span className="font-mono text-zinc-300 text-lg">{toPercent(claim.target)}</span>
             </div>
-            <div className="flex justify-between items-center w-full pt-4 border-t border-zinc-800/50">
-              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Measured</span>
-              <div className="flex items-center gap-3">
-                {delta && <span className={`font-mono text-sm font-semibold ${delta.color}`}>{delta.text}</span>}
-                <span className={`font-mono font-bold text-xl ${colorForTone(res.tone)}`}>{toPercent(v?.measured_mean)}</span>
+            <div className="flex justify-between items-start w-full pt-4 border-t border-zinc-800/50">
+              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className={`font-mono font-bold text-2xl leading-none ${resColorClass.split(' ')[0]}`}>{toPercent(v?.measured_mean)}</span>
+                {delta && <span className={`font-mono text-xs ${delta.color}`}>{delta.text}</span>}
               </div>
             </div>
           </div>
           
-          <div className="bg-zinc-950 border border-zinc-800/50 rounded-lg p-4">
+          <div className={`border-l-2 pl-4 py-1 ${resColorClass.split(' ')[1]}`}>
             <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
               {getJuryStatement(toPercent(claim.target), toPercent(v?.measured_mean), res.tone)}
             </p>
-            <p className="text-[11px] text-zinc-500 mt-2">Margin of Error: ±{toPercent(claim.tolerance)}</p>
+            <p className="text-[11px] text-zinc-500 mt-2 font-mono">Margin of Error: ±{toPercent(claim.tolerance)}</p>
           </div>
         </Section>
         
@@ -289,7 +282,7 @@ function RunView({ ref_ }: { ref_: RunRef }) {
         <div className="flex gap-2 border-b border-zinc-800/50 pb-px mb-6">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} 
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${activeTab === t.id ? 'border-zinc-100 text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${activeTab === t.id ? 'border-zinc-100 text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:border-zinc-700/50'}`}>
               {t.icon}
               {t.label}
             </button>

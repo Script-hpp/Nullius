@@ -1,14 +1,8 @@
-import { Badge, fmt } from './ui'
+import { Badge, toPercent } from './ui'
 import { ATTEMPT, de2en } from '../labels'
 import type { Json } from '../data'
 
-
-interface Event {
-  type: string
-  [key: string]: any
-}
-
-export function EvidenceSplit({ claimId, dossier,  selected }: { claimId: string; dossier: Json; events: Event[]; selected: Json | null }) {
+export function EvidenceSplit({ claimId, dossier,  selected }: { claimId: string; dossier: Json; events: any[]; selected: Json | null }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
   const ev = claim?.target_evidence
   const attempts: Json[] = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId)
@@ -20,9 +14,9 @@ export function EvidenceSplit({ claimId, dossier,  selected }: { claimId: string
         <h3 className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-3 border-b border-zinc-800/50 pb-2">Target Evidence (Claimed)</h3>
         {ev ? (
           <div className="bg-[#0a0a0a] border border-zinc-800/50 rounded-xl p-5">
-            <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between text-sm">
               <span className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Target Value</span>
-              <span className="font-mono text-zinc-100 font-semibold">{claim.target}</span>
+              <span className="font-mono text-zinc-100 text-lg font-semibold">{toPercent(claim.target)}</span>
             </div>
             <blockquote className="font-mono rounded-lg border-l-2 px-4 py-3 text-[12px] leading-relaxed border-amber-500/50 bg-amber-500/5 text-amber-100/90 italic">
               "{ev.quote}"
@@ -51,19 +45,19 @@ export function EvidenceSplit({ claimId, dossier,  selected }: { claimId: string
             <table className="w-full text-[12px] text-left">
               <thead className="bg-zinc-950/30 sticky top-0 backdrop-blur-sm">
                 <tr>
-                  <th className="py-2.5 px-4 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">Seed</th>
-                  <th className="py-2.5 px-4 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">Status</th>
-                  <th className="py-2.5 px-4 text-zinc-500 font-semibold uppercase tracking-wider text-[10px] text-right">Measured</th>
+                  <th className="py-3 px-4 border-b border-zinc-800/50 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">Seed</th>
+                  <th className="py-3 px-4 border-b border-zinc-800/50 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">Status</th>
+                  <th className="py-3 px-4 border-b border-zinc-800/50 text-zinc-500 font-semibold uppercase tracking-wider text-[10px] text-right">Measured</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
                 {attempts.map((a, i) => (
                   <tr key={i} className={`hover:bg-zinc-900/50 transition-colors ${selected?.branch_id === a.branch_id ? 'bg-blue-500/10' : ''}`}>
-                    <td className="py-2.5 px-4 font-mono text-zinc-400">{a.seed}</td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-3 px-4 font-mono text-sm text-zinc-400">{a.seed}</td>
+                    <td className="py-3 px-4">
                       <Badge tone={de2en(ATTEMPT, a.status).tone}>{de2en(ATTEMPT, a.status).label}</Badge>
                     </td>
-                    <td className="py-2.5 px-4 font-mono text-right font-medium text-zinc-200">{fmt(a.measured)}</td>
+                    <td className="py-3 px-4 font-mono text-sm text-right font-medium text-zinc-200">{toPercent(a.measured)}</td>
                   </tr>
                 ))}
               </tbody>

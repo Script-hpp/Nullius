@@ -10,6 +10,14 @@ const toneConfig: Record<Tone, { color: string; icon: ReactNode }> = {
   violet: { color: 'text-violet-400', icon: <HelpCircle className="w-4 h-4" /> }
 }
 
+export function toPercent(val: string | number | null | undefined): string {
+  if (val === null || val === undefined || val === '') return '–'
+  const n = Number(val)
+  if (Number.isNaN(n)) return String(val)
+  if (n <= 2.0 && n > 0) return (n * 100).toFixed(1) + '%'
+  return n.toFixed(1) + '%'
+}
+
 export function Badge({ children, tone = 'gray', title }: { children: ReactNode; tone?: Tone; title?: string }) {
   const cfg = toneConfig[tone] || toneConfig.gray
   return (
