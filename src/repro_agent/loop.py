@@ -116,12 +116,19 @@ class Orchestrator:
     def spent_usd(self) -> float:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
 
+    @property
+    def spent_gross_usd(self) -> float:
+        return self.llm.gross(self.spent_usd)
+
     # ---- LLM ----------------------------------------------------------------
     def _ask(
         self, role, system: str, user: str, max_tokens: int | None = None, temperature: float = 0.2
     ) -> LLMResponse:
-        if self.spent_usd >= self.settings.max_cost_per_run_usd:
-            raise CostLimitExceeded(f"MAX_COST_PER_RUN_USD erreicht ({self.spent_usd:.4f} $)")
+        if self.spent_gross_usd >= self.settings.max_cost_per_run_usd:   # Limit gilt brutto
+            raise CostLimitExceeded(
+                f"MAX_COST_PER_RUN_USD erreicht ({self.spent_gross_usd:.4f} $ brutto, "
+                f"{self.spent_usd:.4f} $ netto)"
+            )
         with self._lock:
             resp = self.llm.complete(
                 role,
@@ -439,11 +446,16 @@ def main() -> None:
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     paper_id = args[0] if args else "kipf_gcn_2017"
-    Orchestrator(
-        use_tavily="--no-tavily" not in sys.argv,
-        fresh="--fresh" in sys.argv,
-        setup_details="--no-setup-details" not in sys.argv,
-    ).run(paper_id)
+    from .llm import BillingBlocked
+
+    try:
+        Orchestrator(
+            use_tavily="--no-tavily" not in sys.argv,
+            fresh="--fresh" in sys.argv,
+            setup_details="--no-setup-details" not in sys.argv,
+        ).run(paper_id)
+    except BillingBlocked as exc:
+        sys.exit(f"ABBRUCH: {exc}")
 
 
 if __name__ == "__main__":

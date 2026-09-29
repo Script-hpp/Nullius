@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from typing import Literal
 import httpx
 
 from .config import Settings, load_settings
+from .costs import BudgetExceeded, budget_status, gross, logged_gross_total
 
 # "extract": strukturierte Extraktion (Rollen 2/4). Braucht kein Ultra, nutzt das code-Modell (Super).
 Role = Literal["fast", "code", "reasoning", "extract"]
@@ -27,6 +29,11 @@ TF_PRICES = {
     "nvidia/nemotron-3-super-120b-a12b": (0.3e-6, 0.9e-6),
     "nvidia/Nemotron-3-Ultra-550b-a55b": (1.0e-6, 3.0e-6),
 }
+
+# Abrechnungs-/Auth-Fehler: Statuscodes, oder Text (ausser 5xx). Kein "credit"/"balance" allein:
+# OpenRouters Free-Tageslimit (429) nennt "credits" und ist kein Abrechnungsproblem.
+BILLING_STATUS = (401, 402, 403)
+BILLING_WORDS = ("billing", "suspend", "insufficient", "payment", "api key")
 
 MAX_RETRIES = 5
 BACKOFF_BASE_S = 1.0
@@ -45,6 +52,20 @@ class LLMResponse:
     cost_usd: float
     cached: bool
     finish_reason: str | None = None
+    reasoning_tokens: int | None = None   # in completion_tokens enthalten (usage.completion_tokens_details)
+    status: str = "ok"                    # "ok" | "bad_response" (bezahlt, aber ohne Inhalt)
+
+
+def is_billing_error(status: int | None, text: str) -> bool:
+    if status in BILLING_STATUS:
+        return True
+    if status is not None and status >= 500:
+        return False
+    return any(w in text.lower() for w in BILLING_WORDS)
+
+
+class BillingBlocked(RuntimeError):
+    """Abrechnung oder Zugang blockiert. Kein Retry, kein Reparaturversuch, ganzer Lauf bricht ab."""
 
 
 class BadResponse(Exception):
@@ -62,6 +83,8 @@ class LLMClient:
         self._cache: dict[str, dict] = {}
         self.total_cost_usd = 0.0   # alle Aufrufe dieser Instanz (Rollen 2/4 eingeschlossen)
         self._cost_lock = threading.Lock()
+        self._blocked: str | None = None     # gesetzt = alle weiteren Aufrufe scheitern sofort
+        self._warned_budget = False
         if self.settings.llm_cache:
             self._load_cache()
 
@@ -98,6 +121,8 @@ class LLMClient:
         max_tokens: int | None = None,
         timeout_s: float | None = None,
     ) -> LLMResponse:
+        if self._blocked:
+            raise BillingBlocked(self._blocked)
         model = self._model_for_role(role)
         cache_key = self._cache_key(role, messages, temperature)
 
@@ -107,15 +132,43 @@ class LLMClient:
             self._log_cost(response)
             return response
 
+        self._check_budget()
         response = self._call_with_retry(model, messages, temperature, max_tokens, timeout_s)
-        with self._cost_lock:
-            self.total_cost_usd += response.cost_usd
-        self._log_cost(response)
+        self._book(response)
 
         if self.settings.llm_cache:
             self._append_cache(cache_key, response)
 
         return response
+
+    def _book(self, response: LLMResponse) -> None:
+        with self._cost_lock:
+            self.total_cost_usd += response.cost_usd
+        self._log_cost(response)
+
+    def gross(self, net_usd: float) -> float:
+        return gross(net_usd, self.settings.vat_rate)
+
+    def _check_budget(self) -> None:
+        """Globales Budget (brutto) gegen das Kosten-Log: ab 80 % Warnung, ab 95 % Abbruch."""
+        total = self.settings.budget_total_usd
+        spent = logged_gross_total(COST_LOG_PATH, self.settings.vat_rate) if total > 0 else 0.0
+        status = budget_status(spent, total)
+        if status == "abort":
+            raise BudgetExceeded(
+                f"Budget fast erschoepft: {spent:.2f} $ von {total:.2f} $ brutto laut Log "
+                f"({spent / total:.0%}, Grenze 95 %). Konsole pruefen; Log ist nur eine Schaetzung."
+            )
+        if status == "warn" and not self._warned_budget:
+            self._warned_budget = True
+            print(f"WARNUNG: {spent:.2f} $ von {total:.2f} $ Budget brutto verbraucht ({spent / total:.0%}).",
+                  file=sys.stderr, flush=True)
+
+    def _block(self, status: int | None, text: str) -> None:
+        provider = self.settings.llm.provider
+        who = "Nebius-Abrechnung" if provider == "tokenfactory" else f"{provider}-Abrechnung/Zugang"
+        self._blocked = f"{who} blockiert – Konsole prüfen (HTTP {status}: {text[:200]})"
+        raise BillingBlocked(self._blocked)
 
     def _call_with_retry(
         self,
@@ -135,26 +188,25 @@ class LLMClient:
                 resp = self._client.post(
                     "/chat/completions", json=body, timeout=timeout_s or httpx.USE_CLIENT_DEFAULT
                 )
+                if resp.status_code >= 400 and is_billing_error(resp.status_code, resp.text):
+                    self._block(resp.status_code, resp.text)
                 resp.raise_for_status()
                 data = resp.json()
+                if data.get("error") and is_billing_error(resp.status_code, str(data["error"])):
+                    self._block(resp.status_code, str(data["error"]))
 
-                usage = data.get("usage", {})
+                usage = data.get("usage") or {}
                 try:
                     content = data["choices"][0]["message"]["content"]
                 except (KeyError, IndexError, TypeError):
                     content = None
+                finish = (data.get("choices") or [{}])[0].get("finish_reason")
                 if not content:
+                    if usage.get("prompt_tokens") or usage.get("completion_tokens"):
+                        self._book(self._response(model, "", usage, finish, "bad_response"))   # bezahlt
                     raise BadResponse(f"Antwort ohne Inhalt: {str(data.get('error', data))[:200]}")
 
-                return LLMResponse(
-                    content=content,
-                    model=model,
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    cost_usd=usage.get("cost") or self._estimate_cost(model, usage),
-                    cached=False,
-                    finish_reason=data["choices"][0].get("finish_reason"),
-                )
+                return self._response(model, content, usage, finish, "ok")
             except (httpx.HTTPStatusError, httpx.TransportError, BadResponse, ValueError) as exc:
                 last_error = exc
                 if attempt == MAX_RETRIES - 1:
@@ -165,8 +217,21 @@ class LLMClient:
             f"LLM-Aufruf fehlgeschlagen nach {MAX_RETRIES} Versuchen (Modell {model}): {last_error}"
         )
 
-    @staticmethod
-    def _estimate_cost(model: str, usage: dict) -> float:
+    def _response(self, model: str, content: str, usage: dict, finish: str | None, status: str) -> LLMResponse:
+        details = usage.get("completion_tokens_details") or {}
+        return LLMResponse(
+            content=content, model=model,
+            prompt_tokens=usage.get("prompt_tokens", 0),   # aus usage der API, nie geschaetzt
+            completion_tokens=usage.get("completion_tokens", 0),
+            cost_usd=usage.get("cost") or self._estimate_cost(model, usage),
+            cached=False, finish_reason=finish,
+            reasoning_tokens=details.get("reasoning_tokens"), status=status,
+        )
+
+    def _estimate_cost(self, model: str, usage: dict) -> float:
+        if model not in TF_PRICES and self.settings.llm.provider == "tokenfactory":
+            print(f"WARNUNG: kein Preis fuer Modell {model} in TF_PRICES, Kosten als 0 geloggt.",
+                  file=sys.stderr, flush=True)
         p_in, p_out = TF_PRICES.get(model, (0.0, 0.0))
         return usage.get("prompt_tokens", 0) * p_in + usage.get("completion_tokens", 0) * p_out
 
@@ -174,12 +239,16 @@ class LLMClient:
         COST_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         entry = {
             "ts": time.time(),
+            "provider": self.settings.llm.provider,
+            "base_url": self.settings.llm.base_url,
             "model": response.model,
             "prompt_tokens": response.prompt_tokens,
             "completion_tokens": response.completion_tokens,
             "cost_usd": 0.0 if response.cached else response.cost_usd,
             "cache_hit": response.cached,
             "finish_reason": response.finish_reason,
+            "reasoning_tokens": response.reasoning_tokens,
+            "status": "cached" if response.cached else response.status,
         }
         with COST_LOG_PATH.open("a") as f:
             f.write(json.dumps(entry) + "\n")
