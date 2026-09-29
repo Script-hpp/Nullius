@@ -62,3 +62,13 @@ def test_shchur_table1_headers_without_method_word():
 
 def test_shchur_row_not_in_text_is_not_checkable():
     assert chk(SH, "GCN 1.0 2.0 3.0 4.0", 0.01, "GCN", "CORA", "accuracy", True).status == "nicht pruefbar"
+
+
+SGC = json.loads((FIX / "1902.07153.json").read_text())["text"]
+
+
+def test_partial_quote_is_extended_to_full_row():
+    # Das Modell zitierte nur "SGC 81.0 ± 0.0"; die Zeile hat drei Spalten (Cora Citeseer Pubmed)
+    assert chk(SGC, "SGC 81 .0 ± 0.0", 0.81, "SGC", "Cora", "accuracy", True).status == "ok"
+    assert chk(SGC, "SGC 81 .0 ± 0.0", 0.719, "SGC", "Cora", "accuracy", True).status == "mismatch"
+    assert chk(SGC, "SGC 81 .0 ± 0.0", 0.719, "SGC", "Citeseer", "accuracy", True).status == "ok"

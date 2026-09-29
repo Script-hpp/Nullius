@@ -91,6 +91,10 @@ Every experiment has a file written and committed **before** the first run: hypo
 
 **Consequence of the three calibrations (fixed beforehand):** axis 2 ("method fidelity by the checker") stays **"not checked"** in the benchmark, and this is stated openly here. Verdicts are then "provisional" unless the deterministic graph ablation applies. The checker never rated a wrong code "yes" in the rule sets, but it also cannot see code that runs and whose result is discarded (a known limit of an existence check; line coverage cannot see it either, the ablation can).
 
+## Evidence view
+
+`web/` is a static React app that replays real runs: what Tavily found on the left (verified target value with its table quote, Tavily calls, setup details with verbatim quotes), what the sandbox measured on the right (per-run results against the tolerance band, harness, ablation), the branch tree with repairs, and a step-by-step replay of the run's event log (`events.jsonl`). It needs no backend or API keys; the data are JSON files. See `web/README.md`.
+
 ## Benchmark
 
 **Scope: small graph and time-series models that run on CPU in minutes.** A broad benchmark with shaky tasks would prove less than a narrow, well-documented one. Shwartz-Ziv & Armon (tabular data) was scoped and dropped on purpose: its splits come from other papers, its tuning budget (1000 HyperOpt steps per dataset) cannot be matched on CPU, and the metric is ambiguous, so a verdict would have measured guessed protocol details. [`benchmark/experiments/shwartz_ziv_scoping.md`]

@@ -92,6 +92,19 @@ def _merge_full(words: list[str]) -> list[str]:
     return cols
 
 
+def _row_from(text: str, pos: int) -> str:
+    """Zeile ab `pos` (Zeilenname, dann Zahlen) bis zum naechsten Wort mit mindestens drei Buchstaben nach der ersten Zahl."""
+    out, seen_number = [], False
+    for m in re.finditer(r"\S+", text[pos:pos + 400]):
+        tok = m.group()
+        if re.search(r"\d", tok):
+            seen_number = True
+        elif seen_number and re.search(r"[a-z]{3,}", tok):
+            break
+        out.append(tok)
+    return " ".join(out)
+
+
 def _check_dataset_run(text: str, quote: str, value: float, dataset: str, percent: bool) -> ColumnCheck | None:
     """Tabellen ohne 'Method'-Kopf: die letzte Folge von Datensatznamen VOR der Zeile ist die Kopfzeile
     ('CORA CiteSeer PubMed CORA Full')."""
@@ -115,8 +128,13 @@ def _check_dataset_run(text: str, quote: str, value: float, dataset: str, percen
         best = _merge_full(run)
     if best is None:
         return None
-    q = re.sub(r"±\s*\d+(?:\.\d+)?", " ", re.sub(r"\[\d+(?:,\s*\d+)*\]", " ", quote))
-    row = [float(x) for x in re.findall(NUMBER, q)]
+    def row_numbers(s: str) -> list[float]:
+        s = re.sub(r"±\s*\d+(?:\.\d+)?", " ", re.sub(r"\[\d+(?:,\s*\d+)*\]", " ", s))
+        return [float(x) for x in re.findall(NUMBER, s)]
+
+    row = row_numbers(quote)
+    if len(row) < len(best):   # Zitat enthaelt nur einen Teil der Zeile: im Text bis zum naechsten Zeilennamen fortsetzen
+        row = row_numbers(_row_from(text, pos))
     if len(row) < len(best):
         return ColumnCheck("nicht pruefbar", f"Kopfzeile {best} passt nicht zur Zeile ({len(row)} Zahlen)")
     i = best.index(want)

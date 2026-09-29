@@ -1,0 +1,354 @@
+{
+  "paper_id": "wu_sgc_2019",
+  "claims": [
+    {
+      "id": "sgc_cora_acc",
+      "text": "SGC erreicht 81,0 % Accuracy auf Cora (Planetoid-Split)",
+      "metric": "accuracy",
+      "target": 0.81,
+      "tolerance": 0.01,
+      "source": "Table 2, arXiv v2 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1902.07153v2"
+      ],
+      "target_evidence": {
+        "value": 0.81,
+        "quote": "SGC 81.0 ± 0.0",
+        "table": "Table 2",
+        "url": "https://arxiv.org/pdf/1902.07153v2",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-09-29T09:57:31+00:00",
+        "sha256": "3f53d96637bf7a49a8628a46bc2933e56db5e233e7d83ed7ebab48c1d9ec8a42",
+        "arxiv_version": "v2",
+        "caveat": null,
+        "column_check": "nicht pruefbar"
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-02ba8805",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.817,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.817
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          9,
+          10,
+          11,
+          14,
+          15,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          26,
+          27,
+          31,
+          35,
+          38,
+          39,
+          40,
+          41,
+          44,
+          48,
+          50,
+          52,
+          53,
+          54,
+          55,
+          57,
+          58,
+          61,
+          62,
+          63,
+          64,
+          67,
+          68,
+          69,
+          70,
+          75,
+          76,
+          78,
+          79,
+          80,
+          81,
+          83,
+          84,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          95,
+          96,
+          97,
+          98,
+          99,
+          101,
+          102,
+          103,
+          105,
+          106,
+          107,
+          108,
+          111,
+          112,
+          113,
+          116,
+          117,
+          118,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          129,
+          131,
+          132
+        ],
+        "missing": [
+          12,
+          13,
+          71,
+          72,
+          73
+        ]
+      }
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-f2d94f82",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.807,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.807
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-b707cb79",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 4,
+      "status": "stabil",
+      "measured": 0.809,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.809
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-162cd41a",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 3,
+      "status": "stabil",
+      "measured": 0.812,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.812
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-fac692de",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.813,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.813
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-6bb27f50",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.822,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.822
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-3d5559ce",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 7,
+      "status": "stabil",
+      "measured": 0.819,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.819
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-c74471c0",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 6,
+      "status": "stabil",
+      "measured": 0.816,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.816
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-3da99e6b",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 8,
+      "status": "stabil",
+      "measured": 0.819,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.819
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "sgc_cora_acc",
+      "branch_id": "repro-branch-4f9930e0",
+      "parent_snapshot": "repro-snapshot-wu-sgc-2019-20260929-125849",
+      "code_hash": "cd90584a9feb",
+      "seed": 9,
+      "status": "abweichung",
+      "measured": 0.831,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0187984,
+      "metrics": {
+        "accuracy": 0.831
+      },
+      "coverage": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "sgc_cora_acc",
+      "urteil": "reproduziert",
+      "measured_mean": 0.8165,
+      "measured_std": 0.006932211447695108,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0069. Mit unserem Setup gemessen (10 von 10 Seeds, Zielwert 0.81 +/- 0.01, Table 2, arXiv v2 (pdf)): Mittel 0.8165.",
+      "sources": [
+        "https://arxiv.org/pdf/1902.07153v2"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "dataset",
+      "value": "Cora (Sen et al., 2008)",
+      "quote": "We evaluate the semi-supervised node classification performance of SGC on the Cora, Citeseer, and Pubmed citation network datasets (Table 2) (Sen et al., 2008).",
+      "source": "paper"
+    },
+    {
+      "topic": "data split",
+      "value": "140 training nodes, 500 validation nodes, 1000 test nodes",
+      "quote": "Cora 2, 708 5, 429 140 /500 /1, 000",
+      "source": "paper"
+    },
+    {
+      "topic": "training_epochs",
+      "value": "100 epochs",
+      "quote": "we train SGC for 100 epochs using Adam (Kingma & Ba, 2015) with learning rate 0.2.",
+      "source": "paper"
+    },
+    {
+      "topic": "weight_decay_tuning",
+      "value": "tuned via hyperopt for 60 iterations on public split validation set",
+      "quote": "we use weight decay and tune this hyperparameter on each dataset using hyperopt (Bergstra et al., 2015) for 60 iterations on the public split validation set.",
+      "source": "paper"
+    },
+    {
+      "topic": "epochs_tuning",
+      "value": "tuned based on convergence behavior and validation accuracy",
+      "quote": "On all datasets, we tune the number of epochs based on both convergence behavior and validation accuracy.",
+      "source": "paper"
+    }
+  ],
+  "repo": null,
+  "baselines": {
+    "majority": {
+      "accuracy": 0.319
+    },
+    "no_graph": {
+      "accuracy": 0.506
+    }
+  },
+  "ablations": {
+    "sgc_cora_acc": {
+      "accuracy_full": 0.817,
+      "accuracy_ablated": 0.592,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau"
+}
