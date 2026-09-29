@@ -92,14 +92,16 @@ Every experiment has a file written and committed **before** the first run: hypo
 
 ## Benchmark
 
-Eight to ten papers with known reproduction outcome, each run with and without Tavily. Target sentence for this section: "With Tavily, X of 10 verdicts agreed with human reproduction studies, without Tavily Y."
+**Scope: small graph and time-series models that run on CPU in minutes.** A broad benchmark with shaky tasks would prove less than a narrow, well-documented one. Shwartz-Ziv & Armon (tabular data) was scoped and dropped on purpose: its splits come from other papers, its tuning budget (1000 HyperOpt steps per dataset) cannot be matched on CPU, and the metric is ambiguous, so a verdict would have measured guessed protocol details. [`benchmark/experiments/shwartz_ziv_scoping.md`]
+
+Eight or more papers with known reproduction outcome, each run with and without Tavily. Target sentence for this section: "With Tavily, X of 10 verdicts agreed with human reproduction studies, without Tavily Y."
 
 | Paper | Expectation | Task built | Result (with / without Tavily) |
 |---|---|---|---|
 | Kipf & Welling 2017, GCN (Cora) | reproduced | yes | TBD |
 | Zeng et al. 2023, DLinear (ETTh1) | reproduced | yes | TBD |
 | Shchur et al. 2018, Pitfalls of GNN Evaluation (Cora, random splits) | GCN best on random splits | yes (GCN number only) | TBD |
-| Shwartz-Ziv & Armon 2021, Tabular Data | XGBoost ahead | scoping done | TBD |
+| Wu et al. 2019, SGC (Cora, Planetoid split) | reproduced, on par with GCN | yes (same Cora task) | TBD |
 | Ferrari Dacrema et al. 2019, Are We Really Making Much Progress? | baselines beat neural models | no | TBD |
 
 All numbers in this README and in the video come from production runs on Token Factory; prototype runs on free endpoints are never published.
@@ -115,6 +117,7 @@ Safeguards: a per-run limit (gross), a global budget with a cut-off date (warnin
 - Mode "rebuild" only: the agent writes its own code and takes only cited details from paper and repository; running the authors' code ("re-run") tests something different and is not built.
 - Method fidelity by the LLM checker is not calibrated (see above). The graph ablation exists for GCN only; DLinear would need a decomposition ablation.
 - Hand-written calibration and ablation codes can differ from real agent code; labels were written by the authors of the codes.
+- Shwartz-Ziv & Armon was dropped after scoping (see Benchmark). GAT (Veličković et al., 2018) is a candidate if time remains; agents tend to make more mistakes implementing it.
 - The Shchur task checks the GCN number, not the ranking of models; 30 random splits × 1 initialisation instead of 100 × 20.
 - Role 3 (collecting objections) and role 4 v2 (effective configuration, complete bundle) are designed but not evaluated.
 - Nebius sandbox rate limits: 20 parallel branches ran without errors; higher was not tested.
@@ -122,11 +125,9 @@ Safeguards: a per-run limit (gross), a global budget with a cut-off date (warnin
 
 ## Related work
 
-- **PaperBench** (OpenAI) evaluates agents that replicate recent ML papers from scratch and grades them against author-agreed rubrics.
-- **CORE-Bench** evaluates computational reproducibility: agents run the code and data provided with a paper and answer questions about the output.
+- **PaperBench** ([Starace et al., 2025](https://arxiv.org/abs/2504.01848)): agents replicate 20 ICML 2024 Spotlight and Oral papers from scratch and are graded against hierarchical rubrics (8,316 gradable sub-tasks) co-developed with the papers' authors, using an LLM judge.
+- **CORE-Bench** ([Siegel et al., 2024](https://arxiv.org/abs/2409.11363)): 270 tasks from 90 papers in computer science, social science and medicine; agents run the code and data provided with a paper and answer questions about the results.
 - **Difference:** our agent is judged against the *paper's claims*, not a rubric; the score comes from an independent harness the agent cannot touch; a verdict can say "not reproduced", and negative findings are a first-class output. We also test our own components (harness, checker, ablation) with rules fixed beforehand and report the failures.
-
-*(Descriptions of related work are written from memory and must be checked against the papers before submission.)*
 
 ## Usage
 
