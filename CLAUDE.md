@@ -332,6 +332,10 @@ Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer 
 | Agent schönt Zahlen | unabhängiger Harness, Agent liefert nur Vorhersagen |
 | Falsches „nicht reproduziert" | vorsichtige Formulierung, Toleranz vorab, Versuche offenlegen |
 
+## Evidence-Ansicht (`web/`)
+
+Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine Backend-Pflicht, keine Keys. Grundlage: `runs/<paper>/<ts>/events.jsonl` (Ereignisprotokoll des Loops, `events.py`) und `dossier.json`. Export ausgewählter Läufe mit `scripts/export_site_data.py` nach `web/public/data`; nur Prod-Läufe veröffentlichen. Ältere Läufe ohne `events.jsonl` werden aus dem Dossier abgespielt. Live-Modus (FastAPI + SSE) ist nicht gebaut; wenn überhaupt, nur für ein festes Beispiel mit Zugangscode und Kostenlimit, Keys nie ins Frontend.
+
 ## Offene Punkte
 
 - [x] Sandbox-Beta-Freigabe abwarten (genehmigt, kostenlos)

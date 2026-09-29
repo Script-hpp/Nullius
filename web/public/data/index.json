@@ -10,5 +10,17 @@
   "paper_id": "wu_sgc_2019",
   "title": "Simplifying Graph Convolutional Networks",
   "timestamp": "20260929-125849"
+ },
+ {
+  "id": "kipf_gcn_2017--20260929-130133",
+  "paper_id": "kipf_gcn_2017",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20260929-130133"
+ },
+ {
+  "id": "shchur_pitfalls_2018--20260929-130628",
+  "paper_id": "shchur_pitfalls_2018",
+  "title": "Pitfalls of Graph Neural Network Evaluation",
+  "timestamp": "20260929-130628"
  }
 ]

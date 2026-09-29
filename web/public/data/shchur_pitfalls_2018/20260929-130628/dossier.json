@@ -1,0 +1,704 @@
+{
+  "paper_id": "shchur_pitfalls_2018",
+  "claims": [
+    {
+      "id": "shchur_gcn_cora_acc",
+      "text": "GCN erreicht 81,5 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)",
+      "metric": "accuracy",
+      "target": 0.815,
+      "tolerance": 0.01,
+      "source": "Table 1, arXiv v2 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "target_evidence": {
+        "value": 0.815,
+        "quote": "GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6",
+        "table": "Table 1",
+        "url": "https://arxiv.org/pdf/1811.05868v2",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-09-29T07:54:33+00:00",
+        "sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056",
+        "arxiv_version": "v2",
+        "caveat": null,
+        "column_check": "ok"
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-eb365647",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7990632318501171,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7990632318501171
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          23,
+          27,
+          29,
+          30,
+          33,
+          34,
+          35,
+          38,
+          39,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          49,
+          51,
+          52,
+          53,
+          54,
+          56,
+          57,
+          58,
+          60,
+          61,
+          64,
+          65,
+          66,
+          67,
+          68,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          89,
+          90,
+          91,
+          93,
+          96,
+          101,
+          104,
+          105,
+          106,
+          107,
+          108,
+          110,
+          111
+        ],
+        "missing": [
+          98,
+          99
+        ]
+      }
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-6381bb3d",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.8135831381733021,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8135831381733021
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-f7aeb81c",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.780327868852459,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.780327868852459
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-8f9353f6",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.8088992974238876,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8088992974238876
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-e2d287d3",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.7812646370023419,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7812646370023419
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-a5db2389",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.8004683840749415,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8004683840749415
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-e000c217",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 7,
+      "status": "abweichung",
+      "measured": 0.7985948477751756,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7985948477751756
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-fb37c92f",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 8,
+      "status": "abweichung",
+      "measured": 0.789695550351288,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.789695550351288
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-aeee42f9",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 6,
+      "status": "abweichung",
+      "measured": 0.8252927400468384,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8252927400468384
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-58ff29c6",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 10,
+      "status": "abweichung",
+      "measured": 0.7939110070257611,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7939110070257611
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-ab12aa00",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 9,
+      "status": "abweichung",
+      "measured": 0.7995316159250585,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7995316159250585
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-93530ca0",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 11,
+      "status": "stabil",
+      "measured": 0.8234192037470726,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8234192037470726
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-8f9ef13e",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 12,
+      "status": "abweichung",
+      "measured": 0.8009367681498829,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8009367681498829
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-d65957e6",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 13,
+      "status": "abweichung",
+      "measured": 0.7882903981264637,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7882903981264637
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-9c7edbae",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 14,
+      "status": "abweichung",
+      "measured": 0.8046838407494146,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8046838407494146
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-a8b06751",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 16,
+      "status": "abweichung",
+      "measured": 0.8014051522248243,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8014051522248243
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-f12bec46",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 15,
+      "status": "abweichung",
+      "measured": 0.7981264637002342,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7981264637002342
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-f858fe69",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 17,
+      "status": "abweichung",
+      "measured": 0.7817330210772834,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7817330210772834
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-d58478c5",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 18,
+      "status": "stabil",
+      "measured": 0.8070257611241218,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8070257611241218
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-ddfbb9da",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 19,
+      "status": "stabil",
+      "measured": 0.8220140515222483,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8220140515222483
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-9af11399",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 20,
+      "status": "stabil",
+      "measured": 0.819672131147541,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.819672131147541
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-12107e03",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 22,
+      "status": "abweichung",
+      "measured": 0.7892271662763466,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7892271662763466
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-bfd3870f",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 23,
+      "status": "abweichung",
+      "measured": 0.8252927400468384,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8252927400468384
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-01dd5a46",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 21,
+      "status": "stabil",
+      "measured": 0.8112412177985948,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8112412177985948
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-99cc676c",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 24,
+      "status": "abweichung",
+      "measured": 0.790632318501171,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.790632318501171
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-156fa156",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 25,
+      "status": "abweichung",
+      "measured": 0.7967213114754098,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7967213114754098
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-7a198253",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 27,
+      "status": "abweichung",
+      "measured": 0.7967213114754098,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7967213114754098
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-ae279891",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 26,
+      "status": "abweichung",
+      "measured": 0.7981264637002342,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.7981264637002342
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-faff538d",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 28,
+      "status": "stabil",
+      "measured": 0.8065573770491803,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8065573770491803
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "branch_id": "repro-branch-269fdbc9",
+      "parent_snapshot": "repro-snapshot-shchur-pitfalls-2018-20260929-130628",
+      "code_hash": "a0ac0ff9288e",
+      "seed": 29,
+      "status": "abweichung",
+      "measured": 0.8014051522248243,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.017706700000000002,
+      "metrics": {
+        "accuracy": 0.8014051522248243
+      },
+      "coverage": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "shchur_gcn_cora_acc",
+      "urteil": "teilweise",
+      "measured_mean": 0.8017954722872755,
+      "measured_std": 0.012730188036038757,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0127. Mit unserem Setup gemessen (30 von 30 Seeds, Zielwert 0.815 +/- 0.01, Table 1, arXiv v2 (pdf)): Mittel 0.8018.",
+      "sources": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "data_splits",
+      "value": "100 random train/validation/test splits",
+      "quote": "For each dataset we use 100 random train/validation/test splits",
+      "source": "paper"
+    },
+    {
+      "topic": "random_initializations",
+      "value": "20 random initializations for each split",
+      "quote": "perform 20 random initializations for each split",
+      "source": "paper"
+    },
+    {
+      "topic": "training_procedure",
+      "value": "standardized training and hyperparameter selection procedure for all models",
+      "quote": "We use a standardized training and hyperparameter selection procedure for all models",
+      "source": "paper"
+    },
+    {
+      "topic": "data splits",
+      "value": "20 labeled nodes per class as the training set, 30 nodes per class as the validation set, and the rest as the test set",
+      "quote": "In all cases, we use 20 labeled nodes per class as the training set, 30 nodes per class as the validation set, and the rest as the test set.",
+      "source": "paper"
+    },
+    {
+      "topic": "number of random splits",
+      "value": "100 random train/validation/test splits",
+      "quote": "Table 1: Mean test set accuracy and standard deviation in percent averaged over 100 random train/validation/test splits with 20 random weight initializations each for all models and all datasets.",
+      "source": "paper"
+    },
+    {
+      "topic": "hyperparameter search",
+      "value": "extensive grid search for learning rate, size of the hidden layer, strength of the L2 regularization, and dropout probability",
+      "quote": "We performed an extensive grid search for learning rate, size of the hidden layer, strength of the L2 regularization, and dropout probability (Appendix C).",
+      "source": "paper"
+    },
+    {
+      "topic": "hyperparameter selection criterion",
+      "value": "picked the hyperparameter configuration that achieved the best average accuracy on Cora and CiteSeer datasets (averaged over 100 train/validation/test splits and 20 random initializations for each)",
+      "quote": "For every model, we picked the hyperparameter configuration that achieved the best average accuracy on Cora and CiteSeer datasets (averaged over 100 train/validation/test splits and 20 random initializations for each).",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation protocol",
+      "value": "Mean test set accuracy and standard deviation averaged over 100 splits and 20 random initializations each",
+      "quote": "Results Table 1 shows mean accuracies (and their standard deviations 2) of all models for all 8 datasets averaged over 100 splits and 20 random initializations for each split.",
+      "source": "paper"
+    },
+    {
+      "topic": "Evaluation protocol",
+      "value": "averaged over multiple data splits",
+      "quote": "the results are averaged over multiple data splits",
+      "source": "paper"
+    },
+    {
+      "topic": "Train/validation/test split sizes",
+      "value": "same as Yang et al. 2016",
+      "quote": "different random split with the same train/validation/test set sizes",
+      "source": "paper"
+    },
+    {
+      "topic": "data splits",
+      "value": "100 random train/validation/test splits",
+      "quote": "over 100 random train/validation/test splits",
+      "source": "paper"
+    },
+    {
+      "topic": "weight initializations",
+      "value": "20 random weight initializations each",
+      "quote": "with 20 random weight initializations each.",
+      "source": "paper"
+    }
+  ],
+  "repo": null,
+  "baselines": {
+    "majority": {
+      "accuracy": 0.1377049180327869
+    },
+    "no_graph": {
+      "accuracy": 0.448711943793911
+    }
+  },
+  "ablations": {
+    "shchur_gcn_cora_acc": {
+      "accuracy_full": 0.7990632318501171,
+      "accuracy_ablated": 0.5953161592505855,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau"
+}
