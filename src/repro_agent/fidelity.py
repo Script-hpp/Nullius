@@ -127,54 +127,96 @@ def numbered(code: str) -> str:
     return "\n".join(f"{i:4d}| {line}" for i, line in enumerate(code.splitlines(), 1))
 
 
+CHECKER_SYSTEM = (
+    "You review whether a Python training script implements a specific method. Be strict: a "
+    "component counts as implemented only if the code really does it. 'not_found' and "
+    "'not_implemented' are normal, correct answers; do not stretch a similar piece of code "
+    "to fit a component. Keep reasoning brief."
+)
+
+# Nur typografische Zeichen vereinheitlichen; Bezeichner und Zahlen bleiben exakt (case-sensitiv).
+_TYPO = str.maketrans({
+    "\u2010": "-", "\u2011": "-", "\u2013": "-", "\u2212": "-", "\u00a0": " ",
+    "\u201c": '"', "\u201d": '"', "\u2018": "'", "\u2019": "'",
+})
+_LINE_PREFIX = re.compile(r"^\s*\d+\|\s?", flags=re.M)   # unser Zeilennummern-Format, falls mitzitiert
+
+
+def _code_norm(s: str, strip_prefix: bool = False) -> str:
+    """Leerraum und Zeilenumbrueche vereinheitlichen (auch um Operatoren: `k=5` == `k = 5`)."""
+    if strip_prefix:
+        s = _LINE_PREFIX.sub("", s)
+    return re.sub(r"\s+", "", s.translate(_TYPO))
+
+
+def value_in_quote(value: str, quote: str) -> bool:
+    """Wert als ganzes Token: `5` steht nicht in `kernel_size=25`, `0.5` nicht in `10.55`."""
+    return re.search(rf"(?<![\w.]){re.escape(value)}(?![\w]|\.\d)", quote) is not None
+
+
+def _ask_checker(llm: LLMClient, listing: str, code: str) -> tuple[list | None, str]:
+    """(Ergebnisliste, Ausfallgrund). Abgeschnitten oder unlesbar: einmal neu, mit doppelter Grenze."""
+    reason = ""
+    for max_tokens, temperature in ((8000, 0.0), (16000, 0.2)):   # Temperatur anders: sonst kaeme Cache-Treffer
+        resp = llm.complete("extract", [
+            {"role": "system", "content": CHECKER_SYSTEM},
+            {"role": "user", "content": (
+                f"Components the method requires:\n{listing}\n\nScript (line-numbered):\n{numbered(code)}\n\n"
+                'Answer with a JSON list, one object per component id: {"id": ..., "status": one of '
+                '"implemented" | "not_implemented" | "not_found", "code_quote": the VERBATIM code lines '
+                "(without the line-number prefix) that implement it, or null, \"note\": one short sentence}. "
+                "End with the JSON list."
+            )},
+        ], temperature=temperature, max_tokens=max_tokens, timeout_s=600)
+        raw = _last_json(resp.content, "[")
+        if isinstance(raw, list) and any(isinstance(r, dict) and "id" in r for r in raw):
+            return raw, ""
+        reason = ("Ausgabe abgeschnitten (finish_reason length)" if resp.finish_reason == "length"
+                  else "keine lesbare JSON-Liste")
+    return None, reason
+
+
 def check_fidelity(llm: LLMClient, components: list[Component], code: str) -> FidelityReport:
+    """Ein technischer Ausfall (unlesbare Antwort, fehlender Baustein) ist nie ein Urteil: Ergebnis
+    'nicht geprueft', nicht 'nicht gefunden' oder 'nein'."""
     listing = "\n".join(
         f'- id={c.id}: {c.name}. {c.description}' + (f" Required value: {c.value}." if c.value else "")
         for c in components
     )
-    resp = llm.complete("extract", [
-        {"role": "system", "content": (
-            "You review whether a Python training script implements a specific method. Be strict: a "
-            "component counts as implemented only if the code really does it. 'not_found' and "
-            "'not_implemented' are normal, correct answers; do not stretch a similar piece of code "
-            "to fit a component. Keep reasoning brief."
-        )},
-        {"role": "user", "content": (
-            f"Components the method requires:\n{listing}\n\nScript (line-numbered):\n{numbered(code)}\n\n"
-            'Answer with a JSON list, one object per component id: {"id": ..., "status": one of '
-            '"implemented" | "not_implemented" | "not_found", "code_quote": the VERBATIM code lines '
-            "(without the line-number prefix) that implement it, or null, \"note\": one short sentence}. "
-            "End with the JSON list."
-        )},
-    ], temperature=0.0, max_tokens=8000, timeout_s=600)
-    raw = _last_json(resp.content, "[") or []
+    raw, reason = _ask_checker(llm, listing, code)
+    if raw is None:
+        note = f"technischer Ausfall des Pruefers: {reason}"
+        return FidelityReport("nicht geprueft", [ComponentResult(c.id, "nicht geprueft", None, note) for c in components])
     by_id = {str(r.get("id")): r for r in raw if isinstance(r, dict)}
-    code_norm = _norm(code)
+    code_norm = _code_norm(code)
     results = []
     for c in components:
         r = by_id.get(c.id)
-        if r is None:
-            results.append(ComponentResult(c.id, "nicht gefunden", None, "Pruefer lieferte keine Antwort zu diesem Baustein"))
-            continue
         status = {"implemented": "umgesetzt", "not_implemented": "nicht umgesetzt",
-                  "not_found": "nicht gefunden"}.get(str(r.get("status")), "nicht gefunden")
+                  "not_found": "nicht gefunden"}.get(str(r.get("status"))) if r else None
+        if status is None:
+            results.append(ComponentResult(c.id, "nicht geprueft", None, "technischer Ausfall: Antwort fehlt oder Status unlesbar"))
+            continue
         quote = r.get("code_quote")
         note = str(r.get("note", ""))
         if status == "umgesetzt":
-            if not quote or _norm(str(quote)) not in code_norm:
+            if not quote or _code_norm(str(quote), strip_prefix=True) not in code_norm:
                 status, note = "nicht gefunden", "Code-Zitat steht nicht im Code (verworfen): " + note
-            elif c.value and c.value not in str(quote):
+            elif c.value and not value_in_quote(c.value, str(quote)):
                 status, note = "teilweise", f"Wert {c.value} steht nicht im Zitat: " + note
         results.append(ComponentResult(c.id, status, str(quote) if quote else None, note))
     return FidelityReport(overall=aggregate(components, results), results=results)
 
 
 def aggregate(components: list[Component], results: list[ComponentResult]) -> str:
-    """ja: alle tragenden Bausteine umgesetzt; nein: keiner; sonst teilweise."""
+    """ja: alle tragenden Bausteine umgesetzt; nein: keiner; sonst teilweise.
+    Fehlt bei einem tragenden Baustein ein Ergebnis (technischer Ausfall): nicht geprueft."""
     status = {r.id: r.status for r in results}
     critical = [c for c in components if c.critical]
     if not critical:
         return "nicht pruefbar"
+    if any(status.get(c.id, "nicht geprueft") == "nicht geprueft" for c in critical):
+        return "nicht geprueft"
     ok = sum(status.get(c.id) == "umgesetzt" for c in critical)
     if ok == len(critical):
         return "ja"
