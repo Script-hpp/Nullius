@@ -570,7 +570,9 @@ class TavilyFinder(FakeTavily):
         ]}
     def curate_discussion(self, title, max_results=5):
         self.discussion_titles.append(title)
-        return {"results": [{"url": "https://github.com/foo/bar/issues/12", "title": "Cannot reproduce 95%", "content": "Seed dependent"}]}
+        return {"results": [
+            {"url": "https://github.com/foo/bar/issues/12", "title": "Cannot reproduce Sample Paper Title 95%", "content": "Seed dependent"},
+            {"url": "https://arxiv.org/abs/2999.00001", "title": "fMRI dynamics", "content": "Stuart-Landau oscillators in the brain"}]}
 
 
 def test_tavily_finds_papers_and_community(monkeypatch, tmp_path):
@@ -1015,3 +1017,61 @@ def test_quote_normalization_is_not_fuzzy():
     from repro_agent.discovery import _norm_quote
     assert _norm_quote("96 0.3664 ± 0.0015") not in _norm_quote("| 96 | 0.3663\\pm 0.0015 |")
     assert _norm_quote("96 0.3663 0.0015") not in _norm_quote("| 96 | 0.3663\\pm 0.0015 |")
+
+
+# ---- J: Methode im Spaltenkopf, K: Community-Bezug ----
+
+HEAD = "Table 3: results on ETTh1.\nModel | HaKAN | RLinear\n"
+ROW = "| 96 | 0.366 | 0.386 |\n"
+
+
+def _run_table(monkeypatch, tmp_path, text, quote="| 96 | 0.366 | 0.386 |"):
+    atom = ATOM_ONE.replace("Cora", "ETTh1")
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(atom))
+    class T(FakeTavily):
+        def curate_extract(self, url, query):
+            return {"results": [{"raw_content": text}]}
+    claim = {"protocol": "passt", "protocol_quote": quote, "matched_task": "ETTh1", "method": "HaKAN", "metric": "MSE",
+             "horizon": 96, "quote": quote, "target": 0.366}
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=json.dumps(claim)), tavily=T(repos=["https://github.com/foo/bar"]),
+                           cache_path=str(tmp_path / "c.json"))
+    events = []
+    return agent.discover(["ETTh1"], on_event=events.append), events, str(tmp_path / "c.json")
+
+
+def test_method_in_table_header_is_supported(monkeypatch, tmp_path):
+    result, _, _ = _run_table(monkeypatch, tmp_path, HEAD + ROW + "Filler sentence. " * 300)
+    assert len(result) == 1 and result[0].claim["method"] == "HaKAN"
+
+
+def test_method_too_far_before_quote_rejected(monkeypatch, tmp_path):
+    text = HEAD + "Filler sentence. " * 300 + ROW + "Filler sentence. " * 50     # ca. 5100 Zeichen dazwischen
+    result, events, cache_file = _run_table(monkeypatch, tmp_path, text)
+    assert result == []
+    assert any(e.get("stage") == "quote" and "Method" in e["reason"] for e in events)
+    assert "2101.12345" not in _read_cache(cache_file)
+
+
+def test_method_after_quote_not_supported():
+    from repro_agent.discovery import _method_supported
+    assert not _method_supported("HaKAN", "| 96 | 0.366 |", "| 96 | 0.366 |\nlater HaKAN is mentioned")
+    assert _method_supported("HaKAN", "| 96 | 0.366 |", "Model | HaKAN\n| 96 | 0.366 |")
+    assert not _method_supported("", "q", "q")
+
+
+def test_community_hits_without_relation_dropped(monkeypatch, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    assert [c["url"] for c in result[0].community] == ["https://github.com/foo/bar/issues/12"]
+    assert [e for e in events if e.get("type") == "candidate"][0]["community_hits"] == 1
+
+
+def test_community_related_rules():
+    from repro_agent.discovery import _community_related
+    t = "Stuart-Landau Graph Convolutional Networks for Node Classification"
+    assert _community_related(t, "2511.08094", "x", "see arXiv 2511.08094 issue")                      # arXiv-ID
+    assert _community_related(t, "2511.08094", "Stuart-Landau graph convolutional networks for node classification", "")  # Titel
+    assert _community_related(t, "2511.08094", "Stuart Landau convolutional networks", "node")           # 5 von 7 Woertern
+    assert not _community_related(t, "2511.08094", "fMRI dynamics", "Stuart-Landau oscillators in the brain")

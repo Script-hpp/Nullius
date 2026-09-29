@@ -50,6 +50,37 @@ def _norm_quote(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+METHOD_CONTEXT_CHARS = 2000   # Tabellen nennen die Methode im Spaltenkopf, nicht in der Zeile
+TITLE_STOPWORDS = {"with", "from", "that", "this", "towards", "toward", "using", "based", "into", "over", "their", "than", "have", "more"}
+COMMUNITY_TITLE_SHARE = 0.6
+
+
+def _method_supported(method, quote: str, text: str) -> bool:
+    """Methode steht im Zitat oder in den 2000 Zeichen davor (Spaltenkopf der Tabelle)."""
+    if not (isinstance(method, str) and method.strip()):
+        return False
+    m, q, t = _norm_quote(method), _norm_quote(quote), _norm_quote(text)
+    if m in q:
+        return True
+    pos = t.find(q)
+    return pos >= 0 and m in t[max(0, pos - METHOD_CONTEXT_CHARS):pos]
+
+
+def _community_related(title: str, arxiv_id: str, hit_title: str, snippet: str) -> bool:
+    """Treffer gehoert zum Paper: Titel oder arXiv-ID im Treffer, oder mind. 60 % der Titelwoerter."""
+    import re
+    def alnum(x): return re.sub(r"[^a-z0-9]+", " ", (x or "").lower()).strip()
+    hay = alnum(f"{hit_title} {snippet}")
+    if arxiv_id and arxiv_id.lower() in (f"{hit_title} {snippet}").lower():
+        return True
+    if alnum(title) and alnum(title) in hay:
+        return True
+    words = {w for w in alnum(title).split() if len(w) > 3 and w not in TITLE_STOPWORDS}
+    if not words:
+        return False
+    return len(words & set(hay.split())) / len(words) >= COMMUNITY_TITLE_SHARE
+
+
 def _last_json_object(text: str) -> dict | None:
     """Letztes JSON-Objekt im Text; Lightning schreibt oft Denktext davor."""
     import re
@@ -655,7 +686,7 @@ class DiscoveryAgent:
                         continue
 
                 method = claim_data.get("method")
-                if not (isinstance(method, str) and method.strip() and norm_ws(method) in norm_ws(quote)):
+                if not _method_supported(method, quote, text):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
                     continue
 
@@ -681,6 +712,8 @@ class DiscoveryAgent:
                         disc = self._tavily("curate_discussion", 8, "search", p["title"], p["title"])
                         community = [{"url": r.get("url"), "title": r.get("title"), "snippet": (r.get("content") or "")[:300]}
                                      for r in disc.get("results", [])]
+                        community = [c for c in community
+                                     if _community_related(p["title"], p["arxiv_id"], c["title"], c["snippet"])]
                     except (BillingBlocked, BudgetExceeded):
                         raise
                     except Exception as e:
