@@ -42,11 +42,14 @@ def windows(arr):
 
 xtr, ytr = windows(train)
 xva, yva = windows(np.concatenate([train[-L:], val]))   # Val-Fenster mit Vorgeschichte aus Train
+SMOKE = os.environ.get("SMOKE") == "1"   # Formpruefung der Pipeline: 1 Batch, 1 Epoche, 8 Testfenster
+if SMOKE:
+    xtr, ytr, test_inputs = xtr[:32], ytr[:32], test_inputs[:8]
 model = DLinear()
 opt = torch.optim.Adam(model.parameters(), lr=0.005)
 best, best_state, patience = 1e9, None, 0
 LR_HALVE = os.environ.get("LR_HALVE") == "1"   # Lernrate pro Epoche halbieren (Autoformer/DLinear-Repos)
-for epoch in range(10):
+for epoch in range(1 if SMOKE else 10):
     if LR_HALVE:
         for g in opt.param_groups:
             g["lr"] = 0.005 * (0.5 ** epoch)
