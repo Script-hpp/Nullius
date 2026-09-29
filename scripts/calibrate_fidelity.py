@@ -19,11 +19,13 @@ from repro_agent.dossier import REPO_ROOT
 from repro_agent.fidelity import COMPONENT_DIR, check_fidelity, load_components
 from repro_agent.llm import LLMClient
 
-# v1 (verbraucht, Eichung gescheitert) und v2 (neue Codes). Standard: v2.
+# v1 (verbraucht, Eichung gescheitert) und v2 (neue Codes). Standard: v3.
 SETS = {
     "v1": (COMPONENT_DIR / "gold_labels.json", REPO_ROOT / "tests" / "fixtures" / "agent_codes"),
     "v2": (COMPONENT_DIR / "gold_labels_v2.json", REPO_ROOT / "tests" / "fixtures" / "agent_codes_v2"),
+    "v3": (COMPONENT_DIR / "gold_labels_v3.json", REPO_ROOT / "tests" / "fixtures" / "agent_codes_v3"),
 }
+MIN_HITS = {"v1": 8, "v2": 8, "v3": 9}   # Regelschwelle je Version (v3: 9 von 11, siehe calibration_fidelity_v3.md)
 
 
 REPEATS = 3
@@ -36,7 +38,7 @@ def majority(verdicts: list[str]) -> str | None:
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    version = "v1" if "--v1" in sys.argv else "v2"
+    version = next((v for v in SETS if f"--{v}" in sys.argv), "v3")
     gold_path, codes_dir = SETS[version]
     gold = json.loads(gold_path.read_text())
     only = args
@@ -72,14 +74,14 @@ def main() -> None:
               f"Urteile: {votes}{' (dead_code, nur berichtet)' if is_dead else ''}{' JA/NEIN VERTAUSCHT' if swap else ''}")
         for r in reps[0].results:
             print(f"      {r.id:34s} {r.status:16s} {r.note[:90]}")
-    passed = hits >= 8 and swaps == 0
+    passed = hits >= MIN_HITS[version] and swaps == 0
     print(f"\nRegelmenge: {hits}/{rule_n} Mehrheitsurteile stimmen mit Gold; ja/nein vertauscht: {swaps}; "
           f"Codes mit uneinigen Urteilen (alle): {unstable}/{len(results)}; Kosten {llm.total_cost_usd:.4f} $ netto")
     for line in dead:
         print(f"  dead_code (nicht in der Regel): {line}")
     if version == "v1":
         print("v1 ist verbraucht (Regel v1: >= 8/10 ohne Vertauschung).")
-    print(f"Eichregel ({version}: >= 8 von {rule_n} und keine Vertauschung): {'ERFUELLT' if passed else 'NICHT ERFUELLT'}")
+    print(f"Eichregel ({version}: >= {MIN_HITS[version]} von {rule_n} und keine Vertauschung): {'ERFUELLT' if passed else 'NICHT ERFUELLT'}")
 
 
 if __name__ == "__main__":

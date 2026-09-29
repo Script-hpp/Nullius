@@ -1,0 +1,69 @@
+{
+ "dl3_module_constant_kernel": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "KERNEL = 25 auf Modulebene, MovingAvg(KERNEL), zwei Linear, Summe"
+ },
+ "dl3_default_kernel_effective": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "Standardargument kernel_size=25, Aufruf Model(SEQ_LEN, PRED_LEN) ohne Ueberschreibung"
+ },
+ "dl3_cumsum_moving_average": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "Mittelwert der Laenge 25 per cumsum, zwei getrennte Linear, Summe"
+ },
+ "dl3_default_overridden_positional": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "Standardwert 25, aber Aufruf Model(SEQ_LEN, PRED_LEN, 5): wirksamer Kernel 5"
+ },
+ "dl3_default_overridden_keyword": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "Standardwert 25, aber Aufruf mit kernel_size=49"
+ },
+ "dl3_trend_only": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "Zerlegung k=25, aber nur ein Linear auf dem Trend, Saisonanteil verworfen, keine Summe"
+ },
+ "dl3_tiny_transformer": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "kleiner Transformer-Encoder, keine Zerlegung"
+ },
+ "dl3_gru": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "GRU, keine Zerlegung"
+ },
+ "dl3_decomposition_overwritten": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "DLinear-Ausgabe berechnet und in der naechsten Zeile durch ein Linear auf Rohsignal ueberschrieben",
+  "dead_code": true
+ },
+ "gcn3_sparse_tensor_faithful": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "Selbstschleifen, symmetrische Gradnormalisierung, torch.sparse.mm, zwei Schichten"
+ },
+ "gcn3_no_selfloops_symmetric": {
+  "paper": "kipf_gcn_2017",
+  "gold": "teilweise",
+  "why": "D^-1/2 A D^-1/2 ohne A+I: Selbstschleifen und Renormalisierung fehlen"
+ },
+ "gcn3_three_layers": {
+  "paper": "kipf_gcn_2017",
+  "gold": "teilweise",
+  "why": "korrekte renormalisierte Adjazenz, aber drei statt zwei Schichten"
+ },
+ "gcn3_propagation_result_discarded": {
+  "paper": "kipf_gcn_2017",
+  "gold": "nein",
+  "why": "erste Schicht mit A_hat berechnet und in der naechsten Zeile ueberschrieben; effektiv MLP",
+  "dead_code": true
+ }
+}
