@@ -397,6 +397,8 @@ class Orchestrator:
                 self.llm, text, spec["method"], spec["dataset"], spec["metric"],
                 percent=spec.get("percent", True),
             )
+            self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
+                       agrees=abs(ev.value - claim.target) < 1e-9, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]

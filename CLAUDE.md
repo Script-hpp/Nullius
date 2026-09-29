@@ -174,6 +174,8 @@ Jeder Aufruf muss Frage beantworten, die Agent sonst nicht beantworten könnte.
 
 Kernidee für Tavily-Preis: Tavily-Funde werden zu Experimenten. Beispiel: Issue meldet Seed-Abhängigkeit → 5 Branches mit verschiedenen Seeds.
 
+> **Standard ist live** (`TAVILY_MODE=live`): ein normaler Lauf ruft Tavily zur Laufzeit auf (Paper-Text, README), gespeichert mit Modus, Zeitstempel und Hash (`Dossier.sources`, `events.jsonl`, `paper_text.json`). Fixtures nur mit `--offline` oder `TAVILY_MODE=fixture` (Tests, vorab festgelegte Experimente, Benchmark: `tavily_mode="fixture"` in den Skripten). Der Tavily-Preis verlangt einen echten Aufruf zur Laufzeit.
+
 > **Tavily-Key sparsam benutzen.** Free/Trial-Kontingent begrenzt (Credits pro Monat), kein unlimitiertes Guthaben wie bei OpenRouter Free. Jeder Aufruf muss Frage beantworten, die sonst nicht beantwortbar ist (siehe Tabelle oben) — kein Testen/Debuggen mit echten Tavily-Calls, wenn Mock/Fixture reicht. Crawl immer mit `limit`, Research max 1× pro Paper (siehe Rolle 7). Bei Unsicherheit: erst Dossier/Cache prüfen, ob Frage schon beantwortet wurde, bevor neuer Call.
 
 ## Modus und Rolle 4 (Stand Meilenstein 2)
