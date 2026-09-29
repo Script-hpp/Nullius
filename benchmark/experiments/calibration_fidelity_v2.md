@@ -54,3 +54,13 @@ Zusätzlich berichtet (keine Regelbedingung): Codes mit uneinigen Urteilen (alle
 - Selbst geschriebene Varianten können von echten Agenten-Codes abweichen. Ergänzung später: echte Codes aus
   Läufen, von Hand eingeordnet.
 - Die Labels stammen von der Autorin/dem Autor der Codes (Claude Code) und sind noch nicht vom Projektteam gegengelesen.
+
+## Kombinationsregel mit der späteren Ausführungsabdeckung (vor dem Lauf festgelegt)
+Die Abdeckung ist deterministisch (Unit-Tests, keine statistische Eichung) und darf ein Prüferurteil nur
+**herabstufen**, nie heraufsetzen. Damit bleibt diese Eichung gültig.
+- Prüfer `ja`, aber zitierte Kernzeilen im ersten vollständigen Seed-Lauf nicht ausgeführt → `nein`
+  (`teilweise`, wenn nur ein Teil der tragenden Bausteine betroffen ist).
+- Prüfer `teilweise` oder `nein` → unverändert.
+- Abdeckung nicht verfügbar → Prüferurteil unverändert, Hinweis im Zeugnis.
+- Gemessen wird im ersten vollständigen Seed-Lauf, nicht im Smoke-Lauf (Epochen-, Early-Stopping- und
+  Auswertungszweige laufen dort nie).
