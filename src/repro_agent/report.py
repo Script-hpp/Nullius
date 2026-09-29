@@ -23,6 +23,8 @@ def render_markdown(dossier: Dossier) -> str:
                 f"{ev['url']}, Version {ev['arxiv_version']}, abgerufen {ev['retrieved_at']}, "
                 f"SHA-256 {ev['sha256'][:12]})"
             )
+            if ev.get("column_check") == "ok":
+                lines.append("Spaltenzuordnung: an Kopfzeile geprüft (Position von Methode und Metrik stimmt).")
             if ev.get("caveat"):
                 lines.append(f"ACHTUNG Zielwert: {ev['caveat']}")
         elif claim:

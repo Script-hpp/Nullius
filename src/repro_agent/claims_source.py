@@ -20,6 +20,7 @@ from pathlib import Path
 import httpx
 
 from .llm import LLMClient
+from .table_check import check_columns
 from .tavily_tools import TavilyTools
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "fixtures"
@@ -53,6 +54,7 @@ class TargetEvidence:
     sha256: str
     arxiv_version: str | None
     caveat: str | None = None   # z. B. Spaltenzuordnung nicht belegt
+    column_check: str = "nicht pruefbar"   # "ok" (Kopfzeile geparst, Position stimmt) | "nicht pruefbar"
 
 
 class ExtractionInvalid(RuntimeError):
@@ -161,6 +163,7 @@ def _last_json_object(content: str) -> dict | None:
 
 
 def _column_caveat(method: str, quote: str) -> str | None:
+    """Rueckfall, wenn die Kopfzeile nicht geparst werden konnte."""
     if _norm(method.split(" (")[0]) in _norm(quote):
         return None
     return (
@@ -168,6 +171,18 @@ def _column_caveat(method: str, quote: str) -> str | None:
         "Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Zuordnung nicht automatisch "
         "geprueft, Kopfzeile ggf. von Hand gegenlesen)."
     )
+
+
+def _column_status(
+    text: str, quote: str, value: float, method: str, dataset: str, metric: str, percent: bool
+) -> tuple[str | None, str]:
+    """(caveat, column_check). Falsche Spalte = ExtractionInvalid, Zielwert ungueltig."""
+    res = check_columns(_norm(text), _norm(quote), value, method, dataset, metric, percent)
+    if res.status == "mismatch":
+        raise ExtractionInvalid(f"Spaltenpruefung: {res.detail}")
+    if res.status == "ok":
+        return None, "ok"
+    return _column_caveat(method, quote), "nicht pruefbar"
 
 
 def extract_target(
@@ -196,17 +211,18 @@ def extract_target(
             continue
         try:
             value = verify_extraction(data, paper.text, percent)
+            _column_status(paper.text, str(data["quote"]), value, method, dataset, metric, percent)
             break
         except ExtractionInvalid as exc:
             last = exc
     else:
         raise last  # type: ignore[misc]
     quote = str(data["quote"])
-    caveat = _column_caveat(method, quote)
+    caveat, column_check = _column_status(paper.text, quote, value, method, dataset, metric, percent)
     return TargetEvidence(
         value=value, quote=quote, table=data.get("table"), url=paper.url,
         source_kind=paper.source_kind, retrieved_at=paper.retrieved_at, sha256=paper.sha256,
-        arxiv_version=paper.arxiv_version, caveat=caveat,
+        arxiv_version=paper.arxiv_version, caveat=caveat, column_check=column_check,
     )
 
 
@@ -224,7 +240,9 @@ def extract_target_cached(
     path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
     if path.exists():
         ev = TargetEvidence(**json.loads(path.read_text()))
-        ev.caveat = _column_caveat(method, ev.quote)   # immer neu berechnen, auch fuer alte Fixtures
+        ev.caveat, ev.column_check = _column_status(   # immer neu berechnen, auch fuer alte Fixtures
+            paper.text, ev.quote, ev.value, method, dataset, metric, percent
+        )
         verify_extraction(
             {"value": ev.value * 100 if percent else ev.value, "quote": ev.quote}, paper.text, percent
         )
