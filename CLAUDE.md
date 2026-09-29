@@ -322,6 +322,65 @@ Pflicht bei Einreichung:
 
 Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer mit Versuchen.
 
+## Hackathon-Regeln (Official Rules, geprüft)
+
+### Fristen
+- Abgabe: 30.10.2026, 10:00 PT = **18:00 Uhr deutscher Zeit** (nach EU-Zeitumstellung am 25.10.).
+  Entwurf auf Devpost früh anlegen, bis zur Frist änderbar. Danach keine Änderungen mehr.
+- Bewertung: 01.–15.12.2026. Gewinner um den 11.01.2027.
+- **Demo muss bis mindestens 15.12.2026 erreichbar und kostenlos testbar sein.**
+  Server bis dahin betreiben, Spiegel auf GitHub Pages als Absicherung.
+
+### Pflichtbestandteile der Einreichung
+- Track: Coding and Agentic Engineering (Agenten, die Code in Token Factory Sandboxes
+  schreiben, ausführen und testen).
+- Projekt macht Laufzeit-Aufrufe an die Token-Factory-Inferenz-API und nutzt
+  mindestens ein NVIDIA-Open-Source-Modell (Nemotron).
+- Demo-URL (bei Zugangsschutz: Zugangsdaten in den Testhinweisen).
+- Textbeschreibung der Funktionen.
+- Öffentliches Repo (GitHub/GitLab/Bitbucket) mit allem Code, Assets und Anleitung.
+- Open-Source-Lizenzdatei (MIT), muss auf GitHub im "About"-Bereich erkannt werden.
+- README mit Einrichtung und Anleitung zum Ausführen. Ausdrücklich hervorheben:
+  - wie Nemotron genutzt wird,
+  - wo Token Factory den Workflow beschleunigt hat,
+  - welche weiteren Nebius-Dienste genutzt werden (Sandboxes).
+- Video unter 3 Minuten, öffentlich auf YouTube, zeigt das Projekt in Funktion.
+  Keine geschützte Musik, keine fremden Marken ohne Erlaubnis.
+- Alles auf Englisch (oder mit englischer Übersetzung).
+- **Feedback zu Token Factory, AI Cloud und NVIDIA-Tools/Modellen ist Pflichtfeld**
+  im Einreichungsformular. Entwurf: docs/nebius_feedback.md.
+
+### Bewertung
+- Stufe 1 (bestanden/nicht): passt zum Track, nutzt die geforderten APIs/SDKs.
+- Stufe 2, vier gleich gewichtete Kriterien:
+  - Technological Implementation: Qualität, Nutzung von Token Factory und Nemotron.
+  - Design: **vollständiges Produkterlebnis, nicht nur technischer Prototyp**
+    → Dashboard ist Bewertungsbestandteil, kein Extra.
+  - Potential Impact: konkreter Fall für echtes Problem und echte Zielgruppe,
+    belegt durch das Gezeigte → Zielgruppe im README klar benennen.
+  - Quality of the Idea: kreative, nicht naheliegende Nutzung, echtes Verständnis
+    des Problemfelds.
+- Gleichstand: entschieden in Reihenfolge der Kriterien, zuerst Technological Implementation.
+- Juroren müssen nicht selbst testen und können nur nach Text, Bildern und Video urteilen
+  → README und Video tragen die Bewertung.
+
+### Preise
+- Kombinierbar: ein Gesamt- ODER Track-Preis plus ein Bonus-Preis.
+- **Best Use of Tavily (3.000 $): verlangt einen funktionierenden Tavily-API-Aufruf
+  zur Laufzeit als Teil der Lösung.**
+  → Normaler Lauf ruft Tavily live auf. Fixtures nur über ausdrücklichen Schalter
+    (Tests, vorab festgelegte Experimente). Live-Aufrufe im Ereignisprotokoll,
+    in der Evidence-Ansicht, im README und im Video sichtbar machen.
+- Most Valuable Feedback: 10 × 100 $ plus NVIDIA-Swag. Bewertet nach Vollständigkeit,
+  Umsetzbarkeit und Wirkung des Feedbacks.
+- City Winner Awards: nur für Teilnehmer, die ein IRL-Event besucht haben
+  → für uns nicht erreichbar.
+
+### Sonstiges
+- Drittanbieter-SDKs, APIs und Daten nur im Rahmen ihrer Lizenzen nutzen
+  (Datensätze und Paper-Texte beachten).
+- Bei Widersprüchen zwischen Hackathon-Seite und Official Rules gelten die Official Rules.
+
 ## Risiken
 
 | Risiko | Gegenmaßnahme |
