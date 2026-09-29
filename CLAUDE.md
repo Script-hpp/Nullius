@@ -324,9 +324,70 @@ Pflicht bei Einreichung:
 
 Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer mit Versuchen.
 
-## Produktplan (Stand 29.09.2026)
+## Design Philosophy
 
-Nullius soll als Produkt erlebbar sein, nicht nur als Kommandozeile: Paper eingeben, Claims auswählen, Lauf ansehen, Zeugnis erhalten, Verlauf. Entscheidungen: **Demo offen für alle Besucher** mit Warteschlange und hartem Budget (Tages- und Gesamtlimit, Notausschalter, optionaler Zugangscode); **erst lokal bauen**, Hosting voraussichtlich über **Coolify** (Docker, eigener Server); Konfiguration nur über Umgebungsvariablen. Rahmen (sichtbar im Produkt): Nullius prüft Papers auf **unterstützten Benchmarks**. Tavily v2 ist pausiert (Baustein 1 fertig). Einzelheiten, Endpunkte und Reihenfolge: `docs/product_plan.md`.
+Das UI-Design orientiert sich an modernen, minimalistischen SaaS-Plattformen (wie dem Tavily-Dashboard) und vermeidet klassische "AI-Klischees" (wie leuchtende Neon-Farbverläufe oder überladene Chat-Interfaces).
+
+*   **Ästhetik & Layout:** Clean UI, großzügiger Whitespace (Leerraum), klare Kanten und subtile Schatten für Tiefe.
+*   **Theme:** Dark Mode und Light Mode werden nativ unterstützt. Eine weiche Hintergrundfarbe (z. B. Off-White im Light Mode) sorgt für ein professionelles Erscheinungsbild.
+*   **Typografie:** Hochwertige, serifenlose Schriften (wie Inter oder SF Pro). Der Text muss flüssig und leicht lesbar sein; Hierarchien werden durch Schriftstärke und Graustufen statt greller Farben unterschieden.
+*   **Informationsarchitektur:** Die UI darf nicht mit Informationen überfüllt wirken. Daten (wie Metrics oder Logs) werden gut strukturiert in Cards, Tabellen oder ausklappbaren Modulen präsentiert, um kognitive Überlastung zu vermeiden.
+
+# Nullius: Produkt- und Entwicklungsstrategie für die Endphase
+
+Dieses Dokument fasst die strategische Ausrichtung für die verbleibende Zeit des Hackathons zusammen. Der Fokus verlagert sich von der reinen Verbesserung der Evaluierungsgenauigkeit hin zu einem vollständigen, überzeugenden Produkterlebnis für die Jury und zukünftige Nutzer.
+
+## 1. Die Produktvision & Der Rahmen
+Ein Viertel der Hackathon-Bewertung basiert auf einem "vollständigen Produkterlebnis" und ein weiteres auf dem echten Nutzen für die Zielgruppe. 
+
+**Die ehrliche Grenze des Produkts:** 
+*Nullius prüft Papers, die auf bereits unterstützten Benchmarks (z. B. Cora, ETTh1) evaluieren.* 
+Es ist glaubwürdig und realistisch zu zeigen, dass für neue Datensätze einmalig Tasks/Harnesses gebaut werden müssen, aber neue Papers auf bestehenden Datensätzen out-of-the-box evaluiert werden können.
+
+## 2. Der Nutzer-Workflow (Die "Nullius-Experience")
+Aus Sicht einer Nutzerin (z. B. einer Doktorandin) oder der Jury soll folgender Ablauf erlebbar sein:
+1. **Paper-Auswahl/Eingabe:** Auswahl aus einem kuratierten Katalog (siehe unten) oder Eingabe eines arXiv-Links.
+2. **Claims auswählen:** Nullius schlägt überprüfbare Behauptungen automatisch vor (basierend auf Rolle 2), die Nutzerin wählt aus.
+3. **Zuschauen (Live-Lauf):** Der Auswertungslauf ist live sichtbar (Tavily-Funde, Code-Generierung, Branches, Messungen).
+4. **Zeugnis erhalten:** Ein klares Urteil (Evidence-Ansicht) mit Belegen und Einschränkungen als teilbare Seite.
+5. **Verlauf & Benchmarks:** Eine Übersichtsseite mit früheren Prüfungen und globalen Benchmarks.
+
+## 3. Die "Live-Katalog"-Idee (Der Jury-Pitch)
+Anstatt nur einen arXiv-Link einzufügen, bieten wir der Jury eine kuratierte Liste topaktueller Papers, die sie live testen können.
+* **Tavily als Kurator:** Tavily sucht selbstständig nach neuen Papers, die auf unseren unterstützten Benchmarks evaluieren (z. B. neue GNNs auf Cora). Rolle 2 prüft, ob die Claims extrahierbar sind. 
+* **Vorteil:** Dies ist ein hervorragender und eigenständiger Use-Case für Tavily, der große Chancen auf den Tavily-Sonderpreis hat.
+
+**Wichtige Schutzmaßnahmen für die Jury-Präsentation:**
+1. **Kuration:** Jedes Paper im Katalog muss vorher einmal komplett durchlaufen worden sein. Nur Papers, die (auch bei negativem Ergebnis) nicht abstürzen, kommen in die Auswahl.
+2. **Wartezeit & Fast-Mode:** Da vollständige Läufe (wie Shchur oder GAT) lange dauern, bieten wir für die Live-Demo einen **"Schnellprüfungs-Modus"** (mit weniger Seeds/Epochen) an. Das vorab berechnete, vollständige Ergebnis wird daneben angezeigt.
+3. **Fallback-Stabilität:** Sandbox-Umgebungen können instabil sein. Schlägt ein Live-Lauf fehl, schaltet das Frontend auf eine "Wiedergabe" (Playback) des Vorab-Laufs um, versehen mit einem ehrlichen Hinweis auf temporäre Instabilität.
+4. **Kosten- & Missbrauchsschutz:**
+    * Zugangscode für die Jury.
+    * Warteschlange (Queue) im Backend (nur ein Lauf gleichzeitig).
+    * Tägliches Kostenlimit/Budget auf Server-Seite.
+
+## 4. Architektur-Setup (Deployment auf dem Server)
+Um dieses Produkterlebnis bereitzustellen, wird die Architektur wie folgt aufgebaut:
+
+* **Backend (FastAPI):**
+    * Verwaltet eine Warteschlange (Queue) und einen Worker, der den bestehenden Nullius-Loop ausführt.
+    * API-Keys bleiben strikt serverseitig und sicher.
+    * Beinhaltet Kostenkontrolle und Zugangsschutz.
+* **Live-Übertragung (Server-Sent Events - SSE):**
+    * Das bereits bestehende Ereignisprotokoll des Agenten wird via SSE an das Frontend gestreamt, um den Live-Lauf greifbar zu machen.
+* **Frontend (React App):**
+    * **Seite 1: Katalog & Startseite** (Unterstützte Datensätze, kuratierte Papers, Eingabefeld).
+    * **Seite 2: Live-Lauf** (Fortschrittsanzeige, Log-Stream).
+    * **Seite 3: Zeugnis / Evidence** (Das Endresultat, die bestehende Evidence-Ansicht).
+
+## 5. Nächste Schritte (Roadmap für die nächsten 1-1,5 Wochen)
+1. **Tavily v2 (vorerst) stoppen:** Die bisherigen Verbesserungen (Zitat-Fix) sind super und bleiben. Weitere tiefe Optimierungen werden gestoppt, um Zeit für das Produkt zu haben.
+2. **Frontend & Backend Bootstrap:** FastAPI-Gerüst und React-App aufsetzen.
+3. **Katalog-Generierung:** Das Skript schreiben, in dem Tavily nach neuen Papers sucht und diese in eine `catalog.yaml` oder Datenbank ablegt.
+4. **Live-Streaming implementieren:** SSE-Endpunkt für den bestehenden Loop bauen.
+5. **Design & Branding:** Einheitliches Logo und Layout (Startseite -> Live -> Zeugnis) umsetzen.
+6. **Abschluss:** README aktualisieren, Einreichungsvideo drehen und Projekt abgeben.
+
 
 ## Hackathon-Regeln (Official Rules, geprüft)
 
