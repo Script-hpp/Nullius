@@ -203,6 +203,13 @@ DISCOVERY_PROTOCOL_HINTS = {
 }
 MAX_README_ARXIV_LINKS = 5
 MAX_README_GITHUB_LINKS = 10
+# Kennwoerter unserer Protokolle: nennt ein passt_nicht-Grund eines davon, hat das LLM vermutlich nur gegen einen
+# Task verglichen (Live-Lauf: Shchur-Splits gegen [Cora] statt [Cora-LCC]) -> nicht ablehnen.
+TASK_KEYWORDS = {
+    "Cora": ["planetoid", "public split"],
+    "Cora-LCC": ["shchur", "largest connected component", "random split"],
+    "ETTh1": ["12/4/4", "96"],
+}
 RETRY_TEMPERATURE = 0.3
 ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
 NO_REPO_REASON = "kein passendes Repo gefunden"
@@ -330,7 +337,8 @@ class DiscoveryAgent:
             "and 'protocol_reason' (one short sentence). "
             "Rules for 'protocol': "
             "\"passt\" = the text names the split, input length or horizons of one supported protocol; a standard split counts as matching when the text names it. "
-            "\"passt_nicht\" = the text states a DIFFERENT protocol (for example 60/20/20 splits or other input lengths); quote it in protocol_quote. "
+            "\"passt_nicht\" = the text states a protocol that matches NONE of the supported protocols above (for example 60/20/20 splits or other input lengths); "
+            "if it matches another supported protocol, answer \"passt\" with that task. Quote the stated protocol in protocol_quote. "
             "\"unklar\" = the text does not mention the protocol or does not state it clearly. "
             "Not mentioned means \"unklar\", never \"passt_nicht\". "
             "If you find no clear numerical claim, return an empty JSON object {}."
@@ -386,9 +394,15 @@ class DiscoveryAgent:
                 return "unklar", f"kein unterstuetzter Task ({claim_data.get('matched_task')!r})"
             return "passt", ""
         if level == "passt_nicht":
-            if quote_ok:
-                return "passt_nicht", ""
-            return "unklar", "Abweichendes Protokoll ohne gueltiges Zitat"
+            if not quote_ok:
+                return "unklar", "Abweichendes Protokoll ohne gueltiges Zitat"
+            import re
+            said = f"{pq} {claim_data.get('protocol_reason') or ''}".lower()
+            for task in _tasks_for(dataset):
+                for kw in TASK_KEYWORDS.get(task, []):
+                    if re.search(r"(?<![\w/])" + re.escape(kw) + (r"(?![\w/])" if kw[-1].isdigit() else ""), said):
+                        return "unklar", f"Grund nennt ein unterstuetztes Protokoll ({task}: {kw!r})"
+            return "passt_nicht", ""
         return "unklar", ""
 
     @staticmethod

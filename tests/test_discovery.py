@@ -1264,3 +1264,46 @@ def test_valid_first_answer_has_no_retry(monkeypatch, arxiv_xml, tmp_path):
     result, events, llm, _ = _run_seq(monkeypatch, arxiv_xml, tmp_path, [FakeLLM().claim_content])
     assert len(result) == 1 and llm.temps == [0.0]
     assert len([e for e in events if e.get("type") == "llm_call"]) == 1
+
+
+# ---- Z1: passt_nicht gegen einen Task, obwohl ein anderer unterstuetzter Task passt ----
+
+SHCHUR_REASON = "uses Shchur et al. 2018 random splits, which differ from the Planetoid split required for the Cora task"
+
+
+def test_passt_nicht_naming_other_supported_protocol_is_unklar_not_cached(monkeypatch, arxiv_xml, tmp_path):
+    content = ('{"protocol": "passt_nicht", "protocol_quote": "GraphNet achieves 95% accuracy", "protocol_reason": "' + SHCHUR_REASON
+               + '", ' + CLAIM + '}')
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+    assert not any(e.get("stage") == "protocol" for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "ungeprueft"          # kein gecachter Reject
+    assert "unterstuetztes Protokoll" in result[0].claim["protocol_reason"]
+
+
+@pytest.mark.parametrize("reason", ["uses the largest connected component", "Planetoid public split not used",
+                                    "random splits per seed"])
+def test_passt_nicht_keywords_per_task(monkeypatch, arxiv_xml, tmp_path, reason):
+    content = ('{"protocol": "passt_nicht", "protocol_quote": "GraphNet achieves 95% accuracy", "protocol_reason": "'
+               + reason + '", ' + CLAIM + '}')
+    result, _, _ = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+
+
+def test_passt_nicht_with_foreign_protocol_still_rejected(monkeypatch, arxiv_xml, tmp_path):
+    content = ('{"protocol": "passt_nicht", "protocol_quote": "GraphNet achieves 95% accuracy", '
+               '"protocol_reason": "uses 60/20/20 splits with variable training ratios", ' + CLAIM + '}')
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert result == [] and any(e.get("stage") == "protocol" for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+def test_prompt_passt_nicht_only_if_no_supported_protocol_matches():
+    class Rec(FakeLLM):
+        prompts = []
+        def complete(self, role, messages, **kwargs):
+            Rec.prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    DiscoveryAgent(llm=Rec(), tavily=FakeTavily())._extract_claim("t", "Cora")
+    assert "matches NONE of the supported protocols" in Rec.prompts[0]
+    assert "answer \"passt\" with that task" in Rec.prompts[0]
