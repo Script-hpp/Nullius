@@ -1,0 +1,15 @@
+Repo https://github.com/cure-lab/LTSF-Linear; Search 5 Treffer, Crawl 5 Seiten
+  search: https://huggingface.co/blog/autoformer 37592
+  search: https://arxiv.org/abs/2205.13504 4312
+  search: https://research.cuhk.edu.hk/en/publications/are-transformers-effective-for-time-series-forecasting-3 9179
+  search: https://www.alphaxiv.org/abs/2205.13504 6711
+  search: https://ojs.aaai.org/index.php/AAAI/article/view/26317/26089 13206
+  crawl: https://github.com/cure-lab/LTSF-Linear/issues/112 1052
+  crawl: https://github.com/cure-lab/LTSF-Linear/issues/117 562
+  crawl: https://github.com/cure-lab/LTSF-Linear/issues/116 488
+  crawl: https://github.com/cure-lab/LTSF-Linear/issues/120 484
+  crawl: https://github.com/cure-lab/LTSF-Linear/issues/113 518
+5 Seiten nennen DLinear/LTSF
+2 verifizierte Einwaende, 0 verworfen, Kosten 0.0082 $
+{"topic": "Comparison fairness", "statement": "Questions whether transformers and DLinear are compared under equal feature‑engineering conditions.", "quote": "Is there an honest comparison where both transformers and DLinear look at the same dataset with properly engineered features?", "source": "https://huggingface.co/blog/autoformer", "protocol": false, "repo_check": "nicht pruefbar"}
+{"topic": "input-window mismatch", "statement": "The paper's default comparison uses different input window lengths for linear models (336 steps) versus Transformers (96 steps), raising concerns about a fair evaluation protocol.", "quote": "The input histories are unequal in the paper's default comparison: the linear models use a 336-step input window, while the Transformers use 96 steps.", "source": "https://www.alphaxiv.org/abs/2205.13504", "protocol": false, "repo_check": "nicht pruefbar"}

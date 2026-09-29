@@ -26,13 +26,28 @@ class TavilyTools:
         """Rolle 2: Tabellen mit Zielwerten aus arXiv-HTML extrahieren."""
         return self._client.extract(urls=[arxiv_html_url], extract_depth="advanced")
 
-    def collect_objections(self, paper_title: str, limit: int = 10) -> dict:
-        """Rolle 3: Issues, Gutachten, Kritik-Papers -> neue Einwaende."""
-        results = self._client.search(query=f"{paper_title} reproducibility issues criticism")
-        urls = [r["url"] for r in results.get("results", [])[:limit]]
-        if not urls:
-            return {"results": []}
-        return self._client.crawl(urls=urls, limit=limit)
+    def collect_objections(self, paper_title: str, repo_url: str | None = None, limit: int = 5) -> dict:
+        """Rolle 3: Issues, Gutachten, Kritik-Papers -> neue Einwaende.
+
+        Search (mit Rohtext der Treffer) plus, falls das Repo bekannt ist, ein Crawl der Issue-Seite.
+        `limit` begrenzt beides (Tavily-Credits). Rueckgabe: {"search": ..., "crawl": ... | None}.
+        (Vorher: `crawl(urls=...)`, die API kennt nur `url`: der Aufruf waere mit TypeError gescheitert.)
+        """
+        search = self._client.search(
+            query=f"{paper_title} reproducibility issues criticism evaluation", max_results=limit,
+            include_raw_content="text",
+        )
+        crawl = None
+        if repo_url:
+            try:
+                crawl = self._client.crawl(
+                    url=repo_url.rstrip("/") + "/issues", limit=limit, max_depth=1, chunks_per_source=3,
+                    instructions="Issues about the evaluation protocol, test set, drop_last, data leakage or "
+                                 "whether the reported results can be reproduced",
+                )
+            except Exception as exc:   # Suchergebnis (schon bezahlt) nicht wegen eines Crawl-Fehlers verlieren
+                crawl = {"error": f"{type(exc).__name__}: {exc}", "results": []}
+        return {"search": search, "crawl": crawl}
 
     def get_setup_details(self, url: str) -> dict:
         """Rolle 4: Hyperparameter, Datenaufteilung aus README/Configs/Anhang."""
