@@ -26,6 +26,8 @@ class Task:
     smoke_ids_cmd: str = ""         # alternativ: Kommando im Branch, das die erwarteten ids ausgibt
     smoke_dims: tuple[int, ...] | None = None
     smoke_dim_names: tuple[str, ...] = ()
+    # Nutzungspruefung: Kommando, das im Branch die Daten veraendert (Cora: Kanten entfernen), siehe ablation_gcn.md
+    ablation_cmd: str = ""
 
 
 def _file_cmd(path: Path, dest: str) -> str:
@@ -71,6 +73,11 @@ def cora_task() -> Task:
             "Implement the model yourself in PyTorch (no torch_geometric available). "
             "Print the final validation accuracy to stdout. Use only /data/cora_public.npz. "
             f"{CORA_SMOKE}"
+        ),
+        ablation_cmd=(
+            "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
+            "d['edges'] = np.zeros((0, 2), dtype=np.int64); "
+            "np.savez_compressed('/data/cora_public.npz', **d)\""
         ),
         smoke_ids_cmd=(   # erwartete ids = die ersten N (aufsteigend) von test_idx, aus dem Datensatz selbst
             "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "

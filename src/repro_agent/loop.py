@@ -28,6 +28,7 @@ from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
+from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
 from .harness.verify import agent_fault_suspected, judge
@@ -222,6 +223,16 @@ class Orchestrator:
         self._smoke_ok.add(code_hash)
         return None
 
+    def ablation_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str, acc_full: float) -> dict:
+        """Zweiter Lauf desselben Codes auf Daten ohne Kanten (ablation_gcn.md). Deterministisch, kein LLM."""
+        res = self._run_and_eval(self.sandbox.branch(snapshot), code, seed, task, metric, ablate=True)
+        acc_ablated = res.get("measured") if res["status"] == "ok" else None
+        return {
+            "accuracy_full": acc_full, "accuracy_ablated": acc_ablated,
+            "verdict": classify_ablation(acc_full, acc_ablated),
+            "detail": None if acc_ablated is not None else str(res.get("detail", ""))[-300:],
+        }
+
     def _measure_coverage(self, branch: Branch) -> dict | None:
         """Zeilenabdeckung des gerade gelaufenen train.py (coverage im Basis-Snapshot). None = nicht verfuegbar."""
         r = self.sandbox.run(
@@ -235,7 +246,8 @@ class Orchestrator:
         return {"executed": sorted(cov.executed), "missing": sorted(cov.missing)}
 
     def _run_and_eval(
-        self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False
+        self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False,
+        ablate: bool = False,
     ) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
@@ -244,9 +256,13 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
-        smoke_error = self._smoke_check(branch, code, task)
-        if smoke_error:
-            return {"status": "fehler", "detail": smoke_error}
+        if ablate:   # Nutzungspruefung: veraenderte Daten, kein Smoke-Lauf, keine Abdeckung
+            sb.run(branch, task.ablation_cmd, 120)
+            measure_coverage = False
+        else:
+            smoke_error = self._smoke_check(branch, code, task)
+            if smoke_error:
+                return {"status": "fehler", "detail": smoke_error}
         # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
         # Agenten-Codes (Setup ist vorher im Basis-Snapshot abgeschlossen).
         # Abdeckung nur im ersten vollstaendigen Seed-Lauf (Smoke-Lauf ist zu kurz: Epochen-/Early-Stopping-Zweige)
@@ -374,9 +390,14 @@ class Orchestrator:
                 for name, value in a.metrics.items():
                     per_metric.setdefault(name, []).append(value)
         all_metrics = {name: statistics.mean(v) for name, v in per_metric.items()}
-        dossier.verdicts.append(
-            self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
-        )
+        verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
+        if v0 is not None and task.ablation_cmd:
+            ab = self.ablation_check(snapshot, code, seeds[0], task, claim.metric, v0)
+            dossier.ablations[claim.id] = ab
+            print(f"[{claim.id}] Graph-Ablation: {ab['verdict']} (mit Graph {v0:.4f}, ohne Kanten {ab['accuracy_ablated']})", flush=True)
+            if ab["verdict"] == "Graph nicht genutzt":   # deterministischer Beleg, nur herabstufend
+                verdict.methode = "nein"
+        dossier.verdicts.append(verdict)
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,

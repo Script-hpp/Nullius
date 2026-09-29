@@ -87,6 +87,7 @@ class Dossier:
     setup_details: list[dict] = field(default_factory=list)  # Tavily-Rolle 4: belegte Angaben im Prompt
     repo: dict | None = None      # {url, commit}: Repo, aus dem Setup-Details gelesen wurden
     baselines: dict | None = None  # triviale Vergleichswerte des Harness (ohne Training)
+    ablations: dict = field(default_factory=dict)   # claim_id -> Graph-Ablation (Seed 0), siehe ablation_gcn.md
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
 
     def save(self, timestamp: str) -> Path:
@@ -108,6 +109,7 @@ class Dossier:
             setup_details=data.get("setup_details", []),
             repo=data.get("repo"),
             mode=data.get("mode", "nachbau"),
+            ablations=data.get("ablations", {}),
             baselines=data.get("baselines"),
         )
 

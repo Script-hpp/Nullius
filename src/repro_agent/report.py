@@ -12,8 +12,13 @@ def render_markdown(dossier: Dossier) -> str:
         lines.append(
             f"Gemessen: {verdict.measured_mean:.4f} (std {verdict.measured_std:.4f})"
         )
-        note = " (Methodentreue-Pruefer nicht geeicht, Eichung v1 gescheitert)" if verdict.methode == "nicht geprueft" else ""
+        note = " (Methodentreue-Pruefer nicht geeicht, Eichung gescheitert)" if verdict.methode == "nicht geprueft" else ""
         lines.append(f"Methodentreue: {verdict.methode}{note}. Gesamtaussage: {verdict.gesamtaussage}")
+        ab = dossier.ablations.get(verdict.claim_id)
+        if ab:
+            abl = "n/a" if ab["accuracy_ablated"] is None else f"{ab['accuracy_ablated']:.4f}"
+            lines.append(f"Graph-Ablation (Daten ohne Kanten, Seed 0): {ab['verdict']} "
+                         f"(Genauigkeit {ab['accuracy_full']:.4f} mit Graph, {abl} ohne Kanten)")
         lines.append(verdict.explanation)
         claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
         ev = claim.target_evidence if claim else None
