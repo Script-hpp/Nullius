@@ -1,0 +1,12 @@
+OK  agent_codes/gcn_cached_faithful                  mit Graph 0.804 | ohne Kanten 0.5120 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes/gcn_sparse_selfloop                  mit Graph 0.802 | ohne Kanten 0.4990 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes/gcn_edge_selfloop                    mit Graph 0.788 | ohne Kanten 0.4770 | Graph genutzt (erwartet Graph genutzt) 
+ABW agent_codes/gcn_variant_no_selfloops             mit Graph 0.789 | ohne Kanten n/a | nicht messbar (erwartet Graph genutzt) Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig
+OK  agent_codes/gcn_variant_adjacency_unused         mit Graph 0.512 | ohne Kanten 0.5120 | Graph nicht genutzt (erwartet Graph nicht genutzt) 
+OK  agent_codes_v2/gcn_new_faithful_dense            mit Graph 0.82 | ohne Kanten 0.5680 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes_v2/gcn_new_faithful_scatter          mit Graph 0.815 | ohne Kanten 0.5560 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes_v2/gcn_new_row_normalised            mit Graph 0.83 | ohne Kanten 0.5680 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes_v2/gcn_new_one_layer                 mit Graph 0.717 | ohne Kanten 0.5680 | Graph genutzt (erwartet Graph genutzt) 
+OK  agent_codes_v2/gcn_new_adjacency_stored_unused   mit Graph 0.568 | ohne Kanten 0.5680 | Graph nicht genutzt (erwartet Graph nicht genutzt) 
+
+9/10 wie erwartet eingeordnet. Regel: alle 10, kein unklar/nicht messbar.
