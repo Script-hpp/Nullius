@@ -132,7 +132,7 @@ def check_fidelity(llm: LLMClient, components: list[Component], code: str) -> Fi
         f'- id={c.id}: {c.name}. {c.description}' + (f" Required value: {c.value}." if c.value else "")
         for c in components
     )
-    resp = llm.complete("reasoning", [
+    resp = llm.complete("extract", [
         {"role": "system", "content": (
             "You review whether a Python training script implements a specific method. Be strict: a "
             "component counts as implemented only if the code really does it. 'not_found' and "
