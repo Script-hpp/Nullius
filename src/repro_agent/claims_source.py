@@ -87,11 +87,12 @@ def latest_arxiv_version(arxiv_id: str) -> str | None:
 
 
 def fetch_paper_text(
-    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path = FIXTURE_DIR
+    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture"
 ) -> PaperText:
-    """Fixture zuerst; `get_tavily` wird nur bei Fixture-Miss aufgerufen (spart Credits)."""
+    """mode="fixture": Fixture zuerst, `get_tavily` nur bei Fixture-Miss (spart Credits; Tests, vorab festgelegte Experimente).
+    mode="live": immer Tavily-Aufruf (Standard des Orchestrators); das Ergebnis ersetzt die Fixture."""
     fixture = fixture_dir / f"{arxiv_id}.json"
-    if fixture.exists():
+    if mode == "fixture" and fixture.exists():
         return PaperText(**json.loads(fixture.read_text()))
     tavily = get_tavily()
 

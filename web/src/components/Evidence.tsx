@@ -11,6 +11,7 @@ export function EvidenceSplit({ claimId, dossier, events, selected }: { claimId:
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
   const ev = claim?.target_evidence
   const calls = events.filter((e) => e.type === 'tavily_call')
+  const sources: Json[] = events.filter((e) => e.type === 'source').length ? events.filter((e) => e.type === 'source') : (dossier.sources ?? [])
   const details: Json[] = dossier.setup_details ?? []
   const attempts: Json[] = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId)
   const ab = dossier.ablations?.[claimId]
@@ -40,6 +41,19 @@ export function EvidenceSplit({ claimId, dossier, events, selected }: { claimId:
           </div>
         ) : (
           <p className="muted text-sm">No verified target from Tavily (target set manually).</p>
+        )}
+        {sources.length > 0 && (
+          <div className="panel-2 p-4">
+            <div className="mb-2 text-sm font-medium">Web sources read in this run</div>
+            <ul className="space-y-1.5 text-xs">
+              {sources.map((s, i) => (
+                <li key={i} className="flex flex-wrap items-start gap-2">
+                  <Badge tone={s.mode === 'live' ? 'green' : 'gray'} title={s.mode === 'live' ? 'Fetched from the web by a live Tavily call during this run.' : 'Read from a stored copy (fixture), no Tavily call in this run.'}>{s.mode === 'live' ? 'live Tavily call' : 'stored copy'}</Badge>
+                  <span className="muted mono break-all">{s.kind} · {s.url} · {String(s.retrieved_at ?? '').slice(0, 19)} · sha256 {String(s.sha256 ?? '').slice(0, 10)} · {s.n_chars} chars</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         {calls.length > 0 && (
           <div className="panel-2 p-4">

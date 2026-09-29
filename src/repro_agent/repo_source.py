@@ -122,10 +122,10 @@ def read_repo(
     return dump
 
 
-def fetch_readme(url: str, get_tavily, fixture_dir: Path = FIXTURE_DIR) -> str:
-    """README ueber Tavily Extract (Rolle 4). Fixture zuerst, spart Credits."""
+def fetch_readme(url: str, get_tavily, fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture") -> str:
+    """README ueber Tavily Extract (Rolle 4). mode="fixture": Fixture zuerst, spart Credits; mode="live": immer Aufruf."""
     fixture = fixture_dir / f"{_repo_key(url)}_readme.json"
-    if fixture.exists():
+    if mode == "fixture" and fixture.exists():
         return json.loads(fixture.read_text())["text"]
     result = get_tavily().get_setup_details(url)
     text = next((r.get("raw_content") or "" for r in result.get("results", [])), "")

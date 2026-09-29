@@ -91,6 +91,10 @@ Every experiment has a file written and committed **before** the first run: hypo
 
 **Consequence of the three calibrations (fixed beforehand):** axis 2 ("method fidelity by the checker") stays **"not checked"** in the benchmark, and this is stated openly here. Verdicts are then "provisional" unless the deterministic graph ablation applies. The checker never rated a wrong code "yes" in the rule sets, but it also cannot see code that runs and whose result is discarded (a known limit of an existence check; line coverage cannot see it either, the ablation can).
 
+## Live Tavily use
+
+A normal run calls Tavily **live** at run time (`TAVILY_MODE=live` is the default): Extract on the arXiv paper for the target values (role 2) and on the repository README for setup details (role 4), plus the roles the loop uses later. Each source is recorded with mode (`live` or stored copy), timestamp, SHA-256 and length in the dossier (`sources`), in `events.jsonl` (`source`, `tavily_call`) and as `paper_text.json` in the run folder, so a run stays traceable even if the web page changes. The evidence view shows a badge per source. Stored copies (fixtures) are used only on request (`--offline` or `TAVILY_MODE=fixture`): tests, and the pre-registered experiments and the benchmark, where every generation has to see the same text.
+
 ## Evidence view
 
 `web/` is a static React app that replays real runs: what Tavily found on the left (verified target value with its table quote, Tavily calls, setup details with verbatim quotes), what the sandbox measured on the right (per-run results against the tolerance band, harness, ablation), the branch tree with repairs, and a step-by-step replay of the run's event log (`events.jsonl`). It needs no backend or API keys; the data are JSON files. See `web/README.md`.

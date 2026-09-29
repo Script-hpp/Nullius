@@ -21,7 +21,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -104,7 +104,15 @@ class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
+        tavily_mode: str | None = None,
     ) -> None:
+        # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
+        # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
+        self.tavily_mode = tavily_mode or os.getenv("TAVILY_MODE", "live")
+        if self.tavily_mode not in ("live", "fixture"):
+            raise ValueError(f"TAVILY_MODE muss live oder fixture sein, nicht {self.tavily_mode!r}")
+        self._tavily_calls = 0
+        self._sources: list[dict] = []
         self.use_tavily = use_tavily
         self.use_setup_details = use_tavily and setup_details   # Rolle 4 haengt am Paper-Text
         self.paper_only = paper_only   # Rolle 4 liest nur den Paper-Text, kein Repo/README (Shchur-Experiment)
@@ -113,6 +121,7 @@ class Orchestrator:
         self.details: list[SetupDetail] = []
         self.paper_text: PaperText | None = None
         self.last_run_dir: Path | None = None
+        self._run_dir: Path | None = None
         self._cost_base = 0.0
         self.events = EventLog(None)       # ab run(): runs/<paper>/<ts>/events.jsonl
         self._smoke_ok: set[str] = set()   # Codes, die die Formpruefung bestanden haben
@@ -134,7 +143,17 @@ class Orchestrator:
             ev.write(type, **data)
 
     def _emit_tavily(self, role: int, endpoint: str, target, n_results: int) -> None:
+        self._tavily_calls += 1
         self._emit("tavily_call", role=role, endpoint=endpoint, target=target, n_results=n_results)
+
+    def _record_source(self, kind: str, url: str, text: str, live: bool, retrieved_at: str | None = None,
+                       sha256: str | None = None) -> None:
+        """Web-Quelle im Dossier und im Ereignisprotokoll festhalten: live oder aus Fixture, Zeitstempel, Hash."""
+        rec = {"kind": kind, "url": url, "mode": "live" if live else "fixture", "n_chars": len(text),
+               "retrieved_at": retrieved_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+               "sha256": sha256 or hashlib.sha256(text.encode()).hexdigest()}
+        self._sources.append(rec)
+        self._emit("source", **rec)
 
     @property
     def spent_gross_usd(self) -> float:
@@ -365,12 +384,21 @@ class Orchestrator:
             spec = claim_specs(paper).get(claim.id, {}).get("extract")
             if not spec:
                 continue
-            text = fetch_paper_text(arxiv_id, get_tavily)
-            self.paper_text = text
+            if self.paper_text is None:   # ein Abruf je Lauf, nicht je Claim
+                calls_before = self._tavily_calls
+                self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode)
+                live = self._tavily_calls > calls_before
+                self._record_source("paper", self.paper_text.url, self.paper_text.text, live,
+                                    self.paper_text.retrieved_at, self.paper_text.sha256)
+                if self._run_dir is not None:   # gelesener Text mit Zeitstempel und Hash im Lauf, auch wenn sich die Seite aendert
+                    (self._run_dir / "paper_text.json").write_text(json.dumps(dataclasses.asdict(self.paper_text), ensure_ascii=False))
+            text = self.paper_text
             ev = extract_target_cached(
                 self.llm, text, spec["method"], spec["dataset"], spec["metric"],
                 percent=spec.get("percent", True),
             )
+            self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
+                       agrees=abs(ev.value - claim.target) < 1e-9, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]
@@ -388,9 +416,11 @@ class Orchestrator:
         if not url:
             return docs, None
         get_tavily = self._tavily_getter()
-        readme = fetch_readme(url, get_tavily)
+        calls_before = self._tavily_calls
+        readme = fetch_readme(url, get_tavily, mode=self.tavily_mode)
         if readme:
             docs.append(Doc("repo-readme", readme))
+            self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
@@ -547,6 +577,9 @@ class Orchestrator:
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
         self.last_run_dir = run_dir
+        self._run_dir = run_dir
+        self.paper_text = None    # pro Lauf neu holen (live) statt den Text des vorigen Laufs weiterzuverwenden
+        self._sources = []
         self.events = EventLog(run_dir / "events.jsonl")
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
@@ -570,7 +603,7 @@ class Orchestrator:
             self._emit("setup_details", n=len(self.details), dropped=dropped, by_source=by_src,
                        repo=repo_info, details=[dataclasses.asdict(d) for d in self.details])
         dossier = Dossier(
-            paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info,
+            paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
             setup_details=[dataclasses.asdict(d) for d in self.details],
         )
 
@@ -604,6 +637,7 @@ def main() -> None:
             fresh="--fresh" in sys.argv,
             setup_details="--no-setup-details" not in sys.argv,
             paper_only="--paper-only" in sys.argv,
+            tavily_mode="fixture" if "--offline" in sys.argv else None,
         ).run(paper_id)
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")

@@ -30,7 +30,7 @@ def main() -> None:
     for arm, with_details in (("A_ohne_rolle4", False), ("B_mit_rolle4", True)):
         if arm[0] not in only:
             continue
-        orch = Orchestrator(use_tavily=True, fresh=True, setup_details=with_details, seeds=n_seeds)
+        orch = Orchestrator(tavily_mode="fixture", use_tavily=True, fresh=True, setup_details=with_details, seeds=n_seeds)
         orch._snapshots = snapshots            # Basis-Snapshot ueber Arme teilen
         done = sum(r["arm"] == arm for r in rows)
         for g in range(done, n_gen):
