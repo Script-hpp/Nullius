@@ -19,7 +19,11 @@ from repro_agent.dossier import REPO_ROOT
 from repro_agent.fidelity import COMPONENT_DIR, check_fidelity, load_components
 from repro_agent.llm import LLMClient
 
-CODES = REPO_ROOT / "tests" / "fixtures" / "agent_codes"
+# v1 (verbraucht, Eichung gescheitert) und v2 (neue Codes). Standard: v2.
+SETS = {
+    "v1": (COMPONENT_DIR / "gold_labels.json", REPO_ROOT / "tests" / "fixtures" / "agent_codes"),
+    "v2": (COMPONENT_DIR / "gold_labels_v2.json", REPO_ROOT / "tests" / "fixtures" / "agent_codes_v2"),
+}
 
 
 REPEATS = 3
@@ -31,37 +35,51 @@ def majority(verdicts: list[str]) -> str | None:
 
 
 def main() -> None:
-    gold = json.loads((COMPONENT_DIR / "gold_labels.json").read_text())
-    only = sys.argv[1:]
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    version = "v1" if "--v1" in sys.argv else "v2"
+    gold_path, codes_dir = SETS[version]
+    gold = json.loads(gold_path.read_text())
+    only = args
     settings = dataclasses.replace(load_settings(), llm_cache=False)   # Wiederholungen muessen echt sein
     llm = LLMClient(settings)
     names = [n for n in gold if not only or n in only]
 
     def run(name):
         comps = load_components(gold[name]["paper"])
-        code = (CODES / f"{name}.py").read_text()
+        code = (codes_dir / f"{name}.py").read_text()
         return name, [check_fidelity(llm, comps, code) for _ in range(REPEATS)]
 
     with ThreadPoolExecutor(3) as pool:
         results = list(pool.map(run, names))
-    hits = swaps = unstable = 0
+    # Regelmenge: Codes ohne dead_code. dead_code-Codes (Bau ohne Nutzung) werden nur berichtet.
+    hits = swaps = unstable = rule_n = 0
+    dead: list[str] = []
     for name, reps in results:
         g = gold[name]
         votes = [r.overall for r in reps]
         maj = majority(votes)
         ok = maj == g["gold"]
         swap = {maj, g["gold"]} == {"ja", "nein"}
-        hits += ok
-        swaps += swap
+        is_dead = bool(g.get("dead_code"))
         unstable += len(set(votes)) > 1
-        print(f"{'OK ' if ok else 'ABW'} {name:32s} Mehrheit: {str(maj):9s} Gold: {g['gold']:9s} "
-              f"Urteile: {votes}{' (schwerer Fall)' if g.get('hard') else ''}{' JA/NEIN VERTAUSCHT' if swap else ''}")
+        if is_dead:
+            dead.append(f"{name}: Mehrheit {maj}, Gold {g['gold']}")
+        else:
+            rule_n += 1
+            hits += ok
+            swaps += swap
+        print(f"{'OK ' if ok else 'ABW'} {name:36s} Mehrheit: {str(maj):14s} Gold: {g['gold']:9s} "
+              f"Urteile: {votes}{' (dead_code, nur berichtet)' if is_dead else ''}{' JA/NEIN VERTAUSCHT' if swap else ''}")
         for r in reps[0].results:
             print(f"      {r.id:34s} {r.status:16s} {r.note[:90]}")
     passed = hits >= 8 and swaps == 0
-    print(f"\n{hits}/{len(results)} Mehrheitsurteile stimmen mit Gold; ja/nein vertauscht: {swaps}; "
-          f"Codes mit uneinigen Urteilen: {unstable}/{len(results)}; Kosten {llm.total_cost_usd:.4f} $ netto")
-    print(f"Eichregel (>= 8/10 und keine Vertauschung): {'ERFUELLT' if passed else 'NICHT ERFUELLT'}")
+    print(f"\nRegelmenge: {hits}/{rule_n} Mehrheitsurteile stimmen mit Gold; ja/nein vertauscht: {swaps}; "
+          f"Codes mit uneinigen Urteilen (alle): {unstable}/{len(results)}; Kosten {llm.total_cost_usd:.4f} $ netto")
+    for line in dead:
+        print(f"  dead_code (nicht in der Regel): {line}")
+    if version == "v1":
+        print("v1 ist verbraucht (Regel v1: >= 8/10 ohne Vertauschung).")
+    print(f"Eichregel ({version}: >= 8 von {rule_n} und keine Vertauschung): {'ERFUELLT' if passed else 'NICHT ERFUELLT'}")
 
 
 if __name__ == "__main__":

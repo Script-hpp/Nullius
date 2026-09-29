@@ -1,0 +1,64 @@
+{
+ "dlinear_new_faithful_replicate": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "MovingAvg k=25 mit Randpadding, zwei getrennte Linear, Summe"
+ },
+ "dlinear_new_faithful_conv_kernel": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "ja",
+  "why": "Zerlegung per Depthwise-conv1d mit festem 1/25-Filter, zwei Linear, Summe"
+ },
+ "dlinear_new_kernel_13": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "sonst treu, Kernel 13 statt 25: nur der Wertbaustein fehlt"
+ },
+ "dlinear_new_shared_linear": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "teilweise",
+  "why": "Zerlegung k=25 und Summe, aber EIN geteilter Linear statt zwei unabhaengige"
+ },
+ "dlinear_new_mlp_no_decomposition": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "zweischichtiges MLP auf dem Rohsignal, keine Zerlegung"
+ },
+ "dlinear_new_nlinear": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "NLinear (letzten Wert abziehen, ein Linear): andere Variante, keine Zerlegung"
+ },
+ "dlinear_new_decomposition_discarded": {
+  "paper": "zeng_dlinear_2023",
+  "gold": "nein",
+  "why": "Zerlegung und zwei Linear definiert/berechnet, forward benutzt nur linear_raw auf Rohsignal",
+  "dead_code": true
+ },
+ "gcn_new_faithful_dense": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "A+I, D^-1/2 (A+I) D^-1/2, zwei Schichten A_hat @ (XW)"
+ },
+ "gcn_new_faithful_scatter": {
+  "paper": "kipf_gcn_2017",
+  "gold": "ja",
+  "why": "Selbstschleifen als Kanten, symmetrisches Gewicht ueber Grade, index_add-Propagation, zwei Schichten"
+ },
+ "gcn_new_row_normalised": {
+  "paper": "kipf_gcn_2017",
+  "gold": "teilweise",
+  "why": "A+I, aber Zeilennormalisierung D^-1(A+I) statt symmetrisch: renormalisierte Adjazenz fehlt"
+ },
+ "gcn_new_one_layer": {
+  "paper": "kipf_gcn_2017",
+  "gold": "teilweise",
+  "why": "korrekte Adjazenz mit Selbstschleifen, aber nur EINE Graph-Faltungsschicht"
+ },
+ "gcn_new_adjacency_stored_unused": {
+  "paper": "kipf_gcn_2017",
+  "gold": "nein",
+  "why": "A_hat korrekt gebaut und als self.adj gespeichert, forward ist ein MLP ohne Propagation",
+  "dead_code": true
+ }
+}
