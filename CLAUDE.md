@@ -332,6 +332,7 @@ Das UI-Design orientiert sich an modernen, minimalistischen SaaS-Plattformen (wi
 *   **Theme:** Dark Mode und Light Mode werden nativ unterstützt. Eine weiche Hintergrundfarbe (z. B. Off-White im Light Mode) sorgt für ein professionelles Erscheinungsbild.
 *   **Typografie:** Hochwertige, serifenlose Schriften (wie Inter oder SF Pro). Der Text muss flüssig und leicht lesbar sein; Hierarchien werden durch Schriftstärke und Graustufen statt greller Farben unterschieden.
 *   **Informationsarchitektur:** Die UI darf nicht mit Informationen überfüllt wirken. Daten (wie Metrics oder Logs) werden gut strukturiert in Cards, Tabellen oder ausklappbaren Modulen präsentiert, um kognitive Überlastung zu vermeiden.
+*   **Logo & Bildsprache:** Das Leitmotiv "Nullius in verba" ("auf niemandes Wort hin") muss spürbar sein. Es geht um den visuellen Kontrast: "Worte vs. Messung" und "Behauptung vs. Wiederholung" – nicht um generische Wissenschafts-Symbole (Atome, Reagenzgläser). Die Ästhetik entspricht einem präzisen, sauberen AI-Benchmark, das Papers prüft (z. B. Haken, Checkmarks, klare Linien).
 
 # Nullius: Produkt- und Entwicklungsstrategie für die Endphase
 
