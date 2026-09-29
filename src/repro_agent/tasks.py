@@ -21,6 +21,11 @@ class Task:
     eval_cmd: str                   # Template mit {harness_dir}; gibt eine JSON-Zeile aus
     data_description: str           # fuer den `code`-Prompt
     code_notes: str                 # aufgabenspezifische Hinweise fuer `code` (Bibliotheken, Ausgabe)
+    # Formpruefung (Smoke-Lauf mit SMOKE=1 vor dem Training): erwartete ids, ggf. Dimensionen der ids
+    smoke_ids: tuple[str, ...] = ()
+    smoke_ids_cmd: str = ""         # alternativ: Kommando im Branch, das die erwarteten ids ausgibt
+    smoke_dims: tuple[int, ...] | None = None
+    smoke_dim_names: tuple[str, ...] = ()
 
 
 def _file_cmd(path: Path, dest: str) -> str:
@@ -42,6 +47,14 @@ Environment: Python 3.11, CPU only, numpy, scipy, torch preinstalled. Read the r
 the env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
 
 
+CORA_SMOKE_N = 20
+CORA_SMOKE = (
+    f"Smoke mode: if env var SMOKE=1, train exactly 1 epoch, predict only the first {CORA_SMOKE_N} nodes "
+    "of test_idx and write predictions.csv with only these ids; it must finish in under 60 seconds. "
+    "The pipeline runs this first to check the output form."
+)
+
+
 def cora_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
@@ -56,7 +69,12 @@ def cora_task() -> Task:
         data_description=CORA_DATA_DESCRIPTION,
         code_notes=(
             "Implement the model yourself in PyTorch (no torch_geometric available). "
-            "Print the final validation accuracy to stdout. Use only /data/cora_public.npz."
+            "Print the final validation accuracy to stdout. Use only /data/cora_public.npz. "
+            f"{CORA_SMOKE}"
+        ),
+        smoke_ids_cmd=(   # erwartete ids = die ersten N (aufsteigend) von test_idx, aus dem Datensatz selbst
+            "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "
+            f"print(*sorted(int(i) for i in d['test_idx'])[:{CORA_SMOKE_N}])\""
         ),
     )
 
@@ -80,6 +98,15 @@ Environment: Python 3.11, CPU only, numpy and torch preinstalled. Read the rando
 env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
 
 
+ETTH1_SMOKE_WINDOWS = 8
+ETTH1_SMOKE = (
+    "Smoke mode: if env var SMOKE=1, use at most 1 training batch of 32 samples for 1 epoch, predict only "
+    f"test windows 0..{ETTH1_SMOKE_WINDOWS - 1} and write predictions.csv with only these windows "
+    f"({ETTH1_SMOKE_WINDOWS}*96*7 rows); it must finish in under 60 seconds. "
+    "The pipeline runs this first to check the output shape (windows, 96, 7)."
+)
+
+
 def etth1_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "etth1_data.py", "/opt/prep/etth1_data.py"),
@@ -95,8 +122,12 @@ def etth1_task() -> Task:
         code_notes=(
             "Implement the model yourself in PyTorch. Write predictions.csv efficiently (numpy "
             "to text, not per-row Python objects). Print the final validation MSE to stdout. "
-            "Use only /data/etth1_public.npz."
+            "Use only /data/etth1_public.npz. "
+            f"{ETTH1_SMOKE}"
         ),
+        smoke_ids=tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7)),
+        smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
+        smoke_dim_names=("windows", "steps", "channels"),
     )
 
 

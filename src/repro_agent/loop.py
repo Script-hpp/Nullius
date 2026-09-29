@@ -28,6 +28,7 @@ from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
+from .harness.smoke import check_smoke_output
 from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
@@ -40,6 +41,7 @@ DEFAULT_SEEDS = 5
 MAX_PARALLEL = 4  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
+SMOKE_TIMEOUT_S = 90
 TRIAGE_CHARS = 1500
 WORKDIR = "/work"
 PAPERS_YAML = REPO_ROOT / "benchmark" / "papers.yaml"
@@ -104,6 +106,7 @@ class Orchestrator:
         self.paper_text: PaperText | None = None
         self.last_run_dir: Path | None = None
         self._cost_base = 0.0
+        self._smoke_ok: set[str] = set()   # Codes, die die Formpruefung bestanden haben
         self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
         if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
@@ -185,6 +188,39 @@ class Orchestrator:
         return text.strip()[-TRIAGE_CHARS:]
 
     # ---- Sandbox ------------------------------------------------------------
+    def _smoke_check(self, branch: Branch, code: str, task: Task) -> str | None:
+        """Formpruefung: Code mit SMOKE=1 auf winziger Datenmenge, Ausgabe gegen die Form des Tasks.
+        Findet Tensorform-Fehler in Sekunden statt nach dem Training. None = bestanden."""
+        if not (task.smoke_ids or task.smoke_ids_cmd):
+            return None
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        if code_hash in self._smoke_ok:
+            return None
+        sb = self.sandbox
+        expected = task.smoke_ids
+        if task.smoke_ids_cmd:
+            expected = tuple(sb.run(branch, task.smoke_ids_cmd, 60).stdout.split())
+        r = sb.run(
+            branch,
+            f"mkdir -p /output && cd {WORKDIR} && SEED=0 SMOKE=1 unshare -n python train.py",
+            SMOKE_TIMEOUT_S,
+        )
+        if r.timed_out:
+            return (f"Smoke run (SMOKE=1) exceeded {SMOKE_TIMEOUT_S}s: the script ignores SMOKE=1. "
+                    "With SMOKE=1 use the tiny subset and 1 epoch as described.")
+        if r.exit_code != 0:
+            return "Smoke run (SMOKE=1) crashed:\n" + (r.stderr or r.stdout).strip()[-TRIAGE_CHARS:]
+        try:
+            out = sb.get_file(branch, "/output/predictions.csv")
+        except Exception as exc:   # Sandbox-Adapter melden fehlende Datei unterschiedlich
+            return f"Smoke run wrote no /output/predictions.csv ({exc})"
+        error = check_smoke_output(out, expected, task.smoke_dims, task.smoke_dim_names)
+        if error:
+            return "Smoke run (SMOKE=1) output has the wrong form: " + error
+        sb.run(branch, "rm -f /output/predictions.csv", 30)
+        self._smoke_ok.add(code_hash)
+        return None
+
     def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task, metric: str) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
@@ -193,6 +229,9 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
+        smoke_error = self._smoke_check(branch, code, task)
+        if smoke_error:
+            return {"status": "fehler", "detail": smoke_error}
         # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
         # Agenten-Codes (Setup ist vorher im Basis-Snapshot abgeschlossen).
         r = sb.run(
