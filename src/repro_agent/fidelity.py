@@ -22,6 +22,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .claims_source import PaperText, _norm, _windows
+from .harness.coverage_check import Coverage, quote_coverage
 from .llm import LLMClient
 
 COMPONENT_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "components"
@@ -206,6 +207,28 @@ def check_fidelity(llm: LLMClient, components: list[Component], code: str) -> Fi
                 status, note = "teilweise", f"Wert {c.value} steht nicht im Zitat: " + note
         results.append(ComponentResult(c.id, status, str(quote) if quote else None, note))
     return FidelityReport(overall=aggregate(components, results), results=results)
+
+
+def apply_coverage(
+    components: list[Component], report: FidelityReport, code: str, cov: Coverage | None
+) -> tuple[FidelityReport, list[str]]:
+    """Kombinationsregel (calibration_fidelity_v2.md): Abdeckung darf nur HERABSTUFEN.
+    Nur bei Pruefer-Urteil `ja`: umgesetzter Baustein, dessen zitierte Zeilen nie liefen, gilt als nicht umgesetzt
+    (Gesamturteil dann `teilweise` oder `nein` ueber `aggregate`). `teilweise`/`nein` bleiben unveraendert.
+    Ohne Abdeckung bleibt das Urteil, mit Hinweis."""
+    if cov is None:
+        return report, ["Ausfuehrungsabdeckung nicht verfuegbar: Pruefer-Urteil unveraendert (Existenzpruefung)."]
+    if report.overall != "ja":
+        return report, []
+    notes, results = [], []
+    for r in report.results:
+        if r.status == "umgesetzt" and r.code_quote:
+            cs = quote_coverage(code, r.code_quote, cov)
+            if cs == "nicht ausgefuehrt":
+                notes.append(f"{r.id}: zitierte Zeilen wurden im Lauf nie ausgefuehrt")
+                r = ComponentResult(r.id, "nicht umgesetzt", r.code_quote, "Zitat nie ausgefuehrt (Abdeckung): " + r.note)
+        results.append(r)
+    return FidelityReport(aggregate(components, results), results), notes
 
 
 def aggregate(components: list[Component], results: list[ComponentResult]) -> str:

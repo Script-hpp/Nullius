@@ -36,6 +36,8 @@ class Attempt:
     tavily_queries: list[str] = field(default_factory=list)
     cost_usd: float = 0.0
     metrics: dict | None = None   # alle Metriken des Harness (nicht nur die des Claims)
+    # Zeilenabdeckung des Agenten-Codes (nur erster vollstaendiger Seed-Lauf): {"executed": [...], "missing": [...]}
+    coverage: dict | None = None
 
 
 @dataclass

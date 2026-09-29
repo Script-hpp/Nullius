@@ -28,6 +28,7 @@ from .claims_source import PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
+from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
 from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
@@ -221,7 +222,21 @@ class Orchestrator:
         self._smoke_ok.add(code_hash)
         return None
 
-    def _run_and_eval(self, branch: Branch, code: str, seed: int, task: Task, metric: str) -> dict:
+    def _measure_coverage(self, branch: Branch) -> dict | None:
+        """Zeilenabdeckung des gerade gelaufenen train.py (coverage im Basis-Snapshot). None = nicht verfuegbar."""
+        r = self.sandbox.run(
+            branch, f"cd {WORKDIR} && python -m coverage json --data-file=/tmp/.cov -o /tmp/cov.json", 60
+        )
+        if r.exit_code != 0:
+            return None
+        cov = Coverage.from_coverage_json(json.loads(self.sandbox.get_file(branch, "/tmp/cov.json")))
+        if cov is None:
+            return None
+        return {"executed": sorted(cov.executed), "missing": sorted(cov.missing)}
+
+    def _run_and_eval(
+        self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False
+    ) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
         violations = find_violations(code)
@@ -234,15 +249,19 @@ class Orchestrator:
             return {"status": "fehler", "detail": smoke_error}
         # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
         # Agenten-Codes (Setup ist vorher im Basis-Snapshot abgeschlossen).
+        # Abdeckung nur im ersten vollstaendigen Seed-Lauf (Smoke-Lauf ist zu kurz: Epochen-/Early-Stopping-Zweige)
+        with_cov = measure_coverage and sb.run(branch, "python -c 'import coverage'", 30).exit_code == 0
+        runner = "python -m coverage run --data-file=/tmp/.cov train.py" if with_cov else "python train.py"
         r = sb.run(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && SEED={seed} unshare -n python train.py",
+            f"mkdir -p /output && cd {WORKDIR} && SEED={seed} unshare -n {runner}",
             TRAIN_TIMEOUT_S,
         )
         if r.timed_out:
             return {"status": "timeout", "detail": f"Training > {TRAIN_TIMEOUT_S}s"}
         if r.exit_code != 0:
             return {"status": "fehler", "detail": (r.stderr or r.stdout)}
+        coverage = self._measure_coverage(branch) if with_cov else None
 
         # Harness frisch aus unserem Repo kopieren, in ein Verzeichnis mit Zufallsnamen: der
         # Agent-Code ist schon gelaufen und kannte den Pfad nicht, kann ihn also nicht vorbelegt haben.
@@ -263,7 +282,7 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
-            "baselines": out.get("baselines"),
+            "baselines": out.get("baselines"), "coverage": coverage,
         }
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
@@ -370,7 +389,7 @@ class Orchestrator:
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
             branch = self.sandbox.branch(snapshot)
             t0 = time.time()
-            res = self._run_and_eval(branch, code, seed, task, claim.metric)
+            res = self._run_and_eval(branch, code, seed, task, claim.metric, measure_coverage=seed == 0)
             status, value = res["status"], res.get("measured")
             summary = None
             if status == "ok":
@@ -384,7 +403,7 @@ class Orchestrator:
                 dossier.attempts.append(Attempt(
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
-                    cost_usd=self.spent_usd, metrics=res.get("metrics"),
+                    cost_usd=self.spent_usd, metrics=res.get("metrics"), coverage=res.get("coverage"),
                 ))
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)

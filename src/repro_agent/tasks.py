@@ -58,7 +58,7 @@ CORA_SMOKE = (
 def cora_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
-        "pip install -q numpy scipy torch --extra-index-url https://download.pytorch.org/whl/cpu",
+        "pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         "python /opt/prep/cora_data.py && rm -rf /opt/prep",
     ]
     return Task(
@@ -110,7 +110,7 @@ ETTH1_SMOKE = (
 def etth1_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "etth1_data.py", "/opt/prep/etth1_data.py"),
-        "pip install -q numpy torch --extra-index-url https://download.pytorch.org/whl/cpu",
+        "pip install -q numpy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         "python /opt/prep/etth1_data.py && rm -rf /opt/prep",
     ]
     return Task(
