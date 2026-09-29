@@ -113,7 +113,9 @@ Eight or more papers with known reproduction outcome, each run with and without 
 | Shchur et al. 2018, GCN on random splits (Cora) | reproduced | 0 / 2 | 3 / 3 |
 | **Total** | | **3 of 12 / 6 of 12** | **12 of 12 / 12 of 12** |
 
-**Headline (protocol `benchmark/experiments/benchmark_protocol.md`, fixed before the first run):** on real claims, 6 of 12 verdicts agreed with the reference verdict with Tavily, 3 of 12 without (10 of 12 "near" in both arms); placebo claims (deliberately wrong target values such as 88 % on Cora) were rejected 12 of 12 times in both arms. All verdicts are provisional: method fidelity is not checked.
+**Headline (protocol `benchmark/experiments/benchmark_protocol.md`, fixed before the first run):** with Tavily, 6 of 12 verdicts on real claims matched the reference verdict, without Tavily 3 of 12. In both arms, 10 of 12 runs landed close to the target (reproduced or partially); the difference comes mainly from runs just outside the ±1-point tolerance, so it is suggestive, not conclusive. All 24 placebo claims (deliberately wrong target values such as 88 % on Cora) were correctly rejected, in both arms. All verdicts are provisional: method fidelity is not checked.
+
+*Post hoc (not fixed in advance):* the median distance to the target value on real claims is 0.0166 without Tavily and 0.0097 with Tavily. It does not cut close calls into "right" and "wrong", but it comes from the same 12 runs per arm and is not a test.
 
 Note on Tavily in this benchmark: the arm "with Tavily" used roles 2 and 4 on **stored copies** of the Tavily results (fixtures) so that every generation and both arms see exactly the same paper text; it measures the effect of the information, not of the live call. Live calls are the default of a normal run (see "Live Tavily use").
 

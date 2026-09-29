@@ -1,0 +1,12 @@
+{
+ "value": 0.83,
+ "quote": "GAT (ours) 83.0 ± 0.7% 72.5 ± 0.7% 79.0 ± 0.3%",
+ "table": "Table 2",
+ "url": "https://arxiv.org/pdf/1710.10903v3",
+ "source_kind": "pdf",
+ "retrieved_at": "2026-09-29T13:54:42+00:00",
+ "sha256": "f7f86c91c2403eae7357175e8b4fe74db663bde33e5c14c4878195309b0b74e1",
+ "arxiv_version": "v3",
+ "caveat": null,
+ "column_check": "ok"
+}
