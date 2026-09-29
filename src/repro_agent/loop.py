@@ -190,7 +190,17 @@ class Orchestrator:
         return text.strip()[-TRIAGE_CHARS:]
 
     # ---- Sandbox ------------------------------------------------------------
-    def _smoke_check(self, branch: Branch, code: str, task: Task) -> str | None:
+    def _prepare_data(self, branch: Branch, seed: int, task: Task) -> str | None:
+        """Daten fuer diesen Lauf (Split) im Branch erzeugen. Das Skript liegt nur waehrend der Vorbereitung dort."""
+        sb = self.sandbox
+        d = f"/opt/prep-{uuid.uuid4().hex[:10]}"
+        sb.put_files(branch, {f"{d}/{n}": (HARNESS_DIR / n).read_bytes() for n in task.prepare_files})
+        r = sb.run(branch, task.prepare_cmd.format(dir=d, split=task.split_for(seed)) + f"; rc=$?; rm -rf {d}; exit $rc", 300)
+        if r.timed_out or r.exit_code != 0:
+            return f"Datenvorbereitung fehlgeschlagen: {(r.stderr or r.stdout)[-300:]}"
+        return None
+
+    def _smoke_check(self, branch: Branch, code: str, task: Task, seed: int = 0) -> str | None:
         """Formpruefung: Code mit SMOKE=1 auf winziger Datenmenge, Ausgabe gegen die Form des Tasks.
         Findet Tensorform-Fehler in Sekunden statt nach dem Training. None = bestanden."""
         if not (task.smoke_ids or task.smoke_ids_cmd):
@@ -204,7 +214,7 @@ class Orchestrator:
             expected = tuple(sb.run(branch, task.smoke_ids_cmd, 60).stdout.split())
         r = sb.run(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && SEED=0 SMOKE=1 unshare -n python train.py",
+            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} SMOKE=1 unshare -n python train.py",
             SMOKE_TIMEOUT_S,
         )
         if r.timed_out:
@@ -256,11 +266,15 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
+        if task.prepare_cmd:
+            prep_error = self._prepare_data(branch, seed, task)
+            if prep_error:
+                return {"status": "ungueltig", "detail": prep_error}
         if ablate:   # Nutzungspruefung: veraenderte Daten, kein Smoke-Lauf, keine Abdeckung
             sb.run(branch, task.ablation_cmd, 120)
             measure_coverage = False
         else:
-            smoke_error = self._smoke_check(branch, code, task)
+            smoke_error = self._smoke_check(branch, code, task, seed)
             if smoke_error:
                 return {"status": "fehler", "detail": smoke_error}
         # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
@@ -270,7 +284,7 @@ class Orchestrator:
         runner = "python -m coverage run --data-file=/tmp/.cov train.py" if with_cov else "python train.py"
         r = sb.run(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && SEED={seed} unshare -n {runner}",
+            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n {runner}",
             TRAIN_TIMEOUT_S,
         )
         if r.timed_out:
@@ -285,7 +299,7 @@ class Orchestrator:
         sb.put_files(branch, {
             f"{harness_dir}/{name}": (HARNESS_DIR / name).read_bytes() for name in task.harness_files
         })
-        e = sb.run(branch, task.eval_cmd.format(harness_dir=harness_dir), EVAL_TIMEOUT_S)
+        e = sb.run(branch, task.eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
         if e.timed_out or e.exit_code != 0:
             return {"status": "ungueltig", "detail": f"Harness-Lauf fehlgeschlagen: {e.stderr[-500:]}"}
         try:

@@ -28,6 +28,18 @@ class Task:
     smoke_dim_names: tuple[str, ...] = ()
     # Nutzungspruefung: Kommando, das im Branch die Daten veraendert (Cora: Kanten entfernen), siehe ablation_gcn.md
     ablation_cmd: str = ""
+    # Daten pro Lauf vorbereiten (z. B. Split k): Dateien aus harness/ kommen temporaer in den Branch, danach geloescht
+    prepare_files: tuple[str, ...] = ()
+    prepare_cmd: str = ""           # Template mit {dir} und {split}; laeuft MIT Netz (Rohdaten holen), vor dem Agenten-Code
+    seeds_per_split: int = 0        # > 0: Lauf `seed` = Split seed // n, Initialisierung seed % n (SPLIT= und SEED=)
+
+    def env_for(self, seed: int) -> str:
+        if self.seeds_per_split:
+            return f"SPLIT={seed // self.seeds_per_split} SEED={seed % self.seeds_per_split}"
+        return f"SEED={seed}"
+
+    def split_for(self, seed: int) -> int:
+        return seed // self.seeds_per_split if self.seeds_per_split else 0
 
 
 def _file_cmd(path: Path, dest: str) -> str:
@@ -138,4 +150,38 @@ def etth1_task() -> Task:
     )
 
 
-TASKS = {"Cora": cora_task, "ETTh1": etth1_task}
+CORA_LCC_SEEDS_PER_SPLIT = 3
+CORA_LCC_DATA_DESCRIPTION = """\
+Dataset: Cora citation graph restricted to its largest connected component (2485 nodes, undirected),
+random split, file /data/cora_lcc_public.npz (numpy.load):
+- features: float32 [2485, 1433] bag-of-words (binary, not normalised)
+- edges: int64 [E, 2] directed pairs (u, v), contains both directions
+- labels: int64 [2485], class 0..6; -1 for all test nodes (labels hidden)
+- train_idx (20 nodes per class = 140), val_idx (30 per class = 210), test_idx (all other nodes, 2135)
+Task: node classification. Train on train_idx (use val_idx for early stopping / model selection),
+predict a class for every node in test_idx.
+Output: write /output/predictions.csv with header `id,prediction`, one row per test node,
+id = node index from test_idx, prediction = integer class. Nothing else is scored.
+Environment: Python 3.11, CPU only, numpy, scipy, torch preinstalled. The env var SPLIT tells which random
+split the data file holds (informational, never derive splits yourself); read the random seed for the weight
+initialisation from the env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
+
+
+def cora_lcc_task() -> Task:
+    base = cora_task()
+    return Task(
+        image=base.image,
+        setup_cmds=["pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu"],
+        harness_files=["cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
+        eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_eval.py",
+        data_description=CORA_LCC_DATA_DESCRIPTION,
+        code_notes=base.code_notes.replace("/data/cora_public.npz", "/data/cora_lcc_public.npz"),
+        smoke_ids_cmd=base.smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
+        ablation_cmd=base.ablation_cmd.replace("cora_public", "cora_lcc_public"),
+        prepare_files=("cora_data.py", "cora_lcc_data.py"),
+        prepare_cmd="mkdir -p /data && python {dir}/cora_lcc_data.py public {split} /data/cora_lcc_public.npz",
+        seeds_per_split=CORA_LCC_SEEDS_PER_SPLIT,
+    )
+
+
+TASKS = {"Cora": cora_task, "ETTh1": etth1_task, "Cora-LCC": cora_lcc_task}

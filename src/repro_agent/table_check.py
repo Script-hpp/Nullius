@@ -75,6 +75,54 @@ def _check_datasets_as_columns(text: str, quote: str, value: float, dataset: str
     return _compare(row[i], value, percent, f"Spalte {cols[i]}, Position {i + 1} von {len(cols)}")
 
 
+DATASET_WORDS = {
+    "cora", "citeseer", "pubmed", "nell", "full", "amazon", "computer", "computers", "photo", "coauthor", "cs",
+    "physics",
+}
+
+
+def _merge_full(words: list[str]) -> list[str]:
+    """'cora full' ist eine Spalte."""
+    cols: list[str] = []
+    for w in words:
+        if w == "full" and cols:
+            cols[-1] += " full"
+        else:
+            cols.append(w)
+    return cols
+
+
+def _check_dataset_run(text: str, quote: str, value: float, dataset: str, percent: bool) -> ColumnCheck | None:
+    """Tabellen ohne 'Method'-Kopf: die letzte Folge von Datensatznamen VOR der Zeile ist die Kopfzeile
+    ('CORA CiteSeer PubMed CORA Full')."""
+    pos = text.find(quote)
+    if pos < 0:
+        return None
+    want = dataset.lower()
+    best: list[str] | None = None
+    run: list[str] = []
+    for m in re.finditer(r"[a-z0-9-]+", text[:pos]):
+        tok = m.group()
+        stripped = tok.lstrip("0123456789")   # Fussnotenziffer vor dem Namen ("2cora")
+        word = stripped if tok[:1].isdigit() and stripped in DATASET_WORDS else tok
+        if word in DATASET_WORDS:
+            run.append(word)
+            continue
+        if len(run) >= 3 and want in _merge_full(run):
+            best = _merge_full(run)
+        run = []
+    if len(run) >= 3 and want in _merge_full(run):
+        best = _merge_full(run)
+    if best is None:
+        return None
+    q = re.sub(r"±\s*\d+(?:\.\d+)?", " ", re.sub(r"\[\d+(?:,\s*\d+)*\]", " ", quote))
+    row = [float(x) for x in re.findall(NUMBER, q)]
+    if len(row) < len(best):
+        return ColumnCheck("nicht pruefbar", f"Kopfzeile {best} passt nicht zur Zeile ({len(row)} Zahlen)")
+    i = best.index(want)
+    return _compare(row[i], value, percent, f"Spalte {best[i]}, Position {i + 1} von {len(best)}")
+
+
 def check_columns(
     norm_text: str, norm_quote: str, value: float, method: str, dataset: str, metric: str, percent: bool
 ) -> ColumnCheck:
@@ -83,6 +131,7 @@ def check_columns(
     for res in (
         _check_methods_as_columns(norm_text, norm_quote, value, method, metric, percent),
         _check_datasets_as_columns(norm_text, norm_quote, value, dataset, percent),
+        _check_dataset_run(norm_text, norm_quote, value, dataset, percent),
     ):
         if res is not None:
             return res

@@ -45,3 +45,20 @@ def test_extraction_with_wrong_column_is_invalid():
     with pytest.raises(ExtractionInvalid, match="Spaltenpruefung"):
         _column_status(DL, ROW, 0.397, "DLinear", "ETTh1", "MAE for prediction length 96", False)
     assert _column_status(DL, ROW, 0.399, "DLinear", "ETTh1", "MAE for prediction length 96", False) == (None, "ok")
+
+
+SH = json.loads((FIX / "1811.05868.json").read_text())["text"]
+
+
+def test_shchur_table1_headers_without_method_word():
+    gcn = "GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6"
+    mlp = "MLP 58 .2 ± 2.1 59 .1 ± 2.3 70 .0 ± 2.1 36 .8 ± 1.0"
+    assert chk(SH, gcn, 0.815, "GCN", "CORA", "accuracy", True).status == "ok"
+    assert chk(SH, gcn, 0.719, "GCN", "CORA", "accuracy", True).status == "mismatch"      # CiteSeer-Spalte
+    assert chk(SH, gcn, 0.622, "GCN", "CORA Full", "accuracy", True).status == "ok"        # 'CORA Full' ist eine Spalte
+    assert chk(SH, mlp, 0.582, "MLP", "CORA", "accuracy", True).status == "ok"
+    assert chk(SH, mlp, 0.591, "MLP", "CORA", "accuracy", True).status == "mismatch"
+
+
+def test_shchur_row_not_in_text_is_not_checkable():
+    assert chk(SH, "GCN 1.0 2.0 3.0 4.0", 0.01, "GCN", "CORA", "accuracy", True).status == "nicht pruefbar"

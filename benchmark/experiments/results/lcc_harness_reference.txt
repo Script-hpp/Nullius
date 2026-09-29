@@ -1,0 +1,12 @@
+30/30 gueltig; Accuracy Mittel 0.8068, Std 0.0128
+  Split 0: 0.8075 (n=3)
+  Split 1: 0.8112 (n=3)
+  Split 2: 0.8039 (n=3)
+  Split 3: 0.8003 (n=3)
+  Split 4: 0.7863 (n=3)
+  Split 5: 0.7944 (n=3)
+  Split 6: 0.8161 (n=3)
+  Split 7: 0.8002 (n=3)
+  Split 8: 0.8183 (n=3)
+  Split 9: 0.8297 (n=3)
+Baselines Split 0: {'majority': {'accuracy': 0.1377049180327869}, 'no_graph': {'accuracy': 0.5091334894613583}}
