@@ -1,7 +1,9 @@
 [project]
 name = "repro-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "Paper reproduction agent: the paper is the test suite"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Script-hpp", email = "onuralpag2a@gmail.com" }
 ]
