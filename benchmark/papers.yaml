@@ -18,6 +18,13 @@ papers:
         tolerance: 0.01   # feste Regel: +-1 Prozentpunkt bei Accuracy
         source: "manuell (Gedaechtnis, ungeprueft)"   # ohne Tavily; mit Tavily wird target/source ersetzt
         extract: {method: "GCN (this paper)", dataset: "Cora", metric: "accuracy"}
+      - id: gcn_cora_acc_placebo
+        text: "GCN erreicht 88,0 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle: bewusst falscher Zielwert, nicht aus dem Paper (benchmark_protocol.md)
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
 
   - id: shchur_pitfalls_2018
     title: "Pitfalls of Graph Neural Network Evaluation"
@@ -35,6 +42,13 @@ papers:
         tolerance: 0.01
         source: "Tabelle 1, arXiv v2 (manuell aus Fixture, mit Tavily belegt ersetzt)"
         extract: {method: "GCN", dataset: "CORA", metric: "accuracy"}
+      - id: shchur_gcn_cora_acc_placebo
+        text: "GCN erreicht 88,0 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle: bewusst falscher Zielwert, nicht aus dem Paper (benchmark_protocol.md)
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
 
   - id: zeng_dlinear_2023
     title: "Are Transformers Effective for Time Series Forecasting?"
@@ -55,6 +69,13 @@ papers:
         tolerance: 0.01
         source: "manuell (Gedaechtnis, ungeprueft)"
         extract: {method: "DLinear", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+      - id: dlinear_etth1_96_mse_placebo
+        text: "DLinear erreicht MSE 0,300 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.3
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle: bewusst falscher Zielwert, nicht aus dem Paper (benchmark_protocol.md)
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
       - id: dlinear_etth1_96_mae
         text: "DLinear erreicht MAE 0,399 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
         metric: mae
@@ -85,3 +106,10 @@ papers:
         tolerance: 0.01
         source: "Tabelle 2, arXiv v2 (manuell aus Fixture, mit Tavily belegt ersetzt)"
         extract: {method: "SGC", dataset: "Cora", metric: "accuracy"}
+      - id: sgc_cora_acc_placebo
+        text: "SGC erreicht 88,0 % Accuracy auf Cora (Planetoid-Split)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle: bewusst falscher Zielwert, nicht aus dem Paper (benchmark_protocol.md)
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"

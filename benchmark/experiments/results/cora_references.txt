@@ -1,0 +1,2 @@
+gcn: 10/10 gueltig; Accuracy Mittel 0.8136 Median 0.8150 Std 0.0051
+sgc: 10/10 gueltig; Accuracy Mittel 0.8081 Median 0.8080 Std 0.0009

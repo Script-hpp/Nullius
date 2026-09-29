@@ -87,7 +87,7 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
     claims = [
         Claim(
             id=c["id"], text=c["text"], metric=c["metric"], target=c["target"],
-            tolerance=c["tolerance"], source=c["source"], origin="paper",
+            tolerance=c["tolerance"], source=c["source"], origin=c.get("origin", "paper"),
         )
         for c in paper.get("claims", [])
     ]

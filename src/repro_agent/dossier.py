@@ -18,7 +18,7 @@ class Claim:
     target: float
     tolerance: float
     source: str                # "Tabelle 2, arXiv v1"
-    origin: Literal["paper", "einwand"]
+    origin: Literal["paper", "einwand", "placebo"]
     evidence_urls: list[str] = field(default_factory=list)
     target_evidence: dict | None = None   # Beleg fuer Zielwert (URL, Hash, Zitat), None = manuell
 
