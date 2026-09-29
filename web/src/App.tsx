@@ -5,7 +5,7 @@ import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
-import { Badge, Section, Stat, fmt } from './components/ui'
+import { Badge, Section, Stat, } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
 import { METHOD, OVERALL, RESULT, de2en, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react'
@@ -44,6 +44,18 @@ function colorForTone(tone: Tone) {
   if (tone === 'red') return 'text-rose-400'
   if (tone === 'violet') return 'text-violet-400'
   return 'text-zinc-400'
+}
+
+function toPercent(val: string | number | null | undefined): string {
+  if (val === null || val === undefined || val === '') return '–'
+  const n = Number(val)
+  if (Number.isNaN(n)) return String(val)
+  // If the number is likely a fraction (<= 1.0 or similar), convert to percentage
+  // Since the user asked to convert ALL decimals like 0.81 to 81.0%, we assume they are all fractions if < 2
+  if (n <= 2.0 && n > 0) {
+    return (n * 100).toFixed(1) + '%'
+  }
+  return n.toFixed(1) + '%'
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -127,8 +139,8 @@ function Home({ runs }: { runs: RunRef[] }) {
           
           return (
             <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="flex flex-col p-6 rounded-xl border border-zinc-800 bg-zinc-950/50 no-underline transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/80 group">
-              <div className="flex justify-between items-start mb-3">
+              className="flex flex-col p-6 rounded-xl border border-zinc-800 bg-zinc-950/50 no-underline transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/80 group cursor-pointer block">
+              <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-medium font-mono uppercase tracking-wider">
                   <BookOpen className="w-3.5 h-3.5" />
                   {r.paper_id}
@@ -136,34 +148,28 @@ function Home({ runs }: { runs: RunRef[] }) {
                 <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">{parseDate(r.timestamp)}</div>
               </div>
               
-              <h3 className="mt-1 text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
-              {claim && <p className="mt-2 text-[13px] text-zinc-400 line-clamp-2 leading-relaxed">{translateClaim(claim.text)}</p>}
+              <h3 className="text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
+              {claim && <p className="mt-2 text-[13px] text-zinc-400 line-clamp-2 leading-relaxed mb-6">{translateClaim(claim.text)}</p>}
               
-              <div className="mt-auto pt-6 flex items-end justify-between">
+              <div className="mt-auto border-t border-zinc-800/50 pt-5">
                 {v ? (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-4">
                     <Badge tone={res!.tone}>{res!.label}</Badge>
-                    <div className="flex items-center gap-4 border-l-2 border-zinc-800 pl-3">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Claimed</span>
-                        <span className="font-mono text-sm text-zinc-400">{claim?.target}</span>
+                    
+                    <div className="flex flex-col gap-2 w-full bg-[#0a0a0a] rounded-lg p-3 border border-zinc-800/50">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-zinc-500 uppercase tracking-widest font-semibold text-[10px]">Claimed</span>
+                        <span className="font-mono text-zinc-400">{toPercent(claim?.target)}</span>
                       </div>
-                      <div className="text-zinc-700">
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Measured</span>
-                        <span className={`font-mono text-sm font-bold ${colorForTone(res!.tone)}`}>{fmt(v.measured_mean, 3)}</span>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-zinc-500 uppercase tracking-widest font-semibold text-[10px]">Measured</span>
+                        <span className={`font-mono font-bold ${colorForTone(res!.tone)}`}>{toPercent(v.measured_mean)}</span>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Evaluating...</span>
                 )}
-                
-                <div className="text-zinc-600 group-hover:text-zinc-300 transition-all duration-200 group-hover:translate-x-1">
-                  <ArrowRight className="w-4 h-4" />
-                </div>
               </div>
             </motion.a>
           )
@@ -240,8 +246,8 @@ function RunView({ ref_ }: { ref_: RunRef }) {
             </p>
           </div>
           <div className="mt-6 grid grid-cols-2 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800/30">
-            <Stat label="Measured" value={fmt(v?.measured_mean, 4)} sub={`± ${fmt(v?.measured_std, 4)} std`} />
-            <Stat label="Claimed" value={claim.target} sub={`± ${claim.tolerance}`} />
+            <Stat label="Measured" value={toPercent(v?.measured_mean)} />
+            <Stat label="Claimed" value={toPercent(claim.target)} />
           </div>
           <div className="mt-4 text-right">
              <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-mono">Cost: {cost != null ? `$${Number(cost).toFixed(3)} net` : '–'}</span>
@@ -280,7 +286,6 @@ function RunView({ ref_ }: { ref_: RunRef }) {
     </main>
   )
 }
-
 
 export default function App() {
   const hash = useHash()

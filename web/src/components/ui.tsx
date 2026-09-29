@@ -1,19 +1,19 @@
 import type { ReactNode } from 'react'
-import { CheckCircle2, AlertCircle, XCircle, Info, HelpCircle } from 'lucide-react'
+import { CheckCircle2, CircleDashed, XCircle, Info, HelpCircle } from 'lucide-react'
 import type { Tone } from '../labels'
 
 const toneConfig: Record<Tone, { color: string; icon: ReactNode }> = {
-  green: { color: 'text-emerald-400', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  amber: { color: 'text-amber-400', icon: <AlertCircle className="w-3.5 h-3.5" /> },
-  red: { color: 'text-rose-400', icon: <XCircle className="w-3.5 h-3.5" /> },
-  gray: { color: 'text-zinc-500', icon: <Info className="w-3.5 h-3.5" /> },
-  violet: { color: 'text-violet-400', icon: <HelpCircle className="w-3.5 h-3.5" /> }
+  green: { color: 'text-emerald-400', icon: <CheckCircle2 className="w-4 h-4" /> },
+  amber: { color: 'text-amber-400', icon: <CircleDashed className="w-4 h-4" /> },
+  red: { color: 'text-rose-400', icon: <XCircle className="w-4 h-4" /> },
+  gray: { color: 'text-zinc-500', icon: <Info className="w-4 h-4" /> },
+  violet: { color: 'text-violet-400', icon: <HelpCircle className="w-4 h-4" /> }
 }
 
 export function Badge({ children, tone = 'gray', title }: { children: ReactNode; tone?: Tone; title?: string }) {
   const cfg = toneConfig[tone] || toneConfig.gray
   return (
-    <span title={title} className={`inline-flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase ${cfg.color}`}>
+    <span title={title} className={`inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase ${cfg.color}`}>
       {cfg.icon}
       {children}
     </span>
