@@ -152,7 +152,7 @@ class LLMClient:
     def _check_budget(self) -> None:
         """Globales Budget (brutto) gegen das Kosten-Log: ab 80 % Warnung, ab 95 % Abbruch."""
         total = self.settings.budget_total_usd
-        spent = logged_gross_total(COST_LOG_PATH, self.settings.vat_rate) if total > 0 else 0.0
+        spent = logged_gross_total(COST_LOG_PATH, self.settings.vat_rate, self.settings.budget_since) if total > 0 else 0.0
         status = budget_status(spent, total)
         if status == "abort":
             raise BudgetExceeded(

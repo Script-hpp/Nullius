@@ -53,7 +53,8 @@ TAVILY_API_KEY=
 # ---- Kostenbremsen ----
 MAX_COST_PER_RUN_USD=0.50        # brutto (inkl. MwSt.)
 VAT_RATE=0.19                    # Log speichert netto, Limits und Budget gelten brutto
-BUDGET_TOTAL_USD=29.75           # brutto, globales Budget; ab 80 % Warnung, ab 95 % Abbruch
+BUDGET_TOTAL_USD=29.75           # brutto, Kontostand zum Stichtag; ab 80 % Warnung, ab 95 % Abbruch
+BUDGET_SINCE=2026-09-29T08:00Z   # Stichtag (UTC), nur Log-Eintraege ab dann zaehlen
 MAX_ATTEMPTS_PER_CLAIM=4
 LLM_CACHE=on                     # on | off
 ```
@@ -269,9 +270,9 @@ Verfügbar: 25 $ Token Factory, Tavily-Key. Builders Program beantragt (+25 $ TF
 - LLM-Cache: identische Anfragen aus Datei lesen (`LLM_CACHE=on`)
 - Kostenbremse: Abbruch bei `MAX_COST_PER_RUN_USD`, geprüft gegen **Brutto** (netto × (1 + `VAT_RATE`))
 - **MwSt.:** Nebius rechnet netto + 19 % ab. `logs/costs.jsonl` speichert netto (`cost_usd`), Limits und Budget gelten brutto, `scripts/cost_report.py` zeigt beides.
-- **Globales Budget:** `BUDGET_TOTAL_USD` (brutto). Vor jedem API-Aufruf werden die bisherigen Bruttokosten aus dem Log summiert: ab 80 % Warnung, ab 95 % `BudgetExceeded` (kein Aufruf). Bei neuem Guthaben Wert in `.env` anpassen.
+- **Globales Budget:** `BUDGET_TOTAL_USD` (brutto). Vor jedem API-Aufruf werden die bisherigen Bruttokosten aus dem Log summiert: ab 80 % Warnung, ab 95 % `BudgetExceeded` (kein Aufruf). `BUDGET_TOTAL_USD` ist der Kontostand zu einem Stichtag (`BUDGET_SINCE`), der Code zählt nur Log-Einträge ab dann, damit Konsole und Code übereinstimmen. Beim Aufladen beide Werte neu eintragen (aktuellen Kontostand, aktuellen Zeitpunkt). Ohne `BUDGET_SINCE` zählt das ganze Log (sichere Richtung, zu vorsichtig).
 - **Das Log ist eine Schätzung, maßgeblich ist die Konsole.** Bei Abweichung > 10 % (`scripts/cost_report.py`, Konsolenwerte dort eintragen) Log/Preistabelle korrigieren, nicht das Budget erhöhen. Stand 2026-09-29: Abweichung ≤ 1,3 % (Rundung der Konsole).
-- **Abrechnungs-/Auth-Fehler** (HTTP 401/402/403, oder Text mit billing/suspended/insufficient/payment/api key, auch im 200-Body): `BillingBlocked`, kein Retry, kein Reparaturversuch, alle weiteren Aufrufe des Clients scheitern sofort, CLI bricht mit „Nebius-Abrechnung blockiert – Konsole prüfen“ ab. Grund: Konto war nach Trial-Ende „Billing: Suspended“. Nur im LLM-Client, nicht wiederholen.
+- **Abrechnungs-/Auth-Fehler** (HTTP 401/402/403, oder Text mit billing/suspended/insufficient/payment/api key, auch im 200-Body): `BillingBlocked`, kein Retry, kein Reparaturversuch, alle weiteren Aufrufe des Clients scheitern sofort, CLI bricht mit „Nebius-Abrechnung blockiert – Konsole prüfen“ ab. Grund: Konto war nach Trial-Ende „Billing: Suspended“. Geprüft werden nur Statuscode und strukturiertes `error`-Feld der API, nie der vom Modell erzeugte Inhalt (sonst blockiert eine Antwort mit „api_key“ den Lauf). Echte Fehlerantwort bei nächster Sperrung als Fixture speichern. Nur im LLM-Client.
 - Log-Felder pro Aufruf: `provider`, `base_url`, `model`, `prompt_tokens`, `completion_tokens` (aus `usage` der API, nie geschätzt; Reasoning-Tokens sind enthalten, zusätzlich `reasoning_tokens`), `cache_hit`, `finish_reason`, `status` (`ok`/`bad_response`/`cached`), `cost_usd` netto. Leere, aber bezahlte Antworten werden mitgeloggt.
 - Versuchs-Limit: `MAX_ATTEMPTS_PER_CLAIM=4`
 - Kosten-Log: jeder Aufruf mit Modell, Tokens, geschätzten Kosten in `logs/costs.jsonl`

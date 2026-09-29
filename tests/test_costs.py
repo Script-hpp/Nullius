@@ -153,3 +153,25 @@ def test_aggregate_splits_cache_and_provider():
     assert len(agg) == 3
     b = next(r for r in agg if r["model"] == "b" and not r["cache_hit"])
     assert (b["provider"], b["gross"]) == ("tokenfactory", pytest.approx(1.19))
+
+
+def test_model_content_never_triggers_block(tmp_path, monkeypatch):
+    text = "def f(api_key): # payment data, billing address, insufficient funds, account suspended"
+    ok = httpx.Response(200, json={
+        "choices": [{"message": {"content": text}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+    })
+    c, _ = _client(tmp_path, monkeypatch, [ok])
+    assert c.complete("code", MSG).content == text
+    assert c._blocked is None
+
+
+def test_budget_since_counts_only_newer_entries(tmp_path):
+    path = tmp_path / "c.jsonl"
+    old = {"ts": costs.parse_since("2026-09-29T07:00Z"), "model": "m", "prompt_tokens": 1,
+           "completion_tokens": 1, "cost_usd": 5.0}
+    new = {**old, "ts": costs.parse_since("2026-09-29T09:00Z"), "cost_usd": 1.0}
+    path.write_text(json.dumps(old) + "\n" + json.dumps(new) + "\n")
+    assert costs.logged_gross_total(path, 0.19, "2026-09-29T08:00Z") == pytest.approx(1.19)
+    assert costs.logged_gross_total(path, 0.19) == pytest.approx(6 * 1.19)
+    assert costs.parse_since("2026-09-29T08:00:00") == costs.parse_since("2026-09-29T08:00Z")

@@ -31,9 +31,22 @@ def gross(net_usd: float, vat_rate: float) -> float:
     return net_usd * (1.0 + vat_rate)
 
 
-def logged_gross_total(path: Path, vat_rate: float) -> float:
-    """Bruttokosten aller bisher geloggten Aufrufe (Cache-Treffer kosten 0)."""
-    return gross(sum(e["cost_usd"] for e in read_log(path)), vat_rate)
+def parse_since(since: str) -> float:
+    """ISO-Zeitpunkt (z. B. 2026-09-29T08:00Z, ohne Zone = UTC) als Unix-Zeit; leer = 0."""
+    if not since.strip():
+        return 0.0
+    import datetime as dt
+
+    t = dt.datetime.fromisoformat(since.strip().replace("Z", "+00:00"))
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=dt.timezone.utc)
+    return t.timestamp()
+
+
+def logged_gross_total(path: Path, vat_rate: float, since: str = "") -> float:
+    """Bruttokosten der geloggten Aufrufe ab Stichtag `since` (Cache-Treffer kosten 0)."""
+    t0 = parse_since(since)
+    return gross(sum(e["cost_usd"] for e in read_log(path) if e["ts"] >= t0), vat_rate)
 
 
 def budget_status(spent_gross: float, budget_total: float) -> str:

@@ -9,11 +9,12 @@ from __future__ import annotations
 import os
 
 from repro_agent import config  # noqa: F401  laedt .env
-from repro_agent.costs import aggregate, gross, read_log, entry_provider
+from repro_agent.costs import aggregate, entry_provider, gross, logged_gross_total, read_log
 from repro_agent.llm import COST_LOG_PATH, TF_PRICES
 
 VAT = float(os.getenv("VAT_RATE", "0.19"))
 BUDGET = float(os.getenv("BUDGET_TOTAL_USD", "29.75"))
+SINCE = os.getenv("BUDGET_SINCE", "")
 
 # Nebius-Konsole, Stand 2026-09-29 05:35 UTC (Mio. Tokens, netto USD; Tokens auf 0,01 Mio. gerundet).
 # Lightning-Kosten stehen dort nur als "<0,01 $".
@@ -64,8 +65,8 @@ def main() -> None:
         ok = abs(c_in - p_in) < 1e-9 and abs(c_out - p_out) < 1e-9
         print(f"  {model}: code {c_in:.2f}/{c_out:.2f} | offiziell {p_in:.2f}/{p_out:.2f} | {'OK' if ok else 'ABWEICHUNG'}")
 
-    spent = gross(sum(e["cost_usd"] for e in entries), VAT)
-    print(f"\n== Budget ==\n  Brutto laut Log {spent:.2f} $ von {BUDGET:.2f} $ ({spent / BUDGET:.1%}), Rest {BUDGET - spent:.2f} $")
+    spent = logged_gross_total(COST_LOG_PATH, VAT, SINCE)
+    print(f"\n== Budget (Kontostand {BUDGET:.2f} $ zum Stichtag {SINCE or '—'})==\n  Brutto laut Log seit Stichtag {spent:.2f} $ von {BUDGET:.2f} $ ({spent / BUDGET:.1%}), Rest {BUDGET - spent:.2f} $")
     old = sum(1 for e in entries if "provider" not in e)
     print(f"  {old} Alteintraege ohne Feld provider (Anbieter aus Modell-ID abgeleitet)")
 

@@ -52,7 +52,8 @@ class Settings:
     max_attempts_per_claim: int
     llm_cache: bool
     vat_rate: float = 0.19            # MwSt.; Log speichert netto, Limits gelten brutto
-    budget_total_usd: float = 0.0     # brutto, 0 = keine Pruefung
+    budget_total_usd: float = 0.0     # brutto, Kontostand zum Stichtag; 0 = keine Pruefung
+    budget_since: str = ""            # Stichtag (ISO, UTC): nur Log-Eintraege ab dann zaehlen
 
 
 def load_settings() -> Settings:
@@ -91,4 +92,5 @@ def load_settings() -> Settings:
         llm_cache=_get_optional("LLM_CACHE", "on").lower() == "on",
         vat_rate=float(_get_optional("VAT_RATE", "0.19")),
         budget_total_usd=float(_get_optional("BUDGET_TOTAL_USD", "29.75")),
+        budget_since=_get_optional("BUDGET_SINCE", ""),
     )
