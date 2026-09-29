@@ -66,6 +66,17 @@ def main() -> None:
     bad = [r for r in rows if r.get("target_matches_yaml") is False]
     out.append(f"- Belegter Zielwert weicht von `papers.yaml` ab: {len(bad)} Fälle" + (f" ({[(r['paper'], r['arm']) for r in bad]})" if bad else ""))
 
+    out.append("\n## Code-Stand je Zeile (siehe `benchmark_incidents.md`)\n")
+    out.append("| Stand | Zeilen (Urteile) | Übereinstimmungen echt | Übereinstimmungen Placebo | Ausfälle |")
+    out.append("|---|---|---|---|---|")
+    stands = defaultdict(list)
+    for r in rows:
+        stands[r.get("code_commit", "Altstand (ohne Feld, Timeout 10 s)")].append(r)
+    for stand, rs in sorted(stands.items()):
+        real = [r for r in rs if r["origin"] == "paper"]
+        plc = [r for r in rs if r["origin"] == "placebo"]
+        out.append(f"| {stand} | {len(rs)} | {sum(r['match'] for r in real)} von {len(real)} | {sum(r['match'] for r in plc)} von {len(plc)} | {sum(r['fail'] for r in rs)} |")
+
     out.append("\n## Aufwand: brauchen Placebo-Läufe auffällig mehr Versuche oder Tuning?\n")
     out.append("| Claim-Art | Arm | Versuche je Claim (Median) | Code-Versionen (Median) | Reparaturen gesamt | Code mit Tuning-Stichwort | Codelänge (Median, Zeilen) |")
     out.append("|---|---|---|---|---|---|---|")
