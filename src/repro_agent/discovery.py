@@ -21,6 +21,35 @@ def _tasks_for(dataset: str) -> dict:
     return {k: v for k, v in TASKS.items() if k == dataset or k.startswith(dataset + "-")}
 
 
+def _normalize_repo_url(url: str) -> str | None:
+    """https://github.com/owner/repo/blob/... -> https://github.com/owner/repo, sonst None."""
+    import re
+    m = re.match(r"https?://(?:www\.)?github\.com/([^/?#\s]+)/([^/?#\s]+)", url or "")
+    if not m:
+        return None
+    repo = m.group(2)
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+    return f"https://github.com/{m.group(1)}/{repo}"
+
+
+ALLOWED_METRICS = {"Cora": {"accuracy"}, "ETTh1": {"mse", "mae"}}
+METRIC_ALIASES = {"accuracy": "accuracy", "acc": "accuracy", "test accuracy": "accuracy",
+                  "mse": "mse", "mean squared error": "mse", "mae": "mae", "mean absolute error": "mae"}
+
+
+def _normalize_metric(metric) -> str | None:
+    return METRIC_ALIASES.get(str(metric or "").strip().lower())
+
+
+def _norm_quote(s: str) -> str:
+    """Zitatvergleich: Kleinschreibung, Tabellen-Pipes und $ weg, \\pm / +- / +/- einheitlich, Leerraum zusammengefasst."""
+    import re
+    s = s.lower().replace("\\pm", "±").replace("+/-", "±").replace("+-", "±")
+    s = s.replace("|", " ").replace("$", "").replace("±", " ± ")
+    return re.sub(r"\s+", " ", s).strip()
+
+
 def _last_json_object(text: str) -> dict | None:
     """Letztes JSON-Objekt im Text; Lightning schreibt oft Denktext davor."""
     import re
@@ -71,7 +100,8 @@ class CandidatePaper:
     found_by: str = "arxiv"                 # "tavily" | "arxiv" (Ersatzweg)
     source_url: str | None = None           # Tavily-Treffer, ueber den das Paper gefunden wurde
     community: list[dict] = __import__('dataclasses').field(default_factory=list)   # Tavily-Hinweise, kein Urteil
-    
+    protocol: str = "unklar"                # "passt" (Zitat belegt) | "unklar" (Protokoll nicht belegt)
+
     def to_dict(self):
         return {
             "status": self.status,
@@ -85,19 +115,39 @@ class CandidatePaper:
             "found_by": self.found_by,
             "source_url": self.source_url,
             "community": self.community or [],
+            "protocol": self.protocol,
         }
 
 
-# Tavily-Suche pro Datensatz: aktuelle Papers mit eigenen Ergebnissen auf dem Benchmark.
+# Tavily-Suche pro Datensatz: hoechstens 2 Queries, je eine pro Task, mit den Begriffen unseres Protokolls.
 DISCOVERY_QUERIES = {
-    "Cora": "new graph neural network node classification Cora test accuracy results table",
-    "ETTh1": "new long-term time series forecasting ETTh1 MSE MAE results table",
+    "Cora": [
+        "node classification Cora Planetoid public split 140 training nodes test accuracy results table",
+        "node classification Cora random splits Shchur largest connected component test accuracy results table",
+    ],
+    "ETTh1": [
+        "long-term time series forecasting ETTh1 input length 96 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+    ],
 }
+MAX_SEARCHES_PER_DATASET = 2
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
 EXTRACT_QUERIES = {
-    "Cora": "Cora node classification: data split (Planetoid, 20 labels per class), evaluation protocol, test accuracy",
-    "ETTh1": "ETTh1 forecasting: input length, prediction horizons 96/192/336/720, data split, test MSE and MAE",
+    "Cora": "Cora node classification: data split (Planetoid public split 140 training nodes, or random splits / largest connected component), evaluation protocol, test accuracy",
+    "ETTh1": "ETTh1 forecasting: input length 96, prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
 }
+CACHE_VERSION = 2   # 2: dreistufiges Protokoll; Eintraege der Ja/Nein-Logik (ohne Version) gelten nicht mehr
+# Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
+DISCOVERY_PROTOCOL_HINTS = {
+    "ETTh1": ("Equivalent statements: 12/4/4 months; 8640/2880/2880 rows; papers often report window/sample counts instead "
+              "(e.g. 8545/2881/2881 as quoted in arXiv 2602.00717, or other counts slightly below 8640/2880/2880 "
+              "depending on input length and horizon) - these are the same split."),
+    "Cora": "Planetoid public split = 140/500/1000 = 20 labels per class.",
+    "Cora-LCC": "Shchur et al. 2018 random splits, 20 per class train, 30 per class val, largest connected component.",
+}
+MAX_README_ARXIV_LINKS = 5
+MAX_README_GITHUB_LINKS = 10
+ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
+NO_REPO_REASON = "kein passendes Repo gefunden"
 ARXIV_ID_RE = __import__("re").compile(r"arxiv\.org/(?:abs|html|pdf)/(\d{4}\.\d{4,5})")
 
 
@@ -145,15 +195,22 @@ class DiscoveryAgent:
 
     def _find_papers_tavily(self, dataset: str) -> list[dict]:
         """Tavily-Suche -> arXiv-IDs; Metadaten (Titel, Abstract) danach kostenlos von der arXiv-API."""
-        query = DISCOVERY_QUERIES.get(dataset)
-        if not query or not hasattr(self.tavily, "curate_papers"):
+        queries = DISCOVERY_QUERIES.get(dataset, [])[:MAX_SEARCHES_PER_DATASET]
+        if not queries or not hasattr(self.tavily, "curate_papers"):
             return []
-        res = self._tavily("curate_papers", 8, "search", query, query)
+        per_query = []
+        for query in queries:
+            res = self._tavily("curate_papers", 8, "search", query, query)
+            per_query.append(res.get("results", []))
+        # Treffer der Queries abwechselnd einreihen und deduplizieren: der Extract-Deckel trifft so beide Protokolle.
         found = {}
-        for r in res.get("results", []):
-            m = ARXIV_ID_RE.search(r.get("url", ""))
-            if m and m.group(1) not in found:
-                found[m.group(1)] = {"source_url": r.get("url"), "snippet": r.get("content", "")}
+        for i in range(max((len(r) for r in per_query), default=0)):
+            for results in per_query:
+                if i < len(results):
+                    r = results[i]
+                    m = ARXIV_ID_RE.search(r.get("url", ""))
+                    if m and m.group(1) not in found:
+                        found[m.group(1)] = {"source_url": r.get("url"), "snippet": r.get("content", "")}
         if not found:
             return []
         resp = httpx.get("https://export.arxiv.org/api/query",
@@ -177,22 +234,36 @@ class DiscoveryAgent:
         """LLM extrahiert einen Claim und prueft das Protokoll gegen alle Tasks dieses Datensatzes."""
         import time
         tasks = _tasks_for(dataset)
-        protocols = "\n\n".join(f"[{name}]\n{factory().data_description}" for name, factory in tasks.items())
+        protocols = "\n\n".join(
+            f"[{name}]\n{factory().data_description}"
+            + (f"\n{DISCOVERY_PROTOCOL_HINTS[name]}" if name in DISCOVERY_PROTOCOL_HINTS else "")
+            for name, factory in tasks.items())
         
         system_prompt = (
             "You are an expert AI researcher. Extract ONE clear, numerical, testable claim "
             f"from the following text regarding the dataset '{dataset}'. "
-            "You must also verify whether the paper follows one of the evaluation protocols we can replicate. "
+            "You must also judge whether the paper evaluates with one of the protocols we can replicate. "
             "Supported protocols, each with its task name in brackets:\n"
             f"{protocols}\n\n"
-            "Reply with a JSON object containing keys: "
-            "'quote' (a VERBATIM excerpt copied from the text that proves BOTH the claim and the protocol match), "
-            "'metric' (e.g., accuracy, MSE), "
+            "The claim must be the ABSOLUTE test metric of the method PROPOSED in the paper, "
+            "never a baseline and never a relative improvement (no 'reduction percent'). "
+            "Reply with keys: "
+            "'method' (name of the proposed method exactly as written in the quote), "
+            "'quote' (a VERBATIM excerpt copied from the text that names the method and gives the number), "
+            "'metric' (accuracy for node classification; mse or mae for forecasting), "
             "'target' (the numerical value as float), "
-            "'protocol_match' (boolean: true if the paper's protocol matches one supported protocol), "
-            "'matched_task' (the task name in brackets that matches, or null), "
-            "and 'protocol_reason' (a short explanation citing the text to justify your protocol_match decision). "
-            "If no clear claim or protocol is found, return {\"protocol_match\": false}."
+            + ("'horizon' (integer prediction horizon of the number; choose the number for input length 96 and horizon 96, "
+               "never an average over horizons, and the quote must contain 96), " if dataset == "ETTh1" else "") +
+            "'protocol' (one of \"passt\", \"unklar\", \"passt_nicht\"), "
+            "'matched_task' (the task name in brackets when protocol is \"passt\", else null), "
+            "'protocol_quote' (a VERBATIM excerpt copied from the text that shows the protocol; required for \"passt\" and \"passt_nicht\"), "
+            "and 'protocol_reason' (one short sentence). "
+            "Rules for 'protocol': "
+            "\"passt\" = the text names the split, input length or horizons of one supported protocol; a standard split counts as matching when the text names it. "
+            "\"passt_nicht\" = the text states a DIFFERENT protocol (for example 60/20/20 splits or other input lengths); quote it in protocol_quote. "
+            "\"unklar\" = the text does not mention the protocol or does not state it clearly. "
+            "Not mentioned means \"unklar\", never \"passt_nicht\". "
+            "If you find no clear numerical claim, return an empty JSON object {}."
         )
         messages = [
             {"role": "system", "content": system_prompt},
@@ -227,6 +298,27 @@ class DiscoveryAgent:
             return {"llm_unreadable": True}
         return claim_data
 
+    def _judge_protocol(self, claim_data: dict, text: str, dataset: str, norm_ws) -> tuple[str, str]:
+        """Dreistufiges Protokollurteil, vom Code gegen den Text geprueft.
+
+        `passt` braucht ein Zitat im Text und einen echten Task, `passt_nicht` (Reject) ein Zitat im Text.
+        Fehlt der Beleg, gilt `unklar`: kein Befund ueber das Paper, kein Reject.
+        """
+        level = str(claim_data.get("protocol") or "").strip().lower()
+        pq = claim_data.get("protocol_quote")
+        quote_ok = isinstance(pq, str) and bool(pq.strip()) and norm_ws(pq) in norm_ws(text)
+        if level == "passt":
+            if not quote_ok:
+                return "unklar", "Protokoll-Zitat fehlt oder steht nicht im Text"
+            if claim_data.get("matched_task") not in _tasks_for(dataset):
+                return "unklar", f"kein unterstuetzter Task ({claim_data.get('matched_task')!r})"
+            return "passt", ""
+        if level == "passt_nicht":
+            if quote_ok:
+                return "passt_nicht", ""
+            return "unklar", "Abweichendes Protokoll ohne gueltiges Zitat"
+        return "unklar", ""
+
     def _fetch_readme(self, repo_url: str) -> str:
         """Fetch README from github repo."""
         # Convert https://github.com/user/repo to raw URLs
@@ -247,7 +339,7 @@ class DiscoveryAgent:
                 pass
         return ""
 
-    def _find_repo_and_context(self, title: str, dataset: str, authors: list[str]) -> tuple[str | None, str, list[dict]]:
+    def _find_repo_and_context(self, title: str, dataset: str, authors: list[str], arxiv_id: str = "") -> tuple[str | None, str, list[dict]]:
         """Find Github repos and score them based on author, paper link, and dataset."""
         import httpx
         
@@ -257,41 +349,46 @@ class DiscoveryAgent:
             search_code = self._curate_repo(title)
             results = search_code.get("results", [])
             
+            import re
+            def norm_title(t): return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
             for r in results:
-                url = r.get("url", "")
-                if "github.com" in url:
+                url = _normalize_repo_url(r.get("url", ""))
+                if url:
                     readme = self._fetch_readme(url).lower()
                     if not readme:
                         continue
-                        
+
+                    # Sammlung (Awesome-/Paper-Liste) ist keine Implementierung, auch wenn sie den Titel nennt
+                    if (len(re.findall(r"arxiv\.org/(?:abs|pdf|html)/", readme)) > MAX_README_ARXIV_LINKS
+                            or len(re.findall(r"github\.com/", readme)) > MAX_README_GITHUB_LINKS):
+                        continue
+
                     keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "ogb", "ett", "movielens"]
-                    import re
                     if not any(re.search(r"\b" + re.escape(k) + r"\b", readme) for k in keywords):
                         continue
-                        
-                    # Valid candidate found
-                    
-                    # 1. Author-Match
+
+                    # 1. Autor-Match: Owner-Name oder Autorenzeile, nicht beliebiges Vorkommen im README
+                    owner = url.split("github.com/")[-1].split("/")[0].lower()
+                    author_lines = " ".join(l for l in readme.splitlines() if "author" in l or l.strip().startswith("by "))
                     author_match = False
-                    owner_and_readme = url.split("github.com/")[-1].split("/")[0].lower() + " " + readme
                     for a in authors:
                         last_name = a.split(" ")[-1].lower()
-                        if last_name and len(last_name) > 2 and last_name in owner_and_readme:
+                        if last_name and len(last_name) > 2 and (last_name in owner or last_name in author_lines):
                             author_match = True
                             break
-                            
-                    # 2. Paper-Link
-                    paper_link = False
-                    if title.lower() in readme:
-                        paper_link = True
-                        
-                    # 3. Dataset-Match (exact)
-                    dataset_match = False
-                    if dataset.lower() in readme:
-                        dataset_match = True
-                        
+
+                    # 2. Paper-Link: arXiv-ID (ohne Version) oder normalisierter Titel im README
+                    paper_link = bool(arxiv_id and arxiv_id.lower() in readme) or (
+                        bool(norm_title(title)) and norm_title(title) in norm_title(readme))
+
+                    # 3. Datensatz im README
+                    dataset_match = dataset.lower() in readme
+
                     score = int(author_match) + int(paper_link) + int(dataset_match)
-                    
+                    # Datensatz allein ist kein Beleg (Live-Lauf: TTS-Repo, Sammel-Repo)
+                    if not (paper_link or (author_match and dataset_match)):
+                        continue
+
                     # Get stars
                     stars = 0
                     try:
@@ -319,7 +416,7 @@ class DiscoveryAgent:
             print(f"Tavily search error: {e}")
             
         if not candidates:
-            return None, "No valid GitHub repository found.", []
+            return None, NO_REPO_REASON, []
             
         seen_repos = set()
         deduped = []
@@ -368,7 +465,9 @@ class DiscoveryAgent:
         if os.path.exists(cache_file):
             try:
                 with open(cache_file, "r") as f:
-                    cache = json.load(f)
+                    loaded = json.load(f)
+                cache = {k: v for k, v in loaded.items()
+                         if isinstance(v, dict) and v.get("cache_version") == CACHE_VERSION}
             except Exception:
                 pass
                 
@@ -379,6 +478,7 @@ class DiscoveryAgent:
                 try:
                     with open(cache_file, "r") as f: c = json.load(f)
                 except Exception: pass
+            data = {**data, "cache_version": CACHE_VERSION}
             c[key] = data
             os.makedirs(os.path.dirname(cache_file) or ".", exist_ok=True)
             tmp = cache_file + ".tmp"
@@ -486,18 +586,21 @@ class DiscoveryAgent:
                 # Prompt zeigt Tasknamen in Klammern; Live-Lauf 4: LLM antwortete "[Cora-LCC]"
                 if isinstance(claim_data.get("matched_task"), str):
                     claim_data["matched_task"] = claim_data["matched_task"].strip().strip("[]").strip()
-                # matched_task muss ein echter Task sein, sonst gilt der Match nicht
-                # (Formfehler des LLM, kein Befund ueber das Paper: nicht cachen)
-                if claim_data.get("protocol_match") and claim_data.get("matched_task") not in _tasks_for(ds):
-                    emit({"type": "reject", "arxiv_id": cache_key, "stage": "protocol",
-                          "reason": f"LLM nannte keinen unterstuetzten Task ({claim_data.get('matched_task')!r})"})
-                    continue
-                if not claim_data.get("protocol_match"):
-                    reason_msg = claim_data.get("protocol_reason", "Protocol mismatch")
+                import re
+                norm_ws = _norm_quote
+
+                protocol, protocol_note = self._judge_protocol(claim_data, text, ds, norm_ws)
+                if protocol == "passt_nicht":
+                    reason_msg = claim_data.get("protocol_reason") or "Protocol mismatch"
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason_msg, "stage": "protocol"})
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_msg})
                     continue
-                    
+                claim_data["protocol"] = protocol
+                if protocol == "unklar":
+                    claim_data["matched_task"] = None
+                    if protocol_note:
+                        claim_data["protocol_reason"] = protocol_note
+
                 quote = claim_data.get("quote", "")
                 if not quote:
                     reason = "No quote provided by LLM"
@@ -506,9 +609,6 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                import re
-                def norm_ws(s): return re.sub(r"\s+", " ", s.replace("\n", " ")).strip().lower()
-                
                 if norm_ws(quote) not in norm_ws(text):
                     reason = "Quote not found in text"
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"})
@@ -543,18 +643,37 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                claim_data["protocol_evidence"] = "Protokoll: LLM-Einschaetzung"
+                if ds == "ETTh1":
+                    try:
+                        horizon_ok = int(claim_data.get("horizon")) == ETTH1_HORIZON
+                    except (TypeError, ValueError):
+                        horizon_ok = False
+                    if not (horizon_ok and re.search(r"\b96\b", norm_ws(quote))):
+                        reason = f"Horizont nicht {ETTH1_HORIZON}"
+                        emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
+                        _update_cache(cache_key, {"status": "rejected", "reason": reason})
+                        continue
+
+                method = claim_data.get("method")
+                if not (isinstance(method, str) and method.strip() and norm_ws(method) in norm_ws(quote)):
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
+                    continue
+
+                metric = _normalize_metric(claim_data.get("metric"))
+                if metric not in ALLOWED_METRICS.get(ds, set()):
+                    reason = f"Metrik nicht messbar ({claim_data.get('metric')!r})"
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
+                    _update_cache(cache_key, {"status": "rejected", "reason": reason})
+                    continue
+                claim_data["metric"] = metric
+
+                claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"
+                                                   else "Protokoll nicht belegt")
                 claim = claim_data
                     
                 emit({"type": "searching", "arxiv_id": cache_key, "claim": {"text": json.dumps(claim), "target": target_val}})
                     
-                github_url, reason, alternatives = self._find_repo_and_context(p["title"], ds, p.get("authors", []))
-                if not github_url:
-                    emit({"type": "reject", "arxiv_id": cache_key, "reason": "No valid GitHub repo matching dataset found.", "stage": "repo"})
-                    reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": "No valid GitHub repo matching dataset found.", "stage": "repo"}.get("reason", "")
-                    _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
-                    continue
-                
+                github_url, reason, alternatives = self._find_repo_and_context(p["title"], ds, p.get("authors", []), p["arxiv_id"])
                 # Community-Hinweise (Issues, Reviews): nur als Belege, das Urteil faellt im Loop.
                 community = []
                 if hasattr(self.tavily, "curate_discussion"):
@@ -568,7 +687,7 @@ class DiscoveryAgent:
                         emit({"type": "warning", "arxiv_id": cache_key, "message": f"Community search failed: {e}"})
 
                 emit({"type": "candidate", "arxiv_id": cache_key, "reason": reason, "found_by": p.get("found_by", "arxiv"),
-                      "community_hits": len(community)})
+                      "community_hits": len(community), "protocol": protocol})
                 
                 paper = CandidatePaper(
                     title=p["title"],
@@ -581,6 +700,7 @@ class DiscoveryAgent:
                     found_by=p.get("found_by", "arxiv"),
                     source_url=p.get("source_url"),
                     community=community,
+                    protocol=protocol,
                 )
                 candidates.append(paper)
                 _update_cache(cache_key, paper.to_dict())

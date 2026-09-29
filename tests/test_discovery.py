@@ -8,7 +8,7 @@ from repro_agent.config import Settings
 class FakeLLM:
     def __init__(self, claim_content=None):
         if claim_content is None:
-            self.claim_content = '{"protocol_match": true, "matched_task": "Cora", "quote": "95% accuracy", "metric": "acc", "target": 95}'
+            self.claim_content = '{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "acc", "target": 95}'
         else:
             self.claim_content = claim_content
     def complete(self, role, messages, temperature=0.0, **kwargs):
@@ -17,7 +17,8 @@ class FakeLLM:
         return Resp()
 
 # Discovery verlangt lesbaren Volltext (MIN_FULLTEXT_CHARS), Abstract allein reicht nicht.
-FULLTEXT = "This is a sample abstract mentioning Cora dataset. It achieves 95% accuracy. " + "Filler sentence. " * 300
+MISMATCH = '{"protocol": "passt_nicht", "protocol_quote": "GraphNet achieves 95% accuracy", "protocol_reason": "Protocol mismatch", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}'
+FULLTEXT = "This is a sample abstract mentioning Cora dataset. GraphNet achieves 95% accuracy. " + "Filler sentence. " * 300
 
 
 class FakeTavily:
@@ -76,36 +77,36 @@ def test_no_claim_reject(monkeypatch, arxiv_xml, tmp_path):
 
     
     
-    # 1. protocol_match false
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": false}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    # 1. protocol passt_nicht
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=MISMATCH), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "protocol" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
     
     # 2. Empty quote
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "quote": "", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "no quote provided" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
 
     # 3. Quote not in text
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "I made this up 95", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "quote": "I made this up 95", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "quote not found in text" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
 
     # 4. Target not in quote
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 99}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 99}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "target value not found numerically in quote" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
     
     # 5. Success case
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -174,6 +175,7 @@ def test_cache_hit(monkeypatch, tmp_path):
                 "reason": "Cached",
                 "github_url": "https://github.com/foo/bar",
                 "status": "ungeprueft",
+                "cache_version": 2,
                 "alternatives": []
             }
         }, f)
@@ -216,6 +218,7 @@ def test_cache_hit_on_reject(monkeypatch, tmp_path):
         json.dump({
             "1234.5678": {
                 "status": "rejected",
+                "cache_version": 2,
                 "reason": "Regex pre-filter failed"
             }
         }, f)
@@ -260,7 +263,7 @@ def test_numerical_quote(monkeypatch, arxiv_xml, tmp_path):
     cache_file = tmp_path / "c1.json"
     
     # Target 95.0, quote has 95%
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95.0}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95.0}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -268,7 +271,7 @@ def test_numerical_quote(monkeypatch, arxiv_xml, tmp_path):
 
     cache_file = tmp_path / "c2.json"
     # Target 0.95, quote has 95%
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 0.95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 0.95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -293,7 +296,7 @@ def test_extract_limit(monkeypatch, arxiv_xml, tmp_path):
             
     tavily = CountingTavily()
     cache_file = tmp_path / "c3.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": false}'), tavily=tavily, cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=MISMATCH), tavily=tavily, cache_path=str(cache_file))
     agent._search_arxiv = mock_search
     
     events = []
@@ -311,28 +314,28 @@ def test_missing_target(monkeypatch, arxiv_xml, tmp_path):
 
     # Missing target
     cache_file = tmp_path / "c1.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95"}'), tavily=FakeTavily(), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "quote": "95"}'), tavily=FakeTavily(), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
 
     # Null target
     cache_file = tmp_path / "c2.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95", "target": null}'), tavily=FakeTavily(), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "quote": "95", "target": null}'), tavily=FakeTavily(), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
 
     # String target with %
     cache_file = tmp_path / "c3.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95%", "metric": "accuracy", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any(e.get("type") == "candidate" for e in events)
 
     # String target bad parse
     cache_file = tmp_path / "c4.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "ninety-five"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "quote": "95%", "target": "ninety-five"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
@@ -344,7 +347,7 @@ def test_on_call_events(monkeypatch, arxiv_xml, tmp_path):
     monkeypatch.setattr("httpx.get", mock_get)
     cache_file = tmp_path / "c99.json"
     
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95%", "metric": "accuracy", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     
@@ -445,8 +448,8 @@ def test_L6_extract_limit_order(monkeypatch, tmp_path):
         return FakeResponse(xml)
     monkeypatch.setattr("httpx.get", mock_get)
 
-    # protocol_match false: kein Kandidat, sonst stoppt die Grenze von 2 Kandidaten vor dem Deckel
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": false}'), tavily=FakeTavily(), cache_path=str(tmp_path / "c_l6.json"))
+    # protocol passt_nicht: kein Kandidat, sonst stoppt die Grenze von 2 Kandidaten vor dem Deckel
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=MISMATCH), tavily=FakeTavily(), cache_path=str(tmp_path / "c_l6.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     
@@ -496,7 +499,7 @@ def test_L2_unreadable_answer_not_cached(monkeypatch, arxiv_xml, tmp_path):
 def test_L2_thinking_text_before_json(monkeypatch, arxiv_xml, tmp_path):
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
     content = ('Let me think. The text uses {braces} in prose. Final answer: '
-               '{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}')
+               '{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}')
     agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
                            cache_path=str(tmp_path / "c.json"))
     events = []
@@ -527,7 +530,7 @@ def test_L3_extract_error_does_not_fall_back_to_abstract(monkeypatch, arxiv_xml,
 
 
 def test_max_two_candidates_per_dataset(monkeypatch, tmp_path):
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}'),
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}'),
                            tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse("# Cora\n"))
     agent._search_arxiv = lambda ds, max_results=30: [
@@ -612,7 +615,7 @@ def test_falls_back_to_arxiv_without_tavily_hits(monkeypatch, arxiv_xml, tmp_pat
 
 def test_prefilter_uses_tavily_snippet(monkeypatch, tmp_path):
     """Abstract ohne Datensatz/Zahl, aber Tavily-Ausschnitt mit Tabelle: nicht vorab verwerfen."""
-    atom = ATOM_ONE.replace("This is a sample abstract mentioning Cora dataset. It achieves 95% accuracy.",
+    atom = ATOM_ONE.replace("This is a sample abstract mentioning Cora dataset. GraphNet achieves 95% accuracy.",
                             "We propose a new graph model.")
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(atom))
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
@@ -629,23 +632,12 @@ def test_protocol_checked_against_all_dataset_tasks(monkeypatch, arxiv_xml, tmp_
         def complete(self, role, messages, **kwargs):
             prompts.append(messages[0]["content"])
             return super().complete(role, messages, **kwargs)
-    content = '{"protocol_match": true, "matched_task": "Cora-LCC", "quote": "It achieves 95% accuracy", "target": 95}'
+    content = '{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora-LCC", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}'
     agent = DiscoveryAgent(llm=RecordingLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
                            cache_path=str(tmp_path / "c.json"))
     result = agent.discover(["Cora"])
     assert "[Cora]" in prompts[0] and "[Cora-LCC]" in prompts[0]
     assert result and result[0].claim["matched_task"] == "Cora-LCC"
-
-
-def test_unknown_matched_task_rejected_not_cached(monkeypatch, arxiv_xml, tmp_path):
-    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
-    content = '{"protocol_match": true, "matched_task": "PubMed", "quote": "It achieves 95% accuracy", "target": 95}'
-    cache_file = str(tmp_path / "c.json")
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
-    events = []
-    assert agent.discover(["Cora"], on_event=events.append) == []
-    assert any(e.get("stage") == "protocol" and "PubMed" in e["reason"] for e in events)
-    assert "2101.12345" not in _read_cache(cache_file)
 
 
 def test_short_extract_retried_once(monkeypatch, arxiv_xml, tmp_path):
@@ -664,8 +656,362 @@ def test_short_extract_retried_once(monkeypatch, arxiv_xml, tmp_path):
 def test_matched_task_with_brackets_accepted(monkeypatch, arxiv_xml, tmp_path):
     """Live-Lauf 4 (Token Factory): 3 von 6 Papers verworfen, weil das LLM '[Cora-LCC]' schrieb."""
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
-    content = '{"protocol_match": true, "matched_task": " [Cora-LCC] ", "quote": "It achieves 95% accuracy", "target": 95}'
+    content = '{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": " [Cora-LCC] ", "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}'
     agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
                            cache_path=str(tmp_path / "c.json"))
     result = agent.discover(["Cora"])
     assert result and result[0].claim["matched_task"] == "Cora-LCC"
+
+
+# ---- Dreistufiges Protokoll, Suche, Repo ----
+
+def _run(monkeypatch, arxiv_xml, tmp_path, content, repos=("https://github.com/foo/bar",), tavily=None):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=tavily or FakeTavily(repos=list(repos)), cache_path=cache_file)
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    return result, events, cache_file
+
+
+CLAIM = '"method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95'
+
+
+def test_protocol_unklar_is_candidate(monkeypatch, arxiv_xml, tmp_path):
+    content = '{"protocol": "unklar", "matched_task": null, ' + CLAIM + '}'
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+    assert result[0].to_dict()["protocol"] == "unklar"
+    cand = [e for e in events if e.get("type") == "candidate"][0]
+    assert cand["protocol"] == "unklar"
+    assert _read_cache(cache_file)["2101.12345"]["protocol"] == "unklar"
+
+
+def test_protocol_passt_with_quote_and_task(monkeypatch, arxiv_xml, tmp_path):
+    content = '{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora-LCC", ' + CLAIM + '}'
+    result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert result[0].protocol == "passt" and result[0].claim["matched_task"] == "Cora-LCC"
+    assert [e for e in events if e.get("type") == "candidate"][0]["protocol"] == "passt"
+
+
+def test_passt_nicht_with_quote_rejected_and_cached(monkeypatch, arxiv_xml, tmp_path):
+    content = ('{"protocol": "passt_nicht", "protocol_quote": "GraphNet achieves 95% accuracy", '
+               '"protocol_reason": "60/20/20 split", ' + CLAIM + '}')
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert result == []
+    assert any(e.get("type") == "reject" and e.get("stage") == "protocol" for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+@pytest.mark.parametrize("pq", ['"protocol_quote": "text the paper never wrote", ', ""])
+def test_passt_nicht_without_valid_quote_is_unklar(monkeypatch, arxiv_xml, tmp_path, pq):
+    content = '{"protocol": "passt_nicht", ' + pq + '"protocol_reason": "different split", ' + CLAIM + '}'
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+    assert not any(e.get("stage") == "protocol" for e in events)
+
+
+@pytest.mark.parametrize("task", ['"PubMed"', "null"])
+def test_passt_without_valid_task_is_unklar(monkeypatch, arxiv_xml, tmp_path, task):
+    content = ('{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": ' + task + ', ' + CLAIM + '}')
+    result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+    assert result[0].claim["matched_task"] is None
+
+
+def test_passt_without_valid_quote_is_unklar(monkeypatch, arxiv_xml, tmp_path):
+    content = ('{"protocol": "passt", "protocol_quote": "invented sentence", "matched_task": "Cora", ' + CLAIM + '}')
+    result, _, _ = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert len(result) == 1 and result[0].protocol == "unklar"
+
+
+def test_prompt_states_three_levels(monkeypatch, arxiv_xml, tmp_path):
+    prompts = []
+    class Rec(FakeLLM):
+        def complete(self, role, messages, **kwargs):
+            prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    DiscoveryAgent(llm=Rec(), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
+                   cache_path=str(tmp_path / "c.json")).discover(["Cora"])
+    p = prompts[0]
+    assert "passt_nicht" in p and "unklar" in p and "protocol_quote" in p
+    assert "Not mentioned means" in p and "standard split" in p
+
+
+def test_repo_score_zero_gives_no_repo(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf: fremdes Sammel-Repo mit Score 0/3 wurde uebernommen."""
+    class ForeignReadme(FakeTavily):
+        pass
+    def mock_get(url, *a, **k):
+        if "raw.githubusercontent.com" in url:
+            return FakeResponse("collection of citeseer tools")   # Schluesselwort, aber weder Autor, Titel noch Cora
+        return FakeResponse(arxiv_xml)
+    monkeypatch.setattr("httpx.get", mock_get)
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=ForeignReadme(repos=["https://github.com/zoo/collection"]),
+                           cache_path=str(tmp_path / "c.json"))
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    assert len(result) == 1
+    assert result[0].github_url is None and result[0].reason == "kein passendes Repo gefunden"
+    assert not any(e.get("stage") == "repo" for e in events)
+
+
+def test_no_repo_at_all_is_candidate(monkeypatch, arxiv_xml, tmp_path):
+    result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
+    assert len(result) == 1 and result[0].github_url is None
+    assert result[0].reason == "kein passendes Repo gefunden"
+
+
+def test_queries_contain_protocol_terms():
+    from repro_agent.discovery import DISCOVERY_QUERIES, EXTRACT_QUERIES, MAX_SEARCHES_PER_DATASET
+    cora = " ".join(DISCOVERY_QUERIES["Cora"]).lower()
+    assert "planetoid" in cora and "140" in cora and "shchur" in cora and "largest connected component" in cora
+    etth1 = " ".join(DISCOVERY_QUERIES["ETTh1"]).lower()
+    assert "input length 96" in etth1 and "96 192 336 720" in etth1 and "12/4/4" in etth1
+    assert all(len(q) <= MAX_SEARCHES_PER_DATASET for q in DISCOVERY_QUERIES.values())
+    assert "planetoid" in EXTRACT_QUERIES["Cora"].lower() and "12/4/4" in EXTRACT_QUERIES["ETTh1"]
+
+
+def test_max_two_searches_and_dedup(monkeypatch, tmp_path):
+    class TwoQ(FakeTavily):
+        def __init__(self, repos=None):
+            super().__init__(repos)
+            self.paper_queries = []
+        def curate_papers(self, query, max_results=10):
+            self.paper_queries.append(query)
+            return {"results": [
+                {"url": "https://arxiv.org/html/2101.12345v1", "title": "Sample", "content": "Cora 95%"},
+                {"url": f"https://arxiv.org/abs/2202.0000{len(self.paper_queries)}", "title": "x", "content": "Cora 95%"},
+            ]}
+    urls = []
+    def mock_get(url, *a, **k):
+        urls.append(k.get("params"))
+        return FakeResponse(ATOM_ONE)
+    monkeypatch.setattr("httpx.get", mock_get)
+    tavily = TwoQ(repos=["https://github.com/foo/bar"])
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=tavily, cache_path=str(tmp_path / "c.json"))
+    agent.discover(["Cora"])
+    assert len(tavily.paper_queries) == 2
+    assert tavily.paper_queries[0] != tavily.paper_queries[1]
+    ids = urls[0]["id_list"].split(",")
+    assert ids.count("2101.12345") == 1 and len(ids) == 3
+
+
+def test_prompt_contains_protocol_hints(monkeypatch, arxiv_xml, tmp_path):
+    prompts = []
+    class Rec(FakeLLM):
+        def complete(self, role, messages, **kwargs):
+            prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    agent = DiscoveryAgent(llm=Rec(), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
+                           cache_path=str(tmp_path / "c.json"))
+    agent._extract_claim("text", "ETTh1")
+    agent._extract_claim("text", "Cora")
+    assert "8545/2881/2881" in prompts[0]
+    assert "140/500/1000" in prompts[1] and "largest connected component" in prompts[1]
+
+
+def test_old_cache_entries_without_version_are_rechecked(monkeypatch, arxiv_xml, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"2101.12345": {"status": "rejected", "reason": "Protocol mismatch"}}))
+    result, events, _ = _run_with_cache(monkeypatch, arxiv_xml, str(cache_file))
+    assert len(result) == 1                       # alter Reject ignoriert, Paper neu geprueft
+    assert any(e.get("type") == "extracting" for e in events)
+    entry = _read_cache(str(cache_file))["2101.12345"]
+    assert entry["cache_version"] == 2 and entry["status"] == "ungeprueft"
+
+
+def test_old_cached_candidate_without_version_is_rechecked(monkeypatch, arxiv_xml, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"2101.12345": {"title": "Old", "arxiv_id": "2101.12345", "dataset": "Cora",
+                                                     "claim": {}, "reason": "x", "github_url": None, "status": "ungeprueft"}}))
+    result, events, _ = _run_with_cache(monkeypatch, arxiv_xml, str(cache_file))
+    assert any(e.get("type") == "extracting" for e in events)
+    assert result[0].protocol == "passt"
+
+
+def _run_with_cache(monkeypatch, arxiv_xml, cache_file):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
+    events = []
+    return agent.discover(["Cora"], on_event=events.append), events, cache_file
+
+
+# ---- D: Repo-Beleg, E: Methode, F: messbare Metrik ----
+
+def _repo_agent(monkeypatch, arxiv_xml, tmp_path, urls, readme):
+    def mock_get(url, *a, **k):
+        if "raw.githubusercontent.com" in url:
+            return FakeResponse(readme)
+        return FakeResponse(arxiv_xml)
+    monkeypatch.setattr("httpx.get", mock_get)
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(repos=urls), cache_path=str(tmp_path / "c.json"))
+    return agent._find_repo_and_context("Sample Paper Title", "Cora", ["John Doe"], "2101.12345")
+
+
+def test_repo_dataset_match_alone_is_no_evidence(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf: TTS-Repo und Sammel-Repo mit Cora-Erwaehnung, aber ohne Titel/ID."""
+    url, reason, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path,
+                                 ["https://github.com/InsomaniacElf/sg-tamil-tts-resources-"],
+                                 "resources for cora and text to speech. credits: doe")
+    assert url is None and reason == "kein passendes Repo gefunden"
+
+
+def test_repo_author_surname_in_body_is_not_author_match(monkeypatch, arxiv_xml, tmp_path):
+    url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/zoo/collection"],
+                            "cora benchmark. thanks to doe for the idea.")
+    assert url is None
+
+
+def test_repo_blob_url_normalized_and_paper_link(monkeypatch, arxiv_xml, tmp_path):
+    url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path,
+                            ["https://github.com/DaoSword/Repo/blob/main/README.md"],
+                            "code for the paper sample paper title (cora)")
+    assert url == "https://github.com/DaoSword/Repo"
+
+
+def test_repo_arxiv_id_is_paper_link(monkeypatch, arxiv_xml, tmp_path):
+    url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/a/b/issues/3"],
+                            "see arxiv 2101.12345 (cora)")
+    assert url == "https://github.com/a/b"
+
+
+def test_repo_author_in_owner_plus_dataset_ok(monkeypatch, arxiv_xml, tmp_path):
+    url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/johndoe-lab/gnn"], "cora experiments")
+    assert url == "https://github.com/johndoe-lab/gnn"
+
+
+def test_claim_method_must_be_in_quote(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf: Claim gehoerte einer Baseline. Methode fehlt oder steht nicht im Zitat -> Reject, nicht gecacht."""
+    for method in ('"method": "", ', '"method": "OtherNet", ', ""):
+        content = ('{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", ' + method +
+                   '"quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}')
+        result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+        assert result == []
+        assert any(e.get("stage") == "quote" and "Method" in e["reason"] for e in events)
+        assert "2101.12345" not in _read_cache(cache_file)
+        os.remove(cache_file) if os.path.exists(cache_file) else None
+
+
+@pytest.mark.parametrize("metric", ["MSE reduction percent", "relative improvement", None])
+def test_unmeasurable_metric_rejected(monkeypatch, arxiv_xml, tmp_path, metric):
+    content = json.dumps({"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora",
+                          "method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": metric, "target": 95})
+    result, events, cache_file = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert result == []
+    assert any(e.get("stage") == "number" and "Metrik nicht messbar" in e["reason"] for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+def test_metric_normalization_and_allowed_per_dataset():
+    from repro_agent.discovery import _normalize_metric, ALLOWED_METRICS
+    assert [_normalize_metric(m) for m in ("Accuracy", "acc", "ACC", "MSE", "mae")] == ["accuracy", "accuracy", "accuracy", "mse", "mae"]
+    assert _normalize_metric("MSE reduction percent") is None
+    assert ALLOWED_METRICS["Cora"] == {"accuracy"} and ALLOWED_METRICS["ETTh1"] == {"mse", "mae"}
+    assert "mse" not in ALLOWED_METRICS["Cora"]
+
+
+def test_metric_normalized_in_candidate_claim(monkeypatch, arxiv_xml, tmp_path):
+    content = ('{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", '
+               '"method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "ACC", "target": 95}')
+    result, _, _ = _run(monkeypatch, arxiv_xml, tmp_path, content)
+    assert result[0].claim["metric"] == "accuracy" and result[0].claim["method"] == "GraphNet"
+
+
+def test_prompt_demands_proposed_method_absolute_metric(monkeypatch, arxiv_xml, tmp_path):
+    prompts = []
+    class Rec(FakeLLM):
+        def complete(self, role, messages, **kwargs):
+            prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    DiscoveryAgent(llm=Rec(), tavily=FakeTavily(), cache_path=str(tmp_path / "c.json"))._extract_claim("t", "Cora")
+    assert "PROPOSED" in prompts[0] and "never a baseline" in prompts[0] and "'method'" in prompts[0]
+    assert "relative improvement" in prompts[0]
+
+
+# ---- G: Sammlungen, H: Horizont, I: Zitat-Normalisierung ----
+
+def test_readme_collection_is_no_repo(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf 7: Sammel-Repo, dessen README den Titel nennt (Paper-Liste)."""
+    many_arxiv = "cora sample paper title\n" + "\n".join(f"- https://arxiv.org/abs/2101.{i:05d}" for i in range(6))
+    many_github = "cora sample paper title\n" + "\n".join(f"- https://github.com/u/r{i}" for i in range(11))
+    for readme in (many_arxiv, many_github):
+        url, reason, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/DaoSword/Collection"], readme)
+        assert url is None and reason == "kein passendes Repo gefunden"
+
+
+def test_readme_few_links_is_repo(monkeypatch, arxiv_xml, tmp_path):
+    readme = "cora sample paper title\n" + "\n".join(f"- https://arxiv.org/abs/2101.{i:05d}" for i in range(5))
+    url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/a/b"], readme)
+    assert url == "https://github.com/a/b"
+
+
+ETT_TEXT = ("GraphNet reaches MSE 0.439 at horizon 96 on ETTh1. Average MSE 0.512 over all horizons on ETTh1. "
+            "| 96 | 0.3663\\pm 0.0015 | on ETTh1. " + "Filler sentence. " * 300)
+
+
+def _run_etth1(monkeypatch, tmp_path, claim):
+    atom = ATOM_ONE.replace("Cora", "ETTh1")
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(atom))
+    class EttTavily(FakeTavily):
+        def curate_extract(self, url, query):
+            return {"results": [{"raw_content": ETT_TEXT}]}
+    base = {"protocol": "passt", "protocol_quote": "GraphNet reaches MSE 0.439 at horizon 96", "matched_task": "ETTh1",
+            "method": "GraphNet", "metric": "MSE"}
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=json.dumps({**base, **claim})),
+                           tavily=EttTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
+    events = []
+    return agent.discover(["ETTh1"], on_event=events.append), events, cache_file
+
+
+def test_etth1_horizon_96_accepted(monkeypatch, tmp_path):
+    result, _, _ = _run_etth1(monkeypatch, tmp_path, {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": 96})
+    assert len(result) == 1 and result[0].claim["metric"] == "mse"
+
+
+@pytest.mark.parametrize("claim", [
+    {"quote": "Average MSE 0.512 over all horizons", "target": 0.512, "horizon": 96},        # Mittelwert, Zitat ohne 96
+    {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": 336},  # falscher Horizont
+    {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439},                  # Horizont fehlt
+    {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": "avg"},
+])
+def test_etth1_horizon_not_96_rejected_and_cached(monkeypatch, tmp_path, claim):
+    result, events, cache_file = _run_etth1(monkeypatch, tmp_path, claim)
+    assert result == []
+    assert any(e.get("stage") == "number" and e["reason"] == "Horizont nicht 96" for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+def test_cora_claim_needs_no_horizon(monkeypatch, arxiv_xml, tmp_path):
+    result, _, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content)
+    assert len(result) == 1
+
+
+def test_prompt_horizon_only_for_etth1():
+    class Rec(FakeLLM):
+        prompts = []
+        def complete(self, role, messages, **kwargs):
+            Rec.prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    agent = DiscoveryAgent(llm=Rec(), tavily=FakeTavily())
+    agent._extract_claim("t", "ETTh1")
+    agent._extract_claim("t", "Cora")
+    assert "'horizon'" in Rec.prompts[0] and "never an average" in Rec.prompts[0]
+    assert "'horizon'" not in Rec.prompts[1]
+
+
+def test_quote_normalization_table_row():
+    from repro_agent.discovery import _norm_quote
+    row = "| 96 | 0.3663\\pm 0.0015 |"
+    assert _norm_quote("96 0.3663 ± 0.0015") in _norm_quote("Table 3:\n" + row + "\n| 192 | 0.4 |")
+    assert _norm_quote("$0.3663 +- 0.0015$") == _norm_quote("0.3663 ± 0.0015") == _norm_quote("0.3663\\pm0.0015")
+
+
+def test_quote_normalization_is_not_fuzzy():
+    from repro_agent.discovery import _norm_quote
+    assert _norm_quote("96 0.3664 ± 0.0015") not in _norm_quote("| 96 | 0.3663\\pm 0.0015 |")
+    assert _norm_quote("96 0.3663 0.0015") not in _norm_quote("| 96 | 0.3663\\pm 0.0015 |")
