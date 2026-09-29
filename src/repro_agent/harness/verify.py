@@ -41,7 +41,8 @@ def check_plausibility(predictions: dict[str, str], expected_ids: set[str]) -> s
     if set(predictions.keys()) != expected_ids:
         missing = expected_ids - predictions.keys()
         extra = predictions.keys() - expected_ids
-        return f"IDs unvollstaendig oder falsch. Fehlend: {len(missing)}, ueberschuessig: {len(extra)}"
+        return (f"IDs unvollstaendig oder falsch. Erwartet {len(expected_ids)}, erhalten {len(predictions)}; "
+                f"fehlend: {len(missing)}, ueberschuessig: {len(extra)}")
     if len(set(predictions.values())) <= 1:
         return "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig"
     return None

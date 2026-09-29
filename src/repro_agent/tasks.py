@@ -65,7 +65,8 @@ CORA_SMOKE_N = 20
 CORA_SMOKE = (
     f"Smoke mode: if env var SMOKE=1, train exactly 1 epoch, predict only the first {CORA_SMOKE_N} nodes "
     "of test_idx and write predictions.csv with only these ids; it must finish in under 60 seconds. "
-    "The pipeline runs this first to check the output form."
+    "The pipeline runs this first to check the output form. If SMOKE is unset (or not 1) the script must do the normal "
+    "full run: all test nodes, full training. Never treat an unset SMOKE as smoke mode."
 )
 
 
@@ -122,7 +123,8 @@ ETTH1_SMOKE = (
     "Smoke mode: if env var SMOKE=1, use at most 1 training batch of 32 samples for 1 epoch, predict only "
     f"test windows 0..{ETTH1_SMOKE_WINDOWS - 1} and write predictions.csv with only these windows "
     f"({ETTH1_SMOKE_WINDOWS}*96*7 rows); it must finish in under 60 seconds. "
-    "The pipeline runs this first to check the output shape (windows, 96, 7)."
+    "The pipeline runs this first to check the output shape (windows, 96, 7). If SMOKE is unset (or not 1) the script "
+    "must do the normal full run: all 2785 windows, full training. Never treat an unset SMOKE as smoke mode."
 )
 
 
