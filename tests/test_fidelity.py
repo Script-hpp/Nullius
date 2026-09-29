@@ -90,3 +90,32 @@ def test_missing_component_answer_is_not_checked_not_nein():
     llm = FakeLLM([reply(item("k", "self.k = 25", "not_implemented"))])   # 'pool' fehlt
     rep = check_fidelity(llm, COMP, CODE)
     assert rep.results[1].status == "nicht geprueft" and rep.overall == "nicht geprueft"
+
+
+# ---- Standardargument wird beim Aufruf ueberschrieben ----
+from repro_agent.fidelity import default_overrides
+
+BASE = "class Model:\n    def __init__(self, seq, pred, kernel_size=25):\n        self.k = kernel_size\n"
+
+
+def test_default_used_or_same_value_is_fine():
+    assert default_overrides(BASE + "m = Model(1, 2)\n", "25", "kernel_size=25") == []
+    assert default_overrides(BASE + "m = Model(1, 2, 25)\nn = Model(1, 2, kernel_size=25)\n", "25", "kernel_size=25") == []
+
+
+def test_positional_and_keyword_override_detected():
+    pos = default_overrides(BASE + "m = Model(1, 2, 5)\n", "25", "kernel_size=25")
+    kw = default_overrides(BASE + "m = Model(1, 2, kernel_size=49)\n", "25", "kernel_size=25")
+    assert pos and "5" in pos[0] and kw and "49" in kw[0]
+
+
+def test_variable_argument_is_undecidable_and_unrelated_param_ignored():
+    assert default_overrides(BASE + "k = 5\nm = Model(1, 2, k)\n", "25", "kernel_size=25") == []
+    assert default_overrides(BASE + "m = Model(1, 2, 5)\n", "25", "self.other = 1") == []   # Parameter nicht im Zitat
+
+
+def test_checker_marks_overridden_default_as_partial():
+    code = BASE + "m = Model(1, 2, 5)\n"
+    llm = FakeLLM([reply(item("k", "def __init__(self, seq, pred, kernel_size=25):"))])
+    rep = check_fidelity(llm, [Component("k", "Kernel", "d", "q", True, value="25")], code)
+    assert rep.results[0].status == "teilweise" and "ueberschreibt" in rep.results[0].note

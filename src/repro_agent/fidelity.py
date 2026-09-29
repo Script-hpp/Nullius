@@ -155,6 +155,53 @@ def value_in_quote(value: str, quote: str) -> bool:
     return re.search(rf"(?<![\w.]){re.escape(value)}(?![\w]|\.\d)", quote) is not None
 
 
+def default_overrides(code: str, value: str, quote: str) -> list[str]:
+    """Standardargumente `param=VALUE`, deren Wert beim Aufruf mit einer Konstante ueberschrieben wird
+    (`Model(a, b, 5)` oder `Model(a, b, kernel_size=5)`). Nur Parameter, die im zitierten Code vorkommen.
+    Nicht-konstante Argumente (Variablen) sind nicht entscheidbar und zaehlen nicht als Ueberschreibung."""
+    import ast
+
+    try:
+        tree = ast.parse(code)
+        want = float(value)
+    except (SyntaxError, ValueError):
+        return []
+
+    def const_num(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            return float(node.value)
+        return None
+
+    targets = []   # (aufgerufener Name, Parametername, Position ohne self)
+    for node in ast.walk(tree):
+        fns = []
+        if isinstance(node, ast.ClassDef):
+            fns = [(node.name, f) for f in node.body if isinstance(f, ast.FunctionDef) and f.name == "__init__"]
+        elif isinstance(node, ast.FunctionDef) and node.name != "__init__":
+            fns = [(node.name, node)]
+        for callee, fn in fns:
+            params = [a.arg for a in fn.args.args if a.arg != "self"]
+            defaults = fn.args.defaults
+            for k, d in enumerate(defaults):
+                name = fn.args.args[len(fn.args.args) - len(defaults) + k].arg
+                if name != "self" and const_num(d) == want and name in quote:
+                    targets.append((callee, name, params.index(name)))
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        fname = node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, "attr", None)
+        for callee, name, pos in targets:
+            if fname != callee:
+                continue
+            for kw in node.keywords:
+                if kw.arg == name and const_num(kw.value) not in (None, want):
+                    found.append(f"{callee}({name}={const_num(kw.value):g}) ueberschreibt den Standardwert {value} (Zeile {node.lineno})")
+            if len(node.args) > pos and const_num(node.args[pos]) not in (None, want):
+                found.append(f"{callee}(..., {const_num(node.args[pos]):g}) ueberschreibt {name}={value} (Zeile {node.lineno})")
+    return found
+
+
 def _ask_checker(llm: LLMClient, listing: str, code: str) -> tuple[list | None, str]:
     """(Ergebnisliste, Ausfallgrund). Abgeschnitten oder unlesbar: einmal neu, mit doppelter Grenze."""
     reason = ""
@@ -166,6 +213,8 @@ def _ask_checker(llm: LLMClient, listing: str, code: str) -> tuple[list | None, 
                 'Answer with a JSON list, one object per component id: {"id": ..., "status": one of '
                 '"implemented" | "not_implemented" | "not_found", "code_quote": the VERBATIM code lines '
                 "(without the line-number prefix) that implement it, or null, \"note\": one short sentence}. "
+                "If a component lists a required value, code_quote must include the line where that value is set "
+                "(assignment, default argument or call argument), not only the line that uses a variable. "
                 "End with the JSON list."
             )},
         ], temperature=temperature, max_tokens=max_tokens, timeout_s=600)
@@ -205,6 +254,8 @@ def check_fidelity(llm: LLMClient, components: list[Component], code: str) -> Fi
                 status, note = "nicht gefunden", "Code-Zitat steht nicht im Code (verworfen): " + note
             elif c.value and not value_in_quote(c.value, str(quote)):
                 status, note = "teilweise", f"Wert {c.value} steht nicht im Zitat: " + note
+            elif c.value and (over := default_overrides(code, c.value, str(quote))):
+                status, note = "teilweise", "Standardwert wird ueberschrieben: " + "; ".join(over)
         results.append(ComponentResult(c.id, status, str(quote) if quote else None, note))
     return FidelityReport(overall=aggregate(components, results), results=results)
 
