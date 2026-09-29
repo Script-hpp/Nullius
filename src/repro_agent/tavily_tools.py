@@ -83,3 +83,13 @@ class TavilyTools:
             research_result = self._client.search(query=paper_title, search_depth="advanced")
             return {"extract": extract_result, "research": research_result}
         return {"extract": extract_result}
+
+    def curate_repo(self, paper_title: str) -> dict:
+        """Discovery: Finde offizielle Github Implementierung."""
+        query = f'"{paper_title}" github implementation'
+        return self._note(8, "search", paper_title, self._client.search(
+            query=query,
+            include_domains=["github.com"],
+            max_results=5,
+        ))
+

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/2101.12345v1</id>
+    <title>Sample Paper Title</title>
+    <summary>This is a sample abstract mentioning Cora dataset. It achieves 95% accuracy.</summary>
+    <author><name>John Doe</name></author>
+    <author><name>Jane Smith</name></author>
+  </entry>
+</feed>
