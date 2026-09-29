@@ -1,0 +1,545 @@
+{
+  "paper_id": "velickovic_gat_2018",
+  "claims": [
+    {
+      "id": "gat_cora_acc",
+      "text": "GAT erreicht 83,0 % Accuracy auf Cora (Standard-Split)",
+      "metric": "accuracy",
+      "target": 0.83,
+      "tolerance": 0.01,
+      "source": "Table 2, arXiv v3 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1710.10903v3"
+      ],
+      "target_evidence": {
+        "value": 0.83,
+        "quote": "GAT (ours) 83.0 ± 0.7% 72.5 ± 0.7% 79.0 ± 0.3%",
+        "table": "Table 2",
+        "url": "https://arxiv.org/pdf/1710.10903v3",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-09-29T13:54:42+00:00",
+        "sha256": "f7f86c91c2403eae7357175e8b4fe74db663bde33e5c14c4878195309b0b74e1",
+        "arxiv_version": "v3",
+        "caveat": null,
+        "column_check": "ok"
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-79bab039",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.808,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.808
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          9,
+          10,
+          11,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          22,
+          23,
+          26,
+          27,
+          28,
+          30,
+          33,
+          34,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          45,
+          47,
+          49,
+          50,
+          53,
+          55,
+          56,
+          58,
+          59,
+          60,
+          61,
+          62,
+          64,
+          65,
+          66,
+          68,
+          70,
+          71,
+          74,
+          75,
+          76,
+          77,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          88,
+          89,
+          92,
+          93,
+          96,
+          97,
+          98,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          107,
+          108,
+          111,
+          114,
+          115,
+          116,
+          117,
+          119,
+          122,
+          123,
+          124,
+          125,
+          127,
+          133,
+          138,
+          139,
+          140,
+          141,
+          142,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          162,
+          163,
+          164,
+          165,
+          166,
+          168,
+          170,
+          171,
+          173,
+          177,
+          178,
+          179,
+          180,
+          181,
+          182,
+          185,
+          186,
+          187,
+          192,
+          193,
+          195,
+          196,
+          197,
+          198,
+          199,
+          202,
+          203
+        ],
+        "missing": [
+          109,
+          110,
+          174,
+          188,
+          189,
+          190
+        ]
+      }
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-ee7dbb21",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 1,
+      "status": "abweichung",
+      "measured": 0.815,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.815
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-ae70938a",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.798,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.798
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-7cd39765",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 2,
+      "status": "abweichung",
+      "measured": 0.801,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.801
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-2a760f0b",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.815,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.815
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-0ca90664",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.794,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.794
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-cb7b316f",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 6,
+      "status": "abweichung",
+      "measured": 0.79,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.79
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-1f7ec7db",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 7,
+      "status": "abweichung",
+      "measured": 0.81,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.81
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-f76eddc3",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 8,
+      "status": "abweichung",
+      "measured": 0.797,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.797
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "gat_cora_acc",
+      "branch_id": "repro-branch-18e8dc2b",
+      "parent_snapshot": "repro-snapshot-velickovic-gat-2018-20260929-155442",
+      "code_hash": "403ac1e7666d",
+      "seed": 9,
+      "status": "abweichung",
+      "measured": 0.808,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.04087506,
+      "metrics": {
+        "accuracy": 0.808
+      },
+      "coverage": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "gat_cora_acc",
+      "urteil": "teilweise",
+      "measured_mean": 0.8036,
+      "measured_std": 0.008809086218218073,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0088. Mit unserem Setup gemessen (10 von 10 Seeds, Zielwert 0.83 +/- 0.01, Table 2, arXiv v3 (pdf)): Mittel 0.8036.",
+      "sources": [
+        "https://arxiv.org/pdf/1710.10903v3"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "neighborhood definition",
+      "value": "first-order neighbors of i (including i)",
+      "quote": "In all our experiments, these will be exactly the first-order neighbors of i (including i).",
+      "source": "paper"
+    },
+    {
+      "topic": "shared linear transformation",
+      "value": "weight matrix W ∈ R^{F'×F} applied to every node",
+      "quote": "a shared linear transformation, parametrized by a weight matrix , W ∈ RF ′×F , is applied to every node.",
+      "source": "paper"
+    },
+    {
+      "topic": "dataset",
+      "value": "Cora",
+      "quote": "The Cora dataset contains 2708 nodes, 5429 edges, 7 classes and 1433 features per node.",
+      "source": "paper"
+    },
+    {
+      "topic": "preprocessing",
+      "value": "bag-of-words representation",
+      "quote": "Node features correspond to elements of a bag-of-words representation of a document.",
+      "source": "paper"
+    },
+    {
+      "topic": "training_split",
+      "value": "20 nodes per class (total 140)",
+      "quote": "We allow for only 20 nodes per class to be used for training—however, honoring the transductive setup, the training algorithm has access to all of the nodes’ feature vectors.",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation_protocol",
+      "value": "accuracy on test set",
+      "quote": "The predictive power of the trained models is evaluated on 1000 test nodes, and we use 500 additional nodes for validation purposes (the same ones as used by Kipf & Welling (2017)).",
+      "source": "paper"
+    },
+    {
+      "topic": "model_type",
+      "value": "two-layer GAT model",
+      "quote": "For the transductive learning tasks, we apply a two-layer GAT model.",
+      "source": "paper"
+    },
+    {
+      "topic": "first_layer_attention_heads",
+      "value": "K = 8 attention heads computing F' = 8 features each (total 64 features)",
+      "quote": "The first layer consists of K = 8 attention heads computing F ′ = 8 features each (for a total of 64 features), followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity.",
+      "source": "paper"
+    },
+    {
+      "topic": "second_layer_attention_heads",
+      "value": "single attention head computing C features (number of classes)",
+      "quote": "The second layer is used for classification: a single attention head that computes C features (where C is the number of classes), followed by a softmax activation.",
+      "source": "paper"
+    },
+    {
+      "topic": "L2_regularization_lambda",
+      "value": "0.0005",
+      "quote": "During training, we apply L2 regulariza-tion with λ = 0 .0005 .",
+      "source": "paper"
+    },
+    {
+      "topic": "hyperparameter_optimization_dataset",
+      "value": "Cora",
+      "quote": "Its architectural hyperparameters have been optimized on the Cora dataset and are then reused for Cite-seer.",
+      "source": "paper"
+    },
+    {
+      "topic": "skip connections",
+      "value": "employed skip connections across the intermediate attentional layer",
+      "quote": "L2 regularization or dropout—we have, however, successfully employed skip connections (He et al., 2016) across the intermediate attentional layer.",
+      "source": "paper"
+    },
+    {
+      "topic": "batch size",
+      "value": "2 graphs",
+      "quote": "We utilize a batch size of 2 graphs during training.",
+      "source": "paper"
+    },
+    {
+      "topic": "Early stopping criterion",
+      "value": "patience-based early stopping",
+      "quote": "if curr_step == patience:\n                    print('Early stop! Min loss: ', vlss_mn, ', Max accuracy: ', vacc_mx)",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Checkpoint saving condition",
+      "value": "save when both validation accuracy improves and validation loss decreases",
+      "quote": "if val_acc_avg/vl_step >= vacc_mx and val_loss_avg/vl_step <= vlss_mn:\n                    vacc_early_model = val_acc_avg/vl_step\n                    vlss_early_model = val_loss_avg/vl_step\n                    saver.save(sess, checkpt_file)",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Best validation metrics tracking",
+      "value": "track maximum validation accuracy and minimum validation loss",
+      "quote": "vacc_mx = np.max((val_acc_avg/vl_step, vacc_mx))\n                vlss_mn = np.min((val_loss_avg/vl_step, vlss_mn))",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Model restoration",
+      "value": "restore best model from checkpoint before testing",
+      "quote": "saver.restore(sess, checkpt_file)",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Test batch evaluation",
+      "value": "evaluate test set in batches, averaging loss and accuracy",
+      "quote": "while ts_step * batch_size < ts_size:\n            loss_value_ts, acc_ts = sess.run([loss, accuracy],\n                feed_dict={\n                    ftr_in: features[ts_step*batch_size:(ts_step+1)*batch_size],\n                    bias_in: biases[ts_step*batch_size:(ts_step+1)*batch_size],\n                    lbl_in: y_test[ts_step*batch_size:(ts_step+1)*batch_size],\n                    msk_in: test_mask[ts_step*batch_size:(ts_step+1)*batch_size],\n                    is_train: False,\n                    attn_drop: 0.0, ffd_drop: 0.0})\n            ts_loss += loss_value_ts\n            ts_acc += acc_ts\n            ts_step += 1\n        print('Test loss:', ts_loss/ts_step, '; Test accuracy:', ts_acc/ts_step)",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Dropout rates during testing",
+      "value": "attn_drop=0.0, ffd_drop=0.0",
+      "quote": "attn_drop: 0.0, ffd_drop: 0.0",
+      "source": "repo:execute_cora.py@5af87e7"
+    },
+    {
+      "topic": "Validation dropout rates",
+      "value": "attn_drop: 0.0, ffd_drop: 0.0",
+      "quote": "attn_drop: 0.0, ffd_drop: 0.0})",
+      "source": "repo:execute_cora_sparse.py@5af87e7"
+    },
+    {
+      "topic": "Checkpoint saving",
+      "value": "saver.save(sess, checkpt_file)",
+      "quote": "saver.save(sess, checkpt_file)",
+      "source": "repo:execute_cora_sparse.py@5af87e7"
+    },
+    {
+      "topic": "Checkpoint restoring",
+      "value": "saver.restore(sess, checkpt_file)",
+      "quote": "saver.restore(sess, checkpt_file)",
+      "source": "repo:execute_cora_sparse.py@5af87e7"
+    },
+    {
+      "topic": "Validation batch iteration",
+      "value": "while vl_step * batch_size < vl_size:",
+      "quote": "while vl_step * batch_size < vl_size:",
+      "source": "repo:execute_cora_sparse.py@5af87e7"
+    },
+    {
+      "topic": "Test batch iteration",
+      "value": "while ts_step * batch_size < ts_size:",
+      "quote": "while ts_step * batch_size < ts_size:",
+      "source": "repo:execute_cora_sparse.py@5af87e7"
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/PetarV-/GAT",
+    "commit": "5af87e7fce2b90ae1cbd621cd58059036a3c7436",
+    "files": [
+      "README.md",
+      "execute_cora.py",
+      "execute_cora_sparse.py",
+      "models/base_gattn.py",
+      "models/gat.py",
+      "utils/process.py"
+    ]
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.319
+    },
+    "no_graph": {
+      "accuracy": 0.506
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/pdf/1710.10903v3",
+      "mode": "live",
+      "n_chars": 43997,
+      "retrieved_at": "2026-09-29T13:54:42+00:00",
+      "sha256": "f7f86c91c2403eae7357175e8b4fe74db663bde33e5c14c4878195309b0b74e1"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/PetarV-/GAT",
+      "mode": "live",
+      "n_chars": 17687,
+      "retrieved_at": "2026-09-29T13:55:00+00:00",
+      "sha256": "623d317852c6a2570242e2ca3e59bb0ffd98b17e309669ec80492f206f86a92c"
+    }
+  ],
+  "ablations": {
+    "gat_cora_acc": {
+      "accuracy_full": 0.808,
+      "accuracy_ablated": 0.553,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau"
+}

@@ -22,5 +22,11 @@
   "paper_id": "shchur_pitfalls_2018",
   "title": "Pitfalls of Graph Neural Network Evaluation",
   "timestamp": "20260929-130628"
+ },
+ {
+  "id": "velickovic_gat_2018--20260929-155442",
+  "paper_id": "velickovic_gat_2018",
+  "title": "Graph Attention Networks",
+  "timestamp": "20260929-155442"
  }
 ]
