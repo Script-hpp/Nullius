@@ -38,8 +38,8 @@ def main() -> None:
     for paper in papers:
         claim_ids = list(CLAIMS[paper])
         arms = {
-            "A_ohne_tavily": Orchestrator(use_tavily=False, fresh=True, setup_details=False, claim_ids=claim_ids),
-            "B_mit_tavily": Orchestrator(use_tavily=True, fresh=True, setup_details=True, claim_ids=claim_ids),
+            "A_ohne_tavily": Orchestrator(use_tavily=False, fresh=True, setup_details=False, claim_ids=claim_ids, tavily_mode="fixture"),
+            "B_mit_tavily": Orchestrator(use_tavily=True, fresh=True, setup_details=True, claim_ids=claim_ids, tavily_mode="fixture"),
         }
         snapshots: dict = {}
         for orch in arms.values():

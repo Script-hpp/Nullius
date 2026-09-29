@@ -26,9 +26,9 @@ def main() -> None:
     rows = [json.loads(x) for x in STORE.read_text().splitlines()] if STORE.exists() else []
     snapshots: dict = {}
     arms = {
-        "A_ohne_rolle4": Orchestrator(use_tavily=True, fresh=True, setup_details=False, seeds=n_seeds,
+        "A_ohne_rolle4": Orchestrator(tavily_mode="fixture", use_tavily=True, fresh=True, setup_details=False, seeds=n_seeds,
                                       claim_ids=[CLAIM]),
-        "B_mit_rolle4": Orchestrator(use_tavily=True, fresh=True, setup_details=True, seeds=n_seeds,
+        "B_mit_rolle4": Orchestrator(tavily_mode="fixture", use_tavily=True, fresh=True, setup_details=True, seeds=n_seeds,
                                      claim_ids=[CLAIM]),
     }
     for orch in arms.values():

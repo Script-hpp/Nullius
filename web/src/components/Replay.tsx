@@ -9,6 +9,7 @@ const STEP_MS = 650
 function describe(e: Event): { title: string; body?: string; tone: 'green' | 'amber' | 'red' | 'gray' | 'violet' } {
   switch (e.type) {
     case 'run_start': return { title: `Run starts: ${e.title ?? e.paper_id}`, body: `Tavily ${e.use_tavily ? 'on' : 'off'} · setup details ${e.use_setup_details ? (e.paper_only ? 'from paper only' : 'from paper + repo') : 'off'} · ${e.seeds} runs`, tone: 'gray' }
+    case 'source': return { title: `Source read (${e.kind}): ${e.mode === 'live' ? 'live Tavily call' : 'stored copy'}`, body: `${String(e.url).slice(0, 80)} · sha256 ${String(e.sha256 ?? '').slice(0, 10)}`, tone: e.mode === 'live' ? 'green' : 'gray' }
     case 'tavily_call': return { title: `Tavily role ${e.role}: ${e.endpoint}`, body: `${String(e.target).slice(0, 90)} → ${e.n_results} result(s)`, tone: 'amber' }
     case 'target_resolved': return { title: `Target value ${e.value} verified`, body: `“${String(e.quote).slice(0, 110)}” · ${e.table} · column check: ${e.column_check}`, tone: 'amber' }
     case 'setup_details': return { title: `${e.n} setup details found (each with a verbatim quote)`, body: (e.details ?? []).slice(0, 4).map((d: Json) => `${d.topic}: ${String(d.value).slice(0, 30)}`).join(' · '), tone: 'amber' }

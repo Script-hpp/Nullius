@@ -32,6 +32,7 @@ function eventsFromDossier(d: Json): Event[] {
   for (const c of d.claims ?? []) {
     if (c.target_evidence) push('target_resolved', { claim_id: c.id, value: c.target, quote: c.target_evidence.quote, table: c.target_evidence.table, url: c.target_evidence.url, arxiv_version: c.target_evidence.arxiv_version, column_check: c.target_evidence.column_check })
   }
+  for (const s of d.sources ?? []) push('source', s)
   if ((d.setup_details ?? []).length) push('setup_details', { n: d.setup_details.length, details: d.setup_details })
   for (const c of d.claims ?? []) push('claim_start', { claim_id: c.id, text: c.text, target: c.target, tolerance: c.tolerance })
   for (const a of d.attempts ?? []) push('attempt', { claim_id: a.claim_id, seed: a.seed, branch_id: a.branch_id, parent_snapshot: a.parent_snapshot, code_hash: a.code_hash, status: a.status, measured: a.measured, error: a.error_summary })
