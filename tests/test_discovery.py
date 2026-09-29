@@ -8,7 +8,7 @@ from repro_agent.config import Settings
 class FakeLLM:
     def __init__(self, claim_content=None):
         if claim_content is None:
-            self.claim_content = '{"protocol_match": true, "quote": "95% accuracy", "metric": "acc", "target": 95}'
+            self.claim_content = '{"protocol_match": true, "matched_task": "Cora", "quote": "95% accuracy", "metric": "acc", "target": 95}'
         else:
             self.claim_content = claim_content
     def complete(self, role, messages, temperature=0.0, **kwargs):
@@ -29,6 +29,10 @@ class FakeTavily:
         if self.on_call: self.on_call(2, "extract", url, 0)
         return {"results": [{"raw_content": FULLTEXT}]}
         
+    def curate_extract(self, url, query):
+        self.extract_queries = getattr(self, "extract_queries", []) + [query]
+        return {"results": [{"url": url, "raw_content": FULLTEXT}]}
+
     def curate_repo(self, title):
         if self.on_call: self.on_call(8, "search", title, len(self.repos))
         return {"results": [{"url": r} for r in self.repos]}
@@ -80,28 +84,28 @@ def test_no_claim_reject(monkeypatch, arxiv_xml, tmp_path):
     assert len(rejects) >= 1
     
     # 2. Empty quote
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "no quote provided" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
 
     # 3. Quote not in text
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "I made this up 95", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "I made this up 95", "target": 95}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "quote not found in text" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
 
     # 4. Target not in quote
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 99}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 99}'), tavily=FakeTavily(), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     rejects = [e for e in events if e.get("type") == "reject" and "target value not found numerically in quote" in e.get("reason", "").lower()]
     assert len(rejects) >= 1
     
     # 5. Success case
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / f"cache_{__import__('uuid').uuid4()}.json"))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -226,7 +230,7 @@ def test_cache_hit_on_reject(monkeypatch, tmp_path):
         def curate_repo(self, title):
             self.calls += 1
             return {"results": []}
-        def read_claims(self, url):
+        def curate_extract(self, url, query):
             self.calls += 1
             return {"results": [{"raw_content": "No claims here."}]}
 
@@ -256,7 +260,7 @@ def test_numerical_quote(monkeypatch, arxiv_xml, tmp_path):
     cache_file = tmp_path / "c1.json"
     
     # Target 95.0, quote has 95%
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 95.0}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95.0}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -264,7 +268,7 @@ def test_numerical_quote(monkeypatch, arxiv_xml, tmp_path):
 
     cache_file = tmp_path / "c2.json"
     # Target 0.95, quote has 95%
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 0.95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 0.95}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     candidates = [e for e in events if e.get("type") == "candidate"]
@@ -283,7 +287,7 @@ def test_extract_limit(monkeypatch, arxiv_xml, tmp_path):
             self.calls = 0
         def curate_repo(self, title):
             return {"results": []}
-        def read_claims(self, url):
+        def curate_extract(self, url, query):
             self.calls += 1
             raise Exception("Fail extract")
             
@@ -307,28 +311,28 @@ def test_missing_target(monkeypatch, arxiv_xml, tmp_path):
 
     # Missing target
     cache_file = tmp_path / "c1.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "95"}'), tavily=FakeTavily(), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95"}'), tavily=FakeTavily(), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
 
     # Null target
     cache_file = tmp_path / "c2.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "95", "target": null}'), tavily=FakeTavily(), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95", "target": null}'), tavily=FakeTavily(), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
 
     # String target with %
     cache_file = tmp_path / "c3.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any(e.get("type") == "candidate" for e in events)
 
     # String target bad parse
     cache_file = tmp_path / "c4.json"
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "95%", "target": "ninety-five"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "ninety-five"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     assert any("Target missing" in e.get("reason", "") for e in events if e.get("type") == "reject")
@@ -340,7 +344,7 @@ def test_on_call_events(monkeypatch, arxiv_xml, tmp_path):
     monkeypatch.setattr("httpx.get", mock_get)
     cache_file = tmp_path / "c99.json"
     
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "95%", "target": "95%"}'), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     events = []
     agent.discover(["Cora"], on_event=lambda e: events.append(e))
     
@@ -410,8 +414,7 @@ def test_L3_short_text(monkeypatch, arxiv_xml, tmp_path):
     monkeypatch.setattr("httpx.get", mock_get)
     
     class ShortTavily(FakeTavily):
-        def read_claims(self, url, paper_title=None):
-            if self.on_call: self.on_call(2, "extract", url, 0)
+        def curate_extract(self, url, query):
             return {"results": [{"raw_content": "Too short!"}]}
             
     cache_file = tmp_path / "c_l3.json"
@@ -493,7 +496,7 @@ def test_L2_unreadable_answer_not_cached(monkeypatch, arxiv_xml, tmp_path):
 def test_L2_thinking_text_before_json(monkeypatch, arxiv_xml, tmp_path):
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
     content = ('Let me think. The text uses {braces} in prose. Final answer: '
-               '{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 95}')
+               '{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}')
     agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
                            cache_path=str(tmp_path / "c.json"))
     events = []
@@ -505,7 +508,7 @@ def test_L3_extract_error_does_not_fall_back_to_abstract(monkeypatch, arxiv_xml,
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
 
     class FailingTavily(FakeTavily):
-        def read_claims(self, url):
+        def curate_extract(self, url, query):
             raise RuntimeError("extract failed")
 
     class CountingLLM(FakeLLM):
@@ -524,7 +527,7 @@ def test_L3_extract_error_does_not_fall_back_to_abstract(monkeypatch, arxiv_xml,
 
 
 def test_max_two_candidates_per_dataset(monkeypatch, tmp_path):
-    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "quote": "It achieves 95% accuracy", "target": 95}'),
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content='{"protocol_match": true, "matched_task": "Cora", "quote": "It achieves 95% accuracy", "target": 95}'),
                            tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse("# Cora\n"))
     agent._search_arxiv = lambda ds, max_results=30: [
@@ -545,3 +548,124 @@ def test_L4_select_sections_keeps_experiments():
     assert out.startswith("Abstract: Our abstract.")
     assert "related related" not in out
     assert len(out) <= 20000
+
+
+ATOM_ONE = open(os.path.join(os.path.dirname(__file__), "fixtures", "arxiv_sample.xml")).read()
+
+
+class TavilyFinder(FakeTavily):
+    """Tavily findet Papers selbst: arXiv-Treffer plus ein Treffer ohne arXiv-ID."""
+    def __init__(self, repos=None):
+        super().__init__(repos)
+        self.paper_queries = []
+        self.discussion_titles = []
+    def curate_papers(self, query, max_results=10):
+        self.paper_queries.append(query)
+        return {"results": [
+            {"url": "https://arxiv.org/html/2101.12345v1", "title": "Sample", "content": "Table 2: Cora 95% accuracy"},
+            {"url": "https://openreview.net/pdf/abc.pdf", "title": "No arXiv id", "content": "Cora 81.5"},
+        ]}
+    def curate_discussion(self, title, max_results=5):
+        self.discussion_titles.append(title)
+        return {"results": [{"url": "https://github.com/foo/bar/issues/12", "title": "Cannot reproduce 95%", "content": "Seed dependent"}]}
+
+
+def test_tavily_finds_papers_and_community(monkeypatch, tmp_path):
+    urls = []
+    def mock_get(url, *args, **kwargs):
+        urls.append((url, kwargs.get("params")))
+        return FakeResponse(ATOM_ONE)
+    monkeypatch.setattr("httpx.get", mock_get)
+    tavily = TavilyFinder(repos=["https://github.com/foo/bar"])
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=tavily, cache_path=str(tmp_path / "c.json"))
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+
+    assert tavily.paper_queries and "Cora" in tavily.paper_queries[0]
+    # Metadaten per id_list, nicht per Stichwortsuche
+    arxiv_calls = [p for u, p in urls if "export.arxiv.org" in u]
+    assert arxiv_calls and arxiv_calls[0]["id_list"] == "2101.12345"
+    assert not any(e.get("message", "").startswith("No Tavily hits") for e in events)
+    # Gezielter Extract mit Frage zum Protokoll
+    assert "split" in tavily.extract_queries[0].lower()
+    assert len(result) == 1
+    c = result[0]
+    assert c.found_by == "tavily" and c.source_url == "https://arxiv.org/html/2101.12345v1"
+    assert c.community[0]["url"].endswith("/issues/12")
+    cand = [e for e in events if e.get("type") == "candidate"][0]
+    assert cand["found_by"] == "tavily" and cand["community_hits"] == 1
+    roles = [(e["role"], e["endpoint"]) for e in events if e.get("type") == "tavily_call"]
+    assert roles[0] == (8, "search") and (2, "extract") in roles
+
+
+def test_falls_back_to_arxiv_without_tavily_hits(monkeypatch, arxiv_xml, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    class NoHits(FakeTavily):
+        def curate_papers(self, query, max_results=10):
+            return {"results": [{"url": "https://openreview.net/forum?id=x", "content": "Cora 80%"}]}
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=NoHits(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    assert any(e.get("message", "").startswith("No Tavily hits") for e in events)
+    assert result and result[0].found_by == "arxiv"
+
+
+def test_prefilter_uses_tavily_snippet(monkeypatch, tmp_path):
+    """Abstract ohne Datensatz/Zahl, aber Tavily-Ausschnitt mit Tabelle: nicht vorab verwerfen."""
+    atom = ATOM_ONE.replace("This is a sample abstract mentioning Cora dataset. It achieves 95% accuracy.",
+                            "We propose a new graph model.")
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(atom))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    events = []
+    agent.discover(["Cora"], on_event=events.append)
+    assert not any(e.get("stage") == "prefilter" for e in events)
+
+
+def test_protocol_checked_against_all_dataset_tasks(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf 3: Paper mit Shchur-Splits wurde verworfen, obwohl Cora-LCC genau das prueft."""
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    prompts = []
+    class RecordingLLM(FakeLLM):
+        def complete(self, role, messages, **kwargs):
+            prompts.append(messages[0]["content"])
+            return super().complete(role, messages, **kwargs)
+    content = '{"protocol_match": true, "matched_task": "Cora-LCC", "quote": "It achieves 95% accuracy", "target": 95}'
+    agent = DiscoveryAgent(llm=RecordingLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
+                           cache_path=str(tmp_path / "c.json"))
+    result = agent.discover(["Cora"])
+    assert "[Cora]" in prompts[0] and "[Cora-LCC]" in prompts[0]
+    assert result and result[0].claim["matched_task"] == "Cora-LCC"
+
+
+def test_unknown_matched_task_rejected_not_cached(monkeypatch, arxiv_xml, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    content = '{"protocol_match": true, "matched_task": "PubMed", "quote": "It achieves 95% accuracy", "target": 95}'
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
+    events = []
+    assert agent.discover(["Cora"], on_event=events.append) == []
+    assert any(e.get("stage") == "protocol" and "PubMed" in e["reason"] for e in events)
+    assert "2101.12345" not in _read_cache(cache_file)
+
+
+def test_short_extract_retried_once(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf 3: dieselbe URL lieferte erst 16, beim zweiten Aufruf 3531 Zeichen."""
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    class Flaky(FakeTavily):
+        calls = 0
+        def curate_extract(self, url, query):
+            Flaky.calls += 1
+            return {"results": [{"raw_content": "x" * 16 if Flaky.calls == 1 else FULLTEXT}]}
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=Flaky(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    assert len(agent.discover(["Cora"])) == 1
+    assert Flaky.calls == 2
+
+
+def test_matched_task_with_brackets_accepted(monkeypatch, arxiv_xml, tmp_path):
+    """Live-Lauf 4 (Token Factory): 3 von 6 Papers verworfen, weil das LLM '[Cora-LCC]' schrieb."""
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    content = '{"protocol_match": true, "matched_task": " [Cora-LCC] ", "quote": "It achieves 95% accuracy", "target": 95}'
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=content), tavily=FakeTavily(repos=["https://github.com/foo/bar"]),
+                           cache_path=str(tmp_path / "c.json"))
+    result = agent.discover(["Cora"])
+    assert result and result[0].claim["matched_task"] == "Cora-LCC"

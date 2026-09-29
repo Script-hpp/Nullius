@@ -93,3 +93,40 @@ class TavilyTools:
             max_results=5,
         ))
 
+
+    def curate_papers(self, query: str, max_results: int = 10) -> dict:
+        """Discovery: aktuelle Papers mit Ergebnissen auf einem unterstuetzten Datensatz finden.
+
+        Anders als die arXiv-API durchsucht Tavily auch OpenReview und liefert Textausschnitte mit Zahlen.
+        """
+        return self._note(8, "search", query, self._client.search(
+            query=query,
+            include_domains=["arxiv.org", "openreview.net"],
+            time_range="year",
+            search_depth="advanced",
+            max_results=max_results,
+        ))
+
+    def curate_discussion(self, paper_title: str, max_results: int = 5) -> dict:
+        """Discovery: Community-Hinweise zu einem Paper (Issues, Reviews, Diskussionen).
+
+        Treffer werden nur als Belege angezeigt; ein Urteil daraus faellt erst im Loop (Rolle 3).
+        """
+        return self._note(8, "search", paper_title, self._client.search(
+            query=f'"{paper_title}" reproduce OR reproducibility OR issue OR results',
+            include_domains=["github.com", "openreview.net", "reddit.com"],
+            max_results=max_results,
+        ))
+
+    def curate_extract(self, url: str, query: str, chunks_per_source: int = 5) -> dict:
+        """Discovery: nur die zur Frage passenden Abschnitte eines Papers (Protokoll, Split, Ergebnisse).
+
+        Tavily waehlt die Abschnitte; das spart LLM-Tokens und Wartezeit gegenueber dem Volltext.
+        """
+        return self._note(2, "extract", url, self._client.extract(
+            urls=[url],
+            extract_depth="advanced",
+            format="markdown",
+            query=query,
+            chunks_per_source=chunks_per_source,
+        ))
