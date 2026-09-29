@@ -49,6 +49,30 @@ class Verdict:
     measured_std: float
     explanation: str
     sources: list[str] = field(default_factory=list)
+    # Achse 2: setzt der Code die Methode des Papers um? Solange der Pruefer nicht geeicht ist
+    # (Eichung v1 gescheitert, benchmark/experiments/results/calibration_fidelity_v1.md): "nicht geprueft".
+    methode: Literal["ja", "teilweise", "nein", "nicht geprueft"] = "nicht geprueft"
+
+    @property
+    def gesamtaussage(self) -> str:
+        return gesamtaussage(self.urteil, self.methode)
+
+
+# Benchmark zaehlt nur diese beiden Gesamtaussagen (Methode umgesetzt).
+BENCHMARK_AUSSAGEN = ("Paper reproduziert", "nicht reproduziert")
+
+
+def gesamtaussage(urteil: str, methode: str) -> str:
+    """Achse 1 (Zahl, inkl. 'Agenten-Fehler vermutet') x Achse 2 (Methode). Achse 1 bleibt unberuehrt."""
+    if urteil in ("Agenten-Fehler vermutet", "nicht reproduzierbar (Setup)"):
+        return urteil
+    if methode == "nicht geprueft":
+        return "vorlaeufig"
+    if urteil == "reproduziert":
+        return "Paper reproduziert" if methode == "ja" else "Zielwert erreicht mit anderem Modell"
+    if methode != "ja":
+        return "nicht bewertbar (Methode nicht umgesetzt)"
+    return "nicht reproduziert" if urteil == "nicht reproduziert" else "teilweise reproduziert"
 
 
 @dataclass

@@ -217,6 +217,8 @@ Leak-Schutz (Schichten, im Dossier unter `isolation` festgehalten und im Zeugnis
 | darüber | nicht reproduziert |
 | Harness-Check fehlgeschlagen | ungültig |
 
+**Zweidimensionales Urteil.** Achse 1 (Zahl): reproduziert / teilweise / nicht reproduziert / Agenten-Fehler vermutet / nicht reproduzierbar (Setup), vom Prüfer nie verändert. Achse 2 (Methodentreue, `Verdict.methode`): ja / teilweise / nein / nicht geprüft. Gesamtaussage (`dossier.gesamtaussage`): reproduziert + ja = „Paper reproduziert“; reproduziert + nein/teilweise = „Zielwert erreicht mit anderem Modell“; nicht reproduziert + ja = „nicht reproduziert“; Achse 2 nicht geprüft = „vorläufig“. Benchmark zählt nur „Paper reproduziert“ und „nicht reproduziert“. **Stand:** Eichung des Methodentreue-Prüfers v1 gescheitert (5/10, 2× ja↔nein, `benchmark/experiments/results/calibration_fidelity_v1.md`), Achse 2 daher überall „nicht geprüft“. Neue Eichung nur auf neuen Codes.
+
 Benötigte Metriken: Accuracy, MSE/MAE, Recall@K/NDCG. Bei Recsys exaktes Auswertungsprotokoll des Papers umsetzen (Anzahl Ranking-Kandidaten usw.).
 
 ## Datenmodell (Forschungsakte)
