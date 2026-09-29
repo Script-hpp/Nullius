@@ -24,9 +24,9 @@ export const OVERALL: Record<string, string> = {
   'nicht reproduzierbar (Setup)': 'Setup Not Reproducible',
 }
 export const ATTEMPT: Record<string, { label: string; tone: Tone }> = {
-  'stabil': { label: 'WITHIN TOLERANCE', tone: 'green' },
-  'abweichung': { label: 'DEVIATION', tone: 'amber' },
-  'fehler': { label: 'ERROR', tone: 'red' },
+  'stabil': { label: 'PASSED', tone: 'green' },
+  'abweichung': { label: 'OUT OF RANGE', tone: 'amber' },
+  'fehler': { label: 'FAILED', tone: 'red' },
   'ungueltig': { label: 'INVALID', tone: 'gray' },
   'timeout': { label: 'TIMEOUT', tone: 'gray' },
 }
@@ -38,6 +38,7 @@ export const ABLATION: Record<string, string> = {
 }
 export const de2en = (map: Record<string, { label: string; tone: Tone }>, k: string) =>
   map[k] ?? { label: k.toUpperCase(), tone: 'gray' as Tone }
+
 export const TONE_VAR: Record<Tone, string> = {
   green: 'var(--green, #34d399)', amber: 'var(--amber, #fbbf24)', red: 'var(--red, #f87171)', gray: 'var(--muted, #9ca3af)', violet: 'var(--violet, #a78bfa)',
 }

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Layout } from './components/Layout'
 import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
-import { Badge, Section, Stat, } from './components/ui'
+import { Badge, Section, } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
-import { METHOD, OVERALL, RESULT, de2en, type Tone } from './labels'
-import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { RESULT, de2en, type Tone } from './labels'
+import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network } from 'lucide-react'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -34,7 +34,7 @@ function translateClaim(text: string) {
   t = t.replace(/Accuracy auf/g, 'accuracy on')
   t = t.replace(/groesste Komponente/g, 'largest component')
   t = t.replace(/zufaellige/g, 'random')
-  t = t.replace(/,(\d) %/g, '.$1%') // "81,0 %" -> "81.0%"
+  t = t.replace(/,(\d) %/g, '.$1%')
   return t
 }
 
@@ -69,6 +69,13 @@ function getDelta(measured: any, target: any) {
   return { text: `${diff.toFixed(1)}%`, color: 'text-rose-400' }
 }
 
+function getJuryStatement(claimed: string, measured: string, tone: Tone) {
+  if (tone === 'green') return `The paper claims ${claimed}, and our independent sandbox measured ${measured}. The claim is fully verified and holds true.`
+  if (tone === 'amber') return `The paper claims ${claimed}, but we measured ${measured}. The target was closely missed, indicating partial reproducibility.`
+  if (tone === 'red') return `The paper claims ${claimed}, but we only measured ${measured}. The claim could not be verified.`
+  return `The paper claims ${claimed}, but the verification is incomplete.`
+}
+
 function DashboardHeader({ count }: { count: number }) {
   return (
     <div className="mb-10">
@@ -87,7 +94,6 @@ function DashboardHeader({ count }: { count: number }) {
         </div>
       </div>
       
-      {/* Quick Stats Row */}
       <div className="grid grid-cols-4 gap-4">
         <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
           <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
@@ -196,7 +202,7 @@ function Home({ runs }: { runs: RunRef[] }) {
 function RunView({ ref_ }: { ref_: RunRef }) {
   const [run, setRun] = useState<RunData | null>(null)
   const [selected, setSelected] = useState<Json | null>(null)
-  const [tab, setTab] = useState<'code' | 'zeugnis' | 'plan'>('zeugnis')
+  const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>('evidence')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   
   if (!run) return <main className="mx-auto max-w-6xl px-8 py-10 muted">Loading run data…</main>
@@ -206,15 +212,18 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   if (!claim) return <main className="mx-auto max-w-6xl px-8 py-10 muted">Empty run.</main>
   
   const res = v ? de2en(RESULT, v.urteil) : { label: 'NO VERDICT', tone: 'gray' as const }
-  const meth = v ? de2en(METHOD, v.methode) : { label: '–', tone: 'gray' as const }
   const attempts: Json[] = (d.attempts ?? []).filter((a: Json) => a.claim_id === claim.id)
-  const end = run.events.find((e) => e.type === 'run_end')
-  const cost = end?.cost_net_usd ?? attempts[attempts.length - 1]?.cost_usd
   const paperUrl = claim.target_evidence?.url
-  const tabs = { zeugnis: run.zeugnis, code: run.code, plan: run.plan }
   
   let delta = null
   if (v && claim) delta = getDelta(v.measured_mean, claim.target)
+
+  const tabs = [
+    { id: 'evidence', label: 'Data & Evidence', icon: <FileText className="w-4 h-4" /> },
+    { id: 'log', label: 'Execution Log', icon: <ActivityIcon className="w-4 h-4" /> },
+    { id: 'tree', label: 'Branch Tree', icon: <Network className="w-4 h-4" /> },
+    { id: 'files', label: 'Raw Files', icon: <Code className="w-4 h-4" /> },
+  ] as const
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-8 pb-20">
@@ -224,13 +233,11 @@ function RunView({ ref_ }: { ref_: RunRef }) {
         </a>
       </div>
       
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8 border-b border-zinc-800/50">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8">
         <div className="flex items-center gap-3 text-zinc-500 text-xs mb-3 font-mono">
           <span>{run.ref.paper_id}</span>
           <span>•</span>
           <span>{parseDate(run.ref.timestamp)}</span>
-          <span>•</span>
-          <span className="uppercase tracking-wider">{d.mode === 'nachbau' ? 'REBUILD (OWN CODE)' : d.mode.toUpperCase()}</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-zinc-100 leading-tight">{run.ref.title}</h1>
         <p className="mt-4 text-lg text-zinc-400 max-w-3xl leading-relaxed">{translateClaim(claim.text)}</p>
@@ -243,63 +250,75 @@ function RunView({ ref_ }: { ref_: RunRef }) {
         )}
       </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Section title="Final Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
-          <div className="space-y-6">
-            <div>
-              <div className="text-zinc-500 mb-2 text-[10px] font-semibold uppercase tracking-widest">1 · Reproducibility</div>
-              <Badge tone={res.tone}>{res.label}</Badge>
+      {/* Split Layout: Verdict & Chart */}
+      <div className="grid gap-6 lg:grid-cols-3 items-start">
+        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
+          <div className="mb-8">
+            <h3 className={`text-4xl font-bold tracking-tight mt-2 ${colorForTone(res.tone)}`}>{res.label}</h3>
+          </div>
+          
+          <div className="space-y-4 mb-6">
+            <div className="flex justify-between items-center w-full">
+              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
+              <span className="font-mono text-zinc-300 text-lg">{toPercent(claim.target)}</span>
             </div>
-            <div>
-              <div className="text-zinc-500 mb-2 text-[10px] font-semibold uppercase tracking-widest">2 · Method Fidelity</div>
-              <Badge tone={meth.tone}>{meth.label}</Badge>
+            <div className="flex justify-between items-center w-full pt-4 border-t border-zinc-800/50">
+              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Measured</span>
+              <div className="flex items-center gap-3">
+                {delta && <span className={`font-mono text-sm font-semibold ${delta.color}`}>{delta.text}</span>}
+                <span className={`font-mono font-bold text-xl ${colorForTone(res.tone)}`}>{toPercent(v?.measured_mean)}</span>
+              </div>
             </div>
-            <div className="pt-3 border-t border-zinc-800/50">
-              <div className="text-zinc-500 mb-1 text-[10px] font-semibold uppercase tracking-widest">Overall Statement</div>
-              <span className="text-sm font-medium text-zinc-200">{OVERALL[v?.gesamt ?? ''] ?? (v?.methode === 'nicht geprueft' ? 'Provisional' : '–')}</span>
-            </div>
-            <p className="text-zinc-600 text-[11px] leading-relaxed">
-              A hit on the number alone proves nothing about the method: a closed-form regression can hit a target value, so the second axis exists.
+          </div>
+          
+          <div className="bg-zinc-950 border border-zinc-800/50 rounded-lg p-4">
+            <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
+              {getJuryStatement(toPercent(claim.target), toPercent(v?.measured_mean), res.tone)}
             </p>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 bg-[#0a0a0a] p-4 rounded-xl border border-zinc-800/50">
-            <Stat label="Measured" value={toPercent(v?.measured_mean)} sub={delta ? <span className={`font-semibold ${delta.color}`}>{delta.text} diff</span> : null} />
-            <Stat label="Claimed" value={toPercent(claim.target)} sub={`± ${toPercent(claim.tolerance)}`} />
-          </div>
-          <div className="mt-4 text-right">
-             <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-mono">Cost: {cost != null ? `$${Number(cost).toFixed(3)} net` : '–'}</span>
+            <p className="text-[11px] text-zinc-500 mt-2">Margin of Error: ±{toPercent(claim.tolerance)}</p>
           </div>
         </Section>
-        <Section title="Measurements" hint={`${attempts.length} runs`} className="lg:col-span-2">
+        
+        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 h-full">
           <AttemptChart dossier={d} claimId={claim.id} />
         </Section>
       </div>
 
-      <Section title="Evidence" hint="Left: Extracted from paper · Right: Measured in sandbox">
-        <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />
-      </Section>
-
-      <Section title="Branch Tree" hint="Violet edges indicate agent repairs">
-        <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />
-      </Section>
-
-      <Section title="Execution Log" hint="Live event stream">
-        <Replay events={run.events} />
-      </Section>
-
-      <Section title="Source Files">
-        <div className="mb-4 flex gap-2 border-b border-zinc-800/50 pb-3">
-          {(['zeugnis', 'code', 'plan'] as const).map((t) => tabs[t] != null && (
-            <button key={t} onClick={() => setTab(t)} 
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors cursor-pointer ${tab === t ? 'bg-zinc-100 text-zinc-900 shadow-sm' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'}`}>
-              {t === 'zeugnis' ? 'Certificate' : t === 'code' ? 'Agent Code' : 'Execution Plan'}
+      {/* Tabs Layout */}
+      <div className="mt-12">
+        <div className="flex gap-2 border-b border-zinc-800/50 pb-px mb-6">
+          {tabs.map((t) => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)} 
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 cursor-pointer ${activeTab === t.id ? 'border-zinc-100 text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>
+              {t.icon}
+              {t.label}
             </button>
           ))}
         </div>
-        <pre className="font-mono max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-[#0a0a0a] border border-zinc-800/50 text-zinc-300 text-[13px] leading-relaxed">
-          {tabs[tab] ?? 'not available'}
-        </pre>
-      </Section>
+        
+        <AnimatePresence mode="wait">
+          <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}>
+            {activeTab === 'evidence' && <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />}
+            {activeTab === 'log' && <Replay events={run.events} />}
+            {activeTab === 'tree' && <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />}
+            {activeTab === 'files' && (
+              <div className="space-y-6">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-sm flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p>These raw files are primarily used by developers to debug the agent's behavior. They contain internal Markdown structure.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800">Agent Code</button>
+                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800">Execution Plan</button>
+                </div>
+                <pre className="font-mono h-96 overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-[#0a0a0a] border border-zinc-800/50 text-zinc-400 text-[12px] leading-relaxed">
+                  {run.code || 'No code snapshot available.'}
+                </pre>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </main>
   )
 }
