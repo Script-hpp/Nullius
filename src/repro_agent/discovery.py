@@ -8,6 +8,8 @@ import httpx
 
 from .costs import BudgetExceeded
 from .llm import BillingBlocked, LLMClient
+from .claims_source import _norm as _table_norm
+from .table_check import check_columns
 from .tavily_tools import TavilyTools
 
 MIN_FULLTEXT_CHARS = 800    # gezielter Extract liefert ca. 4000 Zeichen; darunter nur Reste (Live-Lauf 1: SVG-Namen)
@@ -55,14 +57,38 @@ TITLE_STOPWORDS = {"with", "from", "that", "this", "towards", "toward", "using",
 COMMUNITY_TITLE_SHARE = 0.6
 
 
-def _method_supported(method, quote: str, text: str) -> bool:
-    """Methode steht im Zitat oder in den 2000 Zeichen davor (Spaltenkopf der Tabelle)."""
+def _quote_lines(quote: str) -> list[str]:
+    """Nicht-leere Zitatzeilen (normalisiert); Trennzeilen wie |---| fallen weg."""
+    return [n for n in (_norm_quote(l) for l in quote.split("\n")) if n]
+
+
+def _quote_in_text(quote: str, text: str) -> bool:
+    """Zeilenweise: jede nicht-leere Zeile des Zitats muss fuer sich im Text stehen (Kopfzeile darf weiter vorn stehen).
+    Einzeilige Zitate wie bisher; kein Fuzzy-Match."""
+    t = _norm_quote(text)
+    lines = _quote_lines(quote)
+    return bool(lines) and all(l in t for l in lines)
+
+
+def _number_line(quote: str, target) -> str | None:
+    """Rohzeile des Zitats, die die Zielzahl enthaelt (Zahl, Prozent oder Anteil)."""
+    import re
+    for line in quote.split("\n"):
+        for m in re.finditer(r"\d+(?:\.\d+)?", _norm_quote(line)):
+            n = float(m.group())
+            if any(abs(x - target) < 1e-9 for x in (n, n / 100, n * 100)):
+                return line
+    return None
+
+
+def _method_supported(method, quote: str, text: str, anchor: str | None = None) -> bool:
+    """Methode steht im Zitat oder in den 2000 Zeichen vor der Fundstelle der Zeile mit der Zahl (Spaltenkopf)."""
     if not (isinstance(method, str) and method.strip()):
         return False
     m, q, t = _norm_quote(method), _norm_quote(quote), _norm_quote(text)
     if m in q:
         return True
-    pos = t.find(q)
+    pos = t.find(_norm_quote(anchor) if anchor else q)
     return pos >= 0 and m in t[max(0, pos - METHOD_CONTEXT_CHARS):pos]
 
 
@@ -177,6 +203,7 @@ DISCOVERY_PROTOCOL_HINTS = {
 }
 MAX_README_ARXIV_LINKS = 5
 MAX_README_GITHUB_LINKS = 10
+RETRY_TEMPERATURE = 0.3
 ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
 NO_REPO_REASON = "kein passendes Repo gefunden"
 ARXIV_ID_RE = __import__("re").compile(r"arxiv\.org/(?:abs|html|pdf)/(\d{4}\.\d{4,5})")
@@ -273,7 +300,7 @@ class DiscoveryAgent:
         resp.raise_for_status()
         return _parse_atom(resp.text)
         
-    def _extract_claim(self, text: str, dataset: str, emit_func=None) -> dict | None:
+    def _extract_claim(self, text: str, dataset: str, emit_func=None, temperature: float = 0.0) -> dict | None:
         """LLM extrahiert einen Claim und prueft das Protokoll gegen alle Tasks dieses Datensatzes."""
         import time
         tasks = _tasks_for(dataset)
@@ -317,7 +344,7 @@ class DiscoveryAgent:
             t0 = time.time()
             # Lightning denkt im Antworttext; 4000 reichten im Live-Lauf nicht (finish_reason length).
             # Rolle extract (Super) wie Rollen 2/4: Lightning dachte im Live-Lauf 8000 Tokens ohne Antwort.
-            resp = self.llm.complete("extract", messages, temperature=0.0, max_tokens=8000)
+            resp = self.llm.complete("extract", messages, temperature=temperature, max_tokens=8000)
             is_truncated = getattr(resp, "finish_reason", "") == "length"
             cached = bool(getattr(resp, "cached", False))
             if emit_func:
@@ -624,6 +651,10 @@ class DiscoveryAgent:
 
                 claim = self._extract_claim(text, ds, emit_func=emit)
                 claim_data = claim or {}
+                # Leeres Ergebnis ({} oder unlesbar) schwankt zwischen Laeufen: genau ein zweiter Versuch mit anderer
+                # Temperatur (gleiche Temperatur kaeme aus dem Cache). Hoechstens eine Wiederholung pro Paper.
+                if not claim_data or claim_data.get("llm_unreadable"):
+                    claim_data = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
 
                 # LLM-Probleme sind kein Befund ueber das Paper: nicht cachen.
                 if claim_data.get("llm_truncated"):
@@ -664,7 +695,7 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                if norm_ws(quote) not in norm_ws(text):
+                if not _quote_in_text(quote, text):
                     reason = "Quote not found in text"
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"})
                     reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"}.get("reason", "")
@@ -710,7 +741,7 @@ class DiscoveryAgent:
                         continue
 
                 method = claim_data.get("method")
-                if not _method_supported(method, quote, text):
+                if not _method_supported(method, quote, text, _number_line(quote, target_val)):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
                     continue
 
@@ -721,6 +752,17 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason})
                     continue
                 claim_data["metric"] = metric
+
+                # Spaltenzuordnung: steht die Zahl in der Spalte der Methode? (deterministisch, table_check.py)
+                row = _number_line(quote, target_val) or quote
+                col = check_columns(_table_norm(text.replace("|", " ")), _table_norm(row.replace("|", " ")), target_val,
+                                    method, ds, metric, metric == "accuracy")
+                if col.status == "mismatch":
+                    reason = f"Number belongs to another column: {col.detail}"
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
+                    _update_cache(cache_key, {"status": "rejected", "reason": reason})
+                    continue
+                claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
 
                 claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"
                                                    else "Protokoll nicht belegt")

@@ -12,6 +12,7 @@ export type DClaim = {
   quote?: string
   matched_task?: string | null
   protocol?: string
+  column_check?: 'ok' | 'unchecked'
 }
 
 export type DPaper = {
@@ -89,6 +90,7 @@ export function humanReject(stage: string | undefined, reason: string | undefine
     [/target missing/i, 'The reported number could not be parsed.'],
     [/target value not found/i, 'The number is not contained in the quote.'],
     [/metrik nicht messbar/i, 'The metric cannot be measured by our tasks (for example a relative improvement).'],
+    [/another column/i, 'The number sits in another column of the results table, not in the proposed method column.'],
     [/horizont nicht/i, 'The number is not for prediction horizon 96, which is the one we can re-run.'],
   ]
   for (const [re, text] of table) if (re.test(r)) return text

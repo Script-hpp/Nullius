@@ -183,6 +183,9 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
             </div>
           </div>
           <QuoteView quote={c.quote} target={c.target} />
+          {c.column_check && (
+            <p className="text-[11px] text-zinc-500">{c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}</p>
+          )}
         </div>
       )}
 

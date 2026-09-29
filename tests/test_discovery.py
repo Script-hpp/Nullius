@@ -1151,3 +1151,116 @@ def test_candidate_event_without_repo_has_null_github_url(monkeypatch, arxiv_xml
     result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
     cand = [e for e in events if e.get("type") == "candidate"][0]
     assert cand["github_url"] is None
+
+
+# ---- Y1 zeilenweise Zitate, Y2 Spaltenpruefung, Y3 zweiter LLM-Versuch ----
+
+TABLE = ("Table 3: results on ETTh1.\n| Methods | HaKAN | RLinear |\n| Metric | MSE | MAE | MSE | MAE |\n"
+         "| ETTh1 96 | 0.369 | 0.394 | 0.376 | 0.395 |\n")
+ROW_LINE = "| ETTh1 96 | 0.369 | 0.394 | 0.376 | 0.395 |"
+
+
+def _run_claim(monkeypatch, tmp_path, text, **claim):
+    atom = ATOM_ONE.replace("Cora", "ETTh1")
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(atom))
+    class T(FakeTavily):
+        def curate_extract(self, url, query):
+            return {"results": [{"raw_content": text + "Filler sentence. " * 300}]}
+    base = {"protocol": "passt", "protocol_quote": "Table 3: results on ETTh1.", "matched_task": "ETTh1", "method": "HaKAN",
+            "metric": "MSE", "horizon": 96, "quote": ROW_LINE, "target": 0.369}
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=FakeLLM(claim_content=json.dumps({**base, **claim})), tavily=T(repos=["https://github.com/foo/bar"]),
+                           cache_path=cache_file)
+    events = []
+    return agent.discover(["ETTh1"], on_event=events.append), events, cache_file
+
+
+def test_multiline_quote_header_far_before_row_ok(monkeypatch, tmp_path):
+    """Kopfzeile steht 300 Zeichen vor der Werte-Zeile, nicht direkt davor."""
+    text = ("| (ours) | HaKAN | RLinear |\n| Metric | MSE | MAE |\n" + "Unrelated sentence. " * 15
+            + "\n| ETTh1 96 | 0.369 | 0.394 |\n")
+    quote = "| (ours) | HaKAN | RLinear |\n| Metric | MSE | MAE |\n| ETTh1 96 | 0.369 | 0.394 |"
+    result, _, _ = _run_claim(monkeypatch, tmp_path, text, quote=quote)
+    assert len(result) == 1 and result[0].claim["column_check"] == "unchecked"
+
+
+def test_multiline_quote_with_invented_line_rejected(monkeypatch, tmp_path):
+    text = "| Metric | MSE | MAE |\n| ETTh1 96 | 0.369 | 0.394 |\n"
+    quote = "| Metric | MSE | MAE |\n| HaKAN made up row | 1 | 2 |\n| ETTh1 96 | 0.369 | 0.394 |"
+    result, events, cache_file = _run_claim(monkeypatch, tmp_path, text, quote=quote)
+    assert result == []
+    assert any(e.get("reason") == "Quote not found in text" for e in events)
+
+
+def test_method_window_anchored_at_number_line():
+    from repro_agent.discovery import _method_supported
+    text = "| Model | HaKAN |\n" + "x " * 100 + "\n| ETTh1 96 | 0.369 |\n" + "y " * 3000 + "| HaKAN |"
+    quote = "| Metric | MSE |\n| ETTh1 96 | 0.369 |"
+    assert not _method_supported("HaKAN", quote, text)                       # Zitatanfang steht nicht im Text
+    assert _method_supported("HaKAN", "| ETTh1 96 | 0.369 |", text, "| ETTh1 96 | 0.369 |")
+
+
+def test_column_ok_when_number_in_method_column(monkeypatch, tmp_path):
+    result, _, _ = _run_claim(monkeypatch, tmp_path, TABLE)
+    assert len(result) == 1 and result[0].claim["column_check"] == "ok"
+
+
+def test_column_mismatch_when_number_in_baseline_column(monkeypatch, tmp_path):
+    result, events, cache_file = _run_claim(monkeypatch, tmp_path, TABLE, target=0.376)   # RLinear-MSE
+    assert result == []
+    rej = [e for e in events if e.get("type") == "reject"][0]
+    assert rej["stage"] == "number" and rej["reason"].startswith("Number belongs to another column")
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+def test_column_unchecked_without_header(monkeypatch, tmp_path):
+    text = "Table 3: HaKAN results on ETTh1.\n| ETTh1 96 | 0.369 | 0.394 |\n"
+    result, _, _ = _run_claim(monkeypatch, tmp_path, text, quote="| ETTh1 96 | 0.369 | 0.394 |")
+    assert len(result) == 1 and result[0].claim["column_check"] == "unchecked"
+
+
+class SeqLLM:
+    """Antwortet der Reihe nach; merkt sich Temperaturen."""
+    def __init__(self, contents):
+        self.contents, self.temps = list(contents), []
+    def complete(self, role, messages, temperature=0.0, **kwargs):
+        from repro_agent.llm import LLMResponse
+        self.temps.append(temperature)
+        return LLMResponse(content=self.contents.pop(0), model="fake", prompt_tokens=1, completion_tokens=1,
+                           cost_usd=0.001, cached=False, finish_reason="stop")
+
+
+def _run_seq(monkeypatch, arxiv_xml, tmp_path, contents):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    llm = SeqLLM(contents)
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=llm, tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
+    events = []
+    result = agent.discover(["Cora"], on_event=events.append)
+    return result, events, llm, cache_file
+
+
+def test_empty_first_answer_retried_with_other_temperature(monkeypatch, arxiv_xml, tmp_path):
+    result, events, llm, _ = _run_seq(monkeypatch, arxiv_xml, tmp_path, ["{}", FakeLLM().claim_content])
+    assert len(result) == 1
+    assert len([e for e in events if e.get("type") == "llm_call"]) == 2
+    assert llm.temps == [0.0, 0.3]
+
+
+def test_unreadable_first_answer_retried(monkeypatch, arxiv_xml, tmp_path):
+    result, _, llm, _ = _run_seq(monkeypatch, arxiv_xml, tmp_path, ["no json at all", FakeLLM().claim_content])
+    assert len(result) == 1 and len(llm.temps) == 2
+
+
+def test_two_empty_answers_reject_and_cache(monkeypatch, arxiv_xml, tmp_path):
+    result, events, llm, cache_file = _run_seq(monkeypatch, arxiv_xml, tmp_path, ["{}", "{}"])
+    assert result == [] and len(llm.temps) == 2               # hoechstens eine Wiederholung
+    assert any(e.get("reason") == "No numerical claim found" for e in events)
+    assert len([e for e in events if e.get("type") == "llm_call"]) == 2
+    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+
+
+def test_valid_first_answer_has_no_retry(monkeypatch, arxiv_xml, tmp_path):
+    result, events, llm, _ = _run_seq(monkeypatch, arxiv_xml, tmp_path, [FakeLLM().claim_content])
+    assert len(result) == 1 and llm.temps == [0.0]
+    assert len([e for e in events if e.get("type") == "llm_call"]) == 1
