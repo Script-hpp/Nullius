@@ -101,13 +101,17 @@ Every experiment has a file written and committed **before** the first run: hypo
 
 Eight or more papers with known reproduction outcome, each run with and without Tavily. Target sentence for this section: "With Tavily, X of 10 verdicts agreed with human reproduction studies, without Tavily Y."
 
-| Paper | Expectation | Task built | Result (with / without Tavily) |
+| Paper | Reference verdict | Agreement with reference, real claim, without / with Tavily (of 3 generations) | Placebo claim detected as not reproduced, without / with Tavily |
 |---|---|---|---|
-| Kipf & Welling 2017, GCN (Cora) | reproduced | yes | TBD |
-| Zeng et al. 2023, DLinear (ETTh1) | reproduced | yes | TBD |
-| Shchur et al. 2018, Pitfalls of GNN Evaluation (Cora, random splits) | GCN best on random splits | yes (GCN number only) | TBD |
-| Wu et al. 2019, SGC (Cora, Planetoid split) | reproduced, on par with GCN | yes (same Cora task) | TBD |
-| Ferrari Dacrema et al. 2019, Are We Really Making Much Progress? | baselines beat neural models | no | TBD |
+| Kipf & Welling 2017, GCN (Cora) | reproduced | 0 / 0 | 3 / 3 |
+| Wu et al. 2019, SGC (Cora, Planetoid split) | reproduced | 2 / 3 | 3 / 3 |
+| Zeng et al. 2023, DLinear (ETTh1, MSE, horizon 96) | reproduced | 1 / 1 (one setup failure with Tavily) | 3 / 3 |
+| Shchur et al. 2018, GCN on random splits (Cora) | reproduced | 0 / 2 | 3 / 3 |
+| **Total** | | **3 of 12 / 6 of 12** | **12 of 12 / 12 of 12** |
+
+**Headline (protocol `benchmark/experiments/benchmark_protocol.md`, fixed before the first run):** on real claims, 6 of 12 verdicts agreed with the reference verdict with Tavily, 3 of 12 without (10 of 12 "near" in both arms); placebo claims (deliberately wrong target values such as 88 % on Cora) were rejected 12 of 12 times in both arms. All verdicts are provisional: method fidelity is not checked.
+
+How to read it: (1) the reference verdict is the verdict of our own human reference solution in the same harness; all four papers are "reproduced", so there is no real negative case yet. (2) The placebo controls confirm that the verdict logic and the isolation do not let false target values through; they do not measure how well the agent recognises *slightly* wrong claims. (3) The difference on real claims is boundary-driven: the tolerance is ±1 percentage point and many verdicts land 0.0004 to 0.003 beside it; it comes from two papers (Shchur, SGC) and there is no significance test with 12 against 12 verdicts. (4) Details, failures and caveats: `benchmark/experiments/results/benchmark_results.md` and `benchmark_interpretation.md`; four infrastructure aborts of the Nebius sandbox API are logged in `benchmark_incidents.md`.
 
 All numbers in this README and in the video come from production runs on Token Factory; prototype runs on free endpoints are never published.
 
