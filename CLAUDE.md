@@ -324,6 +324,10 @@ Pflicht bei Einreichung:
 
 Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer mit Versuchen.
 
+## Produktplan (Stand 29.09.2026)
+
+Nullius soll als Produkt erlebbar sein, nicht nur als Kommandozeile: Paper eingeben, Claims auswählen, Lauf ansehen, Zeugnis erhalten, Verlauf. Entscheidungen: **Demo offen für alle Besucher** mit Warteschlange und hartem Budget (Tages- und Gesamtlimit, Notausschalter, optionaler Zugangscode); **erst lokal bauen**, Hosting voraussichtlich über **Coolify** (Docker, eigener Server); Konfiguration nur über Umgebungsvariablen. Rahmen (sichtbar im Produkt): Nullius prüft Papers auf **unterstützten Benchmarks**. Tavily v2 ist pausiert (Baustein 1 fertig). Einzelheiten, Endpunkte und Reihenfolge: `docs/product_plan.md`.
+
 ## Hackathon-Regeln (Official Rules, geprüft)
 
 ### Fristen
