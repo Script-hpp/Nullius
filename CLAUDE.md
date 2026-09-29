@@ -317,6 +317,7 @@ Pflicht bei Einreichung:
 - [ ] Öffentliches Repo mit Open-Source-Lizenz
 - [ ] Demo-URL
 - [ ] Demo-Video (max. 3 Min.)
+- [ ] Feedback zu Nebius Token Factory, AI Cloud und NVIDIA-Tools/Modellen (Pflichtbestandteil der Einreichung laut Devpost; Preis: 10 × 100 $; Entwurf `docs/nebius_feedback.md`). Abgabe: 30.10.2026, 10:00 PDT
 - [ ] README: Architektur, Benchmark-Ergebnisse, Hinweis auf verwandte Arbeiten (PaperBench, CORE-Bench) und unser Unterschied
 
 Urteile vorsichtig formulieren: „mit unserem Setup nicht reproduziert", immer mit Versuchen.

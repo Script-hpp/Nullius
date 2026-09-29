@@ -39,7 +39,8 @@ class FakeSandbox:
             return f"b{self.n}"
 
     def put_file(self, branch, path, content):
-        pass
+        self.puts = getattr(self, "puts", [])
+        self.puts.append((branch, path, content))
 
     def put_files(self, branch, files):
         pass
@@ -249,3 +250,19 @@ def test_nebius_guard_converts_api_timeout():
     with pytest.raises(SandboxUnavailable, match="Sandbox-API-Timeout bei run"):
         NebiusSandbox._guard("run", boom)
     assert NebiusSandbox._guard("run", lambda: 42) == 42
+
+
+def test_infra_retry_reruns_the_same_code_with_the_same_seed(tmp_path, monkeypatch):
+    import repro_agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod.time, "sleep", lambda s: None)
+    sb = FlakySandbox({4})                          # Fehler mitten im ersten Versuch (nach put_file, Vorbereitung, Smoke)
+    o, calls = make_orch(sb, seeds=1)
+    run_claim(o, tmp_path)
+    codes = [c for (_, p, c) in sb.puts if p.endswith("train.py")]
+    assert len(codes) >= 2 and len(set(codes)) == 1     # derselbe Code auf beiden Branches
+    assert calls["write"] == 1 and calls["repair"] == []  # nichts neu generiert
+    branches = {b for (b, p, _) in sb.puts if p.endswith("train.py")}
+    assert len(branches) >= 2                           # wirklich ein neuer Branch
+    seeds = {re.search(r"SEED=(\d+)", c).group(1) for _, c in sb.cmds if "SEED=" in c}
+    assert seeds == {"0"}                               # derselbe Seed
