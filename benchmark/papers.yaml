@@ -129,3 +129,27 @@ papers:
         tolerance: 0.01
         source: "manuell (Wu et al. 2019, Tabelle 2, Literaturwert); mit Tavily aus dem GAT-Paper belegt ersetzt"
         extract: {method: "GAT", dataset: "Cora", metric: "accuracy"}
+
+  - id: velickovic_dgi_2019
+    title: "Deep Graph Infomax"
+    arxiv_url: "https://arxiv.org/abs/1809.10341"
+    dataset: "Cora"   # Standard-Split 140/500/1000 (Tabelle 1 des Papers); Pruefmenge fuer Tavily v2 (tavily_v2_holdout.md)
+    expectation: "reproduziert (Kandidat, Pruefmenge)"
+    seeds: 10   # Paper: 50 Laeufe des Trainings mit anschliessender logistischer Regression
+    claims:
+      # Zielwert Tabelle 2 des DGI-Papers selbst (Fixture 1809.10341.json): DGI (ours) Cora 82.3 +- 0.6 % (Mittel ueber 50 Laeufe).
+      - id: dgi_cora_acc
+        text: "DGI erreicht 82,3 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.823
+        tolerance: 0.01
+        source: "Tabelle 2, arXiv (manuell aus Fixture, mit Tavily belegt ersetzt)"
+        extract: {method: "DGI (ours)", dataset: "Cora", metric: "accuracy"}
+      - id: dgi_cora_acc_placebo
+        text: "DGI erreicht 88,0 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
+

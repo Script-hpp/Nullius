@@ -69,8 +69,8 @@ def _check_datasets_as_columns(text: str, quote: str, value: float, dataset: str
     q = re.sub(r"\[\d+(?:,\s*\d+)*\]", " ", quote)              # Literaturverweise
     q = re.sub(r"±\s*\d+(?:\.\d+)?", " ", q)                     # Streuung
     row = [float(x) for x in re.findall(NUMBER, q)]
-    if len(row) < len(cols):
-        return ColumnCheck("nicht pruefbar", f"Zeile hat {len(row)} Zahlen, Kopfzeile {len(cols)} Spalten")
+    if len(row) < len(cols):   # Kopf nicht sauber getrennt (Zeilenname vor den Zahlen) -> naechste Variante versuchen
+        return None
     i = [_clean_name(c) for c in cols].index(want)
     return _compare(row[i], value, percent, f"Spalte {cols[i]}, Position {i + 1} von {len(cols)}")
 

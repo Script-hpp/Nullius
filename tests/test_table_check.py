@@ -72,3 +72,16 @@ def test_partial_quote_is_extended_to_full_row():
     assert chk(SGC, "SGC 81 .0 ± 0.0", 0.81, "SGC", "Cora", "accuracy", True).status == "ok"
     assert chk(SGC, "SGC 81 .0 ± 0.0", 0.719, "SGC", "Cora", "accuracy", True).status == "mismatch"
     assert chk(SGC, "SGC 81 .0 ± 0.0", 0.719, "SGC", "Citeseer", "accuracy", True).status == "ok"
+
+
+DGI = json.loads((FIX / "1809.10341.json").read_text())["text"]
+GAT = json.loads((FIX / "1710.10903.json").read_text())["text"]
+
+
+def test_percent_signs_after_std_do_not_break_the_row():
+    dgi = "X, A DGI (ours) 82.3 ± 0.6% 71.8 ± 0.7% 76.8 ± 0.6%"
+    assert chk(DGI, dgi, 0.823, "DGI (ours)", "Cora", "accuracy", True).status == "ok"
+    assert chk(DGI, dgi, 0.718, "DGI (ours)", "Cora", "accuracy", True).status == "mismatch"
+    assert chk(DGI, dgi, 0.718, "DGI (ours)", "Citeseer", "accuracy", True).status == "ok"
+    gat = "GAT (ours) 83.0 ± 0.7% 72.5 ± 0.7% 79.0 ± 0.3%"
+    assert chk(GAT, gat, 0.83, "GAT", "Cora", "accuracy", True).status == "ok"
