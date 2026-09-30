@@ -1,7 +1,9 @@
 """Menschliche Referenzloesung Cora-LCC (Shchur et al. 2018): GAT mit den Hyperparametern aus Tabelle 4 (Anhang C): 8 Koepfe x 8 Merkmale
 (Hidden 64), lr 0,01, Dropout 0,6 auf Eingaben und 0,3 auf Attention-Koeffizienten, L2 0,01 (TF-l2_loss = 0,5 * lambda * ||W||^2 auf allen Gewichten),
 Adam, Early Stopping auf dem GESAMT-Validierungsloss (Datenloss + Regularisierung), Geduld 50, beste Gewichte zuruecksetzen, Glorot-Init.
-Kantenweise (duenn besetzt) gerechnet, Architektur sonst wie tests/reference/gat_cora_reference.py. Selbsttest der Pipeline, nie Agenten-Ergebnis.
+Nach dem Original-Code des Papers (github.com/shchur/gnn-benchmark, gnnbench/models/gat.py und config/optimized/gat.conf.yaml): Merkmale NICHT zeilennormalisiert
+(config/train.conf.yaml: normalize_features false), zusaetzliches Dropout (0,6) auf den transformierten Merkmalen nach der Attention-Berechnung, L2 auf allen Gewichten der
+Schichten ausser Bias. Kantenweise (duenn besetzt) gerechnet, Architektur sonst wie tests/reference/gat_cora_reference.py. Selbsttest der Pipeline, nie Agenten-Ergebnis.
 Aufruf im Branch: SPLIT=0 SEED=0 python train.py
 """
 
@@ -19,7 +21,6 @@ t0 = time.time()
 
 d = np.load("/data/cora_lcc_public.npz")
 X = torch.from_numpy(d["features"]).float()
-X = X / X.sum(1, keepdim=True).clamp(min=1)
 edges = torch.from_numpy(d["edges"]).long()
 y = torch.from_numpy(d["labels"]).long()
 tr, va, te = (torch.from_numpy(d[k]).long() for k in ("train_idx", "val_idx", "test_idx"))
@@ -47,6 +48,7 @@ class GATLayer(torch.nn.Module):
         w = torch.exp(e - emax[dst])
         denom = torch.zeros(N, self.heads).index_add_(0, dst, w)
         alpha = F.dropout(w / denom[dst], P_ATT, train)                                            # Dropout auf Attention-Koeffizienten
+        h = F.dropout(h, P, train)                                                             # zusaetzliches Dropout auf den transformierten Merkmalen (gnn-benchmark gat.py, "used in the official implementation")
         out = torch.zeros(N, self.heads, self.n_out).index_add_(0, dst, alpha[:, :, None] * h[src])
         return out.reshape(N, -1) + self.bias
 

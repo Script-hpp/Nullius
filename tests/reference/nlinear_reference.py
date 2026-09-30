@@ -1,6 +1,7 @@
 """Referenz-Loesung (von Menschen geschrieben) fuer den ETTh1-Harness: NLinear (Zeng et al. 2023: letzten Wert des Fensters abziehen, lineare Schicht L->H, Wert wieder addieren), L=336, H=96.
 
-Dient nur als Selbsttest der Pipeline, nie als Agenten-Ergebnis. Aufruf im Branch: SEED=0 python train.py
+Dient nur als Selbsttest der Pipeline, nie als Agenten-Ergebnis. Training nach LTSF-Linear (run_longExp.py/etth1.sh): Adam lr 0,005, Batch 32, bis 10 Epochen, Geduld 3, lradj type1 (Lernrate pro Epoche halbiert), MSE-Loss.
+Aufruf im Branch: SEED=0 python train.py
 """
 import os
 
@@ -43,7 +44,7 @@ if SMOKE:
 model = NLinear()
 opt = torch.optim.Adam(model.parameters(), lr=0.005)
 best, best_state, patience = 1e9, None, 0
-LR_HALVE = os.environ.get("LR_HALVE") == "1"   # Lernrate pro Epoche halbieren (Autoformer/DLinear-Repos)
+LR_HALVE = os.environ.get("LR_HALVE", "1") == "1"   # Standard wie im Repo: lradj type1 = Lernrate 0,005 * 0,5^(Epoche) (run_longExp.py Standard, utils/tools.py)
 for epoch in range(1 if SMOKE else 10):
     if LR_HALVE:
         for g in opt.param_groups:
