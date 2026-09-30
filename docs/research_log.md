@@ -1,0 +1,160 @@
+# Paper reproduction agent — the paper is the test suite
+
+> Other agents fix code until the tests turn green. Here, the paper is the test suite.
+
+Built for the Nebius × NVIDIA Global AI Hackathon (track: Coding and Agentic Engineering, plus Best Use of Tavily).
+Licence: MIT.
+
+**Status: work in progress.** Benchmark numbers below are placeholders (`TBD`) until the production runs on Nebius Token Factory are finished.
+Everything else in this README is backed by a file in this repository; pointers are given in brackets.
+
+## Problem and solution
+
+Many machine-learning results are hard to reproduce. Rebuilding a paper costs days of broken code, missing hyperparameters and numbers that do not come out.
+
+Give the agent an arXiv paper. It
+
+1. extracts a few checkable claims with target values (Tavily Extract on the paper text, every number quoted verbatim and re-checked against the text and the table header),
+2. collects setup details and community objections (Tavily Search / Extract / Crawl),
+3. writes its own experiment code and runs it in sandbox branches,
+4. lets an **independent harness** score the predictions, and
+5. issues a reproduction certificate: a verdict per claim with measured mean, spread, sources and the branch tree as evidence.
+
+The agent delivers *predictions*, never numbers. Verdicts are worded carefully ("not reproduced *with our setup*") and always list the attempts.
+
+## Architecture
+
+```
+App (Python orchestrator)
+ ├── LLM client ───▶ Nebius Token Factory (NVIDIA Nemotron); OpenRouter free endpoints only for prototyping
+ ├── Sandbox ──────▶ Nebius Sandboxes (real branching, contree-sdk) | local Docker fallback
+ ├── Tavily ───────▶ Search, Extract, Crawl (seven roles, see below)
+ ├── Harness ──────▶ our own code, copied fresh into the branch after the agent has run
+ └── Report ───────▶ certificate (Markdown) + dossier (JSON)
+```
+
+Nemotron is the brain, the sandbox is the lab, Tavily is the researcher, the orchestrator is the lab head. The model never executes code; the sandbox never thinks.
+
+| Role | Task | Model (production) |
+|---|---|---|
+| `fast` | triage, table extraction | Nemotron 3.5 Lightning |
+| `code` / `extract` | experiment code, extraction of setup details and of the method checklist | Nemotron 3 Super |
+| `reasoning` | research plan | Nemotron 3 Ultra |
+
+Tavily roles: (1) find material, (2) read claims from the paper, (3) collect objections, (4) fetch setup details, (5) look up error messages, (6) explain deviations, (7) cite sources. Every call must answer a question the agent could not answer otherwise. The Tavily key is scarce, so tests run on fixtures and the paper text is cached.
+
+## How a verdict is produced
+
+**Independent harness.** The agent writes `/output/predictions.csv` (`id,prediction`); nothing else counts. After the agent's run, the harness is copied fresh into the branch, loads the test labels itself from the original dataset, checks plausibility (complete unique ids, not a single class) and computes the metric with fixed, tested code.
+
+**Leak protection** (recorded in the dossier under `isolation`): the training run has no network (`unshare -n`); a static code check rejects network access, downloads, process spawning and dynamic code; test labels never enter the agent's dataset.
+
+**Two axes.** A verdict is not one number:
+
+| Axis | Values | Source |
+|---|---|---|
+| 1. Result | reproduced / partially / not reproduced / agent fault suspected / not reproducible (setup) | mean over all seeds against a tolerance fixed before the run |
+| 2. Method fidelity | yes / partially / no / not checked | method checklist, graph ablation |
+
+Overall statement: *reproduced + method yes* = "paper reproduced"; *reproduced + method no/partially* = "target value reached with a different model"; *not reproduced + method yes* = "not reproduced"; *method not checked* = "provisional". The benchmark counts only the first and the third.
+
+**Baselines.** The harness reports trivial baselines (majority class, no-graph logistic regression, repeat-last-value). A measured value that is worse than the best trivial baseline although the paper's value beats it is flagged "agent fault suspected" instead of blaming the paper.
+
+**Graph ablation (GCN).** The agent's code runs a second time on the same data *without edges*. If accuracy does not drop, the graph was never used, however the code looks. Rule fixed in advance: drop ≥ 0.10 = "graph used", ≤ 0.02 = "graph not used" (axis 2 becomes "no"), otherwise unclear. [`benchmark/experiments/ablation_gcn.md`]
+
+**Form check before training.** The agent's script first runs with `SMOKE=1` on a tiny subset; the output form is compared with the task's contract (for DLinear `(windows, 96, 7)`), so tensor-shape errors surface within seconds and the repair loop gets a precise message.
+
+**Column check for target values.** The table header is parsed deterministically and the position of the number in the row is compared with the position the header dictates. Example (DLinear, Table 2): DLinear must be the third MSE/MAE pair, Repeat the last.
+
+## Why hitting the target value proves nothing
+
+In the DLinear experiment one fresh generation of the agent was judged "reproduced" with MSE 0.3765 (target 0.375, tolerance 0.01) and a standard deviation of exactly 0 over five seeds. The code was a closed-form ridge regression, not DLinear: no decomposition, no two linear branches. The number was right, the method was not. This is why the certificate has a second axis, and why "reproduced" alone is never reported as "method reproduced". [`benchmark/experiments/results/role4_dlinear.md`]
+
+## Validating the harness itself
+
+- **DLinear / ETTh1.** The harness' own repeat-last-value baseline gives MSE 1.2944 / MAE 0.7132 on all 2785 test windows; the paper reports 1.295 / 0.713 for `Repeat`. A human reference DLinear, re-measured through the pipeline (5 seeds, no LLM): MSE 0.4278 with a constant learning rate and 0.3809 (median 0.3751) with the per-epoch halving used in the original repository (paper: 0.375). [`results/etth1_harness_reference.txt`]
+- **Cora, random splits (Shchur et al. 2018).** A human reference GCN with the paper's Appendix C configuration, run through the same pipeline on 30 random splits × 1 initialisation, reaches accuracy 0.8107 with a standard deviation of 0.0118 (paper: 81.5 ± 1.3 over 100 × 20 runs). The spread across runs matches the paper's. 90 runs (30 × 3) give 0.8111. [`benchmark/experiments/shchur_task.md`, `results/lcc_harness_reference_*.txt`]
+- **Graph ablation** on ten hand-written GCN scripts (eight use the graph, two build it and never multiply with it): 9 of 10 classified as expected; the tenth (no self-loops, no edges → constant output) was "not measurable" by the rule defined beforehand. Thresholds were not adjusted. [`results/ablation_gcn_validation.md`]
+
+## Experiments with rules fixed in advance
+
+Every experiment has a file written and committed **before** the first run: hypothesis, setup, counting rules, success rule, limitations. Rules are not changed after seeing results, even when they become unreachable; results that contradict the hope are reported. Evaluation uses the median, not the mean (one broken generation dominates a mean).
+
+| Experiment | Question | Result |
+|---|---|---|
+| Role 4 on DLinear (`role4_dlinear.md`) | Do setup details from paper + repo help? | **Primary rule clearly missed.** Near the target: arm without role 4 6 of 8, with role 4 1 of 8 (required: +3 for role 4). Mean MSE 0.5724 without vs 0.5635 with (required: −0.02). Post hoc: the details were complete but scattered over four repository files with contradictions; three of eight role-4 generations failed completely; the prompt was ~6× longer. |
+| Method-fidelity checker calibration v1 (`calibration_fidelity.md`) | Can an LLM checker tell faithful from unfaithful code? | **Rule not met:** 5/10 correct, two yes↔no swaps. |
+| Calibration v2, new codes, checker improved (`calibration_fidelity_v2.md`) | same | **Rule not met:** 7/10 (threshold 8/10), no swap; all errors were faithful codes rated too strictly. |
+| Calibration v3, final (`calibration_fidelity_v3.md`) | same | **Rule not met:** 8/11 (threshold 9/11), no swap. |
+| Role 3 stage 1 on DLinear (`role3_dlinear.md`) | Does Tavily search + crawl find an evaluation-protocol objection (e.g. `drop_last`) on its own? | **Rule not met (no objection with the pre-listed keywords).** One Tavily call found 5 search hits and 5 GitHub issues; 2 verified objections (comparison fairness, unequal input windows 336 vs 96), none about `drop_last`, so stage 2 was not run. Post hoc: the crawl also found real reproduction reports (issue #117: MSE 0.426 vs 0.386) that the pre-registered naming filter excluded. Building the experiment revealed a bug in role 3 (`crawl(urls=…)` would have raised `TypeError`), now fixed. |
+| Role 4 on Shchur, paper appendix only (`role4_shchur.md`) | Does role 4 help when the settings sit in one place? | **Rule not met, direction positive.** Median deviation from the target 0.0107 with role 4 vs 0.0153 without (required: 0.005 smaller; measured 0.0046); reproduced 1 vs 0 of 6 (required: +2). Role 4 transferred the appendix values reliably (dropout 0.8, L2 1e-3 in 6/6 codes with vs 0/6 without) and the results were tighter. One of six role-4 generations failed completely. Neither confirms nor refutes the "bundled information helps" explanation (6 vs 6 generations). |
+
+**Consequence of the three calibrations (fixed beforehand):** axis 2 ("method fidelity by the checker") stays **"not checked"** in the benchmark, and this is stated openly here. Verdicts are then "provisional" unless the deterministic graph ablation applies. The checker never rated a wrong code "yes" in the rule sets, but it also cannot see code that runs and whose result is discarded (a known limit of an existence check; line coverage cannot see it either, the ablation can).
+
+## Live Tavily use
+
+A normal run calls Tavily **live** at run time (`TAVILY_MODE=live` is the default): Extract on the arXiv paper for the target values (role 2) and on the repository README for setup details (role 4), plus the roles the loop uses later. Each source is recorded with mode (`live` or stored copy), timestamp, SHA-256 and length in the dossier (`sources`), in `events.jsonl` (`source`, `tavily_call`) and as `paper_text.json` in the run folder, so a run stays traceable even if the web page changes. The evidence view shows a badge per source. Stored copies (fixtures) are used only on request (`--offline` or `TAVILY_MODE=fixture`): tests, and the pre-registered experiments and the benchmark, where every generation has to see the same text.
+
+## Evidence view
+
+`web/` is a static React app that replays real runs: what Tavily found on the left (verified target value with its table quote, Tavily calls, setup details with verbatim quotes), what the sandbox measured on the right (per-run results against the tolerance band, harness, ablation), the branch tree with repairs, and a step-by-step replay of the run's event log (`events.jsonl`). It needs no backend or API keys; the data are JSON files. See `web/README.md`.
+
+## Benchmark
+
+**Scope: small graph and time-series models that run on CPU in minutes.** A broad benchmark with shaky tasks would prove less than a narrow, well-documented one. Shwartz-Ziv & Armon (tabular data) was scoped and dropped on purpose: its splits come from other papers, its tuning budget (1000 HyperOpt steps per dataset) cannot be matched on CPU, and the metric is ambiguous, so a verdict would have measured guessed protocol details. [`benchmark/experiments/shwartz_ziv_scoping.md`]
+
+Eight or more papers with known reproduction outcome, each run with and without Tavily. Target sentence for this section: "With Tavily, X of 10 verdicts agreed with human reproduction studies, without Tavily Y."
+
+| Paper | Reference verdict | Agreement with reference, real claim, without / with Tavily (of 3 generations) | Placebo claim detected as not reproduced, without / with Tavily |
+|---|---|---|---|
+| Kipf & Welling 2017, GCN (Cora) | reproduced | 0 / 0 | 3 / 3 |
+| Wu et al. 2019, SGC (Cora, Planetoid split) | reproduced | 2 / 3 | 3 / 3 |
+| Zeng et al. 2023, DLinear (ETTh1, MSE, horizon 96) | reproduced | 1 / 1 (one setup failure with Tavily) | 3 / 3 |
+| Shchur et al. 2018, GCN on random splits (Cora) | reproduced | 0 / 2 | 3 / 3 |
+| **Total** | | **3 of 12 / 6 of 12** | **12 of 12 / 12 of 12** |
+
+**Headline (protocol `benchmark/experiments/benchmark_protocol.md`, fixed before the first run):** with Tavily, 6 of 12 verdicts on real claims matched the reference verdict, without Tavily 3 of 12. In both arms, 10 of 12 runs landed close to the target (reproduced or partially); the difference comes mainly from runs just outside the ±1-point tolerance, so it is suggestive, not conclusive. All 24 placebo claims (deliberately wrong target values such as 88 % on Cora) were correctly rejected, in both arms. All verdicts are provisional: method fidelity is not checked.
+
+*Post hoc (not fixed in advance):* the median distance to the target value on real claims is 0.0166 without Tavily and 0.0097 with Tavily. It does not cut close calls into "right" and "wrong", but it comes from the same 12 runs per arm and is not a test.
+
+Note on Tavily in this benchmark: the arm "with Tavily" used roles 2 and 4 on **stored copies** of the Tavily results (fixtures) so that every generation and both arms see exactly the same paper text; it measures the effect of the information, not of the live call. Live calls are the default of a normal run (see "Live Tavily use").
+
+How to read it: (1) the reference verdict is the verdict of our own human reference solution in the same harness; all four papers are "reproduced", so there is no real negative case yet. (2) The placebo controls confirm that the verdict logic and the isolation do not let false target values through; they do not measure how well the agent recognises *slightly* wrong claims. (3) The difference on real claims is boundary-driven: the tolerance is ±1 percentage point and many verdicts land 0.0004 to 0.003 beside it; it comes from two papers (Shchur, SGC) and there is no significance test with 12 against 12 verdicts. (4) Details, failures and caveats: `benchmark/experiments/results/benchmark_results.md` and `benchmark_interpretation.md`; four infrastructure aborts of the Nebius sandbox API are logged in `benchmark_incidents.md`.
+
+All numbers in this README and in the video come from production runs on Token Factory; prototype runs on free endpoints are never published.
+
+## Cost tracking, reconciled with the Nebius bill
+
+Every model call is logged (`logs/costs.jsonl`): provider, base URL, model, input/output tokens taken from the API's `usage` field, cache hit, finish reason, net cost. Compared with the Nebius console (29 Sep 2026): Ultra, Super and Lightning token counts agree with the console within its rounding (0.01 M tokens); net total 1.256 $ in the log vs 1.26 $ in the console, gross 1.495 $ vs 1.49 $ (19 % VAT). The log remains an estimate; the console is authoritative, and the price table in the code matches the official prices.
+Safeguards: a per-run limit (gross), a global budget with a cut-off date (warning at 80 %, abort at 95 % before the first call), retries with exponential back-off, and a hard stop on billing or authentication errors (no retries, no repair loop). Truncated model answers are never cached.
+
+## Limits and open points
+
+- CPU only, claims that run in under ten minutes; no LLM papers, no PDF image analysis (arXiv HTML/PDF text only).
+- Mode "rebuild" only: the agent writes its own code and takes only cited details from paper and repository; running the authors' code ("re-run") tests something different and is not built.
+- Method fidelity by the LLM checker is not calibrated (see above). The graph ablation exists for GCN only; DLinear would need a decomposition ablation.
+- Hand-written calibration and ablation codes can differ from real agent code; labels were written by the authors of the codes.
+- Shwartz-Ziv & Armon was dropped after scoping (see Benchmark). GAT (Veličković et al., 2018) is a candidate if time remains; agents tend to make more mistakes implementing it.
+- The Shchur task checks the GCN number, not the ranking of models; 30 random splits × 1 initialisation instead of 100 × 20.
+- **Tavily v2 is paused** after its first building block (quote check for PDF text, `results/role4_quote_check.md`: quote rejections on the development set 21 → 6 of 196 model statements, numbers and identifiers still exact). Not built: categories and bundling of setup details (paper before repo script before README before code default, conflicts made visible), and role 6 (search for explanations of a deviation, each explanation as its own branch; the verdict stays that of the original run). The plan and the development/holdout split (holdout DGI and, half-clean, GAT) are fixed in `benchmark/experiments/tavily_v2_holdout.md`; human reference solutions for the holdout papers exist (GAT 0.828, DGI 0.8047).
+- Role 3 stage 2 (testing an objection with the reference solution) was not run because stage 1 found no protocol objection; role 4 v2 (effective configuration, complete bundle) is designed but not built. Next-step hypothesis from the two role-4 experiments: bundled information is transferred reliably, scattered information is not; v2 would give the agent the computed effective configuration as one bundle.
+- Nebius sandbox rate limits: 20 parallel branches ran without errors; higher was not tested.
+- Reference numbers of the human reference solutions are pipeline self-tests, not reproduction verdicts.
+
+## Related work
+
+- **PaperBench** ([Starace et al., 2025](https://arxiv.org/abs/2504.01848)): agents replicate 20 ICML 2024 Spotlight and Oral papers from scratch and are graded against hierarchical rubrics (8,316 gradable sub-tasks) co-developed with the papers' authors, using an LLM judge.
+- **CORE-Bench** ([Siegel et al., 2024](https://arxiv.org/abs/2409.11363)): 270 tasks from 90 papers in computer science, social science and medicine; agents run the code and data provided with a paper and answer questions about the results.
+- **Difference:** our agent is judged against the *paper's claims*, not a rubric; the score comes from an independent harness the agent cannot touch; a verdict can say "not reproduced", and negative findings are a first-class output. We also test our own components (harness, checker, ablation) with rules fixed beforehand and report the failures.
+
+## Usage
+
+```bash
+cp .env.example .env            # add NEBIUS_API_KEY, NEBIUS_PROJECT_ID, TAVILY_API_KEY
+uv sync
+LLM_PROVIDER=tokenfactory uv run repro-agent kipf_gcn_2017
+uv run python -m pytest -m "not integration"   # unit tests, no network
+uv run python scripts/cost_report.py            # cost log vs console
+```
+
+Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate). Paper definitions and targets are in `benchmark/papers.yaml`; run results are written to `runs/<paper>/<timestamp>/` (`dossier.json`, `zeugnis.md`).
