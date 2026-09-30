@@ -566,6 +566,7 @@ class Orchestrator:
             self._emit("ablation", claim_id=claim.id, runde=rounds, code_hash=h(code), **ab)
             self._emit("graph_repair", result="repariert", to_hash=h(code), ablation_verdict=ab["verdict"], **ev)
             notes.append(f"{head}; neuer Code {h(code)}, Ablation danach: {ab['verdict']}")
+        discarded.discard(h(code))   # Reparatur kann denselben Code liefern; der finale Code zaehlt nie als verworfen
         if rounds:
             dossier.graph_repairs[claim.id] = rounds
         return v0, note0, code, ab, notes, discarded
