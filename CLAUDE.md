@@ -219,7 +219,7 @@ Leak-Schutz (Schichten, im Dossier unter `isolation` festgehalten und im Zeugnis
 | darüber | nicht reproduziert |
 | Harness-Check fehlgeschlagen | ungültig |
 
-**Zweidimensionales Urteil.** Achse 1 (Zahl): reproduziert / teilweise / nicht reproduziert / Agenten-Fehler vermutet / nicht reproduzierbar (Setup), vom Prüfer nie verändert. Achse 2 (Methodentreue, `Verdict.methode`): ja / teilweise / nein / nicht geprüft. Gesamtaussage (`dossier.gesamtaussage`): reproduziert + ja = „Paper reproduziert“; reproduziert + nein/teilweise = „Zielwert erreicht mit anderem Modell“; nicht reproduziert + ja = „nicht reproduziert“; Achse 2 nicht geprüft = „vorläufig“. Benchmark zählt nur „Paper reproduziert“ und „nicht reproduziert“. **Stand:** Eichung des Methodentreue-Prüfers v1 gescheitert (5/10, 2× ja↔nein, `benchmark/experiments/results/calibration_fidelity_v1.md`), Achse 2 daher überall „nicht geprüft“. Eichungen v2 (7/10) und v3 (8/11, Schwelle 9/11) ebenfalls gescheitert (`results/calibration_fidelity_v2.md`, `_v3.md`). **Endgültig, vorab festgelegt:** Achse 2 bleibt für den Benchmark „nicht geprüft“, im README offen benennen (Eichungen v1–v3 mit Ergebnissen); keine weitere Eichung vor der Abgabe. Für GCN gilt zusätzlich die Graph-Ablation.
+**Zweidimensionales Urteil.** Achse 1 (Zahl): reproduziert / teilweise / nicht reproduziert / Agenten-Fehler vermutet / nicht reproduzierbar (Setup), vom Prüfer nie verändert. Achse 2 (Methodentreue, `Verdict.methode`): ja / teilweise / nein / nicht geprüft. Gesamtaussage (`dossier.gesamtaussage`): reproduziert + ja = „Paper reproduziert“; reproduziert + nein/teilweise = „Zielwert erreicht mit anderem Modell“; nicht reproduziert + ja = „nicht reproduziert“; Achse 2 nicht geprüft = „vorläufig“. Die gebaute Gesamtaussage steht im Zeugnis; der **Benchmark v2 zählt nicht die Gesamtaussage, sondern Achse 1** (Mehrheitsregel, siehe Abschnitt „Benchmark“). **Stand:** Eichung des Methodentreue-Prüfers v1 gescheitert (5/10, 2× ja↔nein, `benchmark/experiments/results/calibration_fidelity_v1.md`), Achse 2 daher überall „nicht geprüft“. Eichungen v2 (7/10) und v3 (8/11, Schwelle 9/11) ebenfalls gescheitert (`results/calibration_fidelity_v2.md`, `_v3.md`). **Endgültig, vorab festgelegt:** Achse 2 bleibt für den Benchmark „nicht geprüft“, im README offen benennen (Eichungen v1–v3 mit Ergebnissen); keine weitere Eichung vor der Abgabe. Für GCN gilt zusätzlich die Graph-Ablation (Graph-Modelle allgemein, siehe unten).
 
 **Formprüfung und Ausführungsabdeckung (ohne LLM).** Vor dem Training läuft der Agenten-Code mit `SMOKE=1` (Cora 20 Knoten/1 Epoche, ETTh1 8 Fenster/1 Batch); Form gegen Task-Vorgabe (`harness/smoke.py`), Fehlermeldung geht an die Reparaturschleife. Im ersten vollständigen Seed-Lauf (Seed 0) wird die Zeilenabdeckung gemessen (`coverage` im Basis-Snapshot, `Attempt.coverage`). Kombinationsregel Prüfer × Abdeckung (`fidelity.apply_coverage`): Abdeckung darf nur herabstufen (Prüfer `ja` + zitierte Zeilen nie ausgeführt → `teilweise`/`nein`), `teilweise`/`nein` bleiben, ohne Abdeckung bleibt das Urteil mit Hinweis. **Grenze:** Zeilenabdeckung erkennt nur nie ausgeführten Code. Ausgeführter, aber verworfener Code (Zerlegung berechnet, Ergebnis ungenutzt; Adjazenz gebaut, nie multipliziert) gilt als abgedeckt; das braucht einen Identitäts-/Ablationstest (offen). Der Prüfer ist bisher nicht in den Loop eingebunden (Eichung gescheitert). **Graph-Ablation (GCN, kein LLM):** Der Code läuft ein zweites Mal auf Cora ohne Kanten (`ablation_gcn.md`); Abfall ≥ 0,10 = „Graph genutzt“, ≤ 0,02 = „Graph nicht genutzt“ (setzt Achse 2 auf `nein`), sonst unklar, Absturz/ungültig = nicht messbar (Achse 2 unverändert). Validierung 9/10 (`results/ablation_gcn_validation.md`); erkennt die toten Fälle, die Prüfer und Abdeckung nicht sehen.
 
@@ -289,9 +289,15 @@ Verfügbar: 25 $ Token Factory, Tavily-Key. Builders Program beantragt (+25 $ TF
 
 ## Benchmark
 
-8–10 Papers mit bekanntem Reproduktionsergebnis (ML Reproducibility Challenge, Kritik-Papers). Jedes Paper läuft zweimal: mit und ohne Tavily.
+**Stand: Benchmark v2** (Vorab-Festlegung `benchmark/experiments/benchmark_v2.md`, final; `src/` eingefroren, bis alle Läufe fertig sind). Die ursprüngliche Planung (8–10 Papers, Vergleich mit menschlichen Reproduktionsstudien) gilt nicht mehr.
+- **6 Papers, 8 Paper-Claim-Einheiten** (Kipf, Wu/SGC, Zeng DLinear und NLinear, Shchur GCN und GAT, Veličković GAT, DGI), jede Einheit **mit und ohne Tavily** (beide Arme mit gespeicherten Tavily-Ergebnissen, `tavily_mode="fixture"`), je 3 frische Generierungen, dazu je Lauf ein **Placebo-Claim** (bewusst falscher Zielwert) als Negativkontrolle. 48 Läufe, Store `runs/benchmark_v2.jsonl`, Skripte `scripts/run_benchmark.py --v2` und `scripts/eval_benchmark_v2.py`.
+- **Produktkonfiguration** (`graph_repair=True`) in beiden Armen.
+- **Kennzahl = Zahl-Urteil (Achse 1), Mehrheit je Paper-Claim-Einheit über 3 Generierungen** (mindestens 2 gleiche Klassen), Übereinstimmung mit dem Referenzurteil; Rohzählung sekundär. Das ersetzt die frühere Regel „nur Paper reproduziert/nicht reproduziert“ (siehe „Zweidimensionales Urteil“). Die Kennzahl misst „Zielwert laut Harness erreicht“, nicht „Methode reproduziert“; im README steht immer „method fidelity not checked“.
+- **Referenzurteile** sind überwiegend (R) = eigene Referenzlösung im eigenen Harness (`tests/reference/`), nur Shchur-GCN und Shchur-GAT haben zusätzlich (H) = unabhängige Neumessung im Kritik-Paper.
+- **Dacrema nicht gebaut** (MovieLens-1M: NeuMF reproduziert, kein Negativfall, 3–5 Tage Aufwand); Shwartz-Ziv zugeschnitten und verworfen (`benchmark/experiments/shwartz_ziv_scoping.md`). Es gibt keinen echten Negativfall, die Placebos ersetzen ihn nicht.
+- **v1 ist eingefroren** (`benchmark/experiments/benchmark_protocol.md`, vier Papers, Produktkonfiguration aus); Verlauf in `docs/research_log.md`.
 
-Kennzahl: Übereinstimmung der Urteile mit menschlichen Reproduktionsstudien. Ziel-Satz fürs README: „Mit Tavily stimmten X von 10 Urteilen überein, ohne Tavily Y."
+Ziel-Satz fürs README (Zahlen erst aus `benchmark/experiments/results/benchmark_v2.md`): „With Tavily, X of 8 paper-claim units matched the reference verdict, without Tavily Y. Method fidelity was not checked."
 
 **Task Shchur (Cora, zufällige Splits, gebaut):** GCN-Claim 81,5 % (Tabelle 1, belegt per Tavily Extract + Spaltenprüfung), größte Komponente, 20/30/Rest, 30 Splits × 1 Initialisierung statt 100 × 20 (Details, Toleranz und Harness-Validierung: `benchmark/experiments/shchur_task.md`; menschliche Referenz 81,1 ± 1,2 %). Der Task prüft nur die GCN-Zahl, nicht die Rangfolge der Modelle. Abgeschnittene LLM-Antworten (`finish_reason: length`) werden nie gecacht, Wiederholungen der Extraktion nutzen andere Temperatur und doppelte Grenze (sonst kam die abgeschnittene Antwort aus dem Cache).
 
@@ -305,12 +311,16 @@ Kandidaten (Zielwerte direkt aus Papers übernehmen, nicht aus Gedächtnis):
 | Ferrari Dacrema et al. 2019, Are We Really Making Much Progress? | Baselines schlagen neuronale Modelle | MovieLens |
 | Shwartz-Ziv & Armon 2021, Tabular Data: DL Is Not All You Need | XGBoost vorn | kleine Tabellen-Datensätze |
 
+Stand der Kandidaten: Kipf, Shchur (GCN und GAT) und Zeng (DLinear, NLinear) sind im Benchmark v2; dazu Wu/SGC, Veličković GAT und DGI. **Dacrema und Shwartz-Ziv sind nicht gebaut** (Gründe im Abschnitt „Benchmark“). Die Spalte „Erwartung“ ist die ursprüngliche Planung, maßgeblich sind die Referenzurteile in `benchmark/experiments/benchmark_v2.md`.
+
 ## Demo und Einreichung
 
-Drei Akte im 3-Minuten-Video:
-1. GCN auf Cora → grün
-2. DLinear schlägt Transformer → Überraschung hält
-3. Recsys-Paper → fällt durch, mit Tavily-Evidenz und Branch-Baum
+Drei Akte im 3-Minuten-Video (an den gebauten Stand angepasst, Szenenliste und Aufnahme-Checkliste: `docs/video_script.md`; Devpost-Texte: `docs/devpost_submission.md`):
+1. Live-Lauf eines Katalog-Papers mit Tavily-Live-Aufrufen, Branches und Harness
+2. GCN auf Cora → Zeugnis „Zielwert erreicht“ (Methodentreue nicht geprüft)
+3. Negativkontrolle: Placebo-Claim (falscher Zielwert) wird abgelehnt, dazu die ehrlichen Grenzen
+
+Die ursprünglichen Akte „DLinear schlägt Transformer“ (der Task prüft nur einen MSE-Wert, keine Rangfolge) und „Recsys-Paper fällt durch“ (Dacrema nicht gebaut) entfallen.
 
 Evidence-Ansicht in UI: links, was Tavily gefunden hat, rechts, was Sandbox gemessen hat.
 
@@ -463,7 +473,13 @@ Um dieses Produkterlebnis bereitzustellen, wird die Architektur wie folgt aufgeb
 
 ## Evidence-Ansicht (`web/`)
 
-Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine Backend-Pflicht, keine Keys. Grundlage: `runs/<paper>/<ts>/events.jsonl` (Ereignisprotokoll des Loops, `events.py`) und `dossier.json`. Export ausgewählter Läufe mit `scripts/export_site_data.py` nach `web/public/data`; nur Prod-Läufe veröffentlichen. Ältere Läufe ohne `events.jsonl` werden aus dem Dossier abgespielt. Live-Modus (FastAPI + SSE) ist nicht gebaut; wenn überhaupt, nur für ein festes Beispiel mit Zugangscode und Kostenlimit, Keys nie ins Frontend.
+Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine Backend-Pflicht, keine Keys. Grundlage: `runs/<paper>/<ts>/events.jsonl` (Ereignisprotokoll des Loops, `events.py`) und `dossier.json`. Export ausgewählter Läufe mit `scripts/export_site_data.py` nach `web/public/data`; nur Prod-Läufe veröffentlichen. Ältere Läufe ohne `events.jsonl` werden aus dem Dossier abgespielt. Keys nie ins Frontend.
+
+**Live-Modus (gebaut):** FastAPI `src/repro_agent/api.py`, Start `uvicorn repro_agent.api:app`; Auslieferung von API und Web-App in einem Container über `deploy/serve.py` (`Dockerfile`, `docs/deploy.md`). Das Starten von Jobs braucht `ACCESS_CODE`, ein Lauf gleichzeitig (Semaphor im Speicher, genau ein uvicorn-Worker), Tageslimits `MAX_DAILY_JOBS` (Discovery, Default 5) und `MAX_DAILY_REPRO_JOBS` (Reproduktion, Default 3).
+- `POST /api/discover`, Stream `GET /api/discover/{job_id}/stream`: Tavily-Discovery auf unterstützten Datensätzen.
+- `POST /api/reproduce` (Katalogeintrag, Default Schnellprüfung mit `QUICK_SEEDS = 3`), Stream `GET /api/reproduce/{job_id}/stream?from=<n>` (SSE, Reconnect liefert Events erneut), `GET /api/jobs/current`. Der Orchestrator läuft mit `graph_repair=True` und **ohne LLM-Cache**; die API **schreibt nie `benchmark/catalog.yaml`**. Der fertige Lauf wird nach `REPRO_EXPORT_DIR` exportiert (`site_export.export_live_run`) und erscheint in der Evidence-Ansicht.
+- Web: Live-Lauf `#/live/<job>` (Phasen-Timeline `web/src/components/run/`), Evidence `#/run/<id>` mit Replay, Katalog `#/catalog`, Discover `#/discover`. Die Steuerung erscheint nur, wenn die API erreichbar ist; sonst Replay des letzten Laufs. Statischer Spiegel: `.github/workflows/pages.yml`.
+- Katalog: `benchmark/catalog.yaml` (gepflegt von `scripts/curate_catalog.py`, Logik `src/repro_agent/catalog.py`), Jury-Filter `jury_ready` (Gesamtaussagen „nicht bewertbar (Methode nicht umgesetzt)“, „Agenten-Fehler vermutet“, „nicht reproduzierbar (Setup)“ sind nicht jury-tauglich).
 
 ## Offene Punkte
 
@@ -472,30 +488,33 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [x] Exakte Modell-IDs auf OpenRouter und Token Factory eintragen (TF geprüft 2026-09-28: Lightning 0,06/0,24 $, Super 0,30/0,90 $, Ultra 1/3 $ pro Mio. Tokens)
 - [ ] Builders-Program-Codes einlösen
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren
-- [ ] Benchmark-Liste auf 8–10 Papers mit belegten Ergebnissen erweitern
-- [ ] Hosting für Demo-URL wählen (Nebius Serverless empfohlen, nicht Pflicht)
+- [x] Benchmark-Liste festgelegt: 6 Papers, 8 Paper-Claim-Einheiten statt 8–10 Papers (`benchmark/experiments/benchmark_v2.md`); Läufe und Auswertung laufen noch, Zahlen `TBD`
+- [x] Live-Modus (FastAPI + SSE) gebaut (`src/repro_agent/api.py`)
+- [x] Hosting-Optionen verglichen, Empfehlung Coolify (`docs/deploy.md`); **Deployment und Demo-URL stehen aus**
+- [ ] Benchmark v2 auswerten, Zahlen ins README
+- [ ] Demo-Video aufnehmen (Skript `docs/video_script.md`), Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`)
 
-## Projektstruktur (Vorschlag)
+## Projektstruktur (tatsächlich)
 
 ```
-repro-agent/
-├── .env.example
-├── CLAUDE.md
-├── src/
-│   ├── config.py          # liest .env, wählt Anbieter
-│   ├── llm.py             # OpenRouter | Token Factory, Retry, Cache, Kosten-Log
-│   ├── sandbox/
-│   │   ├── base.py        # Protocol
-│   │   ├── local.py       # Docker-Fallback
-│   │   └── nebius.py      # contree-sdk
-│   ├── tavily_tools.py    # die 7 Rollen
-│   ├── harness/
-│   │   ├── verify.py
-│   │   └── metrics.py
-│   ├── loop.py            # Orchestrator
-│   ├── dossier.py         # Forschungsakte
-│   └── report.py
-├── benchmark/papers.yaml
-├── runs/                  # nicht in Git
-└── logs/                  # nicht in Git
+.
+├── CLAUDE.md, README.md, LICENSE (MIT), Dockerfile, pyproject.toml, uv.lock
+├── src/repro_agent/
+│   ├── loop.py            # Orchestrator (Rollen 2 und 4, Plan, Code, Branches, Urteil)
+│   ├── llm.py, costs.py, config.py   # LLM-Client (Retry, Cache, Kosten, Budget), .env
+│   ├── tavily_tools.py, claims_source.py, repo_source.py, setup_details.py, table_check.py
+│   ├── tasks.py           # Cora, Cora-LCC, ETTh1
+│   ├── harness/           # unabhängiger Prüf-Harness, Baselines, Ablation, Formprüfung, Code-Check
+│   ├── sandbox/           # base.py, nebius.py (contree-sdk), local.py (Docker-Fallback)
+│   ├── discovery.py, catalog.py, site_export.py
+│   ├── api.py             # FastAPI, SSE, Warteschlange
+│   └── dossier.py, events.py, fidelity.py, objections.py, report.py
+├── benchmark/             # papers.yaml, catalog.yaml, fixtures/, experiments/ (Vorab-Festlegungen, results/)
+├── scripts/               # run_benchmark.py, eval_benchmark_v2.py, curate_catalog.py, export_site_data.py, Validierungen
+├── web/                   # React-App (Vite), public/data = exportierte Läufe
+├── deploy/                # serve.py (API und Web in einem Prozess), Caddyfile, docker-compose.yml
+├── tests/                 # Fakes, tests/reference/ = Referenzlösungen
+├── docs/                  # Pläne, Deployment, Forschungslog, Feedback, Video und Devpost
+├── runs/                  # nicht in Git (Läufe, benchmark_v2.jsonl)
+└── logs/                  # nicht in Git (costs.jsonl)
 ```
