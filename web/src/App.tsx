@@ -10,7 +10,7 @@ import { Catalog } from './components/Catalog'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
-import { NOT_ASSESSABLE, RESULT, catalogLabel, de2en, isPreliminary, type Tone } from './labels'
+import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info } from 'lucide-react'
 
 const useHash = () => {
@@ -234,11 +234,11 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' ? 'log' : 'evidence')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   
-  if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Loading run data…</main>
+  if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 text-muted">Loading run data…</main>
   const d = run.dossier
   const claim: Json = d.claims?.[0]
   const v: Json = d.verdicts?.[0]
-  if (!claim) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Empty run.</main>
+  if (!claim) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 text-muted">Empty run.</main>
   
   const isCatalog = !!ref_.catalog_id   // discovery candidate run through the loop
   const res = v ? (isCatalog ? catalogLabel(v.urteil, ref_.gesamtaussage) : de2en(RESULT, v.urteil)) : { label: 'NO VERDICT', tone: 'gray' as const }
@@ -285,7 +285,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
 
       {/* Split Layout: Verdict & Chart */}
       <div className="grid gap-6 lg:grid-cols-3 items-start">
-        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
+        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: TONE_VAR[res.tone] }}>
           <div className="mb-8">
             <h3 className={`text-4xl font-bold tracking-tight mt-2 ${resColorClass}`}>{res.label}</h3>
           </div>

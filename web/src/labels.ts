@@ -79,6 +79,10 @@ export const ABLATION: Record<string, string> = {
 export const de2en = (map: Record<string, { label: string; tone: Tone }>, k: string) =>
   map[k] ?? { label: k.toUpperCase(), tone: 'gray' as Tone }
 
+// Fills, borders and strokes (solid tone colors); TONE_TEXT_VAR for text drawn in inline styles (readable in both themes).
 export const TONE_VAR: Record<Tone, string> = {
-  green: 'var(--green, #34d399)', amber: 'var(--amber, #fbbf24)', red: 'var(--red, #f87171)', gray: 'var(--muted, #9ca3af)', violet: 'var(--violet, #a78bfa)',
+  green: 'var(--c-tone-green-solid)', amber: 'var(--c-tone-amber-solid)', red: 'var(--c-tone-red-solid)', gray: 'var(--c-line-strong)', violet: 'var(--c-tone-violet-solid)',
+}
+export const TONE_TEXT_VAR: Record<Tone, string> = {
+  green: 'var(--c-tone-green)', amber: 'var(--c-tone-amber)', red: 'var(--c-tone-red)', gray: 'var(--c-muted)', violet: 'var(--c-tone-violet)',
 }

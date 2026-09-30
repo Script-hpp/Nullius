@@ -1,7 +1,7 @@
 import { Background, Controls, MarkerType, ReactFlow, type Edge, type Node } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useMemo } from 'react'
-import { ATTEMPT, TONE_VAR, de2en } from '../labels'
+import { ATTEMPT, TONE_TEXT_VAR, TONE_VAR, de2en } from '../labels'
 import type { Json } from '../data'
 
 // Basis-Snapshot -> je Code-Version ein Knoten -> je Lauf (Sandbox-Branch) ein Blatt. Reparaturen verbinden Code-Versionen.
@@ -17,8 +17,8 @@ export function BranchTree({ dossier, claimId, events, onSelect, selected }: {
     const snap = attempts[0]?.parent_snapshot ?? 'snapshot'
     nodes.push({
       id: 'snap', position: { x: 0, y: 0 }, draggable: false, selectable: false,
-      data: { label: (<div><div className="text-xs muted">base snapshot</div><div className="mono text-xs">{String(snap).replace('repro-snapshot-', '').slice(0, 30)}</div></div>) },
-      style: { background: 'var(--panel-2)', color: 'var(--text)', border: '1px solid var(--line)', borderRadius: 10, width: 200, padding: 8 },
+      data: { label: (<div><div className="text-xs text-muted">base snapshot</div><div className="font-mono text-xs">{String(snap).replace('repro-snapshot-', '').slice(0, 30)}</div></div>) },
+      style: { background: 'var(--c-raised)', color: 'var(--c-fg)', border: '1px solid var(--c-line-strong)', borderRadius: 10, width: 200, padding: 8 },
     })
     const perVersion: Record<string, number> = {}
     const versionCols: Record<string, number> = {}
@@ -34,14 +34,14 @@ export function BranchTree({ dossier, claimId, events, onSelect, selected }: {
       const list = attempts.filter((a) => a.code_hash === v)
       nodes.push({
         id: `v-${v}`, position: { x: versionX[v], y: 0 }, draggable: false, selectable: false,
-        data: { label: (<div><div className="text-xs muted">code version {vi + 1}</div><div className="mono text-xs">{v}</div><div className="text-xs muted">{list.length} run{list.length > 1 ? 's' : ''}</div></div>) },
-        style: { background: 'color-mix(in srgb, var(--violet) 14%, var(--panel))', color: 'var(--text)', border: '1px solid color-mix(in srgb, var(--violet) 40%, transparent)', borderRadius: 10, width: 180, padding: 8 },
+        data: { label: (<div><div className="text-xs text-muted">code version {vi + 1}</div><div className="font-mono text-xs">{v}</div><div className="text-xs text-muted">{list.length} run{list.length > 1 ? 's' : ''}</div></div>) },
+        style: { background: 'color-mix(in srgb, var(--c-tone-violet-solid) 14%, var(--c-surface-2))', color: 'var(--c-fg)', border: '1px solid color-mix(in srgb, var(--c-tone-violet-solid) 40%, transparent)', borderRadius: 10, width: 180, padding: 8 },
       })
       const first = attempts.find((a) => a.code_hash === v)
       edges.push({ id: `e-snap-${v}`, source: vi === 0 ? 'snap' : `v-${versions[vi - 1]}`, target: `v-${v}`, animated: vi > 0,
         label: vi > 0 ? `repair ⟵ ${String(events.find((e) => e.type === 'repair' && e.from_hash === versions[vi - 1])?.error ?? '').split('\n').filter(Boolean).slice(-1)[0]?.slice(0, 40) ?? ''}` : undefined,
-        labelStyle: { fill: 'var(--muted)', fontSize: 10 }, labelBgStyle: { fill: 'var(--panel)' },
-        style: { stroke: vi > 0 ? 'var(--violet)' : 'var(--line)' }, markerEnd: { type: MarkerType.ArrowClosed, color: vi > 0 ? '#b394ff' : '#243044' } })
+        labelStyle: { fill: 'var(--c-muted)', fontSize: 10 }, labelBgStyle: { fill: 'var(--c-surface-2)' },
+        style: { stroke: vi > 0 ? 'var(--c-tone-violet-solid)' : 'var(--c-line-stronger)' }, markerEnd: { type: MarkerType.ArrowClosed, color: vi > 0 ? 'var(--c-tone-violet-solid)' : 'var(--c-line-stronger)' } })
       void first
     })
     attempts.forEach((a) => {
@@ -50,11 +50,12 @@ export function BranchTree({ dossier, claimId, events, onSelect, selected }: {
       const row = (k % perCol) + 1, colIdx = Math.floor(k / perCol)
       const st = de2en(ATTEMPT, a.status)
       const col = TONE_VAR[st.tone]
+      const textCol = TONE_TEXT_VAR[st.tone]
       const id = `a-${a.branch_id}`
       nodes.push({
         id, position: { x: versionX[a.code_hash] + colIdx * 172, y: 90 + (row - 1) * 66 }, draggable: false,
-        data: { label: (<div className="text-left"><div className="text-xs"><b>seed {a.seed}</b> · <span style={{ color: col }}>{st.label}</span></div><div className="mono text-xs muted">{a.measured != null ? a.measured.toFixed(4) : (a.error_summary ?? '').split('\n').filter(Boolean).slice(-1)[0]?.slice(0, 32) ?? '–'}</div></div>) },
-        style: { background: `color-mix(in srgb, ${col} 10%, var(--panel))`, color: 'var(--text)', border: `${selected === a.branch_id ? 2 : 1}px solid ${col}`, borderRadius: 8, width: 160, padding: 6 },
+        data: { label: (<div className="text-left"><div className="text-xs"><b>seed {a.seed}</b> · <span style={{ color: textCol }}>{st.label}</span></div><div className="font-mono text-xs text-muted">{a.measured != null ? a.measured.toFixed(4) : (a.error_summary ?? '').split('\n').filter(Boolean).slice(-1)[0]?.slice(0, 32) ?? '–'}</div></div>) },
+        style: { background: `color-mix(in srgb, ${col} 10%, var(--c-surface-2))`, color: 'var(--c-fg)', border: `${selected === a.branch_id ? 2 : 1}px solid ${col}`, borderRadius: 8, width: 160, padding: 6 },
       })
       edges.push({ id: `e-${id}`, source: `v-${a.code_hash}`, target: id, type: 'smoothstep', style: { stroke: col, strokeOpacity: 0.45 } })
     })
@@ -62,13 +63,13 @@ export function BranchTree({ dossier, claimId, events, onSelect, selected }: {
   }, [dossier, claimId, events, selected])
 
   return (
-    <div style={{ height: 460 }} className="panel-2 overflow-hidden">
+    <div style={{ height: 460 }} className="overflow-hidden rounded-xl border border-line bg-surface-2">
       <ReactFlow nodes={nodes} edges={edges} fitView fitViewOptions={{ padding: 0.15 }} minZoom={0.2} proOptions={{ hideAttribution: true }}
         nodesConnectable={false} onNodeClick={(_, n) => {
           const a = (dossier.attempts ?? []).find((x: Json) => `a-${x.branch_id}` === n.id)
           if (a) onSelect(a)
         }}>
-        <Background color="#243044" gap={22} />
+        <Background color="var(--c-line-strong)" gap={22} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
