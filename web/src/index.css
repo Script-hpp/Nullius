@@ -45,6 +45,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --c-bg: #000;
   --c-surface: #0a0a0a;
   --c-surface-2: #0c0c0c;
@@ -69,8 +70,9 @@
   --c-fg-2: oklch(92% 0.004 286.32);
   --c-fg-3: oklch(87.1% 0.006 286.286);
   --c-fg-4: oklch(70.5% 0.015 286.067);
-  --c-muted: oklch(55.2% 0.016 285.938);
-  --c-subtle: oklch(44.2% 0.017 285.786);
+  /* AA on the dark surfaces (4.5:1 on #0c0c0c): was zinc-500 4.05:1 and zinc-600 2.53:1 */
+  --c-muted: #81818a;
+  --c-subtle: #797982;
   --c-faint: oklch(37% 0.013 285.805);
   --c-tone-green: oklch(76.5% 0.177 163.223);
   --c-tone-amber: oklch(82.8% 0.189 84.429);
@@ -92,7 +94,7 @@
   --c-flow-ctl-fg: #ededed;
   --c-flow-ctl-line: #27272a;
   --chart-grid: #27272a;
-  --chart-axis: #71717a;
+  --chart-axis: #81818a;
   --chart-green: #10b981;
   --chart-amber: #f59e0b;
   --chart-red: #f43f5e;
