@@ -78,6 +78,11 @@ INFRA_RETRIES = 3       # Wiederholungen eines Versuchs bei Sandbox-Infrastruktu
 INFRA_BACKOFF_S = 5.0
 TRIAGE_CHARS = 1500
 WORKDIR = "/work"
+CODE_RETRY_MAX_TOKENS = 24000   # Wiederholung nach fehlendem Code-Block oder abgeschnittener Antwort
+CODE_ONLY_NOTE = (
+    "\n\nIMPORTANT: Reply with the complete script in one ```python block and nothing else. "
+    "Do not reason at length before the code; the answer must not be cut off."
+)
 PAPERS_YAML = REPO_ROOT / "benchmark" / "papers.yaml"
 
 PLAN_SYSTEM = (
@@ -253,11 +258,19 @@ class Orchestrator:
         return FIDELITY_NOTE if getattr(self, "graph_repair", False) else ""
 
     def _code_from_llm(self, system: str, user: str) -> str:
-        """Code-Block aus der Antwort; bei fehlendem Block bis zu 3 Versuche mit hoeherer
-        Temperatur (gleicher Prompt + gleiche Temperatur gaebe aus dem Cache dieselbe Antwort)."""
+        """Code-Block aus der Antwort; bis zu 3 Versuche. Fehlt der Block oder ist die Antwort abgeschnitten
+        (finish_reason "length": bei langem Code zehrt das Denken des Modells das Token-Limit auf), folgen
+        hoehere Temperatur (gleicher Prompt + gleiche Temperatur gaebe aus dem Cache dieselbe Antwort),
+        hoeheres max_tokens und der Hinweis, nur Code zurueckzugeben."""
         last: ValueError | None = None
         for i in range(3):
-            resp = self._ask("code", system, user, temperature=0.2 + 0.3 * i)
+            resp = self._ask(
+                "code", system, user + (CODE_ONLY_NOTE if i else ""),
+                max_tokens=CODE_RETRY_MAX_TOKENS if i else None, temperature=0.2 + 0.3 * i,
+            )
+            if getattr(resp, "finish_reason", None) == "length":
+                last = ValueError("Antwort abgeschnitten (finish_reason length)")
+                continue
             try:
                 return extract_code(resp.content)
             except ValueError as exc:
