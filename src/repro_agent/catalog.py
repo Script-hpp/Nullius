@@ -210,6 +210,21 @@ def order_key(entry: dict) -> tuple[int, str]:
     return tier, entry["arxiv_id"]
 
 
+NOT_JURY_READY = ("nicht bewertbar (Methode nicht umgesetzt)", "Agenten-Fehler vermutet", "nicht reproduzierbar (Setup)")
+
+
+def jury_ready(entry: dict) -> tuple[bool, str]:
+    """Jury-Katalog: Status geprueft heisst nur "Lauf ohne Absturz"; zusaetzlich zaehlt die Gesamtaussage."""
+    if entry.get("status") != CHECKED:
+        return False, f"Status {entry.get('status')}"
+    gesamt = (entry.get("verdict") or {}).get("gesamtaussage")
+    if gesamt is None:
+        return False, "kein Urteil"
+    if gesamt in NOT_JURY_READY:
+        return False, f"Gesamtaussage: {gesamt}"
+    return True, f"Gesamtaussage: {gesamt}"
+
+
 def record_result(entry: dict, status: str, reason: str | None = None, dossier=None, run_dir: Path | None = None,
                   cost_gross_usd: float | None = None) -> None:
     """Status (und bei Lauf-Ende das Urteil Achse 1) in den Eintrag schreiben."""
@@ -217,6 +232,7 @@ def record_result(entry: dict, status: str, reason: str | None = None, dossier=N
     entry["checked_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     entry.pop("reason", None)
     entry.pop("verdict", None)
+    entry.pop("jury", None)
     if reason:
         entry["reason"] = reason
     if cost_gross_usd is not None:
@@ -235,5 +251,8 @@ def record_result(entry: dict, status: str, reason: str | None = None, dossier=N
             "urteil": v.urteil, "measured_mean": num(v.measured_mean), "measured_std": num(v.measured_std),
             "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
             "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
+            "graph_repairs": dossier.graph_repairs.get(claim.id, 0),
             "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),
         }
+    ready, why = jury_ready(entry)
+    entry["jury"] = {"ready": ready, "reason": why}

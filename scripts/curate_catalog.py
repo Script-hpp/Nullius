@@ -45,6 +45,17 @@ def describe(entry: dict, seeds: int | None) -> dict:
             "warnings": paper["warnings"]}
 
 
+def overview(entries: list[dict]) -> str:
+    """Je Kandidat Status, Urteil, Gesamtaussage, Jury-Eignung mit Grund (liest nur, berechnet jury_ready frisch)."""
+    lines = []
+    for e in entries:
+        v = e.get("verdict") or {}
+        ready, why = cat.jury_ready(e)
+        lines.append(f"{e['arxiv_id']}  {e['status']:<19} urteil={v.get('urteil', '-')}  gesamt={v.get('gesamtaussage', '-')}  "
+                     f"jury={'ja' if ready else 'nein'} ({why})")
+    return "\n".join(lines)
+
+
 def curate(entries: list[dict], chosen: list[dict], path: Path, max_usd: float, seeds: int | None, offline: bool,
            orchestrator_factory=None) -> int:
     """Laeuft die Kandidaten nacheinander. Rueckgabe: Exit-Code (0 ok, 2 Abrechnung/Budget/Kostengrenze)."""
@@ -52,12 +63,13 @@ def curate(entries: list[dict], chosen: list[dict], path: Path, max_usd: float, 
         from repro_agent.loop import Orchestrator
 
         def orchestrator_factory():
-            return Orchestrator(seeds=seeds, tavily_mode="fixture" if offline else None)
+            return Orchestrator(seeds=seeds, tavily_mode="fixture" if offline else None, graph_repair=True)
     orch = orchestrator_factory()
     spent = 0.0
     for entry in chosen:
         if spent >= max_usd:   # harte Grenze: kein weiterer Kandidat
             print(f"ABBRUCH: --max-usd {max_usd:.2f} $ erreicht ({spent:.4f} $ brutto), {entry['arxiv_id']} und Rest nicht gelaufen")
+            print("\nUebersicht:\n" + overview(chosen))
             return 2
         try:
             cat.build_paper(entry)
@@ -90,11 +102,13 @@ def curate(entries: list[dict], chosen: list[dict], path: Path, max_usd: float, 
         v = entry.get("verdict") or {}
         print(f"{entry['arxiv_id']}: geprueft, {v.get('urteil')} (Mittel {v.get('measured_mean')}, "
               f"std {v.get('measured_std')}), {cost:.4f} $ brutto, gesamt {spent:.4f} $")
+    print("\nUebersicht:\n" + overview(chosen))
     return 0
 
 
 def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--list", action="store_true", help="nur Uebersicht aus catalog.yaml (Status, Urteil, Jury-Eignung), keine Aufrufe")
     ap.add_argument("--dry-run", action="store_true", help="nur Adapter-Ausgabe, schreibt nichts, null Aufrufe")
     ap.add_argument("--only", metavar="ARXIV_ID", help="nur dieser Kandidat (jeder Status)")
     ap.add_argument("--seeds", type=int, help="Seeds pro Kandidat (Standard: Wert des Katalogeintrags oder des Tasks)")
@@ -105,6 +119,9 @@ def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     ap.add_argument("--offline", action="store_true", help="Tavily-Fixtures statt Live-Aufrufe (nur Tests)")
     args = ap.parse_args(argv)
 
+    if args.list:
+        print(overview(cat.load_catalog(args.catalog)))
+        return 0
     entries = cat.load_catalog(args.catalog)
     candidates = cat.read_cache_candidates(args.cache) if args.cache.exists() else []
     if args.import_events:
