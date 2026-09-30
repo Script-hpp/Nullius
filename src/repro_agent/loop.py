@@ -159,6 +159,16 @@ class Orchestrator:
         if cb is not None:
             cb(record if record is not None else {"ts": time.time(), "type": type, **data})
 
+    def _announce_code(self, claim: Claim, code: str) -> None:
+        """Code-Version einmal an den Live-Hook schicken (nie in events.jsonl; im Export liegt jede Version als code_<hash>.py)."""
+        if getattr(self, "on_event", None) is None:
+            return
+        h = hashlib.sha256(code.encode()).hexdigest()[:12]
+        sent = self.__dict__.setdefault("_code_sent", set())
+        if h not in sent:
+            sent.add(h)
+            self._emit_live("code_text", claim_id=claim.id, code_hash=h, code=code)
+
     def _emit_live(self, type: str, **data) -> None:
         """Nur an den Live-Hook, nie in events.jsonl (Kosten laufend, kein Beleg des Laufs)."""
         cb = getattr(self, "on_event", None)
@@ -487,7 +497,9 @@ class Orchestrator:
         plan = self.plan(paper, claim, task)
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
         self._emit("plan", claim_id=claim.id, text=plan[:1500])
+        self._emit_live("plan_text", claim_id=claim.id, text=plan)   # voller Plan nur fuer den Live-Stream (plan.md im Export)
         code = self.write_code(plan, task)
+        self._announce_code(claim, code)
         self._emit("code_written", claim_id=claim.id, code_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
         seeds = list(range(self.seeds or paper.get("seeds", DEFAULT_SEEDS)))
         # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
@@ -589,6 +601,7 @@ class Orchestrator:
         for n in range(1, self.settings.max_attempts_per_claim + 1):
             code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
+            self._announce_code(claim, code)
             t0 = time.time()
             branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0)
             status, value = res["status"], res.get("measured")
@@ -680,6 +693,7 @@ class Orchestrator:
         self._run_dir = run_dir
         self.paper_text = None    # pro Lauf neu holen (live) statt den Text des vorigen Laufs weiterzuverwenden
         self._sources = []
+        self._code_sent = set()
         self.events = EventLog(run_dir / "events.jsonl")
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
