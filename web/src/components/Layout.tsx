@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
-import { Home, Layers, CheckCircle, Database, Settings, Search, Menu, X } from 'lucide-react'
+import { Home, Layers, CheckCircle, Database, Settings, Search, Menu, X, Library } from 'lucide-react'
 
 export function Layout({ children, currentHash }: { children: ReactNode, currentHash: string }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isDiscover = currentHash === 'discover'
+  const isCatalog = currentHash === 'catalog'
   const isHome = currentHash === '' || currentHash === '#' || currentHash === '#/'
   const item = (active: boolean) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-zinc-900/80 text-zinc-100' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/50'}`
 
@@ -17,6 +18,10 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
       <a href="#discover" className={item(isDiscover)}>
         <Search className="w-4 h-4" />
         Discover
+      </a>
+      <a href="#catalog" className={item(isCatalog)}>
+        <Library className="w-4 h-4" />
+        Catalog
       </a>
       <a href="#" className={item(!isHome && currentHash.includes('/run/'))}>
         <Layers className="w-4 h-4" />

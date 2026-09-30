@@ -7,6 +7,46 @@ export const RESULT: Record<string, { label: string; tone: Tone }> = {
   'nicht reproduzierbar (Setup)': { label: 'INVALID SETUP', tone: 'gray' },
   'Agenten-Fehler vermutet': { label: 'AGENT ERROR', tone: 'violet' },
 }
+// Discovery candidates that ran once through the loop: never a verdict on the paper, always "with our setup".
+export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
+  'reproduziert': { label: 'REPRODUCED', tone: 'green' },
+  'teilweise': { label: 'PARTIALLY REPRODUCED', tone: 'amber' },
+  'nicht reproduziert': { label: 'NOT REPRODUCED', tone: 'red' },
+  'nicht reproduzierbar (Setup)': { label: 'SETUP NOT REPRODUCIBLE', tone: 'gray' },
+  'Agenten-Fehler vermutet': { label: 'AGENT ERROR SUSPECTED', tone: 'violet' },
+}
+export const PRELIMINARY = 'Preliminary: method fidelity not checked'
+export const isPreliminary = (gesamt: string | undefined) => gesamt === 'vorlaeufig'
+export const NOT_ASSESSABLE = 'nicht bewertbar (Methode nicht umgesetzt)'
+
+// Label for a catalog result: a run whose code did not implement the method is "not assessable", whatever the number says.
+export function catalogLabel(urteil: string, gesamt: string | undefined): { label: string; tone: Tone } {
+  if (gesamt === NOT_ASSESSABLE) return { label: 'NOT ASSESSABLE', tone: 'gray' }
+  return de2en(RESULT_CATALOG, urteil)
+}
+
+// Warnings in the dossier are written in German by the loop; the UI shows English.
+const WARNING_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^Info: Das Paper nennt Streuung \+-([\d.]+)/, (m) => `The paper reports a spread of ±${m[1]} across splits or runs. That is not the tolerance of the mean; the tolerance stays fixed.`],
+  [/^Protokoll im Paper nicht belegt/, () => 'Protocol not stated in the paper: the task was assumed, not confirmed. The overall statement stays preliminary.'],
+  [/^Tabellenspalte nicht gepr/, () => 'Table column not verified: the number could belong to a comparison method.'],
+  [/^Eingabel[aä]nge im Paper nicht belegt/, () => 'Input length not stated in the paper: the agent chose it freely (up to 720).'],
+  [/^Zielwert weicht ab: Rolle 2 liest ([\d.]+).*die Discovery ([\d.]+)/, (m) => `Target differs: re-reading the paper gave ${m[1]}, discovery gave ${m[2]}. The discovery value is used.`],
+  [/^Rolle 2 konnte den Zielwert/, () => 'The target could not be cross-checked against the paper text. The discovery value is used.'],
+]
+export function translateWarning(text: string): string {
+  for (const [re, fn] of WARNING_PATTERNS) {
+    const m = text.match(re)
+    if (m) return fn(m)
+  }
+  return text
+}
+
+// Text color per tone, shared by Badge (ui.tsx) and the catalog components: one place to change for a light theme.
+export const TONE_TEXT: Record<Tone, string> = {
+  green: 'text-emerald-400', amber: 'text-amber-400', red: 'text-rose-400', gray: 'text-zinc-500', violet: 'text-violet-400',
+}
+
 export const METHOD: Record<string, { label: string; tone: Tone }> = {
   'ja': { label: 'YES', tone: 'green' },
   'teilweise': { label: 'PARTIAL', tone: 'amber' },

@@ -6,9 +6,11 @@ import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
 import { Discovery } from './components/Discovery'
+import { Catalog } from './components/Catalog'
+import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
-import { RESULT, de2en, type Tone } from './labels'
+import { NOT_ASSESSABLE, RESULT, catalogLabel, de2en, isPreliminary, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info } from 'lucide-react'
 
 const useHash = () => {
@@ -35,6 +37,9 @@ function translateClaim(text: string) {
   t = t.replace(/Accuracy auf/g, 'accuracy on')
   t = t.replace(/groesste Komponente/g, 'largest component')
   t = t.replace(/zufaellige/g, 'random')
+  t = t.replace(/20\/30\/Rest-Splits/g, '20/30/rest splits')
+  t = t.replace(/Standard-Split/g, 'standard split')
+  t = t.replace(/Horizont (\d+)/g, 'horizon $1')
   t = t.replace(/,(\d) %/g, '.$1%')
   return t
 }
@@ -55,17 +60,26 @@ function iconForTone(tone: Tone) {
   return <Info className="w-5 h-5 text-zinc-400 mt-0.5 shrink-0" />
 }
 
-function getDelta(measured: any, target: any) {
+// MSE/MAE are plain decimals, never percent; accuracy is a share shown as percent.
+const showValue = (metric: string | undefined, x: any) => (metric && metric !== 'accuracy' ? (x == null ? '–' : Number(x).toFixed(3)) : toPercent(x))
+
+function getDelta(measured: any, target: any, metric?: string) {
   if (measured === null || measured === undefined || target === null || target === undefined) return null
   const m = Number(measured)
   let t = Number(target)
   if (Number.isNaN(m) || Number.isNaN(t)) return null
   
-  const mVal = (m <= 2.0 && m > 0) ? m * 100 : m
-  const tVal = (t <= 2.0 && t > 0) ? t * 100 : t
+  const plain = !!metric && metric !== 'accuracy'
+  const mVal = plain ? m : (m <= 2.0 && m > 0) ? m * 100 : m
+  const tVal = plain ? t : (t <= 2.0 && t > 0) ? t * 100 : t
+  const unit = plain ? '' : '%'
   
   const diff = mVal - tVal
-  if (Math.abs(diff) < 0.05) return { text: '(±0.0% vs. Claimed)', color: 'text-zinc-500' }
+  if (plain) {
+    if (Math.abs(diff) < 0.0005) return { text: '(±0.000 vs. Claimed)', color: 'text-zinc-500' }
+    return { text: `(${diff > 0 ? '+' : ''}${diff.toFixed(3)} vs. Claimed)`, color: diff > 0 ? 'text-emerald-400' : 'text-rose-400' }
+  }
+  if (Math.abs(diff) < 0.05) return { text: `(±0.0${unit} vs. Claimed)`, color: 'text-zinc-500' }
   if (diff > 0) return { text: `(+${diff.toFixed(1)}% vs. Claimed)`, color: 'text-emerald-400' }
   return { text: `(${diff.toFixed(1)}% vs. Claimed)`, color: 'text-rose-400' }
 }
@@ -75,6 +89,15 @@ function getJuryStatement(claimed: string, measured: string, tone: Tone) {
   if (tone === 'amber') return `The paper claims ${claimed}, but we measured ${measured}. The target was closely missed, indicating partial reproducibility.`
   if (tone === 'red') return `The paper claims ${claimed}, but we only measured ${measured}. The claim could not be verified.`
   return `The paper claims ${claimed}, but the verification is incomplete.`
+}
+
+// Catalog runs: always "with our setup", never a verdict on the paper.
+function getCatalogStatement(claimed: string, measured: string, urteil: string, gesamt?: string) {
+  if (gesamt === NOT_ASSESSABLE) return `The code did not implement the method, so the measurement (${measured}) says nothing about the reported ${claimed}.`
+  if (urteil === 'reproduziert') return `Reproduced with our setup: measured ${measured} against the reported ${claimed}.`
+  if (urteil === 'teilweise') return `Partially reproduced with our setup: measured ${measured} against the reported ${claimed}.`
+  if (urteil === 'nicht reproduziert') return `Not reproduced with our setup: measured ${measured} against the reported ${claimed}. This is not a finding about the paper.`
+  return `No valid measurement with our setup against the reported ${claimed}.`
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -145,10 +168,10 @@ function Home({ runs }: { runs: RunRef[] }) {
           const d = data[r.id]
           const v = d?.dossier?.verdicts?.[0]
           const claim = d?.dossier?.claims?.[0]
-          const res = v ? de2en(RESULT, v.urteil) : null
+          const res = v ? (r.catalog_id ? catalogLabel(v.urteil, r.gesamtaussage) : de2en(RESULT, v.urteil)) : null
           
           let delta = null
-          if (v && claim) delta = getDelta(v.measured_mean, claim.target)
+          if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
           
           return (
             <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
@@ -163,7 +186,12 @@ function Home({ runs }: { runs: RunRef[] }) {
               </div>
               
               <div className="flex flex-col gap-2.5 mb-5">
-                {v ? <Badge tone={res!.tone}>{res!.label}</Badge> : <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Evaluating...</span>}
+                {v ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge tone={res!.tone}>{res!.label}</Badge>
+                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
+                  </div>
+                ) : <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Evaluating...</span>}
                 <h3 className="text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
               </div>
               
@@ -176,12 +204,12 @@ function Home({ runs }: { runs: RunRef[] }) {
                   <>
                     <div className="flex justify-between items-center w-full">
                       <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
-                      <span className="font-mono text-zinc-400">{toPercent(claim?.target)}</span>
+                      <span className="font-mono text-zinc-400">{showValue(claim?.metric, claim?.target)}</span>
                     </div>
                     <div className="flex justify-between items-start w-full pt-1">
                       <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
                       <div className="flex flex-col items-end gap-1">
-                        <span className={`font-mono font-bold text-lg leading-none ${colorForTone(res!.tone)}`}>{toPercent(v.measured_mean)}</span>
+                        <span className={`font-mono font-bold text-lg leading-none ${colorForTone(res!.tone)}`}>{showValue(claim?.metric, v.measured_mean)}</span>
                         {delta && <span className={`font-mono text-[10px] ${delta.color}`}>{delta.text}</span>}
                       </div>
                     </div>
@@ -200,10 +228,10 @@ function Home({ runs }: { runs: RunRef[] }) {
   )
 }
 
-function RunView({ ref_ }: { ref_: RunRef }) {
+function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   const [run, setRun] = useState<RunData | null>(null)
   const [selected, setSelected] = useState<Json | null>(null)
-  const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>('evidence')
+  const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' ? 'log' : 'evidence')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   
   if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Loading run data…</main>
@@ -212,12 +240,13 @@ function RunView({ ref_ }: { ref_: RunRef }) {
   const v: Json = d.verdicts?.[0]
   if (!claim) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 muted">Empty run.</main>
   
-  const res = v ? de2en(RESULT, v.urteil) : { label: 'NO VERDICT', tone: 'gray' as const }
+  const isCatalog = !!ref_.catalog_id   // discovery candidate run through the loop
+  const res = v ? (isCatalog ? catalogLabel(v.urteil, ref_.gesamtaussage) : de2en(RESULT, v.urteil)) : { label: 'NO VERDICT', tone: 'gray' as const }
   const attempts: Json[] = (d.attempts ?? []).filter((a: Json) => a.claim_id === claim.id)
   const paperUrl = claim.target_evidence?.url
   
   let delta = null
-  if (v && claim) delta = getDelta(v.measured_mean, claim.target)
+  if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
   const resColorClass = colorForTone(res.tone)
 
   const tabs = [
@@ -252,6 +281,8 @@ function RunView({ ref_ }: { ref_: RunRef }) {
         )}
       </motion.div>
 
+      {isCatalog && <CatalogCallout run={run} claimId={claim.id} gesamt={ref_.gesamtaussage} />}
+
       {/* Split Layout: Verdict & Chart */}
       <div className="grid gap-6 lg:grid-cols-3 items-start">
         <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: `var(--${res.tone})` }}>
@@ -262,12 +293,12 @@ function RunView({ ref_ }: { ref_: RunRef }) {
           <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center w-full">
               <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
-              <span className="font-mono text-zinc-300 text-lg">{toPercent(claim.target)}</span>
+              <span className="font-mono text-zinc-300 text-lg">{showValue(claim.metric, claim.target)}</span>
             </div>
             <div className="flex justify-between items-start w-full pt-4 border-t border-zinc-800/50">
               <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
               <div className="flex flex-col items-end gap-1.5">
-                <span className={`font-mono font-bold text-3xl leading-none ${resColorClass}`}>{toPercent(v?.measured_mean)}</span>
+                <span className={`font-mono font-bold text-3xl leading-none ${resColorClass}`}>{showValue(claim.metric, v?.measured_mean)}</span>
                 {delta && <span className={`font-mono text-[11px] mt-1 ${delta.color}`}>{delta.text}</span>}
               </div>
             </div>
@@ -277,9 +308,11 @@ function RunView({ ref_ }: { ref_: RunRef }) {
             {iconForTone(res.tone)}
             <div>
               <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
-                {getJuryStatement(toPercent(claim.target), toPercent(v?.measured_mean), res.tone)}
+                {isCatalog && v
+                  ? getCatalogStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v.measured_mean), v.urteil, ref_.gesamtaussage)
+                  : getJuryStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v?.measured_mean), res.tone)}
               </p>
-              <p className="text-[11px] text-zinc-500 mt-2 font-mono">Margin of Error: ±{toPercent(claim.tolerance)}</p>
+              <p className="text-[11px] text-zinc-500 mt-2 font-mono">Margin of Error: ±{claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)}</p>
             </div>
           </div>
         </Section>
@@ -332,18 +365,18 @@ export default function App() {
   const hash = useHash()
   const [runs, setRuns] = useState<RunRef[] | null>(null)
   useEffect(() => { loadIndex().then(setRuns) }, [])
-  const m = hash.match(/^\/run\/(.+)$/)
+  const m = hash.match(/^\/run\/([^?]+)(?:\?tab=(\w+))?$/)
   const ref = m && runs?.find((r) => r.id === decodeURIComponent(m[1]))
   
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-black">
-        {hash === 'discover' ? <Discovery /> : runs === null ? (
+        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-zinc-600 animate-pulse" />
             <span className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
           </div>
-        ) : ref ? <RunView ref_={ref} key={ref.id} /> : <Home runs={runs} />}
+        ) : ref ? <RunView ref_={ref} initialTab={m?.[2]} key={ref.id} /> : <Home runs={runs} />}
       </div>
     </Layout>
   )

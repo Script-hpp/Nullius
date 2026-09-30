@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { CheckCircle2, MinusCircle, XCircle, Info, HelpCircle } from 'lucide-react'
-import type { Tone } from '../labels'
+import { TONE_TEXT, type Tone } from '../labels'
 
 const toneConfig: Record<Tone, { color: string; icon: ReactNode }> = {
-  green: { color: 'text-emerald-400', icon: <CheckCircle2 className="w-4 h-4" /> },
-  amber: { color: 'text-amber-400', icon: <MinusCircle className="w-4 h-4" /> },
-  red: { color: 'text-rose-400', icon: <XCircle className="w-4 h-4" /> },
-  gray: { color: 'text-zinc-500', icon: <Info className="w-4 h-4" /> },
-  violet: { color: 'text-violet-400', icon: <HelpCircle className="w-4 h-4" /> }
+  green: { color: TONE_TEXT.green, icon: <CheckCircle2 className="w-4 h-4" /> },
+  amber: { color: TONE_TEXT.amber, icon: <MinusCircle className="w-4 h-4" /> },
+  red: { color: TONE_TEXT.red, icon: <XCircle className="w-4 h-4" /> },
+  gray: { color: TONE_TEXT.gray, icon: <Info className="w-4 h-4" /> },
+  violet: { color: TONE_TEXT.violet, icon: <HelpCircle className="w-4 h-4" /> }
 }
 
 export function toPercent(val: string | number | null | undefined): string {

@@ -1,13 +1,13 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Json = any
 
-export type RunRef = { id: string; paper_id: string; title: string; timestamp: string; note?: string }
+export type RunRef = { id: string; paper_id: string; title: string; timestamp: string; note?: string; catalog_id?: string; gesamtaussage?: string }
 export type Event = { ts: number; type: string; [k: string]: Json }
 export type RunData = { ref: RunRef; dossier: Json; events: Event[]; code: string | null; plan: string | null; zeugnis: string | null }
 
 const base = import.meta.env.BASE_URL + 'data/'
 
-async function getText(path: string): Promise<string | null> {
+export async function getText(path: string): Promise<string | null> {
   try {
     const r = await fetch(base + path)
     if (!r.ok) return null

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Info } from 'lucide-react'
 import { Section } from './ui'
+import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
+import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
@@ -170,11 +172,13 @@ const STATE_TEXT: Record<string, string> = {
   searching: 'Looking for code and community notes',
 }
 
-function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
+function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: CatalogEntry }) {
   const t = useTween()
   const reduce = useReducedMotion()
   const c = p.claim
   const rejected = p.state === 'rejected'
+  const checked = p.state === 'candidate' && entry?.status === 'geprueft' && !!entry.verdict   // ran once through the loop
+  const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
       className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
@@ -203,7 +207,13 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
         </div>
       )}
 
-      {p.state === 'candidate' && (
+      {checked && entry && (
+        <div className="mt-3">
+          <CatalogVerdict entry={entry} />
+        </div>
+      )}
+
+      {p.state === 'candidate' && !checked && (
         <div className="mt-3">
           <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-300">
             <CircleDashed className="w-3.5 h-3.5" />
@@ -213,6 +223,9 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
               <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-zinc-600">from cache<Hint text={HINTS.cache} /></span>
             )}
           </div>
+          {notRun && entry && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${entry.reason}` : ''}</p>
+          )}
         </div>
       )}
 
@@ -229,6 +242,7 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
             </div>
           </div>
           <QuoteView quote={c.quote} target={c.target} />
+          {checked && entry && <ClaimedMeasured entry={entry} />}
           {c.column_check && (
             <p className="inline-flex items-center gap-1 text-[11px] text-zinc-500">
               {c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}<Hint text={HINTS.column} />
@@ -244,7 +258,8 @@ function PaperCard({ p, active }: { p: DPaper; active: boolean }) {
           ) : (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-400"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text<Hint text={HINTS.protocol} /></span>
           )}
-          <span className="flex items-center gap-4 text-[11px] text-zinc-500">
+          <span className="flex flex-wrap items-center gap-4 text-[11px] text-zinc-500">
+            {checked && entry && <EvidenceLink entry={entry}>View evidence</EvidenceLink>}
             <span><span className="font-mono text-zinc-300">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
             {p.githubUrl ? (
               <a href={p.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-zinc-300 hover:text-white">
@@ -298,6 +313,7 @@ export function Discovery() {
   useEffect(() => { speedRef.current = speed }, [speed])
   useEffect(() => () => stop.current(), [])
   const view = useMemo(() => deriveView(events), [events])
+  const catalog = useCatalog()
   const running = mode === 'live' || mode === 'replay'
 
   const reset = () => { stop.current(); setEvents([]); setError(null); setRecorded(false) }
@@ -455,9 +471,9 @@ export function Discovery() {
             <Funnel funnel={view.funnel} />
           </Section>
           <Section title="Papers" hint={`${papers.length} seen`}>
-            <p className="mb-4 text-[12px] leading-relaxed text-zinc-500">Candidates are claims we can re-run. None of them has been re-run yet.</p>
+            <p className="mb-4 text-[12px] leading-relaxed text-zinc-500">Candidates are claims we can re-run. Unless a result is shown, a candidate has not been re-run yet.</p>
             <div className="space-y-3">
-              {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} />)}
+              {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={catalog?.find((e) => e.arxiv_id === p.id)} />)}
               {!papers.length && <p className="text-[13px] text-zinc-600">Papers appear here as Tavily finds and reads them.</p>}
             </div>
           </Section>
