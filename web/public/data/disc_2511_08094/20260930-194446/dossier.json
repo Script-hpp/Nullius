@@ -1,0 +1,432 @@
+{
+  "paper_id": "disc_2511_08094",
+  "claims": [
+    {
+      "id": "disc_2511_08094_accuracy",
+      "text": "SL-GCN erreicht 82.92 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)",
+      "metric": "accuracy",
+      "target": 0.8292,
+      "tolerance": 0.01,
+      "source": "Table 2, arXiv ? (arxiv_html)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/html/2511.08094"
+      ],
+      "target_evidence": {
+        "value": 0.8292,
+        "quote": "| SL-GCN | 82.92 ± 1.39 | 73.29 ± 2.04 | 79.21 ± 1.30 |",
+        "table": "Table 2",
+        "url": "https://arxiv.org/html/2511.08094",
+        "source_kind": "arxiv_html",
+        "retrieved_at": "2026-09-30T17:45:07+00:00",
+        "sha256": "1cd8a992d1da24bc9cd02429b716606e4c7146e27e8dc16bc2ddc22969cadf2d",
+        "arxiv_version": null,
+        "caveat": null,
+        "column_check": "ok"
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-0f3eb3c7",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "3f85c517c6ad",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 105, in <module>\n    main()\n  File \"/work/train.py\", line 49, in main\n    for batch_idx in train_loader:\n  File \"/usr/local/lib/python3.11/site-packages/torch/utils/data/dataloader.py\", line 725, in __next__\n    data = self._next_data()\n           ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/utils/data/dataloader.py\", line 785, in _next_data\n    data = self._dataset_fetcher.fetch(index)  # may raise StopIteration\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py\", line 54, in fetch\n    data = [self.dataset[idx] for idx in possibly_batched_index]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py\", line 54, in <listcomp>\n    data = [self.dataset[idx] for idx in possibly_batched_index]\n            ~~~~~~~~~~~~^^^^^\nIndexError: range object index out of range",
+      "tavily_queries": [],
+      "cost_usd": 0.021051,
+      "metrics": null,
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-aa61ae94",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.5540983606557377,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5540983606557377
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          9,
+          10,
+          11,
+          12,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          22,
+          23,
+          26,
+          27,
+          32,
+          33,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          43,
+          44,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          69,
+          70,
+          71,
+          72,
+          74,
+          75,
+          76,
+          77,
+          80,
+          81,
+          84,
+          85,
+          88,
+          89,
+          90,
+          91,
+          94,
+          95,
+          96,
+          97,
+          98,
+          100,
+          102,
+          103
+        ],
+        "missing": [
+          86
+        ]
+      }
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-eb74c7fa",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.5789227166276346,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5789227166276346
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-1ec23b89",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.5395784543325527,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5395784543325527
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-8f4daa88",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 1,
+      "status": "abweichung",
+      "measured": 0.5733021077283372,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5733021077283372
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-90e2c9d1",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 2,
+      "status": "abweichung",
+      "measured": 0.5583138173302108,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5583138173302108
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-f2f8b0b4",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.5882903981264637,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5882903981264637
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-b8608c25",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 6,
+      "status": "abweichung",
+      "measured": 0.5442622950819672,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5442622950819672
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-8b9fcead",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 7,
+      "status": "abweichung",
+      "measured": 0.5545667447306791,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5545667447306791
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-1af25d15",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 8,
+      "status": "abweichung",
+      "measured": 0.5133489461358314,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5133489461358314
+      },
+      "coverage": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-3cda2e2f",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20260930-194446",
+      "code_hash": "00b32b643451",
+      "seed": 9,
+      "status": "abweichung",
+      "measured": 0.5156908665105386,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.0234066,
+      "metrics": {
+        "accuracy": 0.5156908665105386
+      },
+      "coverage": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "urteil": "nicht reproduziert",
+      "measured_mean": 0.5520374707259953,
+      "measured_std": 0.024883888180624633,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0249. Mit unserem Setup gemessen (10 von 10 Seeds, Zielwert 0.8292 +/- 0.01, Table 2, arXiv ? (arxiv_html)): Mittel 0.5520.",
+      "sources": [
+        "https://arxiv.org/html/2511.08094"
+      ],
+      "methode": "nein"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "encoder/decoder depth",
+      "value": "single-layered MLPs",
+      "quote": "Both the encoder ENC and the decoder DEC are single-layered MLPs.",
+      "source": "paper"
+    },
+    {
+      "topic": "decoder type",
+      "value": "choice between real- or complex-valued DEC does not noticeably affect model performance",
+      "quote": "While ENC is complex-valued, from our experience the choice between a real- or complex-valued DEC does not noticeably affect model performance.",
+      "source": "paper"
+    },
+    {
+      "topic": "readout types",
+      "value": "do not improve and may sometimes degrade model performance",
+      "quote": "Other readout types including modulus, phases, and phase differences do not improve and may sometimes degrade model performance.",
+      "source": "paper"
+    },
+    {
+      "topic": "polar-cartesian conversion overhead",
+      "value": "negligible computational overhead and does not impact model performance",
+      "quote": "Although this scheme requires repeated polar-cartesian conversion at each layer, empirically this introduces negligible computational overhead and does not impact model performance.",
+      "source": "paper"
+    },
+    {
+      "topic": "Newton method convergence",
+      "value": "typically converges within 2 - 5 steps, depending on the set error tolerance",
+      "quote": "When Newton’s method is used, it typically converges within 2 - 5 steps, depending on the set error tolerance.",
+      "source": "paper"
+    },
+    {
+      "topic": "hyperparameter release",
+      "value": "best hyperparameters released along with the code",
+      "quote": "We release the best hyperparameters along with the code (available upon publication).",
+      "source": "paper"
+    },
+    {
+      "topic": "num_random_splits",
+      "value": "100",
+      "quote": "The means and standard deviations are computed over 100 random dataset splits and initialization.",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation_protocol",
+      "value": "transductive node classification",
+      "quote": "Transductive node classification accuracy (%) on homophilic datasets.",
+      "source": "paper"
+    },
+    {
+      "topic": "data split scheme for homophilic graphs",
+      "value": "follow shchurPitfallsGraphNeural2018",
+      "quote": "For homophilic graphs, we follow the data split schemes laid out by shchurPitfallsGraphNeural2018 (shchurPitfallsGraphNeural2018).",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation protocol (splits and initializations)",
+      "value": "10 pre-defined splits with 10 random initializations per split",
+      "quote": "The means and standard deviations are computed over 10 pre-defined splits, with 10 random initializations per split.",
+      "source": "paper"
+    },
+    {
+      "topic": "task type",
+      "value": "transductive node classification",
+      "quote": "We evaluate all models on transductive node classification tasks on both homophilic and heterophilic datasets, including Cora (mccallumAutomatingConstructionInternet2000), Citeseer (senCollectiveClassificationNetwork2008), Pubmed (namataQuerydrivenActiveSurveying2012), WebKB (peiGeomGCNGeometricGraph2020) (Texas, Wisconsin, Cornell), WikipediaNetwork (rozemberczkiMultiscaleAttributedNode2019) (Chameleon, Squirrel), heterophilous graphs (platonovCriticalLookEvaluation2023) (Amazon-rating).",
+      "source": "paper"
+    },
+    {
+      "topic": "data splits",
+      "value": "10 random splits",
+      "quote": "The mean values are computed over 10 random splits and weight initializations.",
+      "source": "paper"
+    },
+    {
+      "topic": "depth tuning",
+      "value": "seven fixed depths ranging from 2 to 128 layers",
+      "quote": "we therefore re-tune the models for seven fixed depths ranging from 2 to 128 layers.",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation protocol",
+      "value": "hyperparameters tuned on validation set; final test performance reported using best validation configuration",
+      "quote": "Hyperparameters are optimized by maximizing classification accuracy or minimizing regression loss on the validation set. We report the final evaluation results on the test set with best-performing configuration on the validation set.",
+      "source": "paper"
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/kevvzhang/StuartLandauGNN",
+    "commit": "40944b1e0d2b954de6b46f31b6a9a6f3dc04f095",
+    "files": []
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.1377049180327869
+    },
+    "no_graph": {
+      "accuracy": 0.497423887587822
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/html/2511.08094",
+      "mode": "live",
+      "n_chars": 62042,
+      "retrieved_at": "2026-09-30T17:45:07+00:00",
+      "sha256": "1cd8a992d1da24bc9cd02429b716606e4c7146e27e8dc16bc2ddc22969cadf2d"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/kevvzhang/StuartLandauGNN",
+      "mode": "live",
+      "n_chars": 17400,
+      "retrieved_at": "2026-09-30T17:45:23+00:00",
+      "sha256": "5f9f7d3e5cdde1c77c8f77cf4bafabd0f6562e00156e3909b6e7e0bbd7846d18"
+    }
+  ],
+  "ablations": {
+    "disc_2511_08094_accuracy": {
+      "accuracy_full": 0.5540983606557377,
+      "accuracy_ablated": 0.5540983606557377,
+      "verdict": "Graph nicht genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau",
+  "warnings": [
+    "Info: Das Paper nennt Streuung +-1.39 (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); die Toleranz +-0.01 bleibt fest."
+  ]
+}

@@ -1,2 +1,206 @@
 # Discovery-Kandidaten und ihr Pruefstatus (scripts/curate_catalog.py). papers.yaml bleibt unberuehrt.
-candidates: []
+candidates:
+- id: disc_2601_18837
+  arxiv_id: '2601.18837'
+  title: Time series forecasting with Hahn Kolmogorov-Arnold networks
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: HaKAN
+      quote: '| Method | HaKAN | TsKAN | Timer-XL | TimeKAN | PatchTST/64 | N-HiTS | DLinear | MICN | TimesNet |
+
+        | Metric | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE
+        |
+
+        | ETTh1 96 | 0.369 | 0.394 | 0.376 | 0.395 | 0.364 | 0.397 | 0.367 | 0.395 | 0.379 | 0.401 | 0.378 | 0.436 | 0.375
+        | 0.399 | 0.413 | 0.442 | 0.421 | 0.440 |'
+      metric: mse
+      target: 0.369
+      horizon: 96
+      protocol: unklar
+      matched_task: null
+      protocol_quote: ''
+      protocol_reason: The text does not explicitly mention the ETTh1 train/validation/test split or protocol details; it
+        only notes a fixed look-back window of L=96.
+      column_check: unchecked
+      protocol_evidence: Protokoll nicht belegt
+    github_url: null
+    source_url: https://arxiv.org/pdf/2601.18837
+    protocol: unklar
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community:
+    - url: https://openreview.net/pdf/36827ca72ee985774a8649ea43f60ee57ccd5271.pdf
+      title: '[PDF] Time Series Forecasting with Hahn Kolmogorov-Arnold Networks'
+      snippet: 'Recent advances in multivariate time series forecasting Proceedings of the 29th International Conference on
+        Arti-ficial Intelligence and Statistics (AISTATS) 2026, Tangier, Morocco. PMLR: Volume 300. Copyright 2026 by the
+        au-thor(s). [...] To capture hierarchical temporal patterns, the Hahn-KAN bloc'
+    - url: https://openreview.net/forum?id=hA1JZ2Sbz5&referrer=%5Bthe+profile+of+Md+Zahidul+Hasan%5D%28%2Fprofile%3Fid%3D~Md_Zahidul_Hasan1%29
+      title: Time Series Forecasting with Hahn Kolmogorov-Arnold Networks | OpenReview
+      snippet: 'Title: Time Series Forecasting with Hahn Kolmogorov-Arnold Networks | OpenReview
+
+        back arrowBack to **the profile of Md Zahidul Hasan**. ## Time Series Forecasting with Hahn Kolmogorov-Arnold Networks.
+        ### Md Zahidul Hasan, Abdessamad Ben Hamza, Nizar Bouguila. Published: 03 Feb 2026, Last Modified: '
+    - url: https://github.com/fsmss/Time-TK
+      title: 'GitHub - Cola-Fsm/Time-TK: [WWW 2026] Time-TK: A Multi-Offset Temporal Interaction Framework Combining Transformer
+        and Kolmogorov-Arnold Networks for Time Series Forecasting · GitHub'
+      snippet: 'Title: GitHub - Cola-Fsm/Time-TK: [WWW 2026] Time-TK: A Multi-Offset Temporal Interaction Framework Combining
+        Transformer and Kolmogorov-Arnold Networks for Time Series Forecasting · GitHub
+
+        ## Navigation Menu. # Search code, repositories, users, issues, pull requests... # Provide feedback. We read e'
+    - url: https://openreview.net/forum?id=Zk1JX3BAdO
+      title: 'AdaKAN: Kolmogorov-Arnold Networks with Adaptive Spectral Decomposition for Time Series Forecasting | OpenReview'
+      snippet: 'Title: AdaKAN: Kolmogorov-Arnold Networks with Adaptive Spectral Decomposition for Time Series Forecasting
+        | OpenReview
+
+        back arrowGo to **ICLR 2026 Conference** homepage. ## AdaKAN: Kolmogorov-Arnold Networks with Adaptive Spectral Decomposition
+        for Time Series Forecasting. ### Yuhan Wu, Xiyu Meng, '
+- id: disc_2601_21866
+  arxiv_id: '2601.21866'
+  title: 'MoHETS: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts'
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: MoHETS
+      quote: '| Models | MoHETS | Timer-XLBase | Time-MoEBase | Time-MoELarge | Time-MoEUltra | MoiraiSmall | MoiraiBase |
+        MoiraiLarge | MOMENT | ChronosBase | ChronosLarge |
+
+        | ETTh1 | 96 | 0.350 | 0.383 | 0.369 | 0.391 | 0.357 | 0.381 | 0.350 | 0.382 | 0.349 | 0.379 | 0.401 | 0.402 | 0.376
+        | 0.392 | 0.381 | 0.388 | 0.688 | 0.557 | 0.440 | 0.393 | 0.441 | 0.390 |'
+      metric: mse
+      target: 0.35
+      horizon: 96
+      protocol: unklar
+      matched_task: null
+      protocol_quote: null
+      protocol_reason: The excerpt does not mention the ETTh1 protocol details such as train/validation/test split or input
+        length/horizon specifics.
+      column_check: unchecked
+      protocol_evidence: Protokoll nicht belegt
+    github_url: null
+    source_url: https://arxiv.org/pdf/2601.21866
+    protocol: unklar
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community:
+    - url: https://github.com/evortigosa/mohe_forecast
+      title: 'GitHub - evortigosa/mohe_forecast: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts ·
+        GitHub'
+      snippet: '`@article{ortigossa2026mohets,
+
+        title={{MoHETS}: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts},
+
+        author={Ortigossa, Evandro S. and Lutsker, Guy and Segal, Eran},
+
+        journal={arXiv preprint arXiv:2601.21866},
+
+        year={2026}
+
+        }`
+
+
+        ## Acknowledgement
+
+
+        We appreciate the following GitHub'
+    - url: https://github.com/evortigosa/segmoe_forecast
+      title: 'GitHub - evortigosa/segmoe_forecast: Segment-wise Mixture-of-Experts for Long-term Time Series Forecasting ·
+        GitHub'
+      snippet: 'Title: GitHub - evortigosa/segmoe_forecast: Segment-wise Mixture-of-Experts for Long-term Time Series Forecasting
+        · GitHub
+
+        You signed in with another tab or window. You switched accounts on another tab or window. ## Latest commit. ## Folders
+        and files. | Name | Name | Last commit message | Last comm'
+- id: disc_2609_30894
+  arxiv_id: '2609.30894'
+  title: Training Graph Foundation Models on The Web Graph
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: Cora
+    claim:
+      method: Acacia, frozen
+      quote: '| Acacia, frozen | 58.17± 1.35 | 39.50± 1.22 | 19.87± 0.74 | 66.00± 0.72 |'
+      metric: accuracy
+      target: 58.17
+      protocol: passt
+      matched_task: Cora
+      protocol_quote: We use the Planetoid public splits  for Cora, CiteSeer, and PubMed, and the official OGB split  for
+        ogbn-products.
+      protocol_reason: The text states they used the Planetoid public split for Cora, which matches the supported Cora protocol.
+      column_check: unchecked
+      protocol_evidence: 'Protokoll: Zitat im Text belegt'
+    github_url: null
+    source_url: https://arxiv.org/html/2609.30894v1
+    protocol: passt
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community:
+    - url: https://openreview.net/pdf/f3b6d4b72fdb96d7e270fe2f0f483832ac1ecb43.pdf
+      title: 'GRAVER: Generative Graph Vocabularies for Robust ...'
+      snippet: '35 F.3 Additional Results: Efficiency Evaluation for Fine-tuning . . . . . . . . . . . .
+
+        35 F.4 Additional Results: Node Embedding Visualization . . . . . . . . . . . . . . . .
+
+        36 G Additional Related Work 37 G.1 Multi-Domain Pre-trained Graph Foundation Models . . . . . . . . . . . . . . .
+
+        37 G.2 G'
+    - url: https://openreview.net/forum?id=ZXOfmBn3Fu&referrer=%5Bthe+profile+of+Xike+Xie%5D%28%2Fprofile%3Fid%3D~Xike_Xie1%29
+      title: Learning Graph Foundation Models on Riemannian ...
+      snippet: Graph foundation models (GFMs), pretrained on massive graph data, have transformed graph machine learning by
+        supporting general-purpose
+    - url: https://github.com/Zehong-Wang/Awesome-Foundation-Models-on-Graphs
+      title: Zehong-Wang/Awesome-Foundation-Models-on-Graphs
+      snippet: A collection of graph foundation models including papers, codes, and datasets. web, academic, molecular) collection
+        of graph foundation models including papers
+    - url: https://github.com/DeepGraphLearning/ULTRA
+      title: 'GitHub - DeepGraphLearning/ULTRA: A foundation model for knowledge graph reasoning · GitHub'
+      snippet: retrieve new easy answers on training queries but on larger unseen graphs. [...] You can use any existing ULTRA
+        checkpoint (`3g` / `4g` / `50g`) for starters - don't forget to set the `--threshold` argument to 0.8 or higher (depending
+        on the dataset). Score thresholding is required because those mod
+    - url: https://openreview.net/forum?id=mXEdUcLtaK
+      title: How Expressive are Knowledge Graph Foundation Models?
+      snippet: 'by X Huang · Cited by 26 — TL;DR: We conduct a rigorous expressiveness study on knowledge graph foundation
+        models and propose a general framework that provably increases'
+- id: disc_2511_08094
+  arxiv_id: '2511.08094'
+  title: Stuart-Landau Oscillatory Graph Neural Network
+  status: geprueft
+  imported_from: events:replay.jsonl
+  candidate:
+    dataset: Cora
+    claim:
+      method: SL-GCN
+      quote: SL-GCN 82.92 ± 1.39
+      metric: accuracy
+      target: 82.92
+      protocol: passt
+      matched_task: Cora-LCC
+      protocol_quote: For homophilic graphs, we follow the data split schemes laid out by shchurPitfallsGraphNeural2018(shchurPitfallsGraphNeural2018).
+      protocol_reason: The text states they use Shchur et al. 2018 split schemes, which corresponds to the Cora‑LCC protocol.
+      column_check: ok
+      protocol_evidence: 'Protokoll: Zitat im Text belegt'
+    github_url: https://github.com/kevvzhang/StuartLandauGNN
+    source_url: https://arxiv.org/pdf/2511.08094
+    protocol: passt
+    found_by: tavily
+    reason: Code found, validated via README.
+  checked_at: '2026-09-30T18:19:19Z'
+  cost_gross_usd: 0.0246
+  verdict:
+    urteil: nicht reproduziert
+    measured_mean: 0.782998
+    measured_std: 0.017567
+    seeds: 10
+    target: 0.8292
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    graph_repairs: 0
+    run_dir: runs/disc_2511_08094/20260930-200050
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'

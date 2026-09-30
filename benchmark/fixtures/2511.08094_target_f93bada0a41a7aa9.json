@@ -1,0 +1,12 @@
+{
+ "value": 0.8292,
+ "quote": "SL-GCN 82.92 ± 1.39 73.29 ± 2.04 79.21 ± 1.30",
+ "table": "Table 2",
+ "url": "https://arxiv.org/html/2511.08094v2",
+ "source_kind": "arxiv_html",
+ "retrieved_at": "2026-09-30T18:00:54+00:00",
+ "sha256": "d2924fd2ef1b993c72c6e2f821e1d79b0ec8c82e118e2a2ebdd6709cc8f9ce7a",
+ "arxiv_version": "v2",
+ "caveat": null,
+ "column_check": "ok"
+}
