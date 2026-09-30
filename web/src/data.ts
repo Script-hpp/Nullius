@@ -41,8 +41,10 @@ function eventsFromDossier(d: Json): Event[] {
   return ev
 }
 
+export const runDir = (ref: RunRef) => `${ref.paper_id}/${ref.timestamp}/`
+
 export async function loadRun(ref: RunRef): Promise<RunData> {
-  const dir = `${ref.paper_id}/${ref.timestamp}/`
+  const dir = runDir(ref)
   const dossier = JSON.parse((await getText(dir + 'dossier.json')) ?? '{}')
   const evText = await getText(dir + 'events.jsonl')
   const events = evText

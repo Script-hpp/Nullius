@@ -107,3 +107,26 @@ export function translateReason(reason: string): string {
   if ((m = reason.match(/^Datensatz (.+) ohne Task/))) return `no task for dataset ${m[1]}`
   return reason
 }
+
+// Claim texts from the loop are German ("erreicht ... Accuracy auf ..."); the UI shows English.
+export function translateClaim(text: string) {
+  if (!text) return text
+  let t = text
+  t = t.replace(/erreicht/g, 'achieves')
+  t = t.replace(/Accuracy auf/g, 'accuracy on')
+  t = t.replace(/groesste Komponente/g, 'largest component')
+  t = t.replace(/zufaellige/g, 'random')
+  t = t.replace(/20\/30\/Rest-Splits/g, '20/30/rest splits')
+  t = t.replace(/Standard-Split/g, 'standard split')
+  t = t.replace(/Horizont (\d+)/g, 'horizon $1')
+  t = t.replace(/,(\d) %/g, '.$1%')
+  return t
+}
+
+export const VERDICT_SENTENCE: Record<string, string> = {
+  'reproduziert': 'Reproduced with our setup',
+  'teilweise': 'Partially reproduced with our setup',
+  'nicht reproduziert': 'Not reproduced with our setup',
+  'nicht reproduzierbar (Setup)': 'No valid run with our setup',
+  'Agenten-Fehler vermutet': 'Agent error suspected',
+}

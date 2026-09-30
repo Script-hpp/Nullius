@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Layout } from './components/Layout'
 import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
 import { EvidenceSplit } from './components/Evidence'
-import { Replay } from './components/Replay'
+import { ReplayPlayer } from './components/run/ReplayPlayer'
 import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
-import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
-import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, type Tone } from './labels'
+import { getText, loadIndex, loadRun, runDir, type Json, type RunData, type RunRef } from './data'
+import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
 import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info } from 'lucide-react'
 
 const useHash = () => {
@@ -30,20 +30,6 @@ function parseDate(ts: string) {
   if (dateStr.length !== 8) return ts
   const d = new Date(parseInt(dateStr.slice(0,4)), parseInt(dateStr.slice(4,6))-1, parseInt(dateStr.slice(6,8)))
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function translateClaim(text: string) {
-  if (!text) return text
-  let t = text
-  t = t.replace(/erreicht/g, 'achieves')
-  t = t.replace(/Accuracy auf/g, 'accuracy on')
-  t = t.replace(/groesste Komponente/g, 'largest component')
-  t = t.replace(/zufaellige/g, 'random')
-  t = t.replace(/20\/30\/Rest-Splits/g, '20/30/rest splits')
-  t = t.replace(/Standard-Split/g, 'standard split')
-  t = t.replace(/Horizont (\d+)/g, 'horizon $1')
-  t = t.replace(/,(\d) %/g, '.$1%')
-  return t
 }
 
 function colorForTone(tone: Tone) {
@@ -235,6 +221,12 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   const [selected, setSelected] = useState<Json | null>(null)
   const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' ? 'log' : 'evidence')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
+  // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
+  const finalHash = useMemo(() => {
+    const att: Json[] = (run?.dossier?.attempts ?? []).filter((x: Json) => x.measured != null)
+    return att.length ? att[att.length - 1].code_hash : null
+  }, [run])
+  const codeLoader = useCallback((hash: string) => getText(`${runDir(ref_)}code_${hash}.py`).then((t) => t ?? (hash === finalHash ? run?.code ?? null : null)), [ref_, finalHash, run])
   
   if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 text-muted">Loading run data…</main>
   const d = run.dossier
@@ -340,7 +332,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}>
             {activeTab === 'evidence' && <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />}
-            {activeTab === 'log' && <Replay events={run.events} />}
+            {activeTab === 'log' && <ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} />}
             {activeTab === 'tree' && <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />}
             {activeTab === 'files' && (
               <div className="space-y-6">

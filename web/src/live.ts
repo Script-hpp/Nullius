@@ -54,7 +54,7 @@ export async function startReproduction(catalogId: string, accessCode: string, q
 }
 
 export type LiveStatus = 'connecting' | 'running' | 'finished' | 'error' | 'lost' | 'unknown'
-export type LiveState = { events: Event[]; status: LiveStatus; runId: string | null; error: string | null; verdict: Record<string, unknown> | null }
+export type LiveState = { events: Event[]; status: LiveStatus; runId: string | null; error: string | null; verdict: Record<string, unknown> | null; lastReceived: number }
 
 // Events arrive over SSE. On a dropped connection it reconnects from the number of events already received (server keeps them all).
 export function useLiveRun(jobId: string): LiveState {
@@ -63,6 +63,7 @@ export function useLiveRun(jobId: string): LiveState {
   const [runId, setRunId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [verdict, setVerdict] = useState<Record<string, unknown> | null>(null)
+  const [lastReceived, setLastReceived] = useState(0)
   const count = useRef(0)
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export function useLiveRun(jobId: string): LiveState {
         let e: Event
         try { e = JSON.parse(m.data) as Event } catch { return }
         count.current++
+        setLastReceived(Date.now())
         setEvents((x) => [...x, e])
         if (e.type === 'finished') {
           setStatus('finished'); setRunId(String(e.run_id)); setVerdict((e.verdict as Record<string, unknown>) ?? null)
@@ -100,7 +102,7 @@ export function useLiveRun(jobId: string): LiveState {
     return () => { closed = true; es?.close(); window.clearTimeout(timer) }
   }, [jobId])
 
-  return { events, status, runId, error, verdict }
+  return { events, status, runId, error, verdict, lastReceived }
 }
 
 export const PHASES = ['Target', 'Setup details', 'Plan', 'Code', 'Seed 0', 'Ablation', 'Seeds', 'Verdict'] as const

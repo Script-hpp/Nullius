@@ -29,12 +29,12 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
   const domain: [number, number] = [Math.min(...vals, lo) - pad, Math.max(...vals, hi) + pad]
   const shownBase = baselines.filter(([, v]) => v >= domain[0] && v <= domain[1])
   
-  const f = (v: number) => toPercent(v)
+  const f = (v: number) => (claim.metric === 'accuracy' ? toPercent(v) : v.toFixed(3))
 
   return (
     <div className="flex flex-col flex-1">
       <div style={{ width: '100%', height: 260, minHeight: 260 }} className="flex-1 mt-2">
-        <ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="100%" minHeight={260}>
           <BarChart data={data} margin={{ top: 20, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
             <XAxis dataKey="name" tick={{ fill: 'var(--chart-axis)', fontSize: 11, fontFamily: 'monospace' }} tickLine={false} axisLine={{ stroke: 'var(--chart-grid)' }} interval="preserveStartEnd" />
