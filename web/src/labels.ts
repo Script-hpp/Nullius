@@ -54,7 +54,7 @@ export const METHOD: Record<string, { label: string; tone: Tone }> = {
   'nicht geprueft': { label: 'UNTESTED', tone: 'gray' },
 }
 export const OVERALL: Record<string, string> = {
-  'vorlaeufig': 'Provisional',
+  'vorlaeufig': 'Preliminary',
   'Paper reproduziert': 'Fully Verified',
   'Zielwert erreicht mit anderem Modell': 'Target reached with different model',
   'nicht reproduziert': 'Failed Verification',

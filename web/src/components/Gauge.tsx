@@ -15,7 +15,8 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
   const attempts = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId && a.measured !== null && a.measured !== undefined)
   if (!claim || attempts.length === 0) return <p className="text-sm text-zinc-500 italic">No valid measurements.</p>
-  const data = attempts.map((a: Json, i: number) => ({ name: `#${a.seed}`, i, value: a.measured, status: a.status }))
+  const data = [...attempts].sort((a: Json, b: Json) => a.seed - b.seed)   // seed order #0..#n (stable: retries of a seed stay in run order)
+    .map((a: Json, i: number) => ({ name: `#${a.seed}`, i, value: a.measured, status: a.status }))
   const vals = data.map((d: Json) => d.value as number)
   const mean = vals.reduce((s: number, v: number) => s + v, 0) / vals.length
   const baselines: [string, number][] = []

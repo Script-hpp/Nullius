@@ -23,8 +23,7 @@ export function CatalogVerdict({ entry }: { entry: CatalogEntry }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <Badge tone={r.tone}>{r.label}</Badge>
-      <span className="text-[11px] text-zinc-500">{OVERALL[v.gesamtaussage] ?? v.gesamtaussage}</span>
-      {isPreliminary(v.gesamtaussage) && <PreliminaryChip />}
+      {isPreliminary(v.gesamtaussage) ? <PreliminaryChip /> : <span className="text-[11px] text-zinc-500">{OVERALL[v.gesamtaussage] ?? v.gesamtaussage}</span>}
     </div>
   )
 }

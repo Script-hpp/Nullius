@@ -72,16 +72,16 @@ function getDelta(measured: any, target: any, metric?: string) {
   const plain = !!metric && metric !== 'accuracy'
   const mVal = plain ? m : (m <= 2.0 && m > 0) ? m * 100 : m
   const tVal = plain ? t : (t <= 2.0 && t > 0) ? t * 100 : t
-  const unit = plain ? '' : '%'
   
   const diff = mVal - tVal
   if (plain) {
-    if (Math.abs(diff) < 0.0005) return { text: '(±0.000 vs. Claimed)', color: 'text-zinc-500' }
-    return { text: `(${diff > 0 ? '+' : ''}${diff.toFixed(3)} vs. Claimed)`, color: diff > 0 ? 'text-emerald-400' : 'text-rose-400' }
+    if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-zinc-500' }
+    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-emerald-400' : 'text-rose-400' }
   }
-  if (Math.abs(diff) < 0.05) return { text: `(±0.0${unit} vs. Claimed)`, color: 'text-zinc-500' }
-  if (diff > 0) return { text: `(+${diff.toFixed(1)}% vs. Claimed)`, color: 'text-emerald-400' }
-  return { text: `(${diff.toFixed(1)}% vs. Claimed)`, color: 'text-rose-400' }
+  // percentage points, same wording as the catalog
+  if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-zinc-500' }
+  if (diff > 0) return { text: `+${diff.toFixed(1)} pp vs. claimed`, color: 'text-emerald-400' }
+  return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-rose-400' }
 }
 
 function getJuryStatement(claimed: string, measured: string, tone: Tone) {

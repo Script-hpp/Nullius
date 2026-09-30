@@ -233,8 +233,10 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
         <div className="mt-4 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className={label}>{c.method ?? 'Method'}</div>
-              <div className="mt-1 font-mono text-xl font-semibold text-zinc-50">{formatMetric(c.metric, c.target)}</div>
+              <div className={label}>{checked ? 'Method' : (c.method ?? 'Method')}</div>
+              {checked   // the claimed number is shown once, in CLAIMED below
+                ? <div className="mt-1 text-[13px] text-zinc-300">{c.method ?? '–'}</div>
+                : <div className="mt-1 font-mono text-xl font-semibold text-zinc-50">{formatMetric(c.metric, c.target)}</div>}
             </div>
             <div>
               <div className={label}>Benchmark</div>
