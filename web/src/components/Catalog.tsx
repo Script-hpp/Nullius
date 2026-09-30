@@ -3,6 +3,7 @@ import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle } from 'lucide-re
 import { Badge } from './ui'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
+import { translateJuryReason, translateReason } from '../labels'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
@@ -33,14 +34,14 @@ function CatalogCard({ e }: { e: CatalogEntry }) {
         </div>
       ) : (
         <p className="mt-4 text-[12px] leading-relaxed text-muted">
-          {e.status === 'ungeprueft' ? 'Unverified candidate: the claim was read from the paper, not re-run.' : `${STATUS_TEXT[e.status]}${e.reason ? `: ${e.reason}` : ''}`}
+          {e.status === 'ungeprueft' ? 'Unverified candidate: the claim was read from the paper, not re-run.' : `${STATUS_TEXT[e.status]}${e.reason ? `: ${translateReason(e.reason)}` : ''}`}
         </p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px]">
-        <span className="inline-flex items-center gap-1.5 text-fg-4" title={e.jury?.reason}>
+        <span className="inline-flex items-center gap-1.5 text-fg-4" title={e.jury ? translateJuryReason(e.jury.reason) : undefined}>
           {e.jury?.ready ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleSlash className="w-3.5 h-3.5" />}
-          {e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${e.jury.reason}`) : 'Not jury ready: not run yet'}
+          {e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${translateJuryReason(e.jury.reason)}`) : 'Not jury ready: not run yet'}
         </span>
         <span className="flex flex-wrap items-center gap-4">
           <EvidenceLink entry={e}>View evidence</EvidenceLink>

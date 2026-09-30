@@ -284,7 +284,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
       {isCatalog && <CatalogCallout run={run} claimId={claim.id} gesamt={ref_.gesamtaussage} />}
 
       {/* Split Layout: Verdict & Chart */}
-      <div className="grid gap-6 lg:grid-cols-3 items-start">
+      <div className="grid gap-6 lg:grid-cols-3 items-stretch">
         <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: TONE_VAR[res.tone] }}>
           <div className="mb-8">
             <h3 className={`text-4xl font-bold tracking-tight mt-2 ${resColorClass}`}>{res.label}</h3>
@@ -317,7 +317,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
           </div>
         </Section>
         
-        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 h-full">
+        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 flex flex-col">
           <AttemptChart dossier={d} claimId={claim.id} />
         </Section>
       </div>
@@ -327,7 +327,8 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
         <div className="flex gap-2 border-b border-line/50 pb-px mb-6">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} 
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
+              aria-current={activeTab === t.id ? 'page' : undefined}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${activeTab === t.id ? 'border-fg text-fg' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
               {t.icon}
               {t.label}
             </button>

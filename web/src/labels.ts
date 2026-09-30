@@ -86,3 +86,24 @@ export const TONE_VAR: Record<Tone, string> = {
 export const TONE_TEXT_VAR: Record<Tone, string> = {
   green: 'var(--c-tone-green)', amber: 'var(--c-tone-amber)', red: 'var(--c-tone-red)', gray: 'var(--c-muted)', violet: 'var(--c-tone-violet)',
 }
+
+// Jury reasons and failure reasons are written in German by scripts/curate_catalog.py (catalog.py); the UI shows English.
+export function translateJuryReason(reason: string): string {
+  const g = reason.match(/^Gesamtaussage: (.+)$/)
+  if (g) return OVERALL[g[1]] ?? g[1]
+  const s = reason.match(/^Status (\w+)$/)
+  if (s) return ({ ungeprueft: 'not run yet', lauf_fehlgeschlagen: 'run failed', nicht_laufbar: 'not runnable', geprueft: 'checked' } as Record<string, string>)[s[1]] ?? s[1]
+  if (reason === 'kein Urteil') return 'no verdict'
+  return reason
+}
+
+export function translateReason(reason: string): string {
+  let m: RegExpMatchArray | null
+  if (/^Cora ohne matched_task/.test(reason)) return 'the paper does not say which Cora protocol it uses (Planetoid or random splits)'
+  if ((m = reason.match(/^ETTh1: Horizont (\d+), Task misst nur (\d+)/))) return `horizon ${m[1]}, the task only measures ${m[2]}`
+  if (/^ETTh1: Horizont fehlt/.test(reason)) return 'the horizon is missing or unreadable'
+  if ((m = reason.match(/^Metrik (.+) auf Task (.+) nicht messbar/))) return `metric ${m[1]} cannot be measured on ${m[2]}`
+  if (/^Zielwert fehlt/.test(reason)) return 'the target value is missing or unreadable'
+  if ((m = reason.match(/^Datensatz (.+) ohne Task/))) return `no task for dataset ${m[1]}`
+  return reason
+}

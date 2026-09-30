@@ -4,6 +4,7 @@ import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileTe
 import { Section } from './ui'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
+import { translateReason } from '../labels'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
@@ -224,7 +225,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
             )}
           </div>
           {notRun && entry && (
-            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${entry.reason}` : ''}</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${translateReason(entry.reason)}` : ''}</p>
           )}
         </div>
       )}
