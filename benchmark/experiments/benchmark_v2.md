@@ -28,6 +28,22 @@ Claims stehen in `benchmark/papers.yaml` (v1-Einträge unverändert; neue Eintr�
 | `shchur_gat_2018` (Cora-LCC) | GAT 0,818 | Tabelle 1, `1811.05868.json` (Spaltenprüfung ok: Spalte CORA, Position 1 von 4) | 30 Splits × 1 | 0,88 | **offen**, Referenzlauf nötig | aus Referenzlauf | (H) Kritik-Paper misst GAT 81,8 ± 1,3; (R) offen |
 | `zeng_nlinear_2023` (ETTh1) | NLinear MSE 0,374 (Horizont 96) | Tabelle 2, `2205.13504.json` (Spaltenprüfung ok: MSE Position 3, MAE Position 4) | 5 | 0,300 | **offen**, Referenzlauf nötig | aus Referenzlauf | (R) offen |
 
+Maschinenlesbar für die Auswertung (`scripts/eval_benchmark_v2.py` liest diesen Block; Referenzurteil = `judge(reference_mean, target, tolerance)` mit Toleranz 0,01; `null` = Referenzlauf offen, die Auswertung bricht dann ab, bis der Wert eingetragen ist):
+
+```yaml
+reference_verdicts:
+  tolerance: 0.01
+  units:
+    kipf_gcn_2017:        {claim: gcn_cora_acc,         placebo: gcn_cora_acc_placebo,         target: 0.815, placebo_target: 0.88,  reference_mean: 0.8136, origin: R}
+    wu_sgc_2019:          {claim: sgc_cora_acc,         placebo: sgc_cora_acc_placebo,         target: 0.810, placebo_target: 0.88,  reference_mean: 0.8081, origin: R}
+    zeng_dlinear_2023:    {claim: dlinear_etth1_96_mse, placebo: dlinear_etth1_96_mse_placebo, target: 0.375, placebo_target: 0.300, reference_mean: 0.3809, origin: R}
+    shchur_pitfalls_2018: {claim: shchur_gcn_cora_acc,  placebo: shchur_gcn_cora_acc_placebo,  target: 0.815, placebo_target: 0.88,  reference_mean: 0.8107, origin: "R+H"}
+    velickovic_gat_2018:  {claim: gat_cora_acc,         placebo: gat_cora_acc_placebo,         target: 0.830, placebo_target: 0.88,  reference_mean: 0.8280, origin: R}
+    velickovic_dgi_2019:  {claim: dgi_cora_acc,         placebo: dgi_cora_acc_placebo,         target: 0.823, placebo_target: 0.88,  reference_mean: 0.8047, origin: R}
+    shchur_gat_2018:      {claim: shchur_gat_cora_acc,  placebo: shchur_gat_cora_acc_placebo,  target: 0.818, placebo_target: 0.88,  reference_mean: null,   origin: "R offen, H"}
+    zeng_nlinear_2023:    {claim: nlinear_etth1_96_mse, placebo: nlinear_etth1_96_mse_placebo, target: 0.374, placebo_target: 0.300, reference_mean: null,   origin: "R offen"}
+```
+
 **6 Papers** (Kipf, Wu, Zeng, Shchur, Veličković GAT, DGI), **8 Paper-Claim-Einheiten** (Zeng und Shchur je zweimal). Das README nennt beide Zahlen getrennt.
 
 **Referenzherkunft:** (R) = eigene Referenzlösung im eigenen Harness (`tests/reference/`), (H) = unabhängige Neumessung in einem Kritik-Paper (Fixture). Ein Referenzurteil (R) ist **kein** Fremdurteil und nicht unabhängig von unseren Protokollentscheidungen; das README sagt das offen. Die Formulierung „menschliche Referenzimplementierung im selben Harness“ ist wörtlich zu nehmen, nicht „menschliche Reproduktionsstudie“.
