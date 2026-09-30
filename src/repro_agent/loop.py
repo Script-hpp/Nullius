@@ -45,6 +45,11 @@ from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
 MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
+MAX_GRAPH_REPAIRS = 2   # Reparaturrunden pro Claim, wenn die Ablation "Graph nicht genutzt" meldet
+GRAPH_REPAIR_MESSAGE = (
+    "Your code does not use the graph: accuracy with edges {full:.4f} equals accuracy without edges {ablated:.4f} "
+    "(the code ignores the adjacency). Implement the propagation over the adjacency described in the plan."
+)
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
@@ -105,8 +110,11 @@ class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
-        tavily_mode: str | None = None,
+        tavily_mode: str | None = None, graph_repair: bool = False,
     ) -> None:
+        # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
+        # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
+        self.graph_repair = graph_repair
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
         self.tavily_mode = tavily_mode or os.getenv("TAVILY_MODE", "live")
@@ -476,8 +484,12 @@ class Orchestrator:
         # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
         # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
         v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
+        graph_ab, graph_notes, discarded = None, [], set()
+        if getattr(self, "graph_repair", False) and v0 is not None and task.ablation_cmd:
+            v0, note0, code, graph_ab, graph_notes, discarded = self._graph_repair_loop(
+                claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
         measured = [] if v0 is None else [v0]
-        notes = [] if note0 is None else [note0]
+        notes = ([] if note0 is None else [note0]) + graph_notes
         if v0 is None:
             notes.append("Restliche Seeds nicht gestartet: kein lauffaehiger Code")
         else:
@@ -492,15 +504,18 @@ class Orchestrator:
                 notes += [n for _, n, _ in results if n]
         per_metric: dict[str, list[float]] = {}
         for a in dossier.attempts:
-            if a.claim_id == claim.id and a.metrics and a.measured is not None:
+            if a.claim_id == claim.id and a.metrics and a.measured is not None and a.code_hash not in discarded:
                 for name, value in a.metrics.items():
                     per_metric.setdefault(name, []).append(value)
         all_metrics = {name: statistics.mean(v) for name, v in per_metric.items()}
         verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
         if v0 is not None and task.ablation_cmd:
-            ab = self.ablation_check(snapshot, code, seeds[0], task, claim.metric, v0)
+            if graph_ab is None:
+                ab = self.ablation_check(snapshot, code, seeds[0], task, claim.metric, v0)
+                self._emit("ablation", claim_id=claim.id, **ab)
+            else:   # Ablation des Codes, mit dem die Seeds liefen, lief schon nach Seed 0
+                ab = graph_ab
             dossier.ablations[claim.id] = ab
-            self._emit("ablation", claim_id=claim.id, **ab)
             print(f"[{claim.id}] Graph-Ablation: {ab['verdict']} (mit Graph {v0:.4f}, ohne Kanten {ab['accuracy_ablated']})", flush=True)
             if ab["verdict"] == "Graph nicht genutzt":   # deterministischer Beleg, nur herabstufend
                 verdict.methode = "nein"
@@ -508,6 +523,52 @@ class Orchestrator:
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
                    explanation=verdict.explanation)
+
+    def _graph_repair_loop(
+        self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, code: str,
+        v0: float, note0: str | None, seed: int,
+    ) -> tuple[float, str | None, str, dict, list[str], set[str]]:
+        """Ablation nach Seed 0; bei "Graph nicht genutzt" bis zu MAX_GRAPH_REPAIRS Reparaturrunden mit fester Meldung.
+
+        Rueckgabe: (v0, Hinweis, Code, Ablation des Codes, Hinweise fuer das Urteil, verworfene Code-Hashes).
+        Liefert der reparierte Code keinen gueltigen Seed 0, gilt der letzte lauffaehige Code samt seiner Ablation.
+        CostLimitExceeded wird nicht abgefangen (harte Bremse)."""
+        def h(c: str) -> str:
+            return hashlib.sha256(c.encode()).hexdigest()[:12]
+
+        notes: list[str] = []
+        discarded: set[str] = set()
+        ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
+        self._emit("ablation", claim_id=claim.id, runde=0, code_hash=h(code), **ab)
+        rounds = 0
+        while ab["verdict"] == "Graph nicht genutzt" and rounds < MAX_GRAPH_REPAIRS:
+            rounds += 1
+            from_hash = h(code)
+            ev = {"claim_id": claim.id, "runde": rounds, "from_hash": from_hash,
+                  "acc_full": ab["accuracy_full"], "acc_ablated": ab["accuracy_ablated"]}
+            head = (f"Graph-Reparatur Runde {rounds}: Code {from_hash} nutzt den Graph nicht "
+                    f"(Genauigkeit mit Kanten {ab['accuracy_full']:.4f}, ohne {ab['accuracy_ablated']:.4f})")
+            try:
+                new_code = self.repair_code(
+                    plan, task, code, GRAPH_REPAIR_MESSAGE.format(full=ab["accuracy_full"], ablated=ab["accuracy_ablated"]))
+            except ValueError as exc:   # Modell lieferte keinen Code-Block
+                self._emit("graph_repair", result="no_code", fallback_hash=from_hash, **ev)
+                notes.append(f"{head}; Reparatur ohne Code-Block ({exc}), Rueckfall auf Code {from_hash}")
+                break
+            nv, nnote, new_code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new_code, seed)
+            if nv is None:
+                self._emit("graph_repair", result="crash", fallback_hash=from_hash, to_hash=h(new_code), **ev)
+                notes.append(f"{head}; neuer Code lief nicht ({nnote}), Rueckfall auf Code {from_hash}")
+                break
+            discarded.add(from_hash)
+            code, v0, note0 = new_code, nv, nnote
+            ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
+            self._emit("ablation", claim_id=claim.id, runde=rounds, code_hash=h(code), **ab)
+            self._emit("graph_repair", result="repariert", to_hash=h(code), ablation_verdict=ab["verdict"], **ev)
+            notes.append(f"{head}; neuer Code {h(code)}, Ablation danach: {ab['verdict']}")
+        if rounds:
+            dossier.graph_repairs[claim.id] = rounds
+        return v0, note0, code, ab, notes, discarded
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,

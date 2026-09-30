@@ -23,6 +23,9 @@ def render_markdown(dossier: Dossier) -> str:
             abl = "n/a" if ab["accuracy_ablated"] is None else f"{ab['accuracy_ablated']:.4f}"
             lines.append(f"Graph-Ablation (Daten ohne Kanten, Seed 0): {ab['verdict']} "
                          f"(Genauigkeit {ab['accuracy_full']:.4f} mit Graph, {abl} ohne Kanten)")
+        n = dossier.graph_repairs.get(verdict.claim_id)
+        if n:
+            lines.append(f"Graph-Reparaturen: {n} (Ablation meldete Graph nicht genutzt, Code wurde neu geschrieben)")
         lines.append(verdict.explanation)
         claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
         ev = claim.target_evidence if claim else None
