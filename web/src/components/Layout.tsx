@@ -24,7 +24,7 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
         <Library className="w-4 h-4" />
         Catalog
       </a>
-      <a href="#" className={item(!isHome && currentHash.includes('/run/'))}>
+      <a href="#" className={item(!isHome && (currentHash.includes('/run/') || currentHash.startsWith('/live/')))}>
         <Layers className="w-4 h-4" />
         Live Runs
       </a>

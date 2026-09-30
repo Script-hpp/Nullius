@@ -1,15 +1,15 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Json = any
 
-export type RunRef = { id: string; paper_id: string; title: string; timestamp: string; note?: string; catalog_id?: string; gesamtaussage?: string }
+export type RunRef = { id: string; paper_id: string; title: string; timestamp: string; note?: string; catalog_id?: string; gesamtaussage?: string; live?: boolean; seeds?: number }
 export type Event = { ts: number; type: string; [k: string]: Json }
 export type RunData = { ref: RunRef; dossier: Json; events: Event[]; code: string | null; plan: string | null; zeugnis: string | null }
 
 const base = import.meta.env.BASE_URL + 'data/'
 
-export async function getText(path: string): Promise<string | null> {
+export async function getText(path: string, fresh = false): Promise<string | null> {
   try {
-    const r = await fetch(base + path)
+    const r = await fetch(base + path, fresh ? { cache: 'no-cache' } : undefined)   // fresh: live runs change index.json while the page is open
     if (!r.ok) return null
     const t = await r.text()
     // Statische Server liefern für fehlende Dateien oft index.html (SPA-Fallback): als "nicht vorhanden" behandeln.
@@ -20,7 +20,7 @@ export async function getText(path: string): Promise<string | null> {
 }
 
 export async function loadIndex(): Promise<RunRef[]> {
-  const t = await getText('index.json')
+  const t = await getText('index.json', true)
   return t ? (JSON.parse(t) as RunRef[]) : []
 }
 

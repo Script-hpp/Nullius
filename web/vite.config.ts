@@ -6,5 +6,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
-  server: { proxy: { '/api': 'http://localhost:8000' } },
+  // API_TARGET: point the dev proxy at another backend (for example a fake API for screenshots)
+  server: { proxy: { '/api': process.env.API_TARGET ?? 'http://localhost:8000' } },
 })

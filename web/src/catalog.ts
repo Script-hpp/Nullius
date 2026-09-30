@@ -37,9 +37,10 @@ let cached: Promise<CatalogEntry[]> | null = null
 
 // catalog.json is static and written by scripts/export_site_data.py; missing file = empty catalog.
 export function loadCatalog(): Promise<CatalogEntry[]> {
-  cached ??= getText('catalog.json').then((t) => (t ? (JSON.parse(t) as CatalogEntry[]) : []))
+  cached ??= getText('catalog.json', true).then((t) => (t ? (JSON.parse(t) as CatalogEntry[]) : []))
   return cached
 }
+export const reloadCatalog = () => { cached = null; return loadCatalog() }
 
 export function useCatalog(): CatalogEntry[] | null {
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)

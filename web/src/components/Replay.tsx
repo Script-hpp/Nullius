@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
-import { ATTEMPT, RESULT, de2en } from '../labels'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ATTEMPT, RESULT, de2en, translateWarning } from '../labels'
 import type { Event } from '../data'
 import { toPercent } from './ui'
 import { Play, Pause } from 'lucide-react'
@@ -21,21 +21,29 @@ function describe(e: Event): { title: string; body?: string; tone: 'green' | 'am
     case 'repair': return { title: 'Self-healing triggered (Syntax/Runtime error)', body: 'Agent generated a patch and restarted the sandbox', tone: 'red' }
     case 'ablation': return { title: `Method validation check`, body: `Accuracy with method: ${toPercent(e.accuracy_full)} → without method: ${toPercent(e.accuracy_ablated)}`, tone: e.verdict === 'Graph genutzt' ? 'green' : 'gray' }
     case 'verdict': { const r = de2en(RESULT, e.urteil); return { title: `Final verdict reached`, body: `Calculated mean: ${toPercent(e.mean)}`, tone: r.tone } }
+    case 'target_check': return { title: e.agrees ? 'Target confirmed by a second reading of the paper' : 'Second reading of the paper differs from the discovery value', body: `Paper: ${toPercent(e.verified_value)} · Discovery: ${toPercent(e.configured_value)}`, tone: e.agrees ? 'green' : 'amber' }
+    case 'finished': return { title: 'Run finished', body: 'Result and evidence are available', tone: 'green' }
+    case 'error': return { title: 'Run failed', body: String(e.message ?? ''), tone: 'red' }
+    case 'queued': return { title: 'Waiting for a free sandbox slot', tone: 'gray' }
+    case 'started': return { title: 'Run started', tone: 'gray' }
+    case 'warning': return { title: 'Note on the evidence', body: translateWarning(String(e.text ?? '')), tone: 'amber' }
+    case 'graph_repair': return { title: `Graph repair, round ${e.runde}`, body: e.result === 'repariert' ? 'The code ignored the graph and was rewritten' : 'The rewritten code did not run, the previous code was kept', tone: 'violet' }
     case 'run_end': return { title: 'Evaluation finished', body: `Compute Cost: $${e.cost_net_usd}`, tone: 'gray' }
     default: return { title: e.type.replace(/_/g, ' '), tone: 'gray' }
   }
 }
 
-export function Replay({ events }: { events: Event[] }) {
+export function Replay({ events, live = false, ended = false }: { events: Event[]; live?: boolean; ended?: boolean }) {
   const shown = useMemo(() => {
     const out: Event[] = []
     let attempts = 0
     for (const e of events) {
-      if (e.type === 'attempt') { attempts++; if (attempts > 6) continue }
+      if (e.type === 'llm_call') continue   // running cost only, shown in the progress header
+      if (e.type === 'attempt') { attempts++; if (attempts > 6 && !live) continue }
       out.push(e)
     }
     return { list: out, hidden: attempts > 6 ? attempts - 6 : 0 }
-  }, [events])
+  }, [events, live])
   
   const list = shown.list
   const [i, setI] = useState(list.length)
@@ -50,10 +58,31 @@ export function Replay({ events }: { events: Event[] }) {
   }, [playing, i, list.length])
   
   const visible = list.slice(0, i)
+  const endRef = useRef<HTMLDivElement>(null)
+  const following = useRef(true)   // live: follow new events only while the end of the list is in view
+  useEffect(() => {
+    if (!live || !endRef.current) return
+    const io = new IntersectionObserver(([en]) => { following.current = en.isIntersecting })
+    io.observe(endRef.current)
+    return () => io.disconnect()
+  }, [live])
+  useEffect(() => { if (live && following.current) endRef.current?.scrollIntoView({ block: 'nearest' }) }, [live, list.length])
   const tones = { green: 'bg-tone-green-solid', amber: 'bg-tone-amber-solid', red: 'bg-tone-red-solid', gray: 'bg-dot', violet: 'bg-tone-violet-solid' }
 
   return (
     <div className="bg-surface border border-line/80 rounded-xl p-6">
+      {live ? (
+        <div className="mb-6 flex items-center justify-between">
+          {ended ? (
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Ended</span>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-tone-green">
+              <span className="h-2 w-2 rounded-full bg-tone-green-solid animate-pulse" />Live
+            </span>
+          )}
+          <div className="text-muted text-[11px] uppercase tracking-wider font-mono">{list.length} events</div>
+        </div>
+      ) : (<>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 rounded-lg bg-inverse px-4 py-2 text-xs font-semibold uppercase tracking-wider text-on-inverse transition-colors hover:bg-inverse-hover cursor-pointer"
@@ -70,6 +99,7 @@ export function Replay({ events }: { events: Event[] }) {
       <div className="mb-8 h-1 w-full overflow-hidden rounded-full bg-raised">
         <motion.div className="h-full bg-fill-mid" animate={{ width: `${list.length ? (i / list.length) * 100 : 0}%` }} transition={{ duration: 0.3 }} />
       </div>
+      </>)}
       
       <div className="relative border-l border-line/80 ml-3 space-y-6 pb-4">
         <AnimatePresence initial={false}>
@@ -85,6 +115,7 @@ export function Replay({ events }: { events: Event[] }) {
             )
           })}
         </AnimatePresence>
+        <div ref={endRef} />
         {shown.hidden > 0 && i === list.length && (
           <div className="relative pl-6">
             <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-surface bg-dot" />

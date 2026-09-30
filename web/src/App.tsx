@@ -7,6 +7,8 @@ import { EvidenceSplit } from './components/Evidence'
 import { Replay } from './components/Replay'
 import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
+import { LiveRun } from './components/LiveRun'
+import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
 import { loadIndex, loadRun, type Json, type RunData, type RunRef } from './data'
@@ -365,14 +367,20 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
 export default function App() {
   const hash = useHash()
   const [runs, setRuns] = useState<RunRef[] | null>(null)
-  useEffect(() => { loadIndex().then(setRuns) }, [])
+  useEffect(() => {
+    const load = () => loadIndex().then(setRuns)
+    load()
+    window.addEventListener(DATA_CHANGED, load)   // a live run finished: index.json has a new entry
+    return () => window.removeEventListener(DATA_CHANGED, load)
+  }, [])
   const m = hash.match(/^\/run\/([^?]+)(?:\?tab=(\w+))?$/)
   const ref = m && runs?.find((r) => r.id === decodeURIComponent(m[1]))
+  const live = hash.match(/^\/live\/([^?]+)$/)
   
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : runs === null ? (
+        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
