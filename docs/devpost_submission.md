@@ -98,7 +98,7 @@ Sources of the list: `pyproject.toml`, `web/package.json`, `README.md` (base ima
 
 ## Testing instructions for the judges
 
-Demo URL: `TBD`. Access code for live runs: `TBD` (the pages Overview, Catalog, Evidence and the replay work without a code; only starting a live run or a discovery needs it, `README.md`, "Product tour"). `<!-- REVIEW: README says a live run needs an access code. docs/product_plan.md (29 Sep) planned a demo open for everyone; if the demo must be testable without credentials, decide before submission. The Devpost rules accept credentials in the test notes. -->`
+Demo URL: `TBD`. Access code for live runs: `TBD` (the pages Overview, Catalog, Evidence and the replay work without a code; only starting a live run or a discovery needs it, `README.md`, "Product tour"). <!-- REVIEW: reviewer decided on an access code (README, CLAUDE.md strategy); the code stays TBD; user decides finally. docs/product_plan.md (29 Sep) planned an open demo; the Devpost rules accept credentials in the test notes. -->
 
 What to try in five minutes:
 
