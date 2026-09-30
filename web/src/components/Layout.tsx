@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Home, Layers, CheckCircle, Database, Settings, Search, Menu, X, Library } from 'lucide-react'
+import { Home, Layers, CheckCircle, Database, Search, Menu, X, Library } from 'lucide-react'
+import { ThemeSwitch } from './ThemeSwitch'
 
 export function Layout({ children, currentHash }: { children: ReactNode, currentHash: string }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -48,7 +49,7 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
-        {menuOpen && <div className="pb-4">{nav}</div>}
+        {menuOpen && <div className="pb-4">{nav}<div className="px-6 pt-4"><ThemeSwitch /></div></div>}
       </header>
 
       {/* Sidebar from md up */}
@@ -62,10 +63,7 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
         </div>
 
         <div className="px-6">
-          <a href="#" className="flex items-center gap-3 text-sm font-medium text-fg-4 hover:text-fg transition-colors">
-            <Settings className="w-4 h-4" />
-            Settings
-          </a>
+          <ThemeSwitch />
         </div>
       </aside>
 
