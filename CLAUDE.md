@@ -294,7 +294,7 @@ Verfügbar: 25 $ Token Factory, Tavily-Key. Builders Program beantragt (+25 $ TF
 - **Produktkonfiguration** (`graph_repair=True`) in beiden Armen.
 - **Kennzahl = Zahl-Urteil (Achse 1), Mehrheit je Paper-Claim-Einheit über 3 Generierungen** (mindestens 2 gleiche Klassen), Übereinstimmung mit dem Referenzurteil; Rohzählung sekundär. Das ersetzt die frühere Regel „nur Paper reproduziert/nicht reproduziert“ (siehe „Zweidimensionales Urteil“). Die Kennzahl misst „Zielwert laut Harness erreicht“, nicht „Methode reproduziert“; im README steht immer „method fidelity not checked“.
 - **Referenzurteile** sind überwiegend (R) = eigene Referenzlösung im eigenen Harness (`tests/reference/`), nur Shchur-GCN und Shchur-GAT haben zusätzlich (H) = unabhängige Neumessung im Kritik-Paper.
-- **Dacrema nicht gebaut** (MovieLens-1M: NeuMF reproduziert, kein Negativfall, 3–5 Tage Aufwand); Shwartz-Ziv zugeschnitten und verworfen (`benchmark/experiments/shwartz_ziv_scoping.md`). Es gibt keinen echten Negativfall, die Placebos ersetzen ihn nicht.
+- **Dacrema nicht gebaut** (MovieLens-1M: NeuMF reproduziert, kein Negativfall); Shwartz-Ziv zugeschnitten und verworfen (`benchmark/experiments/shwartz_ziv_scoping.md`). Es gibt keinen echten Negativfall, die Placebos ersetzen ihn nicht.
 - **v1 ist eingefroren** (`benchmark/experiments/benchmark_protocol.md`, vier Papers, Produktkonfiguration aus); Verlauf in `docs/research_log.md`.
 
 Ziel-Satz fürs README (Zahlen erst aus `benchmark/experiments/results/benchmark_v2.md`): „With Tavily, X of 8 paper-claim units matched the reference verdict, without Tavily Y. Method fidelity was not checked."
