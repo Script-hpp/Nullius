@@ -43,13 +43,26 @@
   "column_check": "unchecked",
   "github_url": null,
   "source_url": "https://arxiv.org/pdf/2601.21866",
-  "status": "ungeprueft",
+  "status": "geprueft",
   "reason": null,
-  "checked_at": null,
-  "cost_gross_usd": null,
-  "verdict": null,
-  "run_id": null,
-  "jury": null
+  "checked_at": "2026-09-30T18:47:17Z",
+  "cost_gross_usd": 0.0929,
+  "verdict": {
+   "urteil": "Agenten-Fehler vermutet",
+   "measured_mean": 2.319149,
+   "measured_std": 0.022178,
+   "seeds": 3,
+   "target": 0.35,
+   "tolerance": 0.01,
+   "gesamtaussage": "Agenten-Fehler vermutet",
+   "graph_repairs": 0,
+   "run_dir": "runs/disc_2601_21866/20260930-204237"
+  },
+  "run_id": "disc_2601_21866--20260930-204237",
+  "jury": {
+   "ready": false,
+   "reason": "Gesamtaussage: Agenten-Fehler vermutet"
+  }
  },
  {
   "id": "disc_2609_30894",

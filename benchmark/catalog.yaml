@@ -60,7 +60,7 @@ candidates:
 - id: disc_2601_21866
   arxiv_id: '2601.21866'
   title: 'MoHETS: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts'
-  status: ungeprueft
+  status: geprueft
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: ETTh1
@@ -115,6 +115,21 @@ candidates:
 
         You signed in with another tab or window. You switched accounts on another tab or window. ## Latest commit. ## Folders
         and files. | Name | Name | Last commit message | Last comm'
+  checked_at: '2026-09-30T18:47:17Z'
+  cost_gross_usd: 0.0929
+  verdict:
+    urteil: Agenten-Fehler vermutet
+    measured_mean: 2.319149
+    measured_std: 0.022178
+    seeds: 3
+    target: 0.35
+    tolerance: 0.01
+    gesamtaussage: Agenten-Fehler vermutet
+    graph_repairs: 0
+    run_dir: runs/disc_2601_21866/20260930-204237
+  jury:
+    ready: false
+    reason: 'Gesamtaussage: Agenten-Fehler vermutet'
 - id: disc_2609_30894
   arxiv_id: '2609.30894'
   title: Training Graph Foundation Models on The Web Graph

@@ -1,0 +1,12 @@
+{
+ "value": 0.35,
+ "quote": "| ETTh1 | 96 | 0.350 | 0.383 | 0.381 | 0.399 | 0.382 | 0.403 | 0.386 | 0.405 | 0.375 | 0.400 | 0.384 | 0.402 | 0.414 | 0.419 | 0.423 | 0.448 | 0.479 | 0.464 | 0.386 | 0.400 | 0.376 | 0.419 |",
+ "table": "Table 7",
+ "url": "https://arxiv.org/html/2601.21866v2",
+ "source_kind": "arxiv_html",
+ "retrieved_at": "2026-09-30T18:42:38+00:00",
+ "sha256": "67e17c77adad70f8c68696fa58ea3f3b5db6c334dbfb73a0709f9ab9a9880d13",
+ "arxiv_version": "v2",
+ "caveat": "Methodenname 'MoHETS' steht nicht im Zitat: Der Check belegt nur, dass die Zahl im Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Zuordnung nicht automatisch geprueft, Kopfzeile ggf. von Hand gegenlesen).",
+ "column_check": "nicht pruefbar"
+}
