@@ -1,0 +1,52 @@
+# Statischer Spiegel der Evidence-Ansicht auf GitHub Pages (Absicherung fuer die Demo-URL, Official Rules: erreichbar bis 15.12.2026).
+# Enthaelt nur web/public/data (Exporte, keine Schluessel). Ohne Backend zeigt die App keine Live-Steuerung (fetchJobInfo -> null).
+# Einmalig: Repository-Einstellungen > Pages > Source = "GitHub Actions".
+name: Pages mirror
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build (vite base is ./, works under /<repo>/)
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+      - name: SPA fallback and no Jekyll
+        run: |
+          cp web/dist/index.html web/dist/404.html
+          touch web/dist/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

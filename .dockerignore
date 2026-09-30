@@ -1,0 +1,16 @@
+.git
+.github
+.env
+deploy/.env
+.venv
+__pycache__
+*.pyc
+.ruff_cache
+runs
+logs
+tests
+docs
+scripts
+web/node_modules
+web/dist
+**/node_modules

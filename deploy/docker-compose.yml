@@ -1,0 +1,31 @@
+# VM-Betrieb: Nullius hinter Caddy (TLS). Aufruf im Repo-Wurzelordner:
+#   SITE_ADDRESS=203-0-113-7.sslip.io docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+# SITE_ADDRESS: sslip.io-Hostname mit der IP der VM (Let's Encrypt). Ohne Domain mit Selbstzertifikat: CADDYFILE=Caddyfile.selfsigned (siehe docs/deploy.md).
+services:
+  app:
+    build: ..
+    image: nullius:latest
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - data:/data          # REPRO_EXPORT_DIR: Exporte neuer Laeufe (index.json, catalog.json, Laeufe)
+      - logs:/app/logs      # costs.jsonl: Budgetzaehler, darf beim Neustart nicht verloren gehen
+      - runs:/app/runs
+    expose: ["8000"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [app]
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-example.invalid}
+    volumes:
+      - ./${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  data:
+  logs:
+  runs:
+  caddy_data:
+  caddy_config:

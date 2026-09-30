@@ -1,0 +1,11 @@
+# Hostname-Variante: {$SITE_ADDRESS} = z. B. 203-0-113-7.sslip.io, Caddy holt automatisch ein Let's-Encrypt-Zertifikat (Port 80 und 443 offen).
+{$SITE_ADDRESS} {
+	encode gzip
+	# SSE (Live-Lauf): nicht puffern, langer Lese-Timeout (Laeufe bis ca. 20 Minuten)
+	reverse_proxy app:8000 {
+		flush_interval -1
+		transport http {
+			read_timeout 30m
+		}
+	}
+}

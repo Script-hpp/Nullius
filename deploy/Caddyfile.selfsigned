@@ -1,0 +1,11 @@
+# IP-Variante ohne Domain: Selbstzertifikat (Browser warnt einmal). Nutzung: CADDYFILE=Caddyfile.selfsigned
+:443 {
+	tls internal
+	encode gzip
+	reverse_proxy app:8000 {
+		flush_interval -1
+		transport http {
+			read_timeout 30m
+		}
+	}
+}
