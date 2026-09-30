@@ -26,7 +26,8 @@ from pathlib import Path
 
 import yaml
 
-from .claims_source import PaperText, extract_target_cached, fetch_paper_text
+from .catalog import discovery_details, load_catalog_claims
+from .claims_source import ExtractionInvalid, PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
@@ -136,6 +137,12 @@ class Orchestrator:
     @property
     def spent_usd(self) -> float:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
+
+    def _warn(self, text: str) -> None:
+        if not hasattr(self, "_warnings"):
+            self._warnings = []
+        self._warnings.append(text)
+        self._emit("warning", text=text)
 
     def _emit(self, type: str, **data) -> None:
         ev = getattr(self, "events", None)
@@ -381,9 +388,11 @@ class Orchestrator:
             return tavily
 
         for claim in claims:
-            spec = claim_specs(paper).get(claim.id, {}).get("extract")
+            claim_spec = claim_specs(paper).get(claim.id, {})
+            spec = claim_spec.get("extract")
             if not spec:
                 continue
+            keep = claim_spec.get("keep_target", False)   # Katalog: Discovery-Wert bleibt, Rolle 2 ist Gegenprobe
             if self.paper_text is None:   # ein Abruf je Lauf, nicht je Claim
                 calls_before = self._tavily_calls
                 self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode)
@@ -393,12 +402,24 @@ class Orchestrator:
                 if self._run_dir is not None:   # gelesener Text mit Zeitstempel und Hash im Lauf, auch wenn sich die Seite aendert
                     (self._run_dir / "paper_text.json").write_text(json.dumps(dataclasses.asdict(self.paper_text), ensure_ascii=False))
             text = self.paper_text
-            ev = extract_target_cached(
-                self.llm, text, spec["method"], spec["dataset"], spec["metric"],
-                percent=spec.get("percent", True),
-            )
+            try:
+                ev = extract_target_cached(
+                    self.llm, text, spec["method"], spec["dataset"], spec["metric"],
+                    percent=spec.get("percent", True),
+                )
+            except ExtractionInvalid as exc:
+                if not keep:
+                    raise
+                self._warn(f"Rolle 2 konnte den Zielwert im Paper nicht gegenpruefen ({exc}); "
+                           f"es gilt der Wert der Discovery {claim.target}.")
+                continue
+            agrees = abs(ev.value - claim.target) < 1e-9
             self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
-                       agrees=abs(ev.value - claim.target) < 1e-9, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
+                       agrees=agrees, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
+            if keep and not agrees:
+                self._warn(f"Zielwert weicht ab: Rolle 2 liest {ev.value} ({ev.table or 'Tabelle'}, Zitat: \"{ev.quote}\"), "
+                           f"die Discovery {claim.target}. Es gilt der Wert der Discovery; Rolle 2 belegt ihn nicht.")
+                continue
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]
@@ -568,8 +589,15 @@ class Orchestrator:
         )
 
     # ---- Einstieg -----------------------------------------------------------
-    def run(self, paper_id: str) -> Dossier:
-        paper, claims = load_claims(paper_id)
+    def run(self, paper_id: str, source: str = "benchmark") -> Dossier:
+        """source: "benchmark" (benchmark/papers.yaml) oder "catalog" (benchmark/catalog.yaml, Discovery-Kandidaten)."""
+        if source == "catalog":
+            paper, claims = load_catalog_claims(paper_id)
+        elif source == "benchmark":
+            paper, claims = load_claims(paper_id)
+        else:
+            raise ValueError(f"source muss benchmark oder catalog sein, nicht {source!r}")
+        self._warnings = list(paper.get("warnings", []))
         if self.claim_ids:
             claims = [c for c in claims if c.id in self.claim_ids]
         task = TASKS[paper["dataset"]]()
@@ -586,15 +614,19 @@ class Orchestrator:
                    models={"fast": self.settings.llm.model_fast, "code": self.settings.llm.model_code,
                            "reasoning": self.settings.llm.model_reasoning},
                    seeds=self.seeds or paper.get("seeds", DEFAULT_SEEDS), claims=[c.id for c in claims])
+        for w in self._warnings:
+            self._emit("warning", text=w)
         self._cost_base = self.llm.total_cost_usd
         if self.use_tavily:
             self.resolve_targets(paper, claims)
         repo_info = None
+        extra_details = discovery_details(paper)   # Katalog: Eingabelaenge, Quelle Discovery-Zitat
         if self.use_setup_details and self.paper_text is not None:
             docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])
             self.details, dropped = extract_setup_details(
                 self.llm, docs, claims[0].text, paper["dataset"]
             )
+            self.details = self.details + extra_details
             by_src: dict[str, int] = {}
             for d in self.details:
                 by_src[d.source.split("@")[0]] = by_src.get(d.source.split("@")[0], 0) + 1
@@ -602,9 +634,11 @@ class Orchestrator:
                   f"nach Quelle {by_src}", flush=True)
             self._emit("setup_details", n=len(self.details), dropped=dropped, by_source=by_src,
                        repo=repo_info, details=[dataclasses.asdict(d) for d in self.details])
+        elif extra_details:
+            self.details = extra_details
         dossier = Dossier(
             paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
-            setup_details=[dataclasses.asdict(d) for d in self.details],
+            setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings),
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
@@ -638,7 +672,7 @@ def main() -> None:
             setup_details="--no-setup-details" not in sys.argv,
             paper_only="--paper-only" in sys.argv,
             tavily_mode="fixture" if "--offline" in sys.argv else None,
-        ).run(paper_id)
+        ).run(paper_id, source="catalog" if "--catalog" in sys.argv else "benchmark")
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")
 

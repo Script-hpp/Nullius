@@ -7,6 +7,10 @@ from .dossier import Dossier
 
 def render_markdown(dossier: Dossier) -> str:
     lines = [f"# Reproduktions-Zeugnis: {dossier.paper_id}", ""]
+    if dossier.warnings:
+        lines.append("## Hinweise zur Belegbarkeit")
+        lines.extend(f"- {w}" for w in dossier.warnings)
+        lines.append("")
     for verdict in dossier.verdicts:
         lines.append(f"## Claim {verdict.claim_id}: {verdict.urteil}")
         lines.append(
