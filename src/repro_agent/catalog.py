@@ -225,6 +225,26 @@ def jury_ready(entry: dict) -> tuple[bool, str]:
     return True, f"Gesamtaussage: {gesamt}"
 
 
+def verdict_dict(entry: dict, dossier, run_dir: Path | None = None) -> dict:
+    """Urteil Achse 1 + Gesamtaussage (bei unbelegtem Protokoll auf vorlaeufig gedeckelt) fuer catalog.yaml und die UI."""
+    v = dossier.verdicts[0]
+    claim = dossier.claims[0]
+
+    def num(x):
+        return None if x != x else round(float(x), 6)   # NaN (kein gueltiger Lauf) -> null
+
+    gesamt = v.gesamtaussage
+    if entry["candidate"].get("protocol") != "passt" and gesamt in UNCAPPED_STRONG:
+        gesamt = "vorlaeufig"   # E1: Protokoll im Paper nicht belegt, nie mehr als vorlaeufig
+    return {
+        "urteil": v.urteil, "measured_mean": num(v.measured_mean), "measured_std": num(v.measured_std),
+        "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
+        "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
+        "graph_repairs": dossier.graph_repairs.get(claim.id, 0),
+        "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),
+    }
+
+
 def record_result(entry: dict, status: str, reason: str | None = None, dossier=None, run_dir: Path | None = None,
                   cost_gross_usd: float | None = None) -> None:
     """Status (und bei Lauf-Ende das Urteil Achse 1) in den Eintrag schreiben."""
@@ -238,21 +258,45 @@ def record_result(entry: dict, status: str, reason: str | None = None, dossier=N
     if cost_gross_usd is not None:
         entry["cost_gross_usd"] = round(cost_gross_usd, 4)
     if dossier is not None and dossier.verdicts:
-        v = dossier.verdicts[0]
-        claim = dossier.claims[0]
-
-        def num(x):
-            return None if x != x else round(float(x), 6)   # NaN (kein gueltiger Lauf) -> null
-
-        gesamt = v.gesamtaussage
-        if entry["candidate"].get("protocol") != "passt" and gesamt in UNCAPPED_STRONG:
-            gesamt = "vorlaeufig"   # E1: Protokoll im Paper nicht belegt, nie mehr als vorlaeufig
-        entry["verdict"] = {
-            "urteil": v.urteil, "measured_mean": num(v.measured_mean), "measured_std": num(v.measured_std),
-            "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
-            "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
-            "graph_repairs": dossier.graph_repairs.get(claim.id, 0),
-            "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),
-        }
+        entry["verdict"] = verdict_dict(entry, dossier, run_dir)
     ready, why = jury_ready(entry)
     entry["jury"] = {"ready": ready, "reason": why}
+
+
+@dataclass
+class CandidateOutcome:
+    """Ergebnis eines Laufs fuer einen Kandidaten, ohne catalog.yaml zu beruehren."""
+    status: str                 # geprueft | lauf_fehlgeschlagen | nicht_laufbar | ungeprueft (Abbruch Abrechnung/Budget)
+    reason: str | None = None
+    dossier: object = None
+    run_dir: Path | None = None
+    cost_gross_usd: float = 0.0
+    abort: bool = False         # BillingBlocked/BudgetExceeded: weitere Kandidaten nicht starten
+
+
+def run_candidate(orch, entry: dict, source: str = "catalog") -> CandidateOutcome:
+    """Ein Kandidat durch den Loop (gemeinsam fuer scripts/curate_catalog.py und die API). Schreibt nichts in catalog.yaml."""
+    from .costs import BudgetExceeded
+    from .llm import BillingBlocked
+
+    try:
+        build_paper(entry)
+    except NotRunnable as exc:
+        return CandidateOutcome(NOT_RUNNABLE, reason=str(exc))
+    try:
+        dossier = orch.run(entry["id"], source=source)
+    except (BillingBlocked, BudgetExceeded) as exc:   # Infrastruktur, kein Befund ueber das Paper: bleibt wiederholbar
+        return CandidateOutcome(UNCHECKED, reason=f"Abbruch: {type(exc).__name__}: {exc}"[:300], abort=True)
+    except Exception as exc:   # Absturz, Kostenlimit pro Lauf, Sandbox
+        run_dir = getattr(orch, "last_run_dir", None)
+        where = f" (Lauf: {run_dir})" if run_dir else ""
+        return CandidateOutcome(FAILED, reason=f"{type(exc).__name__}: {exc}{where}"[:300], run_dir=run_dir,
+                                cost_gross_usd=getattr(orch, "spent_gross_usd", 0.0))
+    return CandidateOutcome(CHECKED, dossier=dossier, run_dir=orch.last_run_dir, cost_gross_usd=orch.spent_gross_usd)
+
+
+def apply_outcome(entry: dict, outcome: CandidateOutcome) -> None:
+    """Ergebnis in den Katalogeintrag schreiben (nur Kuratierung, nicht die API)."""
+    cost = outcome.cost_gross_usd if outcome.status in (CHECKED, FAILED) else None
+    record_result(entry, outcome.status, reason=outcome.reason, dossier=outcome.dossier, run_dir=outcome.run_dir,
+                  cost_gross_usd=cost)

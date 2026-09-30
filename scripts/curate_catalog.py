@@ -17,9 +17,7 @@ import sys
 from pathlib import Path
 
 from repro_agent import catalog as cat
-from repro_agent.costs import BudgetExceeded
 from repro_agent.dossier import REPO_ROOT
-from repro_agent.llm import BillingBlocked
 
 
 def select(entries: list[dict], only: str | None) -> list[dict]:
@@ -71,37 +69,22 @@ def curate(entries: list[dict], chosen: list[dict], path: Path, max_usd: float, 
             print(f"ABBRUCH: --max-usd {max_usd:.2f} $ erreicht ({spent:.4f} $ brutto), {entry['arxiv_id']} und Rest nicht gelaufen")
             print("\nUebersicht:\n" + overview(chosen))
             return 2
-        try:
-            cat.build_paper(entry)
-        except cat.NotRunnable as exc:
-            cat.record_result(entry, cat.NOT_RUNNABLE, reason=str(exc))
-            cat.save_catalog(entries, path)
-            print(f"{entry['arxiv_id']}: nicht_laufbar ({exc})")
-            continue
         print(f"== {entry['arxiv_id']} {entry['title']}", flush=True)
-        try:
-            dossier = orch.run(entry["id"], source="catalog")
-        except (BillingBlocked, BudgetExceeded) as exc:   # Infrastruktur, kein Befund ueber das Paper: bleibt wiederholbar
-            cat.record_result(entry, cat.UNCHECKED, reason=f"Abbruch: {type(exc).__name__}: {exc}"[:300])
-            cat.save_catalog(entries, path)
-            print(f"ABBRUCH: {type(exc).__name__}: {exc}")
-            return 2
-        except Exception as exc:   # Absturz, Kostenlimit pro Lauf, Sandbox
-            run_dir = getattr(orch, "last_run_dir", None)
-            where = f" (Lauf: {run_dir})" if run_dir else ""
-            cost = getattr(orch, "spent_gross_usd", 0.0)
-            spent += cost
-            cat.record_result(entry, cat.FAILED, reason=f"{type(exc).__name__}: {exc}{where}"[:300], cost_gross_usd=cost)
-            cat.save_catalog(entries, path)
-            print(f"{entry['arxiv_id']}: lauf_fehlgeschlagen ({type(exc).__name__}: {exc})")
-            continue
-        cost = orch.spent_gross_usd
-        spent += cost
-        cat.record_result(entry, cat.CHECKED, dossier=dossier, run_dir=orch.last_run_dir, cost_gross_usd=cost)
+        outcome = cat.run_candidate(orch, entry)
+        cat.apply_outcome(entry, outcome)
         cat.save_catalog(entries, path)
-        v = entry.get("verdict") or {}
-        print(f"{entry['arxiv_id']}: geprueft, {v.get('urteil')} (Mittel {v.get('measured_mean')}, "
-              f"std {v.get('measured_std')}), {cost:.4f} $ brutto, gesamt {spent:.4f} $")
+        if outcome.abort:
+            print(f"ABBRUCH: {outcome.reason}")
+            return 2
+        spent += outcome.cost_gross_usd
+        if outcome.status == cat.NOT_RUNNABLE:
+            print(f"{entry['arxiv_id']}: nicht_laufbar ({outcome.reason})")
+        elif outcome.status == cat.FAILED:
+            print(f"{entry['arxiv_id']}: lauf_fehlgeschlagen ({outcome.reason})")
+        else:
+            v = entry.get("verdict") or {}
+            print(f"{entry['arxiv_id']}: geprueft, {v.get('urteil')} (Mittel {v.get('measured_mean')}, "
+                  f"std {v.get('measured_std')}), {outcome.cost_gross_usd:.4f} $ brutto, gesamt {spent:.4f} $")
     print("\nUebersicht:\n" + overview(chosen))
     return 0
 

@@ -16,9 +16,11 @@ class EventLog:
         self.path = path
         self._lock = threading.Lock()
 
-    def write(self, type: str, **data) -> None:
-        if self.path is None:
-            return
-        line = json.dumps({"ts": time.time(), "type": type, **data}, ensure_ascii=False, default=str)
-        with self._lock, self.path.open("a") as f:
-            f.write(line + "\n")
+    def write(self, type: str, **data) -> dict:
+        """Schreibt die Zeile (falls ein Pfad gesetzt ist) und gibt den Record zurueck."""
+        record = {"ts": time.time(), "type": type, **data}
+        if self.path is not None:
+            line = json.dumps(record, ensure_ascii=False, default=str)
+            with self._lock, self.path.open("a") as f:
+                f.write(line + "\n")
+        return record

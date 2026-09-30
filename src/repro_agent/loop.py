@@ -154,8 +154,16 @@ class Orchestrator:
 
     def _emit(self, type: str, **data) -> None:
         ev = getattr(self, "events", None)
-        if ev is not None:
-            ev.write(type, **data)
+        record = ev.write(type, **data) if ev is not None else None
+        cb = getattr(self, "on_event", None)   # nur die API setzt es (Live-Stream); Benchmark/CLI unveraendert
+        if cb is not None:
+            cb(record if record is not None else {"ts": time.time(), "type": type, **data})
+
+    def _emit_live(self, type: str, **data) -> None:
+        """Nur an den Live-Hook, nie in events.jsonl (Kosten laufend, kein Beleg des Laufs)."""
+        cb = getattr(self, "on_event", None)
+        if cb is not None:
+            cb({"ts": time.time(), "type": type, **data})
 
     def _emit_tavily(self, role: int, endpoint: str, target, n_results: int) -> None:
         self._tavily_calls += 1
@@ -189,6 +197,7 @@ class Orchestrator:
                 [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 max_tokens=max_tokens, temperature=temperature,
             )
+        self._emit_live("llm_call", role=str(role), cost_net_usd=round(resp.cost_usd, 5), total_net_usd=round(self.spent_usd, 5))
         return resp
 
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
