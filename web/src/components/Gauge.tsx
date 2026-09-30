@@ -33,7 +33,7 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
 
   return (
     <div className="flex flex-col h-full">
-      <div style={{ width: '100%', height: 260 }} className="flex-1 mt-2">
+      <div style={{ width: '100%', height: 260, minHeight: 260 }} className="flex-1 mt-2">
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 20, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
