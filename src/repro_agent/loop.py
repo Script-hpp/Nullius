@@ -413,7 +413,7 @@ class Orchestrator:
                 self._warn(f"Rolle 2 konnte den Zielwert im Paper nicht gegenpruefen ({exc}); "
                            f"es gilt der Wert der Discovery {claim.target}.")
                 continue
-            agrees = abs(ev.value - claim.target) < 1e-9
+            agrees = abs(ev.value - claim.target) < 1e-6   # 82.92/100 gegen anders gerundetes Ergebnis
             self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
                        agrees=agrees, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
             if keep and not agrees:
@@ -598,6 +598,7 @@ class Orchestrator:
         else:
             raise ValueError(f"source muss benchmark oder catalog sein, nicht {source!r}")
         self._warnings = list(paper.get("warnings", []))
+        self.details = []   # pro Lauf neu, sonst erbt ein Paper ohne Rolle 4 die Details des vorigen
         if self.claim_ids:
             claims = [c for c in claims if c.id in self.claim_ids]
         task = TASKS[paper["dataset"]]()

@@ -35,6 +35,10 @@ METRIC_LABEL = {"accuracy": "Accuracy", "mse": "MSE", "mae": "MAE"}
 STD_RE = re.compile(r"(?:±|\\pm|\+-|\+/-)\s*(\d+(?:\.\d+)?)")
 
 
+# Gesamtaussagen, die ein belegtes Protokoll voraussetzen (E1 deckelt sie auf "vorlaeufig")
+UNCAPPED_STRONG = ("Paper reproduziert", "nicht reproduziert", "teilweise reproduziert", "Zielwert erreicht mit anderem Modell")
+
+
 class NotRunnable(Exception):
     """Kandidat kann der Loop nicht nachbauen; Text = Grund fuer catalog.yaml."""
 
@@ -224,9 +228,12 @@ def record_result(entry: dict, status: str, reason: str | None = None, dossier=N
         def num(x):
             return None if x != x else round(float(x), 6)   # NaN (kein gueltiger Lauf) -> null
 
+        gesamt = v.gesamtaussage
+        if entry["candidate"].get("protocol") != "passt" and gesamt in UNCAPPED_STRONG:
+            gesamt = "vorlaeufig"   # E1: Protokoll im Paper nicht belegt, nie mehr als vorlaeufig
         entry["verdict"] = {
             "urteil": v.urteil, "measured_mean": num(v.measured_mean), "measured_std": num(v.measured_std),
             "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
-            "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": v.gesamtaussage,
+            "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
             "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),
         }

@@ -366,3 +366,43 @@ def test_dossier_warnings_roundtrip(tmp_path, monkeypatch):
     assert Dossier.load(path).warnings == ["w1"]
     (tmp_path / "old.json").write_text(json.dumps({"paper_id": "p", "claims": [], "attempts": [], "verdicts": []}))
     assert Dossier.load(tmp_path / "old.json").warnings == []          # alte Laeufe ohne Feld
+
+
+def test_details_reset_at_run_start(tmp_path, monkeypatch):
+    e = cora_entry()
+    o = tavily_orch(tmp_path, monkeypatch, [e], evidence(0.8292))
+    o.use_setup_details = False                                         # Kandidat ohne Rolle 4
+    o.details = [SimpleNamespace(topic="lr", value="0.01", quote="q", source="paper")]   # Rest des vorigen Kandidaten
+    d = o.run(e["id"], source="catalog")
+    assert d.setup_details == []
+
+
+def test_rolle2_agreement_tolerates_rounding(tmp_path, monkeypatch):
+    claim = Claim("c", "t", "accuracy", 82.92 / 100, 0.01, "s", "paper")
+    o = tavily_orch(tmp_path, monkeypatch, [], evidence(0.8292))
+    events = []
+    o._emit = lambda type, **kw: events.append((type, kw))
+    paper = {"arxiv_url": "https://arxiv.org/abs/1", "claims": [{"id": "c", "keep_target": True, "extract": {
+        "method": "SL-GCN", "dataset": "Cora", "metric": "accuracy"}}]}
+    o.resolve_targets(paper, [claim])
+    assert dict(events)["target_check"]["agrees"] is True and not getattr(o, "_warnings", [])
+    claim2 = Claim("c", "t", "accuracy", 0.8292, 0.01, "s", "paper")
+    o.resolve_targets(paper, [claim2])   # 0.8292 gegen 0.8292000000000001 o. ae.
+    o2 = tavily_orch(tmp_path, monkeypatch, [], evidence(0.8293))
+    o2.resolve_targets(paper, [Claim("c", "t", "accuracy", 0.8292, 0.01, "s", "paper")])
+    assert any("weicht ab" in w for w in o2._warnings)                  # 1e-4 Abstand bleibt Abweichung
+
+
+def test_unproven_protocol_caps_gesamtaussage_in_verdict():
+    d = dossier_with("reproduziert")
+    d.verdicts[0].methode = "ja"                                        # Pruefer hypothetisch geeicht
+    assert d.verdicts[0].gesamtaussage == "Paper reproduziert"
+    unclear = entry(etth1())
+    cat.record_result(unclear, cat.CHECKED, dossier=d)
+    assert unclear["verdict"]["gesamtaussage"] == "vorlaeufig"
+    proven = entry(cand())
+    cat.record_result(proven, cat.CHECKED, dossier=d)
+    assert proven["verdict"]["gesamtaussage"] == "Paper reproduziert"   # Protokoll belegt: keine Deckelung
+    d2 = dossier_with("nicht reproduzierbar (Setup)", ())
+    cat.record_result(unclear, cat.CHECKED, dossier=d2)
+    assert unclear["verdict"]["gesamtaussage"] == "nicht reproduzierbar (Setup)"   # strengere Aussagen bleiben
