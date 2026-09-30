@@ -114,6 +114,7 @@ export function translateClaim(text: string) {
   let t = text
   t = t.replace(/erreicht/g, 'achieves')
   t = t.replace(/Accuracy auf/g, 'accuracy on')
+  t = t.replace(/\bauf\b/g, 'on')
   t = t.replace(/groesste Komponente/g, 'largest component')
   t = t.replace(/zufaellige/g, 'random')
   t = t.replace(/20\/30\/Rest-Splits/g, '20/30/rest splits')

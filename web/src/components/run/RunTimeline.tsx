@@ -6,7 +6,7 @@ import { Hint } from '../Hint'
 import { Badge, Section } from '../ui'
 import { PreliminaryChip } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
-import { ACTOR_LABEL, buildRunModel, fmtClock, fmtValue, type Actor, type Expand, type Phase, type PhaseId, type Row } from './phases'
+import { ACTOR_LABEL, buildRunModel, fmtClock, fmtValue, planMapping, type Actor, type Expand, type Phase, type PhaseId, type Row } from './phases'
 import { TONE_TEXT, catalogLabel, isPreliminary, translateClaim, translateWarning, PRELIMINARY } from '../../labels'
 import type { Event } from '../../data'
 
@@ -84,7 +84,19 @@ function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (hash: stri
 function CodeView({ ex, loader }: { ex: Extract<Expand, { kind: 'code' }>; loader?: (hash: string) => Promise<string | null> }) {
   const code = useCode(ex.hash, ex.inline, loader)
   if (code == null) return <p className="mt-2 text-[11px] text-muted">Code version {ex.version} ({ex.hash}) is not stored for this run.</p>
-  return <div className="mt-2"><PythonCode code={code} /></div>
+  const mapping = planMapping(code)
+  return (
+    <div className="mt-2 space-y-2">
+      {mapping && (
+        <div className="rounded-lg border border-line bg-surface p-3">
+          <p className={label}>What the agent says it implemented</p>
+          <ul className="mt-1.5 space-y-0.5 text-[12px] leading-relaxed text-fg-3">{mapping.map((l, i) => <li key={i} className="break-words">{l}</li>)}</ul>
+          <p className="mt-1.5 text-[10.5px] text-muted">The agent&apos;s own statement from the top of its code. We do not check it.</p>
+        </div>
+      )}
+      <PythonCode code={code} />
+    </div>
+  )
 }
 
 function RowView({ row, t0, loader, planFull, reduce }: { row: Row; t0: number | null; loader?: (hash: string) => Promise<string | null>; planFull?: string | null; reduce: boolean }) {
@@ -260,6 +272,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
           <span>Runtime <span className="font-mono text-fg-3">{elapsed == null ? '–' : fmtClock(elapsed)}</span></span>
           {m.costNet != null && <span>Model cost (net) <span className="font-mono text-fg-3">${m.costNet.toFixed(3)}</span></span>}
           <span>Tavily calls <span className="font-mono text-fg-3">{m.tavilyCalls}</span></span>
+          {m.llmCalls > 0 && <span>Nemotron calls <span className="font-mono text-fg-3">{m.llmCalls}</span>{m.llmCached > 0 ? <span className="text-tone-amber"> ({m.llmCached} cached)</span> : <span> live</span>}</span>}
           {m.seedsTotal != null && <span>Seeds <span className="font-mono text-fg-3">{m.stats?.n ?? 0} of {m.seedsTotal}</span><Hint text={TERM_HINT.seed} /></span>}
         </div>
       )}

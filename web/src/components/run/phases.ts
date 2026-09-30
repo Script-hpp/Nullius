@@ -62,6 +62,8 @@ export type RunModel = {
   graphTask: boolean
   waiting: string | null       // what the loop is doing right now, for the pulsing line
   firstMeasurement: boolean
+  llmCalls: number             // live only (llm_call events)
+  llmCached: number
 }
 
 export const ACTOR_LABEL: Record<Actor, string> = { tavily: 'Tavily', nemotron: 'Nemotron', sandbox: 'Sandbox', harness: 'Harness', system: 'System' }
@@ -133,7 +135,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const target = num(claimStart?.target)
   const seedsTotal = num(runStart?.seeds)
   const modelName = (role: 'fast' | 'code' | 'reasoning') => (models[role] ? String(models[role]).replace(/^nvidia\//i, '') : undefined)
-  const discarded = new Set(events.filter((e) => e.type === 'graph_repair' && e.result === 'repariert').map((e) => String(e.from_hash)))
+  const discarded = new Set(events.filter((e) => (e.type === 'graph_repair' || e.type === 'fault_repair') && e.result === 'repariert').map((e) => String(e.from_hash)))
   const graphTask = events.some((e) => e.type === 'ablation') || metric === 'accuracy'
 
   const rows: Record<PhaseId, Row[]> = { claim: [], setup: [], plan: [], code: [], sandbox: [], seeds: [], verdict: [] }
@@ -188,7 +190,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         push('claim', {
           actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: agrees ? 'green' : 'amber',
           title: agrees ? 'Second reading of the paper confirms the number' : 'Second reading of the paper differs from discovery',
-          detail: `Paper: ${fmtValue(metric, num(e.verified_value), 2)} · Discovery: ${fmtValue(metric, num(e.configured_value), 2)}`,
+          detail: `Paper: ${fmtValue(metric, num(e.verified_value), 2)} · Discovery: ${fmtValue(metric, num(e.configured_value), 2)}${e.from_store ? ' · taken from a stored extraction of this paper, no new model call' : ''}`,
         })
         break
       }
@@ -197,7 +199,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         push('claim', {
           actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: 'green',
           title: `Target ${fmtValue(metric, v, 2)} found in ${e.table || 'the paper'}`,
-          detail: e.column_check === 'ok' ? 'Table column verified: the number belongs to the proposed method.' : 'Table column could not be verified.',
+          detail: `${e.column_check === 'ok' ? 'Table column verified: the number belongs to the proposed method.' : 'Table column could not be verified.'}${e.from_store ? ' Number read from a stored extraction of this paper (no new model call).' : ''}`,
           expand: e.quote ? { kind: 'quote', quote: String(e.quote) } : undefined,
         })
         break
@@ -269,6 +271,22 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         else push('sandbox', { actor: 'harness', tone: 'gray', title: `Graph check could not be measured${after}` })
         break
       }
+      case 'plan_retry': {
+        push('plan', { actor: 'nemotron', role: 'reasoning', model: modelName('reasoning'), tone: 'amber', title: `The first answer was ${e.reason === 'too_long' ? 'far too long' : 'code, not a plan'}: Nemotron is asked again for a short plan` })
+        break
+      }
+      case 'fault_repair': {
+        const r = String(e.result)
+        const base = Object.entries((e.baselines ?? {}) as Record<string, unknown>).filter(([, v]) => num(v) != null).map(([k, v]) => `${k} ${fmtValue(metric, num(v))}`).join(', ')
+        push('sandbox', {
+          actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet',
+          title: `Result worse than a trivial baseline, round ${e.runde}: Nemotron gets the numbers and fixes the code`,
+          detail: r === 'repariert'
+            ? `The agent's code is likely wrong, not the paper. It measured ${fmtValue(metric, num(e.measured))}, trivial baselines: ${base || 'n/a'}. The fixed code is checked again.`
+            : 'The rewritten code did not run, the previous code is kept.',
+        })
+        break
+      }
       case 'graph_repair': {
         const r = String(e.result)
         push('sandbox', {
@@ -317,9 +335,9 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const laterSeeds = events.some((e) => e.type === 'attempt' && (num(e.seed) ?? 0) > 0)
   const verdictSeen = seen.has('verdict')
   const done: Record<PhaseId, boolean> = {
-    claim: seen.has('target_resolved') || seen.has('setup_details') || seen.has('plan'),
-    setup: seen.has('setup_details') || seen.has('plan'),
-    plan: seen.has('plan') && (seen.has('code_written') || seen.has('attempt')),
+    claim: seen.has('target_resolved') || seen.has('setup_details') || seen.has('claim_start') || seen.has('plan'),
+    setup: seen.has('setup_details') || seen.has('claim_start') || seen.has('plan'),   // claim_start comes after the setup phase
+    plan: seen.has('plan') && (seen.has('code_written') || seen.has('attempt')),   // stays open while the next step starts: the plan can be read live
     code: seen.has('code_written') && (seen.has('attempt') || seen.has('ablation')),
     sandbox: laterSeeds || verdictSeen || (seedsTotal === 1 && seed0 && (hasAblation || !graphTask)),
     seeds: verdictSeen,
@@ -337,6 +355,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const verdictEv = events.filter((e) => e.type === 'verdict').pop() ?? null
   const ab = events.filter((e) => e.type === 'ablation').pop()
   const repairs = events.filter((e) => e.type === 'graph_repair').length
+  const faultRepairs = events.filter((e) => e.type === 'fault_repair').length
   const summaries: Record<PhaseId, string | null> = {
     claim: target2 ? `Target ${fmtValue(metric, num(target2.value), 2)} confirmed in ${target2.table || 'the paper'}` : null,
     setup: setupEv ? `${setupEv.n} setup details confirmed by quotes${num(setupEv.dropped) ? `, ${setupEv.dropped} dropped` : ''}` : done.setup ? 'No setup details used' : null,
@@ -346,6 +365,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       seed0 ? `Seed 0 scored ${fmtValue(metric, attempts.find((a) => a.seed === 0)!.measured)}` : null,
       ab ? (ab.verdict === 'Graph genutzt' ? 'graph check passed' : ab.verdict === 'Graph nicht genutzt' ? 'graph check failed' : 'graph check inconclusive') : null,
       repairs ? `${repairs} graph repair${repairs > 1 ? 's' : ''}` : null,
+      faultRepairs ? `${faultRepairs} code fix${faultRepairs > 1 ? 'es' : ''} after a result worse than a baseline` : null,
     ].filter(Boolean).join(' · ') || null,
     seeds: stats && seedsTotal ? `${stats.n} of ${seedsTotal} seeds, mean ${fmtValue(metric, stats.mean)} ± ${fmtValue(metric, stats.std)}` : null,
     verdict: verdictEv ? (VERDICT_SENTENCE[String(verdictEv.urteil)] ?? String(verdictEv.urteil)) : null,
@@ -355,9 +375,17 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   let waiting: string | null = null
   if (activeId === 'claim') waiting = 'Tavily is reading the paper and Nemotron is finding the reported number.'
   else if (activeId === 'setup') waiting = 'Collecting setup details from the paper and the repository.'
-  else if (activeId === 'plan') waiting = 'Nemotron is writing the experiment plan.'
-  else if (activeId === 'code') waiting = 'Nemotron is writing the training code.'
-  else if (activeId === 'sandbox') waiting = !seed0 ? 'Training seed 0 in the sandbox. This can take several minutes.' : graphTask && !hasAblation ? 'Graph check: running the same code again without graph edges.' : 'Checking the result before the remaining seeds start.'
+  else if (activeId === 'plan') waiting = seen.has('plan') ? 'The plan is written. Nemotron is now writing the code.' : 'Nemotron is writing the experiment plan.'
+  else if (activeId === 'code') waiting = seen.has('code_written') ? 'The code is written. The sandbox runs a static check and a quick smoke test before training.' : 'Nemotron is writing the training code.'
+  else if (activeId === 'sandbox') {
+    const lastAb = events.filter((e) => e.type === 'ablation').pop()
+    const rewriting = !!lastAb && lastAb.verdict === 'Graph nicht genutzt' && repairs < 2 && repairs + faultRepairs < 3
+    waiting = !seed0 ? 'Training seed 0 in the sandbox. This can take several minutes.'
+      : graphTask && !hasAblation ? 'Graph check: running the same code again without graph edges.'
+        : rewriting ? 'The graph check failed. Nemotron is rewriting the code.'
+          : !graphTask && seedsTotal !== 1 ? 'Checking the result against trivial baselines.'
+            : 'Starting the remaining seeds in parallel.'
+  }
   else if (activeId === 'seeds') {
     const left = seedsTotal ? Math.max(0, seedsTotal - okSeeds.size) : null
     waiting = left === 0 ? 'All seeds finished. The harness is computing the verdict.' : `${left != null ? `${left} seed${left === 1 ? '' : 's'} still training` : 'Seeds are training'} in parallel sandbox branches${medSeconds ? `, about ${fmtSeconds(medSeconds)} each` : ''}.`
@@ -378,5 +406,19 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     title: (runStart?.title as string | undefined) ?? null, claimText: (claimStart?.text as string | undefined) ?? null, metric, target,
     tolerance: num(claimStart?.tolerance), seedsTotal, models, phases, attempts, stats, tavilyCalls, warnings, verdict: verdictEv,
     startTs: first, endTs: last, costNet: num(end?.cost_net_usd) ?? num(cost?.total_net_usd), graphTask, waiting, firstMeasurement: attempts.length > 0,
+    llmCalls: events.filter((e) => e.type === 'llm_call').length, llmCached: events.filter((e) => e.type === 'llm_call' && e.cached === true).length,
   }
+}
+
+// "Plan step -> implemented in: X" comment block at the top of the agent's code (the agent's own statement, not checked by us).
+export function planMapping(code: string): string[] | null {
+  const lines = code.split('\n').slice(0, 80)
+  const at = lines.findIndex((l) => /^\s*#.*plan step/i.test(l))
+  if (at < 0) return null
+  let from = at
+  while (from > 0 && /^\s*#/.test(lines[from - 1])) from--
+  let to = at
+  while (to + 1 < lines.length && /^\s*#/.test(lines[to + 1])) to++
+  const block = lines.slice(from, to + 1).map((l) => l.replace(/^\s*#+\s?/, '').trimEnd()).filter((l) => l.trim() && !/^[-=_*\s]+$/.test(l))
+  return block.length ? block.slice(0, 25) : null
 }
