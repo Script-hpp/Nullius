@@ -1,4 +1,4 @@
-# Übergabe an die nächste Reviewer-Session (Stand 2026-10-01, `main` bei `3b94d36`)
+# Übergabe an die nächste Reviewer-Session (Stand 2026-10-01, `main` bei `d71a8af`)
 
 Diese Datei ersetzt den Verlauf der vorherigen Reviewer-Session. Danach `CLAUDE.md`, `docs/worker_handover.md` und `docs/benchmark_plan.md` lesen.
 
@@ -16,7 +16,14 @@ Diese Datei ersetzt den Verlauf der vorherigen Reviewer-Session. Danach `CLAUDE.
 - API neu starten nach `src/`-Änderungen: PID per `ps -eo pid,args | grep '[u]vicorn repro_agent.api'`, `kill <pid>` (nicht `pkill -f` mit dem Muster im selben Befehl, das beendet die eigene Shell).
 - Hintergrund: Referenzläufe `scripts/validate_v2_references.py gat_lcc 30` und `nlinear 5` (nach Fix `3b94d36`). Ausgaben lagen im Scratchpad der alten Session; bei Bedarf neu starten und nach `benchmark/experiments/results/v2_reference_{gat_lcc,nlinear}.txt` schreiben.
 
-## Nächste Schritte (Reihenfolge)
+## STAND JETZT (zuerst lesen)
+
+- **Benchmark v2 läuft** seit 2026-10-01 ca. 01:00 (Token Factory, Produktkonfiguration), gestartet mit Vorab-Festlegung `d71a8af` (final). **`src/` ist eingefroren, bis alle 48 Läufe fertig sind.** Drei Prozesse (`ps -eo args | grep '[p]ython scripts/run_benchmark'`), Logs `logs/bench_v2/p1.log` (Shchur-GCN, Kipf, Wu), `p2.log` (Shchur-GAT, GAT, DGI), `p3.log` (DLinear, NLinear). Store `runs/benchmark_v2.jsonl`, Budgetstopp 6 $ brutto. Nach Ende: `uv run python scripts/eval_benchmark_v2.py > benchmark/experiments/results/benchmark_v2.md`, prüfen, committen, Zahlen ins README.
+- Referenzläufe erledigt: Shchur-GAT 0,8140 ± 0,0115, NLinear MSE 0,3739 ± 0,0013 (beide reproduziert, eingetragen).
+- worker-2 schreibt den README-Entwurf (Auftrag `docs/worker_brief_10_readme.md`, uncommittet lassen): altes README wird nach `docs/research_log.md` verschoben, neues README produktzentriert, Benchmark-Zahlen `TBD`. Prüfen, dann pushen.
+- Coolify-Weg dokumentiert (`docs/deploy.md`, `df24d77`); Deployment mit dem Nutzer steht aus (Subdomain vorhanden).
+
+## Nächste Schritte (Reihenfolge, ursprüngliche Liste; 1-3 sind erledigt bzw. laufen)
 
 1. **Referenzläufe prüfen** (Erwartung nach Fix, lokal gemessen: GAT-LCC ~0.81, NLinear MSE ~0.374). Werte als `reference_mean` in den YAML-Block `reference_verdicts` von `benchmark/experiments/benchmark_v2.md` eintragen, Ergebnisdateien committen. Nicht auf den Zielwert tunen; weichen sie ab, Ursache belegen lassen.
 2. **Vorab-Festlegung final**: `benchmark_v2.md` Draft-Status entfernen, Commit "final", pushen. Ab dann `src/` eingefroren, bis Benchmark fertig.
