@@ -40,7 +40,8 @@ def test_fault_repair_fixes_code_below_trivial_baseline(tmp_path):
     assert len(calls["repair"]) == 1
     msg = calls["repair"][0]
     assert msg.startswith("Your script ran, but its result is worse than a trivial baseline")
-    assert "Measured ACCURACY: 0.1200" in msg and "majority 0.1300" in msg and "no_graph 0.5000" in msg and "The paper reports 0.83" in msg
+    assert "Measured ACCURACY: 0.1200" in msg and "baselines: majority, no_graph" in msg and "The paper reports 0.83" in msg
+    assert "0.1300" not in msg and "0.5000" not in msg
     assert "copy.deepcopy(model.state_dict())" in msg and "Keep the method described in the plan" in msg
     (fr,) = types(events, "fault_repair")
     assert fr["runde"] == 1 and fr["from_hash"] == h(V1) and fr["to_hash"] == h(V2) and fr["result"] == "repariert" and fr["measured"] == 0.12
@@ -65,9 +66,10 @@ def test_feedback_never_contains_test_statistics(tmp_path):
 
 def test_forecast_message_has_prediction_spread_and_no_target_statistics():
     msg = repair_hints.fault_message("mse", 2.3191, 0.35, {"zero": {"mse": 1.1099, "mae": 0.8}, "repeat": {"mse": 1.2944, "mae": 0.7}}, pred_std=2.5)
-    assert "Measured MSE: 2.3191" in msg and "zero 1.1099" in msg and "repeat 1.2944" in msg
+    assert "Measured MSE: 2.3191" in msg and "baselines: zero, repeat" in msg
+    assert "1.1099" not in msg and "1.2944" not in msg   # Baseline-Werte sind Teststatistik
     assert "standard deviation of your predictions is 2.500; the training data (standardised) has 1.0" in msg
-    assert "'{window}_{step}_{channel}'" in msg and "copy.deepcopy(model.state_dict())" in msg and "normalise each input window" in msg
+    assert "'{window}_{step}_{channel}'" in msg and "copy.deepcopy(model.state_dict())" in msg and "normalise each input window" in msg and "if the plan or the paper uses input normalisation" in msg
     assert "target_std" not in msg and "correlation" not in msg.lower()
     assert list(inspect.signature(repair_hints.fault_message).parameters) == ["metric", "measured", "target", "baselines", "pred_std"]   # keine Teststatistik als Parameter
 
