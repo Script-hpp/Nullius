@@ -1,0 +1,119 @@
+[
+ {
+  "id": "disc_2601_18837",
+  "arxiv_id": "2601.18837",
+  "title": "Time series forecasting with Hahn Kolmogorov-Arnold networks",
+  "dataset": "ETTh1",
+  "task": "ETTh1",
+  "claim": {
+   "method": "HaKAN",
+   "metric": "mse",
+   "target": 0.369,
+   "horizon": 96,
+   "quote": "| Method | HaKAN | TsKAN | Timer-XL | TimeKAN | PatchTST/64 | N-HiTS | DLinear | MICN | TimesNet |\n| Metric | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE |\n| ETTh1 96 | 0.369 | 0.394 | 0.376 | 0.395 | 0.364 | 0.397 | 0.367 | 0.395 | 0.379 | 0.401 | 0.378 | 0.436 | 0.375 | 0.399 | 0.413 | 0.442 | 0.421 | 0.440 |",
+   "input_length": null
+  },
+  "protocol": "unklar",
+  "column_check": "unchecked",
+  "github_url": null,
+  "source_url": "https://arxiv.org/pdf/2601.18837",
+  "status": "ungeprueft",
+  "reason": null,
+  "checked_at": null,
+  "cost_gross_usd": null,
+  "verdict": null,
+  "run_id": null,
+  "jury": null
+ },
+ {
+  "id": "disc_2601_21866",
+  "arxiv_id": "2601.21866",
+  "title": "MoHETS: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts",
+  "dataset": "ETTh1",
+  "task": "ETTh1",
+  "claim": {
+   "method": "MoHETS",
+   "metric": "mse",
+   "target": 0.35,
+   "horizon": 96,
+   "quote": "| Models | MoHETS | Timer-XLBase | Time-MoEBase | Time-MoELarge | Time-MoEUltra | MoiraiSmall | MoiraiBase | MoiraiLarge | MOMENT | ChronosBase | ChronosLarge |\n| ETTh1 | 96 | 0.350 | 0.383 | 0.369 | 0.391 | 0.357 | 0.381 | 0.350 | 0.382 | 0.349 | 0.379 | 0.401 | 0.402 | 0.376 | 0.392 | 0.381 | 0.388 | 0.688 | 0.557 | 0.440 | 0.393 | 0.441 | 0.390 |",
+   "input_length": null
+  },
+  "protocol": "unklar",
+  "column_check": "unchecked",
+  "github_url": null,
+  "source_url": "https://arxiv.org/pdf/2601.21866",
+  "status": "ungeprueft",
+  "reason": null,
+  "checked_at": null,
+  "cost_gross_usd": null,
+  "verdict": null,
+  "run_id": null,
+  "jury": null
+ },
+ {
+  "id": "disc_2609_30894",
+  "arxiv_id": "2609.30894",
+  "title": "Training Graph Foundation Models on The Web Graph",
+  "dataset": "Cora",
+  "task": "Cora",
+  "claim": {
+   "method": "Acacia, frozen",
+   "metric": "accuracy",
+   "target": 58.17,
+   "horizon": null,
+   "quote": "| Acacia, frozen | 58.17± 1.35 | 39.50± 1.22 | 19.87± 0.74 | 66.00± 0.72 |",
+   "input_length": null
+  },
+  "protocol": "passt",
+  "column_check": "unchecked",
+  "github_url": null,
+  "source_url": "https://arxiv.org/html/2609.30894v1",
+  "status": "ungeprueft",
+  "reason": null,
+  "checked_at": null,
+  "cost_gross_usd": null,
+  "verdict": null,
+  "run_id": null,
+  "jury": null
+ },
+ {
+  "id": "disc_2511_08094",
+  "arxiv_id": "2511.08094",
+  "title": "Stuart-Landau Oscillatory Graph Neural Network",
+  "dataset": "Cora",
+  "task": "Cora-LCC",
+  "claim": {
+   "method": "SL-GCN",
+   "metric": "accuracy",
+   "target": 82.92,
+   "horizon": null,
+   "quote": "SL-GCN 82.92 ± 1.39",
+   "input_length": null
+  },
+  "protocol": "passt",
+  "column_check": "ok",
+  "github_url": "https://github.com/kevvzhang/StuartLandauGNN",
+  "source_url": "https://arxiv.org/pdf/2511.08094",
+  "status": "geprueft",
+  "reason": null,
+  "checked_at": "2026-09-30T18:19:19Z",
+  "cost_gross_usd": 0.0246,
+  "verdict": {
+   "urteil": "nicht reproduziert",
+   "measured_mean": 0.782998,
+   "measured_std": 0.017567,
+   "seeds": 10,
+   "target": 0.8292,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "graph_repairs": 0,
+   "run_dir": "runs/disc_2511_08094/20260930-200050"
+  },
+  "run_id": "disc_2511_08094--20260930-200050",
+  "jury": {
+   "ready": true,
+   "reason": "Gesamtaussage: vorlaeufig"
+  }
+ }
+]
