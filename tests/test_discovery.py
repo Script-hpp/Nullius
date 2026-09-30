@@ -175,7 +175,7 @@ def test_cache_hit(monkeypatch, tmp_path):
                 "reason": "Cached",
                 "github_url": "https://github.com/foo/bar",
                 "status": "ungeprueft",
-                "cache_version": 2,
+                "cache_version": 3,
                 "alternatives": []
             }
         }, f)
@@ -218,7 +218,7 @@ def test_cache_hit_on_reject(monkeypatch, tmp_path):
         json.dump({
             "1234.5678": {
                 "status": "rejected",
-                "cache_version": 2,
+                "cache_version": 3,
                 "reason": "Regex pre-filter failed"
             }
         }, f)
@@ -770,7 +770,7 @@ def test_queries_contain_protocol_terms():
     cora = " ".join(DISCOVERY_QUERIES["Cora"]).lower()
     assert "planetoid" in cora and "140" in cora and "shchur" in cora and "largest connected component" in cora
     etth1 = " ".join(DISCOVERY_QUERIES["ETTh1"]).lower()
-    assert "input length 96" in etth1 and "96 192 336 720" in etth1 and "12/4/4" in etth1
+    assert "input length" not in etth1 and "96 192 336 720" in etth1 and "12/4/4" in etth1
     assert all(len(q) <= MAX_SEARCHES_PER_DATASET for q in DISCOVERY_QUERIES.values())
     assert "planetoid" in EXTRACT_QUERIES["Cora"].lower() and "12/4/4" in EXTRACT_QUERIES["ETTh1"]
 
@@ -813,6 +813,10 @@ def test_prompt_contains_protocol_hints(monkeypatch, arxiv_xml, tmp_path):
     agent._extract_claim("text", "Cora")
     assert "8545/2881/2881" in prompts[0]
     assert "140/500/1000" in prompts[1] and "largest connected component" in prompts[1]
+    # E3: Hauptergebnis der vorgeschlagenen Methode, keine Ablation/Variante; E4: Eingabelaenge frei, nur Horizont 96
+    assert all("never an ablation" in p and "frozen" in p for p in prompts)
+    assert "'input_length'" in prompts[0] and "'input_length'" not in prompts[1]
+    assert "input length 96" not in prompts[0]
 
 
 def test_old_cache_entries_without_version_are_rechecked(monkeypatch, arxiv_xml, tmp_path):
@@ -822,7 +826,7 @@ def test_old_cache_entries_without_version_are_rechecked(monkeypatch, arxiv_xml,
     assert len(result) == 1                       # alter Reject ignoriert, Paper neu geprueft
     assert any(e.get("type") == "extracting" for e in events)
     entry = _read_cache(str(cache_file))["2101.12345"]
-    assert entry["cache_version"] == 2 and entry["status"] == "ungeprueft"
+    assert entry["cache_version"] == 3 and entry["status"] == "ungeprueft"
 
 
 def test_old_cached_candidate_without_version_is_rechecked(monkeypatch, arxiv_xml, tmp_path):
@@ -988,6 +992,19 @@ def test_etth1_horizon_not_96_rejected_and_cached(monkeypatch, tmp_path, claim):
     assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
 
 
+def test_etth1_input_length_kept_only_if_in_text(monkeypatch, tmp_path):
+    ok = {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": 96}
+    r, _, _ = _run_etth1(monkeypatch, tmp_path, {**ok, "input_length": 336})   # 336 nicht im Text
+    assert r[0].claim["input_length"] is None
+    from repro_agent.discovery import _valid_input_length
+    assert _valid_input_length(512, "look-back window 512 used") == 512
+    assert _valid_input_length("512", "look-back 512") == 512
+    assert _valid_input_length(512, "value 1512.5") is None          # Teilzahl zaehlt nicht
+    assert _valid_input_length(1000, "input 1000") is None           # ueber 720
+    assert _valid_input_length(None, "x") is None and _valid_input_length("n/a", "x") is None
+    assert _valid_input_length(True, "1") is None
+
+
 def test_cora_claim_needs_no_horizon(monkeypatch, arxiv_xml, tmp_path):
     result, _, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content)
     assert len(result) == 1
@@ -1098,7 +1115,7 @@ def test_cache_hit_emits_candidate_event(monkeypatch, tmp_path):
     cache_file = tmp_path / "c.json"
     cache_file.write_text(json.dumps({"1234.5678": {
         "title": "Cached Paper", "arxiv_id": "1234.5678", "dataset": "Cora", "claim": {"method": "M", "target": 80.0},
-        "reason": "Cached", "github_url": None, "status": "ungeprueft", "cache_version": 2, "protocol": "passt",
+        "reason": "Cached", "github_url": None, "status": "ungeprueft", "cache_version": 3, "protocol": "passt",
         "community": [{"url": "u"}]}}))
     monkeypatch.setattr("httpx.get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no network")))
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(), cache_path=str(cache_file))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime
@@ -38,6 +39,17 @@ def _normalize_repo_url(url: str) -> str | None:
 ALLOWED_METRICS = {"Cora": {"accuracy"}, "ETTh1": {"mse", "mae"}}
 METRIC_ALIASES = {"accuracy": "accuracy", "acc": "accuracy", "test accuracy": "accuracy",
                   "mse": "mse", "mean squared error": "mse", "mae": "mae", "mean absolute error": "mae"}
+
+
+def _valid_input_length(value, text: str) -> int | None:
+    """Eingabelaenge (1..720) nur, wenn die Zahl im Text vorkommt; sonst None (nie raten)."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    if not 1 <= n <= 720 or isinstance(value, bool):
+        return None
+    return n if re.search(rf"(?<![\d.]){n}(?![\d.])", text) else None
 
 
 def _normalize_metric(metric) -> str | None:
@@ -183,21 +195,22 @@ DISCOVERY_QUERIES = {
         "node classification Cora random splits Shchur largest connected component test accuracy results table",
     ],
     "ETTh1": [
-        "long-term time series forecasting ETTh1 input length 96 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+        "long-term time series forecasting ETTh1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
     ],
 }
 MAX_SEARCHES_PER_DATASET = 2
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
 EXTRACT_QUERIES = {
     "Cora": "Cora node classification: data split (Planetoid public split 140 training nodes, or random splits / largest connected component), evaluation protocol, test accuracy",
-    "ETTh1": "ETTh1 forecasting: input length 96, prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
+    "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
 }
-CACHE_VERSION = 2   # 2: dreistufiges Protokoll; Eintraege der Ja/Nein-Logik (ohne Version) gelten nicht mehr
+CACHE_VERSION = 3   # 3: Feld claim.input_length, Hauptergebnis statt Variante; 2: dreistufiges Protokoll (Katalog-Import liest 2 und 3)
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
 DISCOVERY_PROTOCOL_HINTS = {
     "ETTh1": ("Equivalent statements: 12/4/4 months; 8640/2880/2880 rows; papers often report window/sample counts instead "
               "(e.g. 8545/2881/2881 as quoted in arXiv 2602.00717, or other counts slightly below 8640/2880/2880 "
-              "depending on input length and horizon) - these are the same split."),
+              "depending on input length and horizon) - these are the same split. "
+              "Any input length up to 720 is supported; only the horizon 96 is fixed."),
     "Cora": "Planetoid public split = 140/500/1000 = 20 labels per class.",
     "Cora-LCC": "Shchur et al. 2018 random splits, 20 per class train, 30 per class val, largest connected component.",
 }
@@ -324,13 +337,17 @@ class DiscoveryAgent:
             f"{protocols}\n\n"
             "The claim must be the ABSOLUTE test metric of the method PROPOSED in the paper, "
             "never a baseline and never a relative improvement (no 'reduction percent'). "
+            "Choose the best or the highlighted result of the main configuration of the proposed method; "
+            "never an ablation and never a restricted variant (for example 'frozen', 'w/o ...', 'without ...', 'linear probe'). "
             "Reply with keys: "
             "'method' (name of the proposed method exactly as written in the quote), "
             "'quote' (a VERBATIM excerpt copied from the text that names the method and gives the number), "
             "'metric' (accuracy for node classification; mse or mae for forecasting), "
             "'target' (the numerical value as float), "
-            + ("'horizon' (integer prediction horizon of the number; choose the number for input length 96 and horizon 96, "
-               "never an average over horizons, and the quote must contain 96), " if dataset == "ETTh1" else "") +
+            + ("'horizon' (integer prediction horizon of the number; choose the number for horizon 96, "
+               "never an average over horizons, and the quote must contain 96), "
+               "'input_length' (integer input length / look-back window used for that number, at most 720, "
+               "or null if the text does not state it), " if dataset == "ETTh1" else "") +
             "'protocol' (one of \"passt\", \"unklar\", \"passt_nicht\"), "
             "'matched_task' (the task name in brackets when protocol is \"passt\", else null), "
             "'protocol_quote' (a VERBATIM excerpt copied from the text that shows the protocol; required for \"passt\" and \"passt_nicht\"), "
@@ -753,6 +770,9 @@ class DiscoveryAgent:
                         emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
                         _update_cache(cache_key, {"status": "rejected", "reason": reason})
                         continue
+
+                if ds == "ETTh1":   # Eingabelaenge frei bis 720; nur uebernehmen, wenn die Zahl im Text steht
+                    claim_data["input_length"] = _valid_input_length(claim_data.get("input_length"), text)
 
                 method = claim_data.get("method")
                 if not _method_supported(method, quote, text, _number_line(quote, target_val)):
