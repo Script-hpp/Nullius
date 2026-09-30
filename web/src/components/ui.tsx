@@ -30,10 +30,10 @@ export function Badge({ children, tone = 'gray', title }: { children: ReactNode;
 
 export function Section({ title, hint, children, className = '', style }: { title: string; hint?: string; children: ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <section className={`p-6 bg-[#0c0c0c] border border-zinc-800/80 rounded-xl ${className}`} style={style}>
-      <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-zinc-800/50 pb-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-400">{title}</h2>
-        {hint && <p className="text-zinc-600 text-[11px] uppercase tracking-wider">{hint}</p>}
+    <section className={`p-6 bg-surface-2 border border-line/80 rounded-xl ${className}`} style={style}>
+      <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-line/50 pb-3">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-4">{title}</h2>
+        {hint && <p className="text-subtle text-[11px] uppercase tracking-wider">{hint}</p>}
       </div>
       {children}
     </section>
@@ -43,9 +43,9 @@ export function Section({ title, hint, children, className = '', style }: { titl
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
     <div>
-      <div className="text-zinc-500 text-[10px] uppercase tracking-wider font-semibold mb-1">{label}</div>
-      <div className="font-mono text-2xl font-semibold text-zinc-100">{value}</div>
-      {sub && <div className="text-zinc-600 text-[11px] mt-1">{sub}</div>}
+      <div className="text-muted text-[10px] uppercase tracking-wider font-semibold mb-1">{label}</div>
+      <div className="font-mono text-2xl font-semibold text-fg">{value}</div>
+      {sub && <div className="text-subtle text-[11px] mt-1">{sub}</div>}
     </div>
   )
 }

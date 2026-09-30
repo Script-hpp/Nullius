@@ -45,19 +45,19 @@ function translateClaim(text: string) {
 }
 
 function colorForTone(tone: Tone) {
-  if (tone === 'green') return 'text-emerald-400'
-  if (tone === 'amber') return 'text-amber-400'
-  if (tone === 'red') return 'text-rose-400'
-  if (tone === 'violet') return 'text-violet-400'
-  return 'text-zinc-400'
+  if (tone === 'green') return 'text-tone-green'
+  if (tone === 'amber') return 'text-tone-amber'
+  if (tone === 'red') return 'text-tone-red'
+  if (tone === 'violet') return 'text-tone-violet'
+  return 'text-fg-4'
 }
 
 function iconForTone(tone: Tone) {
-  if (tone === 'green') return <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
-  if (tone === 'amber') return <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
-  if (tone === 'red') return <XCircle className="w-5 h-5 text-rose-400 mt-0.5 shrink-0" />
-  if (tone === 'violet') return <HelpCircle className="w-5 h-5 text-violet-400 mt-0.5 shrink-0" />
-  return <Info className="w-5 h-5 text-zinc-400 mt-0.5 shrink-0" />
+  if (tone === 'green') return <CheckCircle2 className="w-5 h-5 text-tone-green mt-0.5 shrink-0" />
+  if (tone === 'amber') return <AlertCircle className="w-5 h-5 text-tone-amber mt-0.5 shrink-0" />
+  if (tone === 'red') return <XCircle className="w-5 h-5 text-tone-red mt-0.5 shrink-0" />
+  if (tone === 'violet') return <HelpCircle className="w-5 h-5 text-tone-violet mt-0.5 shrink-0" />
+  return <Info className="w-5 h-5 text-fg-4 mt-0.5 shrink-0" />
 }
 
 // MSE/MAE are plain decimals, never percent; accuracy is a share shown as percent.
@@ -75,13 +75,13 @@ function getDelta(measured: any, target: any, metric?: string) {
   
   const diff = mVal - tVal
   if (plain) {
-    if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-zinc-500' }
-    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-emerald-400' : 'text-rose-400' }
+    if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-muted' }
+    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-tone-green' : 'text-tone-red' }
   }
   // percentage points, same wording as the catalog
-  if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-zinc-500' }
-  if (diff > 0) return { text: `+${diff.toFixed(1)} pp vs. claimed`, color: 'text-emerald-400' }
-  return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-rose-400' }
+  if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-muted' }
+  if (diff > 0) return { text: `+${diff.toFixed(1)} pp vs. claimed`, color: 'text-tone-green' }
+  return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-tone-red' }
 }
 
 function getJuryStatement(claimed: string, measured: string, tone: Tone) {
@@ -105,13 +105,13 @@ function DashboardHeader({ count }: { count: number }) {
     <div className="mb-10">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">Overview</h1>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-transparent border border-zinc-800 text-zinc-300 text-sm font-medium rounded-lg hover:bg-zinc-800 transition-colors shadow-sm cursor-pointer">
+          <button className="px-4 py-2 bg-transparent border border-line text-fg-3 text-sm font-medium rounded-lg hover:bg-raised-2 transition-colors shadow-sm cursor-pointer">
             Filter runs
           </button>
-          <a href="#discover" className="px-4 py-2 bg-zinc-100 text-zinc-950 border border-transparent text-sm font-medium rounded-lg hover:bg-white hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer no-underline">
+          <a href="#discover" className="px-4 py-2 bg-inverse text-on-inverse border border-transparent text-sm font-medium rounded-lg hover:bg-inverse-hover hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer no-underline">
             <PlayCircle className="w-4 h-4" />
             Discover papers
           </a>
@@ -119,33 +119,33 @@ function DashboardHeader({ count }: { count: number }) {
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
-            <Activity className="w-3.5 h-3.5 text-zinc-400" />
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
+          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
+            <Activity className="w-3.5 h-3.5 text-fg-4" />
             Total Runs
           </div>
-          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">{count}</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">{count}</span>
         </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
+          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
+            <CheckCircle2 className="w-3.5 h-3.5 text-tone-green" />
             Verified
           </div>
-          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">2</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">2</span>
         </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
+          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
+            <AlertCircle className="w-3.5 h-3.5 text-tone-amber" />
             Partial
           </div>
-          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">2</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">2</span>
         </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-sm">
-          <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-semibold uppercase tracking-widest">
-            <BarChart2 className="w-3.5 h-3.5 text-blue-400" />
+        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
+          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
+            <BarChart2 className="w-3.5 h-3.5 text-tone-blue" />
             Datasets
           </div>
-          <span className="font-mono text-3xl font-semibold text-zinc-100 mt-1">3</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">3</span>
         </div>
       </div>
     </div>
@@ -160,7 +160,7 @@ function Home({ runs }: { runs: RunRef[] }) {
       <DashboardHeader count={runs.length} />
       
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500">Recent Evaluations</h2>
+        <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted">Recent Evaluations</h2>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -175,14 +175,14 @@ function Home({ runs }: { runs: RunRef[] }) {
           
           return (
             <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="flex flex-col p-6 rounded-xl border border-zinc-800 bg-zinc-950/50 no-underline transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/80 group cursor-pointer block">
+              className="flex flex-col p-6 rounded-xl border border-line bg-panel/50 no-underline transition-all duration-200 hover:border-line-strong hover:bg-raised/80 group cursor-pointer block">
               
               <div className="flex justify-between items-start mb-5">
-                <div className="flex items-center gap-2 text-zinc-400 text-[11px] font-medium font-mono uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-fg-4 text-[11px] font-medium font-mono uppercase tracking-wider">
                   <BookOpen className="w-3.5 h-3.5" />
                   {r.paper_id}
                 </div>
-                <div className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">{parseDate(r.timestamp)}</div>
+                <div className="text-[11px] font-medium text-muted uppercase tracking-wider">{parseDate(r.timestamp)}</div>
               </div>
               
               <div className="flex flex-col gap-2.5 mb-5">
@@ -191,23 +191,23 @@ function Home({ runs }: { runs: RunRef[] }) {
                     <Badge tone={res!.tone}>{res!.label}</Badge>
                     {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
                   </div>
-                ) : <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Evaluating...</span>}
-                <h3 className="text-lg font-semibold leading-snug text-zinc-100 group-hover:text-white transition-colors">{r.title}</h3>
+                ) : <span className="text-[10px] text-muted uppercase tracking-widest font-semibold">Evaluating...</span>}
+                <h3 className="text-lg font-semibold leading-snug text-fg group-hover:text-fg-max transition-colors">{r.title}</h3>
               </div>
               
-              <p className="text-[13px] text-zinc-400 line-clamp-2 leading-relaxed mb-6">
+              <p className="text-[13px] text-fg-4 line-clamp-2 leading-relaxed mb-6">
                 {claim ? translateClaim(claim.text) : 'Evaluating target metrics...'}
               </p>
               
-              <div className="mt-auto border-t border-zinc-800/50 pt-4 flex flex-col gap-2 w-full text-sm">
+              <div className="mt-auto border-t border-line/50 pt-4 flex flex-col gap-2 w-full text-sm">
                 {v ? (
                   <>
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
-                      <span className="font-mono text-zinc-400">{showValue(claim?.metric, claim?.target)}</span>
+                      <span className="text-muted uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
+                      <span className="font-mono text-fg-4">{showValue(claim?.metric, claim?.target)}</span>
                     </div>
                     <div className="flex justify-between items-start w-full pt-1">
-                      <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
+                      <span className="text-muted uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
                       <div className="flex flex-col items-end gap-1">
                         <span className={`font-mono font-bold text-lg leading-none ${colorForTone(res!.tone)}`}>{showValue(claim?.metric, v.measured_mean)}</span>
                         {delta && <span className={`font-mono text-[10px] ${delta.color}`}>{delta.text}</span>}
@@ -216,7 +216,7 @@ function Home({ runs }: { runs: RunRef[] }) {
                   </>
                 ) : (
                   <div className="h-10 flex items-center">
-                    <span className="text-xs text-zinc-600 font-mono">Running sandbox...</span>
+                    <span className="text-xs text-subtle font-mono">Running sandbox...</span>
                   </div>
                 )}
               </div>
@@ -259,22 +259,22 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 md:px-8 pb-20">
       <div className="pt-2">
-        <a href="#" className="inline-flex items-center gap-1.5 text-zinc-500 text-xs font-medium uppercase tracking-wider hover:text-zinc-200 transition-colors">
+        <a href="#" className="inline-flex items-center gap-1.5 text-muted text-xs font-medium uppercase tracking-wider hover:text-fg-2 transition-colors">
           <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Overview
         </a>
       </div>
       
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8">
-        <div className="flex items-center gap-3 text-zinc-500 text-xs mb-3 font-mono">
+        <div className="flex items-center gap-3 text-muted text-xs mb-3 font-mono">
           <span>{run.ref.paper_id}</span>
           <span>•</span>
           <span>{parseDate(run.ref.timestamp)}</span>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-100 leading-tight">{run.ref.title}</h1>
-        <p className="mt-4 text-lg text-zinc-400 max-w-3xl leading-relaxed">{translateClaim(claim.text)}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-fg leading-tight">{run.ref.title}</h1>
+        <p className="mt-4 text-lg text-fg-4 max-w-3xl leading-relaxed">{translateClaim(claim.text)}</p>
         
         {paperUrl && (
-          <a className="inline-flex items-center gap-2 mt-5 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors" href={paperUrl} target="_blank" rel="noreferrer">
+          <a className="inline-flex items-center gap-2 mt-5 text-sm font-medium text-tone-blue hover:text-tone-blue-hover transition-colors" href={paperUrl} target="_blank" rel="noreferrer">
             <BookOpen className="w-4 h-4" />
             View Source Paper
           </a>
@@ -292,11 +292,11 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
           
           <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center w-full">
-              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
-              <span className="font-mono text-zinc-300 text-lg">{showValue(claim.metric, claim.target)}</span>
+              <span className="text-muted uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
+              <span className="font-mono text-fg-3 text-lg">{showValue(claim.metric, claim.target)}</span>
             </div>
-            <div className="flex justify-between items-start w-full pt-4 border-t border-zinc-800/50">
-              <span className="text-zinc-500 uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
+            <div className="flex justify-between items-start w-full pt-4 border-t border-line/50">
+              <span className="text-muted uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
               <div className="flex flex-col items-end gap-1.5">
                 <span className={`font-mono font-bold text-3xl leading-none ${resColorClass}`}>{showValue(claim.metric, v?.measured_mean)}</span>
                 {delta && <span className={`font-mono text-[11px] mt-1 ${delta.color}`}>{delta.text}</span>}
@@ -307,12 +307,12 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
           <div className="flex items-start gap-3 mt-8">
             {iconForTone(res.tone)}
             <div>
-              <p className="text-[13px] text-zinc-300 leading-relaxed font-medium">
+              <p className="text-[13px] text-fg-3 leading-relaxed font-medium">
                 {isCatalog && v
                   ? getCatalogStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v.measured_mean), v.urteil, ref_.gesamtaussage)
                   : getJuryStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v?.measured_mean), res.tone)}
               </p>
-              <p className="text-[11px] text-zinc-500 mt-2 font-mono">Margin of Error: ±{claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)}</p>
+              <p className="text-[11px] text-muted mt-2 font-mono">Margin of Error: ±{claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)}</p>
             </div>
           </div>
         </Section>
@@ -324,10 +324,10 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
 
       {/* Tabs Layout */}
       <div className="mt-12">
-        <div className="flex gap-2 border-b border-zinc-800/50 pb-px mb-6">
+        <div className="flex gap-2 border-b border-line/50 pb-px mb-6">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} 
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:border-zinc-700/50'}`}>
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
               {t.icon}
               {t.label}
             </button>
@@ -341,15 +341,15 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
             {activeTab === 'tree' && <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />}
             {activeTab === 'files' && (
               <div className="space-y-6">
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg text-sm flex items-start gap-3">
+                <div className="p-4 bg-tone-amber-solid/10 border border-tone-amber-solid/20 text-tone-amber rounded-lg text-sm flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <p>These raw files are primarily used by developers to debug the agent's behavior. They contain internal Markdown structure.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800">Agent Code</button>
-                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800">Execution Plan</button>
+                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-raised border border-line text-fg-3 hover:bg-raised-2">Agent Code</button>
+                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-raised border border-line text-fg-3 hover:bg-raised-2">Execution Plan</button>
                 </div>
-                <pre className="font-mono h-96 overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-[#0a0a0a] border border-zinc-800/50 text-zinc-400 text-[12px] leading-relaxed">
+                <pre className="font-mono h-96 overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-surface border border-line/50 text-fg-4 text-[12px] leading-relaxed">
                   {run.code || 'No code snapshot available.'}
                 </pre>
               </div>
@@ -370,11 +370,11 @@ export default function App() {
   
   return (
     <Layout currentHash={hash}>
-      <div className="py-6 min-h-screen bg-black">
+      <div className="py-6 min-h-screen bg-bg">
         {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
-            <Activity className="w-8 h-8 text-zinc-600 animate-pulse" />
-            <span className="text-zinc-500 text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
+            <Activity className="w-8 h-8 text-subtle animate-pulse" />
+            <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
           </div>
         ) : ref ? <RunView ref_={ref} initialTab={m?.[2]} key={ref.id} /> : <Home runs={runs} />}
       </div>

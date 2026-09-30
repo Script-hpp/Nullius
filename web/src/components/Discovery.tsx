@@ -12,7 +12,7 @@ import {
 type Mode = 'idle' | 'live' | 'replay' | 'done'
 
 const DATASETS = ['Cora', 'ETTh1']
-const label = 'text-[10px] font-semibold uppercase tracking-widest text-zinc-500'
+const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 const btn = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
 
 const PURPOSE_TITLE: Record<string, string> = { find_papers: 'Find papers', read_paper: 'Read paper', find_code: 'Find code', community: 'Community' }
@@ -43,12 +43,12 @@ function Hint({ text }: { text: string }) {
         onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) show(true) }}
         onBlur={() => show(false)}
         onKeyDown={(e) => { if (e.key === 'Escape') show(false) }}
-        className="p-0.5 text-zinc-500 hover:text-zinc-300 focus-visible:text-zinc-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-zinc-500 rounded cursor-pointer">
+        className="p-0.5 text-muted hover:text-fg-3 focus-visible:text-fg-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-zinc-500 rounded cursor-pointer">
         <Info className="w-3.5 h-3.5" />
       </button>
       {open && (
         <span role="tooltip" style={{ left: pos.left, width: pos.width }}
-          className="absolute top-full z-20 mt-1.5 rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-[11px] leading-relaxed text-zinc-300 shadow-lg">
+          className="absolute top-full z-20 mt-1.5 rounded-lg border border-line bg-raised p-3 text-[11px] leading-relaxed text-fg-3 shadow-lg">
           {text}
         </span>
       )}
@@ -74,35 +74,35 @@ function FeedCard({ call }: { call: FeedCall }) {
   const Icon = call.endpoint === 'search' ? Search : FileText
   return (
     <motion.div layout="position" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={t}
-      className="rounded-xl border border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 transition-colors">
+      className="rounded-xl border border-line bg-panel/50 hover:border-line-strong transition-colors">
       <button onClick={() => setOpen(!open)} className="w-full text-left p-4 cursor-pointer">
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-300">
+          <span className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-3">
             <Icon className="w-3.5 h-3.5" />
             {PURPOSE_TITLE[call.purpose ?? ''] ?? call.endpoint}
-            {call.purpose && <span className="text-zinc-600">{call.endpoint}</span>}
+            {call.purpose && <span className="text-subtle">{call.endpoint}</span>}
           </span>
-          <span className="flex items-center gap-3 font-mono text-[11px] text-zinc-500">
+          <span className="flex items-center gap-3 font-mono text-[11px] text-muted">
             <span>{call.hits} {call.hits === 1 ? 'hit' : 'hits'}</span>
             <span>{(call.durationMs / 1000).toFixed(2)}s</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
           </span>
         </div>
-        <p className="mt-2 font-mono text-[12px] leading-relaxed text-zinc-400 break-all">
-          {call.purpose === 'find_code' || call.purpose === 'community' ? <span className="text-zinc-600">Paper: </span> : null}
+        <p className="mt-2 font-mono text-[12px] leading-relaxed text-fg-4 break-all">
+          {call.purpose === 'find_code' || call.purpose === 'community' ? <span className="text-subtle">Paper: </span> : null}
           {shorten(call.query, 110)}
         </p>
-        <p className="mt-2 text-[10px] uppercase tracking-wider text-zinc-600">Live Tavily API call</p>
+        <p className="mt-2 text-[10px] uppercase tracking-wider text-subtle">Live Tavily API call</p>
       </button>
       {open && call.topHits.length > 0 && (
-        <ul className="border-t border-zinc-800/60 px-4 py-3 space-y-2">
+        <ul className="border-t border-line/60 px-4 py-3 space-y-2">
           {call.topHits.map((h) => (
             <li key={h.url} className="text-[12px] leading-snug">
-              <a href={h.url} target="_blank" rel="noreferrer" className="text-zinc-300 hover:text-white inline-flex items-start gap-1.5">
-                <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-zinc-500" />
+              <a href={h.url} target="_blank" rel="noreferrer" className="text-fg-3 hover:text-fg-max inline-flex items-start gap-1.5">
+                <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-muted" />
                 <span>{h.title || h.url}</span>
               </a>
-              <div className="font-mono text-[10px] text-zinc-600 ml-4">{domainOf(h.url)}</div>
+              <div className="font-mono text-[10px] text-subtle ml-4">{domainOf(h.url)}</div>
             </li>
           ))}
         </ul>
@@ -118,28 +118,28 @@ function QuoteView({ quote, target }: { quote?: string; target?: number }) {
   if (!cells) {
     const [b, n, a] = quoteExcerpt(quote, target)
     return (
-      <blockquote className="border-l-2 border-zinc-800 pl-3 font-mono text-[11px] leading-relaxed text-zinc-500 break-words">
-        {b}<span className="text-zinc-50 font-semibold underline decoration-zinc-500 underline-offset-2">{n}</span>{a}
+      <blockquote className="border-l-2 border-line pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">
+        {b}<span className="text-fg-strong font-semibold underline decoration-muted underline-offset-2">{n}</span>{a}
       </blockquote>
     )
   }
-  const hi = <span className="text-zinc-50 font-semibold underline decoration-zinc-500 underline-offset-2">{cells.cell[1]}</span>
+  const hi = <span className="text-fg-strong font-semibold underline decoration-muted underline-offset-2">{cells.cell[1]}</span>
   return (
-    <div className="border-l-2 border-zinc-800 pl-3 font-mono text-[11px] leading-relaxed text-zinc-500">
+    <div className="border-l-2 border-line pl-3 font-mono text-[11px] leading-relaxed text-muted">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        {cells.head.map((c, i) => <span key={`h${i}`} className={`${cellCls} text-zinc-400`}>{c}</span>)}
-        {cells.hasGap && <span className="text-zinc-700">…</span>}
+        {cells.head.map((c, i) => <span key={`h${i}`} className={`${cellCls} text-fg-4`}>{c}</span>)}
+        {cells.hasGap && <span className="text-faint">…</span>}
         {cells.before.map((c, i) => <span key={`b${i}`} className={cellCls}>{c}</span>)}
         <span className={cellCls}>{cells.cell[0]}{hi}{cells.cell[2]}</span>
         {cells.after.map((c, i) => <span key={`a${i}`} className={cellCls}>{c}</span>)}
-        {cells.hasGap && <span className="text-zinc-700">…</span>}
+        {cells.hasGap && <span className="text-faint">…</span>}
       </div>
       {cells.hasGap && (
-        <button onClick={() => setOpen(!open)} className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300 cursor-pointer">
+        <button onClick={() => setOpen(!open)} className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted hover:text-fg-3 cursor-pointer">
           <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />{open ? 'Hide full row' : 'Show full row'}
         </button>
       )}
-      {open && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-zinc-500">{cells.all.map((c, i) => <span key={i} className={cellCls}>{c}</span>)}</div>}
+      {open && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted">{cells.all.map((c, i) => <span key={i} className={cellCls}>{c}</span>)}</div>}
     </div>
   )
 }
@@ -152,12 +152,12 @@ function Funnel({ funnel }: { funnel: DiscoveryView['funnel'] }) {
       {funnel.map((f, i) => (
         <div key={f.label}>
           <div className="flex items-baseline justify-between text-[12px]">
-            <span className="text-zinc-400">{f.label}</span>
-            <span className="font-mono text-zinc-200">{f.value}</span>
+            <span className="text-fg-4">{f.label}</span>
+            <span className="font-mono text-fg-2">{f.value}</span>
           </div>
-          {f.note && <div className="mt-0.5 text-[11px] text-zinc-600">{f.note}</div>}
-          <div className="mt-1.5 h-1.5 rounded-sm bg-zinc-900">
-            <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-zinc-200' : 'bg-zinc-600'}`}
+          {f.note && <div className="mt-0.5 text-[11px] text-subtle">{f.note}</div>}
+          <div className="mt-1.5 h-1.5 rounded-sm bg-raised">
+            <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-fill-max' : 'bg-fill-lo'}`}
               initial={false} animate={{ width: `${(f.value / max) * 100}%` }} transition={t} />
           </div>
         </div>
@@ -181,14 +181,14 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
-      className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+      className="rounded-xl border border-line bg-panel/50 p-5">
       <div className="flex items-start justify-between gap-4">
-        <h3 className="text-[14px] font-semibold leading-snug text-zinc-100">{p.title}</h3>
-        <span className="font-mono text-[10px] text-zinc-500 shrink-0">{p.id}</span>
+        <h3 className="text-[14px] font-semibold leading-snug text-fg">{p.title}</h3>
+        <span className="font-mono text-[10px] text-muted shrink-0">{p.id}</span>
       </div>
 
       {(p.state === 'reading' || p.state === 'claim' || p.state === 'searching') && (
-        <div className="mt-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+        <div className="mt-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-4">
           <motion.span animate={active && !reduce ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
             transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}>
             <Activity className="w-3.5 h-3.5" />
@@ -199,11 +199,11 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
 
       {rejected && (
         <div className="mt-3">
-          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-muted">
             <XCircle className="w-3.5 h-3.5" />
             Rejected · {stageLabel(p.stage, p.reason)}
           </div>
-          <p className="mt-1.5 text-[12px] text-zinc-500 leading-relaxed">{humanReject(p.stage, p.reason)}</p>
+          <p className="mt-1.5 text-[12px] text-muted leading-relaxed">{humanReject(p.stage, p.reason)}</p>
         </div>
       )}
 
@@ -215,16 +215,16 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
 
       {p.state === 'candidate' && !checked && (
         <div className="mt-3">
-          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-zinc-300">
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-3">
             <CircleDashed className="w-3.5 h-3.5" />
             Unverified candidate
             <Hint text={HINTS.unverified} />
             {p.cached && (
-              <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-zinc-600">from cache<Hint text={HINTS.cache} /></span>
+              <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-subtle">from cache<Hint text={HINTS.cache} /></span>
             )}
           </div>
           {notRun && entry && (
-            <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${entry.reason}` : ''}</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${entry.reason}` : ''}</p>
           )}
         </div>
       )}
@@ -235,18 +235,18 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
             <div>
               <div className={label}>{checked ? 'Method' : (c.method ?? 'Method')}</div>
               {checked   // the claimed number is shown once, in CLAIMED below
-                ? <div className="mt-1 text-[13px] text-zinc-300">{c.method ?? '–'}</div>
-                : <div className="mt-1 font-mono text-xl font-semibold text-zinc-50">{formatMetric(c.metric, c.target)}</div>}
+                ? <div className="mt-1 text-[13px] text-fg-3">{c.method ?? '–'}</div>
+                : <div className="mt-1 font-mono text-xl font-semibold text-fg-strong">{formatMetric(c.metric, c.target)}</div>}
             </div>
             <div>
               <div className={label}>Benchmark</div>
-              <div className="mt-1 text-[13px] text-zinc-300">{benchmarkText(p)}</div>
+              <div className="mt-1 text-[13px] text-fg-3">{benchmarkText(p)}</div>
             </div>
           </div>
           <QuoteView quote={c.quote} target={c.target} />
           {checked && entry && <ClaimedMeasured entry={entry} />}
           {c.column_check && (
-            <p className="inline-flex items-center gap-1 text-[11px] text-zinc-500">
+            <p className="inline-flex items-center gap-1 text-[11px] text-muted">
               {c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}<Hint text={HINTS.column} />
             </p>
           )}
@@ -254,21 +254,21 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
       )}
 
       {p.state === 'candidate' && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/60 pt-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3">
           {p.protocol === 'passt' ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" />Protocol confirmed by quote<Hint text={HINTS.protocol} /></span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-tone-green"><CheckCircle2 className="w-3.5 h-3.5" />Protocol confirmed by quote<Hint text={HINTS.protocol} /></span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-400"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text<Hint text={HINTS.protocol} /></span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-tone-amber"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text<Hint text={HINTS.protocol} /></span>
           )}
-          <span className="flex flex-wrap items-center gap-4 text-[11px] text-zinc-500">
+          <span className="flex flex-wrap items-center gap-4 text-[11px] text-muted">
             {checked && entry && <EvidenceLink entry={entry}>View evidence</EvidenceLink>}
-            <span><span className="font-mono text-zinc-300">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
+            <span><span className="font-mono text-fg-3">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
             {p.githubUrl ? (
-              <a href={p.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-zinc-300 hover:text-white">
+              <a href={p.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
                 <Code className="w-3.5 h-3.5" />Code
               </a>
-            ) : <span className="text-zinc-600">No code found</span>}
-            <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-zinc-300 hover:text-white">
+            ) : <span className="text-subtle">No code found</span>}
+            <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
               <BookOpen className="w-3.5 h-3.5" />arXiv
             </a>
           </span>
@@ -286,18 +286,18 @@ function Timeline({ view }: { view: DiscoveryView }) {
       <div className="space-y-2">
         {lanes.map(([kind, name]) => (
           <div key={kind} className="flex items-center gap-3">
-            <span className="w-12 text-[10px] uppercase tracking-wider text-zinc-500">{name}</span>
-            <div className="relative h-4 flex-1 rounded-sm bg-zinc-900">
+            <span className="w-12 text-[10px] uppercase tracking-wider text-muted">{name}</span>
+            <div className="relative h-4 flex-1 rounded-sm bg-raised">
               {view.timeline.filter((x) => x.kind === kind).map((x, i) => (
                 <div key={i} title={`${x.label}: ${(x.end - x.start).toFixed(2)}s`}
-                  className={`absolute top-0 h-full rounded-sm ${kind === 'tavily' ? 'bg-zinc-300' : 'bg-zinc-600'}`}
+                  className={`absolute top-0 h-full rounded-sm ${kind === 'tavily' ? 'bg-fill-hi' : 'bg-fill-lo'}`}
                   style={{ left: `${((x.start - view.t0) / span) * 100}%`, width: `${Math.max(0.6, ((x.end - x.start) / span) * 100)}%` }} />
               ))}
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between pl-[60px] font-mono text-[10px] text-zinc-600"><span>0s</span><span>{fmtSec(span)}</span></div>
+      <div className="mt-2 flex justify-between pl-[60px] font-mono text-[10px] text-subtle"><span>0s</span><span>{fmtSec(span)}</span></div>
     </div>
   )
 }
@@ -391,20 +391,20 @@ export function Discovery() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Live Paper Discovery</h1>
-        <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-zinc-400">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">Live Paper Discovery</h1>
+        <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-fg-4">
           Tavily searches the web for new papers on benchmarks we can re-run, reads only the protocol and results sections, and proposes checkable claims.
         </p>
       </div>
 
-      <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+      <div className="mb-6 rounded-xl border border-line bg-panel/50 p-5">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div>
             <div className={label}>Benchmarks</div>
             <div className="mt-2 flex gap-4">
               {DATASETS.map((d) => (
-                <label key={d} className="inline-flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-                  <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="accent-zinc-300" />
+                <label key={d} className="inline-flex items-center gap-2 text-sm text-fg-3 cursor-pointer">
+                  <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="accent-fg-3" />
                   {d}
                 </label>
               ))}
@@ -413,13 +413,13 @@ export function Discovery() {
           <div>
             <label htmlFor="access-code" className={label}>Access code</label>
             <input id="access-code" type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} disabled={running}
-              className="mt-2 block w-44 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 font-mono text-sm text-zinc-100 outline-none focus:border-zinc-600" />
+              className="mt-2 block w-44 rounded-lg border border-line bg-raised px-3 py-2 font-mono text-sm text-fg outline-none focus:border-line-stronger" />
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={startLive} disabled={running || !datasets.length || !code} className={`${btn} border-transparent bg-zinc-100 text-zinc-950 hover:bg-white`}>
+            <button onClick={startLive} disabled={running || !datasets.length || !code} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               <Play className="w-4 h-4" />Start live run
             </button>
-            <button onClick={startReplay} disabled={running} className={`${btn} border-zinc-800 text-zinc-300 hover:bg-zinc-800`}>
+            <button onClick={startReplay} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
               <RotateCcw className="w-4 h-4" />Replay recorded run
             </button>
           </div>
@@ -428,43 +428,43 @@ export function Discovery() {
             <div className="mt-2 flex gap-1">
               {[1, 4].map((s) => (
                 <button key={s} onClick={() => setSpeed(s)}
-                  className={`px-3 py-1.5 font-mono text-xs rounded-md border cursor-pointer ${speed === s ? 'border-zinc-600 text-zinc-100' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'}`}>{s}x</button>
+                  className={`px-3 py-1.5 font-mono text-xs rounded-md border cursor-pointer ${speed === s ? 'border-line-stronger text-fg' : 'border-line text-muted hover:text-fg-3'}`}>{s}x</button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-zinc-800/60 pt-4 text-[12px] text-zinc-500">
-          <span className={`inline-flex items-center gap-1.5 font-medium uppercase tracking-wider ${mode === 'live' ? 'text-emerald-400' : 'text-zinc-300'}`}>
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
+          <span className={`inline-flex items-center gap-1.5 font-medium uppercase tracking-wider ${mode === 'live' ? 'text-tone-green' : 'text-fg-3'}`}>
             <Radio className="w-3.5 h-3.5" />{status}
           </span>
-          <span>Runtime <span className="font-mono text-zinc-300">{fmtSec(view.tEnd - view.t0)}</span></span>
-          <span>Papers <span className="font-mono text-zinc-300">{view.papers.length}</span></span>
-          <span>Candidates <span className="font-mono text-zinc-300">{view.funnel[view.funnel.length - 1].value}</span></span>
+          <span>Runtime <span className="font-mono text-fg-3">{fmtSec(view.tEnd - view.t0)}</span></span>
+          <span>Papers <span className="font-mono text-fg-3">{view.papers.length}</span></span>
+          <span>Candidates <span className="font-mono text-fg-3">{view.funnel[view.funnel.length - 1].value}</span></span>
           {recorded && events.length > 0 && <span>Recorded run from {fmtDate(events[0].ts)}</span>}
         </div>
 
         {error && (
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-amber-400">
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-tone-amber">
             <span className="inline-flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</span>
-            <button onClick={startReplay} className="text-zinc-200 underline underline-offset-4 cursor-pointer hover:text-white">Show recorded run instead</button>
+            <button onClick={startReplay} className="text-fg-2 underline underline-offset-4 cursor-pointer hover:text-fg-max">Show recorded run instead</button>
           </div>
         )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 items-start">
         <Section title="Tavily research feed" hint="live API calls">
-          <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-zinc-500">
-            <span>Tavily calls <span className="font-mono text-zinc-300">{view.tavilyCalls}</span></span>
-            <span>Model calls <span className="font-mono text-zinc-300">{view.llmCalls}</span>
-              {view.cachedLlmCalls > 0 && <span className="text-zinc-600"> ({view.cachedLlmCalls} cached, no cost)</span>}</span>
-            <span>Model cost <span className="font-mono text-zinc-300">${view.costUsd.toFixed(3)}</span></span>
+          <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted">
+            <span>Tavily calls <span className="font-mono text-fg-3">{view.tavilyCalls}</span></span>
+            <span>Model calls <span className="font-mono text-fg-3">{view.llmCalls}</span>
+              {view.cachedLlmCalls > 0 && <span className="text-subtle"> ({view.cachedLlmCalls} cached, no cost)</span>}</span>
+            <span>Model cost <span className="font-mono text-fg-3">${view.costUsd.toFixed(3)}</span></span>
           </div>
           <div className="space-y-3">
             <AnimatePresence initial={false}>
               {[...view.feed].reverse().map((c) => <FeedCard key={c.seq} call={c} />)}
             </AnimatePresence>
-            {!view.feed.length && <p className="text-[13px] text-zinc-600">No Tavily calls yet. Start a run or replay the recorded one.</p>}
+            {!view.feed.length && <p className="text-[13px] text-subtle">No Tavily calls yet. Start a run or replay the recorded one.</p>}
           </div>
         </Section>
 
@@ -473,14 +473,14 @@ export function Discovery() {
             <Funnel funnel={view.funnel} />
           </Section>
           <Section title="Papers" hint={`${papers.length} seen`}>
-            <p className="mb-4 text-[12px] leading-relaxed text-zinc-500">Candidates are claims we can re-run. Unless a result is shown, a candidate has not been re-run yet.</p>
+            <p className="mb-4 text-[12px] leading-relaxed text-muted">Candidates are claims we can re-run. Unless a result is shown, a candidate has not been re-run yet.</p>
             <div className="space-y-3">
               {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={catalog?.find((e) => e.arxiv_id === p.id)} />)}
-              {!papers.length && <p className="text-[13px] text-zinc-600">Papers appear here as Tavily finds and reads them.</p>}
+              {!papers.length && <p className="text-[13px] text-subtle">Papers appear here as Tavily finds and reads them.</p>}
             </div>
           </Section>
           <Section title="Call timeline" hint="Tavily vs. model">
-            {view.timeline.length ? <Timeline view={view} /> : <p className="text-[13px] text-zinc-600">The timeline fills during the run.</p>}
+            {view.timeline.length ? <Timeline view={view} /> : <p className="text-[13px] text-subtle">The timeline fills during the run.</p>}
           </Section>
         </div>
       </div>

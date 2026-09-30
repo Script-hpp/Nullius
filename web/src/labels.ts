@@ -44,7 +44,7 @@ export function translateWarning(text: string): string {
 
 // Text color per tone, shared by Badge (ui.tsx) and the catalog components: one place to change for a light theme.
 export const TONE_TEXT: Record<Tone, string> = {
-  green: 'text-emerald-400', amber: 'text-amber-400', red: 'text-rose-400', gray: 'text-zinc-500', violet: 'text-violet-400',
+  green: 'text-tone-green', amber: 'text-tone-amber', red: 'text-tone-red', gray: 'text-muted', violet: 'text-tone-violet',
 }
 
 export const METHOD: Record<string, { label: string; tone: Tone }> = {

@@ -1,5 +1,173 @@
 @import "tailwindcss";
 
+/* Semantic color tokens. Components use utilities like bg-surface, text-muted, border-line; the values live here.
+   Dark values are the former zinc/emerald/... palette values. data-theme is always set on <html> (see theme.ts and index.html). */
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-panel: var(--c-panel);
+  --color-raised: var(--c-raised);
+  --color-raised-2: var(--c-raised-2);
+  --color-dot: var(--c-dot);
+  --color-fill-lo: var(--c-fill-lo);
+  --color-fill-mid: var(--c-fill-mid);
+  --color-fill-hi: var(--c-fill-hi);
+  --color-fill-max: var(--c-fill-max);
+  --color-inverse: var(--c-inverse);
+  --color-inverse-hover: var(--c-inverse-hover);
+  --color-on-inverse: var(--c-on-inverse);
+  --color-line: var(--c-line);
+  --color-line-faint: var(--c-line-faint);
+  --color-line-strong: var(--c-line-strong);
+  --color-line-stronger: var(--c-line-stronger);
+  --color-fg-max: var(--c-fg-max);
+  --color-fg-strong: var(--c-fg-strong);
+  --color-fg: var(--c-fg);
+  --color-fg-2: var(--c-fg-2);
+  --color-fg-3: var(--c-fg-3);
+  --color-fg-4: var(--c-fg-4);
+  --color-muted: var(--c-muted);
+  --color-subtle: var(--c-subtle);
+  --color-faint: var(--c-faint);
+  --color-tone-green: var(--c-tone-green);
+  --color-tone-amber: var(--c-tone-amber);
+  --color-tone-red: var(--c-tone-red);
+  --color-tone-violet: var(--c-tone-violet);
+  --color-tone-blue: var(--c-tone-blue);
+  --color-tone-blue-hover: var(--c-tone-blue-hover);
+  --color-tone-amber-fg: var(--c-tone-amber-fg);
+  --color-tone-green-solid: var(--c-tone-green-solid);
+  --color-tone-amber-solid: var(--c-tone-amber-solid);
+  --color-tone-red-solid: var(--c-tone-red-solid);
+  --color-tone-violet-solid: var(--c-tone-violet-solid);
+  --color-tone-blue-solid: var(--c-tone-blue-solid);
+}
+
+:root {
+  --c-bg: #000;
+  --c-surface: #0a0a0a;
+  --c-surface-2: #0c0c0c;
+  --c-panel: oklch(14.1% 0.005 285.823);
+  --c-raised: oklch(21% 0.006 285.885);
+  --c-raised-2: oklch(27.4% 0.006 286.033);
+  --c-dot: oklch(37% 0.013 285.805);
+  --c-fill-lo: oklch(44.2% 0.017 285.786);
+  --c-fill-mid: oklch(70.5% 0.015 286.067);
+  --c-fill-hi: oklch(87.1% 0.006 286.286);
+  --c-fill-max: oklch(92% 0.004 286.32);
+  --c-inverse: oklch(96.7% 0.001 286.375);
+  --c-inverse-hover: #fff;
+  --c-on-inverse: oklch(14.1% 0.005 285.823);
+  --c-line: oklch(27.4% 0.006 286.033);
+  --c-line-faint: oklch(21% 0.006 285.885);
+  --c-line-strong: oklch(37% 0.013 285.805);
+  --c-line-stronger: oklch(44.2% 0.017 285.786);
+  --c-fg-max: #fff;
+  --c-fg-strong: oklch(98.5% 0 none);
+  --c-fg: oklch(96.7% 0.001 286.375);
+  --c-fg-2: oklch(92% 0.004 286.32);
+  --c-fg-3: oklch(87.1% 0.006 286.286);
+  --c-fg-4: oklch(70.5% 0.015 286.067);
+  --c-muted: oklch(55.2% 0.016 285.938);
+  --c-subtle: oklch(44.2% 0.017 285.786);
+  --c-faint: oklch(37% 0.013 285.805);
+  --c-tone-green: oklch(76.5% 0.177 163.223);
+  --c-tone-amber: oklch(82.8% 0.189 84.429);
+  --c-tone-red: oklch(71.2% 0.194 13.428);
+  --c-tone-violet: oklch(70.2% 0.183 293.541);
+  --c-tone-blue: oklch(70.7% 0.165 254.624);
+  --c-tone-blue-hover: oklch(80.9% 0.105 251.813);
+  --c-tone-amber-fg: oklch(96.2% 0.059 95.617);
+  --c-tone-green-solid: oklch(69.6% 0.17 162.48);
+  --c-tone-amber-solid: oklch(76.9% 0.188 70.08);
+  --c-tone-red-solid: oklch(64.5% 0.246 16.439);
+  --c-tone-violet-solid: oklch(60.6% 0.25 292.717);
+  --c-tone-blue-solid: oklch(62.3% 0.214 259.815);
+  /* non-Tailwind surfaces: body text, charts, React Flow */
+  --c-body-text: #ededed;
+  --c-scroll-thumb: #27272a;
+  --c-scroll-thumb-hover: #52525b;
+  --c-flow-ctl-bg: #111111;
+  --c-flow-ctl-fg: #ededed;
+  --c-flow-ctl-line: #27272a;
+  --chart-grid: #27272a;
+  --chart-axis: #71717a;
+  --chart-green: #10b981;
+  --chart-amber: #f59e0b;
+  --chart-red: #f43f5e;
+  --chart-violet: #8b5cf6;
+  --chart-gray: #71717a;
+  --chart-target: #10b981;
+  --chart-mean: #60a5fa;
+  --chart-tooltip-bg: #0a0a0a;
+  --chart-tooltip-line: #27272a;
+  --chart-tooltip-fg: #f4f4f5;
+  --chart-cursor: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #fafafa;
+  --c-surface: #ffffff;
+  --c-surface-2: #ffffff;
+  --c-panel: #ffffff;
+  --c-raised: #f4f4f5;
+  --c-raised-2: #e4e4e7;
+  --c-dot: #a1a1aa;
+  --c-fill-lo: #a1a1aa;
+  --c-fill-mid: #71717a;
+  --c-fill-hi: #52525b;
+  --c-fill-max: #27272a;
+  --c-inverse: #18181b;
+  --c-inverse-hover: #000;
+  --c-on-inverse: #fafafa;
+  --c-line: #e4e4e7;
+  --c-line-faint: #ececee;
+  --c-line-strong: #d4d4d8;
+  --c-line-stronger: #a1a1aa;
+  --c-fg-max: #000;
+  --c-fg-strong: #09090b;
+  --c-fg: #18181b;
+  --c-fg-2: #27272a;
+  --c-fg-3: #3f3f46;
+  --c-fg-4: #52525b;
+  --c-muted: #5f5f68;
+  --c-subtle: #696971;
+  --c-faint: #a1a1aa;
+  --c-tone-green: #047857;
+  --c-tone-amber: #b45309;
+  --c-tone-red: #be123c;
+  --c-tone-violet: #6d28d9;
+  --c-tone-blue: #1d4ed8;
+  --c-tone-blue-hover: #1e40af;
+  --c-tone-amber-fg: #78350f;
+  --c-tone-green-solid: #10b981;
+  --c-tone-amber-solid: #f59e0b;
+  --c-tone-red-solid: #f43f5e;
+  --c-tone-violet-solid: #8b5cf6;
+  --c-tone-blue-solid: #3b82f6;
+  --c-body-text: #18181b;
+  --c-scroll-thumb: #d4d4d8;
+  --c-scroll-thumb-hover: #a1a1aa;
+  --c-flow-ctl-bg: #ffffff;
+  --c-flow-ctl-fg: #18181b;
+  --c-flow-ctl-line: #d4d4d8;
+  --chart-grid: #e4e4e7;
+  --chart-axis: #52525b;
+  --chart-green: #10b981;
+  --chart-amber: #f59e0b;
+  --chart-red: #f43f5e;
+  --chart-violet: #8b5cf6;
+  --chart-gray: #71717a;
+  --chart-target: #047857;
+  --chart-mean: #1d4ed8;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-line: #d4d4d8;
+  --chart-tooltip-fg: #18181b;
+  --chart-cursor: rgba(0, 0, 0, 0.05);
+}
+
 html, body, #root { 
   min-height: 100%; 
   height: 100%;
@@ -7,8 +175,8 @@ html, body, #root {
 
 body {
   margin: 0;
-  background-color: #000000;
-  color: #ededed;
+  background-color: var(--c-bg);
+  color: var(--c-body-text);
   font-family: 'Geist Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
@@ -25,9 +193,9 @@ a, button, .panel { transition: all 0.2s ease-out; }
 .react-flow__attribution { display: none; }
 .react-flow { 
   --xy-background-color: transparent; 
-  --xy-controls-button-background-color: #111111;
-  --xy-controls-button-color: #ededed; 
-  --xy-controls-button-border-color: #27272a; /* zinc-800 */
+  --xy-controls-button-background-color: var(--c-flow-ctl-bg);
+  --xy-controls-button-color: var(--c-flow-ctl-fg); 
+  --xy-controls-button-border-color: var(--c-flow-ctl-line);
 }
 ::selection { background: #3b82f6; color: #fff; }
 .react-flow__handle { opacity: 0; pointer-events: none; }
@@ -35,5 +203,5 @@ a, button, .panel { transition: all 0.2s ease-out; }
 /* Scrollbar styling for a cleaner look */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
+::-webkit-scrollbar-thumb { background: var(--c-scroll-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-scroll-thumb-hover); }

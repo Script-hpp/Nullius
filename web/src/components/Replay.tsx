@@ -50,45 +50,45 @@ export function Replay({ events }: { events: Event[] }) {
   }, [playing, i, list.length])
   
   const visible = list.slice(0, i)
-  const tones = { green: 'bg-emerald-500', amber: 'bg-amber-500', red: 'bg-rose-500', gray: 'bg-zinc-700', violet: 'bg-violet-500' }
+  const tones = { green: 'bg-tone-green-solid', amber: 'bg-tone-amber-solid', red: 'bg-tone-red-solid', gray: 'bg-dot', violet: 'bg-tone-violet-solid' }
 
   return (
-    <div className="bg-[#0a0a0a] border border-zinc-800/80 rounded-xl p-6">
+    <div className="bg-surface border border-line/80 rounded-xl p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-950 transition-colors hover:bg-white cursor-pointer"
+          <button className="flex items-center gap-2 rounded-lg bg-inverse px-4 py-2 text-xs font-semibold uppercase tracking-wider text-on-inverse transition-colors hover:bg-inverse-hover cursor-pointer"
             onClick={() => { if (i >= list.length) setI(0); setPlaying((p) => !p) }}>
             {playing ? <><Pause className="w-3.5 h-3.5" /> Pause</> : i >= list.length ? <><Play className="w-3.5 h-3.5" /> Replay</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
           </button>
-          <button className="text-xs uppercase tracking-wider font-medium text-zinc-500 hover:text-zinc-300 transition-colors px-2 cursor-pointer" onClick={() => { setPlaying(false); setI(list.length) }}>Show All</button>
+          <button className="text-xs uppercase tracking-wider font-medium text-muted hover:text-fg-3 transition-colors px-2 cursor-pointer" onClick={() => { setPlaying(false); setI(list.length) }}>Show All</button>
         </div>
-        <div className="text-zinc-500 text-[11px] uppercase tracking-wider font-mono">
+        <div className="text-muted text-[11px] uppercase tracking-wider font-mono">
           Step {i} of {list.length}
         </div>
       </div>
       
-      <div className="mb-8 h-1 w-full overflow-hidden rounded-full bg-zinc-900">
-        <motion.div className="h-full bg-zinc-400" animate={{ width: `${list.length ? (i / list.length) * 100 : 0}%` }} transition={{ duration: 0.3 }} />
+      <div className="mb-8 h-1 w-full overflow-hidden rounded-full bg-raised">
+        <motion.div className="h-full bg-fill-mid" animate={{ width: `${list.length ? (i / list.length) * 100 : 0}%` }} transition={{ duration: 0.3 }} />
       </div>
       
-      <div className="relative border-l border-zinc-800/80 ml-3 space-y-6 pb-4">
+      <div className="relative border-l border-line/80 ml-3 space-y-6 pb-4">
         <AnimatePresence initial={false}>
           {visible.map((e, k) => {
             const d = describe(e)
             return (
               <motion.div key={k} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}
                 className="relative pl-6 group">
-                <div className={`absolute -left-[5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-[#0a0a0a] ${tones[d.tone]}`} />
-                <div className="text-sm font-medium text-zinc-200">{d.title}</div>
-                {d.body && <div className="mt-1 text-xs text-zinc-400 leading-relaxed">{d.body}</div>}
+                <div className={`absolute -left-[5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-surface ${tones[d.tone]}`} />
+                <div className="text-sm font-medium text-fg-2">{d.title}</div>
+                {d.body && <div className="mt-1 text-xs text-fg-4 leading-relaxed">{d.body}</div>}
               </motion.div>
             )
           })}
         </AnimatePresence>
         {shown.hidden > 0 && i === list.length && (
           <div className="relative pl-6">
-            <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-[#0a0a0a] bg-zinc-700" />
-            <div className="text-sm font-medium text-zinc-500 italic">...and {shown.hidden} more parallel sandbox executions.</div>
+            <div className="absolute -left-[5px] top-1.5 h-2 w-2 rounded-full ring-4 ring-surface bg-dot" />
+            <div className="text-sm font-medium text-muted italic">...and {shown.hidden} more parallel sandbox executions.</div>
           </div>
         )}
       </div>
