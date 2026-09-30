@@ -1,6 +1,6 @@
-# Benchmark v2: Vorab-Festlegung (ENTWURF, nicht freigegeben)
+# Benchmark v2: Vorab-Festlegung (FINAL, freigegeben 2026-10-01)
 
-Entwurf von worker-2, Stand 2026-10-01. Gilt erst, wenn der Reviewer freigibt und die Datei als „final“ committet ist, **vor dem ersten v2-Lauf**. Nichts wird nach Sicht der Ergebnisse geändert. Prod-Modelle (Token Factory); Ergebnisse dürfen ins README. Vorgänger: `benchmark_protocol.md` (v1, eingefroren, historischer Stand). Plan und Begründungen: `docs/benchmark_plan.md`.
+Entwurf von worker-2, vom Reviewer am 2026-10-01 freigegeben und final committet, **vor dem ersten v2-Lauf**. Ab diesem Commit ist `src/` bis zum Ende des Benchmarks eingefroren. Nichts wird nach Sicht der Ergebnisse geändert. Prod-Modelle (Token Factory); Ergebnisse dürfen ins README. Vorgänger: `benchmark_protocol.md` (v1, eingefroren, historischer Stand). Plan und Begründungen: `docs/benchmark_plan.md`.
 
 ## Was v2 gegenüber v1 ändert (Entscheidungen des Nutzers, 2026-10-01)
 1. **Produktkonfiguration:** `graph_repair=True` (Plan-Prüfung, Fehler-Reparatur, Graph-Ablation mit Reparatur nach Seed 0, Gesamtgrenze 3 Runden) in **beiden** Armen. v1 lief ohne; v1 bleibt als historischer Stand im README, alle Papers laufen in v2 neu.
@@ -40,17 +40,17 @@ reference_verdicts:
     shchur_pitfalls_2018: {claim: shchur_gcn_cora_acc,  placebo: shchur_gcn_cora_acc_placebo,  target: 0.815, placebo_target: 0.88,  reference_mean: 0.8107, origin: "R+H"}
     velickovic_gat_2018:  {claim: gat_cora_acc,         placebo: gat_cora_acc_placebo,         target: 0.830, placebo_target: 0.88,  reference_mean: 0.8280, origin: R}
     velickovic_dgi_2019:  {claim: dgi_cora_acc,         placebo: dgi_cora_acc_placebo,         target: 0.823, placebo_target: 0.88,  reference_mean: 0.8047, origin: R}
-    shchur_gat_2018:      {claim: shchur_gat_cora_acc,  placebo: shchur_gat_cora_acc_placebo,  target: 0.818, placebo_target: 0.88,  reference_mean: null,   origin: "R offen, H"}
-    zeng_nlinear_2023:    {claim: nlinear_etth1_96_mse, placebo: nlinear_etth1_96_mse_placebo, target: 0.374, placebo_target: 0.300, reference_mean: null,   origin: "R offen"}
+    shchur_gat_2018:      {claim: shchur_gat_cora_acc,  placebo: shchur_gat_cora_acc_placebo,  target: 0.818, placebo_target: 0.88,  reference_mean: 0.8140, origin: "R+H"}
+    zeng_nlinear_2023:    {claim: nlinear_etth1_96_mse, placebo: nlinear_etth1_96_mse_placebo, target: 0.374, placebo_target: 0.300, reference_mean: 0.3739, origin: R}
 ```
 
 **6 Papers** (Kipf, Wu, Zeng, Shchur, Veličković GAT, DGI), **8 Paper-Claim-Einheiten** (Zeng und Shchur je zweimal). Das README nennt beide Zahlen getrennt.
 
 **Referenzherkunft:** (R) = eigene Referenzlösung im eigenen Harness (`tests/reference/`), (H) = unabhängige Neumessung in einem Kritik-Paper (Fixture). Ein Referenzurteil (R) ist **kein** Fremdurteil und nicht unabhängig von unseren Protokollentscheidungen; das README sagt das offen. Die Formulierung „menschliche Referenzimplementierung im selben Harness“ ist wörtlich zu nehmen, nicht „menschliche Reproduktionsstudie“.
 
-**Referenzurteil der beiden offenen Claims:** Es entsteht aus dem Referenzlauf des Reviewers (Befehle unten) nach derselben Regel (≤ Toleranz reproduziert, ≤ 3 × Toleranz teilweise, sonst nicht reproduziert), **vor** dem ersten Agentenlauf dieses Claims. Ein Claim wird nur dann gestrichen, wenn die Referenz keinen gültigen Lauf liefert, **nie** wegen des Referenzurteils. Gestrichene Claims werden im Bericht genannt.
+**Referenzurteil der beiden neuen Claims** (Referenzläufe `results/v2_reference_gat_lcc.txt`: 30/30 gültig, 0,8140 ± 0,0115, reproduziert; `results/v2_reference_nlinear.txt`: 5/5 gültig, MSE 0,3739 ± 0,0013, reproduziert; nach Fix `3b94d36`, der ein belegtes Setup-Detail korrigierte, nicht auf den Zielwert getunt): Es entsteht aus dem Referenzlauf des Reviewers (Befehle unten) nach derselben Regel (≤ Toleranz reproduziert, ≤ 3 × Toleranz teilweise, sonst nicht reproduziert), **vor** dem ersten Agentenlauf dieses Claims. Ein Claim wird nur dann gestrichen, wenn die Referenz keinen gültigen Lauf liefert, **nie** wegen des Referenzurteils. Gestrichene Claims werden im Bericht genannt.
 
-**Placebos:** konstruierte Negativkontrollen (falscher Zielwert, kein Paper-Wert), Referenzurteil „nicht reproduziert“ (Abstand von Referenz und Placebo > 3 × Toleranz: GAT 0,052, DGI 0,075, Shchur-GAT mit Referenz noch zu prüfen, NLinear mit Referenz noch zu prüfen).
+**Placebos:** konstruierte Negativkontrollen (falscher Zielwert, kein Paper-Wert), Referenzurteil „nicht reproduziert“ (Abstand von Referenz und Placebo > 3 × Toleranz: GAT 0,052, DGI 0,075, Shchur-GAT 0,066, NLinear 0,074).
 
 ## Dacrema: nicht gebaut (Entscheidung des Nutzers)
 - **Befund:** Der Text liegt als Fixture vor (`benchmark/fixtures/1907.06902.json`). Tabelle 6 („Experimental results for NCF“): Auf MovieLens-1M wurde NeuMF reproduziert (HR@10 **0,7120**, NDCG@10 0,4369) und liegt klar vor den einfachen Baselines (UserKNN 0,6705, ItemKNN 0,6596, P3α 0,6464, RP3β 0,6715); nur SLIM (0,7161) ist gleichauf. Die einfachen Baselines gleichauf oder besser liegen nur auf Pinterest (z. B. ItemKNN 0,8744 gegen NeuMF 0,8719). MovieLens liefert deshalb **keinen Negativfall**.

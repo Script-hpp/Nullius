@@ -1,0 +1,2 @@
+gat_lcc: 30/30 gueltig; accuracy Mittel 0.8140, Std 0.0115; Ziel 0.818 +- 0.01, Abstand 0.0040 -> Referenzurteil reproduziert
+Baselines Seed 0: {'majority': {'accuracy': 0.1377049180327869}, 'no_graph': {'accuracy': 0.5091334894613583}}

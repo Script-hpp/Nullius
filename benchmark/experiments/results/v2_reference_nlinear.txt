@@ -1,0 +1,2 @@
+nlinear: 5/5 gueltig; mse Mittel 0.3739, Std 0.0013; Ziel 0.374 +- 0.01, Abstand 0.0001 -> Referenzurteil reproduziert
+Baselines Seed 0: {'repeat': {'mse': 1.2943705947845083, 'mae': 0.7131813544413363}, 'zero': {'mse': 1.1099284100805409, 'mae': 0.7959633803546952}}
