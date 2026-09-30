@@ -152,9 +152,9 @@ Not built: objection search and crawl in the loop, error-message search and devi
 | Kipf & Welling 2017, GCN (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
 | Wu et al. 2019, SGC (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
 | Zeng et al. 2023, DLinear (ETTh1) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Zeng et al. 2023, NLinear (ETTh1) | TBD (R, reference run pending) | TBD | TBD | TBD / TBD |
+| Zeng et al. 2023, NLinear (ETTh1) | reproduced (R) | TBD | TBD | TBD / TBD |
 | Shchur et al. 2018, GCN, random splits (Cora) | reproduced (R, H) | TBD | TBD | TBD / TBD |
-| Shchur et al. 2018, GAT, random splits (Cora) | TBD (R pending, H) | TBD | TBD | TBD / TBD |
+| Shchur et al. 2018, GAT, random splits (Cora) | reproduced (R, H) | TBD | TBD | TBD / TBD |
 | Veličković et al. 2018, GAT (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
 | Veličković et al. 2019, DGI (Cora) | partially (R) | TBD | TBD | TBD / TBD |
 | **Units agreeing with the reference verdict** | | **TBD of 8** | **TBD of 8** | **TBD of 8 / TBD of 8** |
