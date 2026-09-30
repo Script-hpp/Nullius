@@ -129,6 +129,13 @@ papers:
         tolerance: 0.01
         source: "manuell (Wu et al. 2019, Tabelle 2, Literaturwert); mit Tavily aus dem GAT-Paper belegt ersetzt"
         extract: {method: "GAT", dataset: "Cora", metric: "accuracy"}
+      - id: gat_cora_acc_placebo
+        text: "GAT erreicht 88,0 % Accuracy auf Cora (Standard-Split)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo   # negative Kontrolle (benchmark_v2.md): bewusst falscher Zielwert, nicht aus dem Paper
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
 
   - id: velickovic_dgi_2019
     title: "Deep Graph Infomax"
@@ -153,3 +160,54 @@ papers:
         origin: placebo   # negative Kontrolle
         source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
 
+  # ---- Benchmark v2 (benchmark/experiments/benchmark_v2.md): zusaetzliche Eintraege, v1-Eintraege oben unveraendert ----
+  # Eigene Eintraege statt zweiter Claims im v1-Eintrag desselben Papers: load_claims (loop.py) liest nur diese Datei,
+  # und die v1-Eintraege bleiben so Byte fuer Byte wie im Benchmark v1.
+  - id: shchur_gat_2018
+    title: "Pitfalls of Graph Neural Network Evaluation"   # gleiches Paper wie shchur_pitfalls_2018, anderer Claim (GAT statt GCN)
+    arxiv_url: "https://arxiv.org/abs/1811.05868"
+    dataset: "Cora-LCC"
+    expectation: "reproduziert (Kritik-Paper misst GAT selbst: 81,8 +- 1,3)"
+    seeds: 30   # 30 Splits x 1 Initialisierung wie Shchur-GCN
+    claims:
+      # Zielwert Tabelle 1 (Fixture 1811.05868.json v2): GAT CORA 81.8 +- 1.3 (Mittel und Std ueber 100 Splits x 20 Init.).
+      # Toleranz vorab: feste Regel +-1 Prozentpunkt bei Accuracy (wie Shchur-GCN).
+      - id: shchur_gat_cora_acc
+        text: "GAT erreicht 81,8 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)"
+        metric: accuracy
+        target: 0.818
+        tolerance: 0.01
+        source: "Tabelle 1, arXiv v2 (aus Fixture 1811.05868.json)"
+        extract: {method: "GAT", dataset: "CORA", metric: "accuracy"}
+      - id: shchur_gat_cora_acc_placebo
+        text: "GAT erreicht 88,0 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)"
+        metric: accuracy
+        target: 0.88
+        tolerance: 0.01
+        origin: placebo
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
+
+  - id: zeng_nlinear_2023
+    title: "Are Transformers Effective for Time Series Forecasting?"   # gleiches Paper wie zeng_dlinear_2023, anderer Claim (NLinear)
+    arxiv_url: "https://arxiv.org/abs/2205.13504"
+    dataset: "ETTh1"
+    expectation: "reproduziert"
+    seeds: 5
+    claims:
+      # Zielwert Tabelle 2 (Fixture 2205.13504.json): NLinear ETTh1, Horizont 96: MSE 0.374, MAE 0.394. Spaltenzuordnung mit
+      # table_check.py gegen die Fixture geprueft (NLinear MSE Position 3, MAE Position 4: ok), nicht aus der Reihenfolge abgelesen.
+      # Toleranz vorab: wie DLinear 0,01 absolut (das Paper nennt keine Streuung im Haupttext).
+      - id: nlinear_etth1_96_mse
+        text: "NLinear erreicht MSE 0,374 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.374
+        tolerance: 0.01
+        source: "Tabelle 2, arXiv (aus Fixture 2205.13504.json, Spaltenpruefung ok)"
+        extract: {method: "NLinear", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+      - id: nlinear_etth1_96_mse_placebo
+        text: "NLinear erreicht MSE 0,300 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.3
+        tolerance: 0.01
+        origin: placebo
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
