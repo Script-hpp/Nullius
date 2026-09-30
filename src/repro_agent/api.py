@@ -170,7 +170,7 @@ def make_orchestrator(quick: bool):
     """Orchestrator fuer einen Live-Lauf. Tests ersetzen diese Funktion."""
     from .loop import Orchestrator
 
-    return Orchestrator(graph_repair=True, seeds=QUICK_SEEDS if quick else None)
+    return Orchestrator(graph_repair=True, seeds=QUICK_SEEDS if quick else None, llm_cache=False)   # Live: kein Cache, das Modell laeuft wirklich
 
 
 def sanitize_text(text: str, limit: int | None = None) -> str:

@@ -35,6 +35,7 @@ from .events import EventLog
 from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
+from .harness.repair_hints import fault_message
 from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
@@ -46,6 +47,26 @@ from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 DEFAULT_SEEDS = 5
 MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
 MAX_GRAPH_REPAIRS = 2   # Reparaturrunden pro Claim, wenn die Ablation "Graph nicht genutzt" meldet
+FIDELITY_NOTE = (
+    "\n\nImplement the core mechanism described in the plan. Do not replace the method by a simpler stand-in "
+    "(for example a plain linear model, an MLP or a standard GCN for a different architecture). If the full model is too large "
+    "for 5 minutes on CPU, implement a smaller version of the SAME mechanism and say so in a comment. Start the script with a "
+    "comment block in the form '# Plan step -> implemented in: function or class name', one line per plan step."
+)
+PLAN_RETRY_NOTE = (
+    "\n\nYour previous answer was code or far too long. Reply with a numbered plan in plain prose, at most 15 lines, "
+    "with no code block."
+)
+
+
+def plan_needs_retry(text: str) -> bool:
+    """Ein Plan ist kurzer Text. Code-Fence am Anfang, mehrere import-Zeilen oder > 40 Zeilen = Modell hat Code statt Plan geliefert."""
+    t = text.strip()
+    return t.startswith("```") or sum(1 for ln in t.splitlines() if ln.lstrip().startswith(("import ", "from "))) >= 2 or t.count("\n") > 40
+
+
+MAX_FAULT_REPAIRS = 2   # Reparaturrunden pro Claim, wenn das Ergebnis schlechter als eine triviale Baseline ist (Agenten-Fehler)
+MAX_SEED0_REPAIRS = 3   # Gesamtgrenze beider Arten: jede Runde kostet einen Seed-0-Sandboxlauf (Minuten), Live-Demo bleibt kurz
 GRAPH_REPAIR_MESSAGE = (
     "Your code does not use the graph: accuracy with edges {full:.4f} equals accuracy without edges {ablated:.4f} "
     "(the code ignores the adjacency). Implement the propagation over the adjacency described in the plan."
@@ -110,7 +131,7 @@ class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
-        tavily_mode: str | None = None, graph_repair: bool = False,
+        tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
@@ -136,6 +157,8 @@ class Orchestrator:
         self._smoke_ok: set[str] = set()   # Codes, die die Formpruefung bestanden haben
         self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
+        if llm_cache is not None:   # ueberschreibt LLM_CACHE aus .env (die API setzt False: Live-Laeufe rufen das Modell wirklich auf)
+            self.settings = dataclasses.replace(self.settings, llm_cache=llm_cache)
         if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
             self.settings = dataclasses.replace(self.settings, llm_cache=False)
         self.llm = LLMClient(self.settings)
@@ -207,18 +230,27 @@ class Orchestrator:
                 [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 max_tokens=max_tokens, temperature=temperature,
             )
-        self._emit_live("llm_call", role=str(role), cost_net_usd=round(resp.cost_usd, 5), total_net_usd=round(self.spent_usd, 5))
+        self._emit_live("llm_call", role=str(role), model=getattr(resp, "model", None), cached=bool(getattr(resp, "cached", False)),
+                        cost_net_usd=round(resp.cost_usd, 5), total_net_usd=round(self.spent_usd, 5))
         return resp
 
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
-        return self._ask(
-            "reasoning", PLAN_SYSTEM,
+        user = (
             f"Paper: {paper['title']}\nClaim: {claim.text} (target {claim.target}, {claim.metric})\n\n"
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             "Write a short reproduction plan: model architecture, all hyperparameters and training "
             "protocol as described in the paper. Mark every value you are NOT sure about with "
-            "'(uncertain)'. Max 15 lines.",
-        ).content
+            "'(uncertain)'. Max 15 lines."
+        )
+        text = self._ask("reasoning", PLAN_SYSTEM, user).content
+        if getattr(self, "graph_repair", False) and plan_needs_retry(text):   # Katalog/API: Plan darf kein Code sein
+            self._emit("plan_retry", reason="code" if text.lstrip().startswith("```") or "import " in text else "too_long")
+            text = self._ask("reasoning", PLAN_SYSTEM, user + PLAN_RETRY_NOTE, temperature=0.4).content
+        return text
+
+    def _fidelity_note(self) -> str:
+        """Nur Katalog/API (Flag): Kernmechanismus des Plans umsetzen, Kommentarblock Plan step -> function. Anleitung, kein Pruefer."""
+        return FIDELITY_NOTE if getattr(self, "graph_repair", False) else ""
 
     def _code_from_llm(self, system: str, user: str) -> str:
         """Code-Block aus der Antwort; bei fehlendem Block bis zu 3 Versuche mit hoeherer
@@ -238,7 +270,8 @@ class Orchestrator:
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
-            f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan.",
+            f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan."
+            f"{self._fidelity_note()}",
         )
 
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
@@ -246,7 +279,8 @@ class Orchestrator:
             CODE_SYSTEM,
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
-            f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script.",
+            f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script."
+            f"{self._fidelity_note()}",
         )
 
     def triage(self, text: str) -> str:
@@ -397,6 +431,8 @@ class Orchestrator:
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
             "baselines": out.get("baselines"), "coverage": coverage,
+            "diagnostics": out.get("diagnostics"),             # nur Dossier/Events; pred_std geht in die Fehler-Rueckmeldung, nie Teststatistik
+            "stdout_tail": (r.stdout or "")[-300:],            # Ende der Trainingsausgabe (z. B. Val-Loss) als Evidenz
         }
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
@@ -442,7 +478,7 @@ class Orchestrator:
                 continue
             agrees = abs(ev.value - claim.target) < 1e-6   # 82.92/100 gegen anders gerundetes Ergebnis
             self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
-                       agrees=agrees, url=ev.url)   # Gegenprobe: belegter Wert gegen papers.yaml
+                       agrees=agrees, url=ev.url, from_store=ev.from_store)   # Gegenprobe: belegter Wert gegen papers.yaml
             if keep and not agrees:
                 self._warn(f"Zielwert weicht ab: Rolle 2 liest {ev.value} ({ev.table or 'Tabelle'}, Zitat: \"{ev.quote}\"), "
                            f"die Discovery {claim.target}. Es gilt der Wert der Discovery; Rolle 2 belegt ihn nicht.")
@@ -453,7 +489,8 @@ class Orchestrator:
             claim.target_evidence = dataclasses.asdict(ev)
             print(f"[{claim.id}] Zielwert {ev.value} belegt: {ev.quote!r}")
             self._emit("target_resolved", claim_id=claim.id, value=ev.value, quote=ev.quote, table=ev.table,
-                       url=ev.url, arxiv_version=ev.arxiv_version, column_check=ev.column_check, caveat=ev.caveat)
+                       url=ev.url, arxiv_version=ev.arxiv_version, column_check=ev.column_check, caveat=ev.caveat,
+                       from_store=ev.from_store)
 
     def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
         """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
@@ -506,8 +543,8 @@ class Orchestrator:
         # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
         v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
         graph_ab, graph_notes, discarded = None, [], set()
-        if getattr(self, "graph_repair", False) and v0 is not None and task.ablation_cmd:
-            v0, note0, code, graph_ab, graph_notes, discarded = self._graph_repair_loop(
+        if getattr(self, "graph_repair", False) and v0 is not None:   # Katalog/API: Fehler- und Graph-Check nach Seed 0
+            v0, note0, code, graph_ab, graph_notes, discarded = self._seed0_quality_loop(
                 claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
         measured = [] if v0 is None else [v0]
         notes = ([] if note0 is None else [note0]) + graph_notes
@@ -545,51 +582,93 @@ class Orchestrator:
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
                    explanation=verdict.explanation)
 
-    def _graph_repair_loop(
+    def _fault_check(self, claim: Claim, dossier: Dossier, code_hash: str, seed: int, v0: float) -> str | None:
+        """Schlechter als eine triviale Baseline? (harness/verify.agent_fault_suspected, deterministisch, kein LLM)"""
+        att = next((x for x in reversed(dossier.attempts) if x.claim_id == claim.id and x.seed == seed
+                    and x.code_hash == code_hash and x.measured is not None), None)
+        metrics = att.metrics if att is not None and att.metrics else {claim.metric: v0}
+        return agent_fault_suspected(claim.metric, v0, claim.target, dossier.baselines, metrics)
+
+    def _seed0_quality_loop(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, code: str,
         v0: float, note0: str | None, seed: int,
-    ) -> tuple[float, str | None, str, dict, list[str], set[str]]:
-        """Ablation nach Seed 0; bei "Graph nicht genutzt" bis zu MAX_GRAPH_REPAIRS Reparaturrunden mit fester Meldung.
+    ) -> tuple[float, str | None, str, dict | None, list[str], set[str]]:
+        """Nach Seed 0 (nur Katalog/API): Fehler-Check (schlechter als triviale Baseline) und Graph-Check mit Reparaturrunden.
 
-        Rueckgabe: (v0, Hinweis, Code, Ablation des Codes, Hinweise fuer das Urteil, verworfene Code-Hashes).
-        Liefert der reparierte Code keinen gueltigen Seed 0, gilt der letzte lauffaehige Code samt seiner Ablation.
-        CostLimitExceeded wird nicht abgefangen (harte Bremse)."""
+        Fehler: bis MAX_FAULT_REPAIRS Runden mit fester Rueckmeldung (harness/repair_hints.fault_message). Graph: bis
+        MAX_GRAPH_REPAIRS Runden. Zusammen hoechstens MAX_SEED0_REPAIRS (jede Runde kostet einen Seed-0-Sandboxlauf, Minuten).
+        Reihenfolge je Runde: erst Fehler-Check, dann Graph-Check des Codes, der den Fehler-Check bestanden hat.
+        Rueckgabe: (v0, Hinweis, Code, Ablation des Codes oder None, Hinweise fuer das Urteil, verworfene Code-Hashes).
+        Liefert ein reparierter Code keinen gueltigen Seed 0, gilt der letzte lauffaehige Code. CostLimitExceeded laeuft durch."""
         def h(c: str) -> str:
             return hashlib.sha256(c.encode()).hexdigest()[:12]
 
         notes: list[str] = []
         discarded: set[str] = set()
-        ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
-        self._emit("ablation", claim_id=claim.id, runde=0, code_hash=h(code), **ab)
-        rounds = 0
-        while ab["verdict"] == "Graph nicht genutzt" and rounds < MAX_GRAPH_REPAIRS:
-            rounds += 1
+        ab: dict | None = None
+        fault_rounds = graph_rounds = 0
+
+        def budget(kind_rounds: int, kind_max: int) -> bool:
+            return kind_rounds < kind_max and fault_rounds + graph_rounds < MAX_SEED0_REPAIRS
+
+        def repair(kind: str, rnd: int, message: str, head: str, ev: dict) -> tuple[bool, str, float, str | None]:
+            """Ein Reparaturversuch. Rueckgabe: (ok, code, v0, note). ok=False: Rueckfall auf den bisherigen Code."""
             from_hash = h(code)
-            ev = {"claim_id": claim.id, "runde": rounds, "from_hash": from_hash,
-                  "acc_full": ab["accuracy_full"], "acc_ablated": ab["accuracy_ablated"]}
-            head = (f"Graph-Reparatur Runde {rounds}: Code {from_hash} nutzt den Graph nicht "
-                    f"(Genauigkeit mit Kanten {ab['accuracy_full']:.4f}, ohne {ab['accuracy_ablated']:.4f})")
             try:
-                new_code = self.repair_code(
-                    plan, task, code, GRAPH_REPAIR_MESSAGE.format(full=ab["accuracy_full"], ablated=ab["accuracy_ablated"]))
+                new_code = self.repair_code(plan, task, code, message)
             except ValueError as exc:   # Modell lieferte keinen Code-Block
-                self._emit("graph_repair", result="no_code", fallback_hash=from_hash, **ev)
+                self._emit(f"{kind}_repair", result="no_code", fallback_hash=from_hash, **ev)
                 notes.append(f"{head}; Reparatur ohne Code-Block ({exc}), Rueckfall auf Code {from_hash}")
-                break
+                return False, code, v0, note0
             nv, nnote, new_code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new_code, seed)
             if nv is None:
-                self._emit("graph_repair", result="crash", fallback_hash=from_hash, to_hash=h(new_code), **ev)
+                self._emit(f"{kind}_repair", result="crash", fallback_hash=from_hash, to_hash=h(new_code), **ev)
                 notes.append(f"{head}; neuer Code lief nicht ({nnote}), Rueckfall auf Code {from_hash}")
-                break
+                return False, code, v0, note0
             discarded.add(from_hash)
-            code, v0, note0 = new_code, nv, nnote
+            return True, new_code, nv, nnote
+
+        while True:
+            fault = self._fault_check(claim, dossier, h(code), seed, v0)
+            if fault and budget(fault_rounds, MAX_FAULT_REPAIRS):
+                fault_rounds += 1
+                from_hash = h(code)
+                diag = getattr(self, "_diag", {}).get((from_hash, seed)) or {}
+                pred_std = diag.get("pred_std") if isinstance(diag, dict) else None
+                message = fault_message(claim.metric, v0, claim.target, dossier.baselines, pred_std)
+                ev = {"claim_id": claim.id, "runde": fault_rounds, "from_hash": from_hash, "measured": v0,
+                      "baselines": {k: v.get(claim.metric) for k, v in (dossier.baselines or {}).items() if isinstance(v, dict)}}
+                head = f"Fehler-Reparatur Runde {fault_rounds}: Code {from_hash} schlechter als triviale Baseline ({fault})"
+                ok, code, v0, note0 = repair("fault", fault_rounds, message, head, ev)
+                if not ok:
+                    break
+                self._emit("fault_repair", result="repariert", to_hash=h(code), **ev)
+                notes.append(f"{head}; neuer Code {h(code)}")
+                continue
+            if not task.ablation_cmd:
+                break
             ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
-            self._emit("ablation", claim_id=claim.id, runde=rounds, code_hash=h(code), **ab)
-            self._emit("graph_repair", result="repariert", to_hash=h(code), ablation_verdict=ab["verdict"], **ev)
-            notes.append(f"{head}; neuer Code {h(code)}, Ablation danach: {ab['verdict']}")
+            self._emit("ablation", claim_id=claim.id, runde=fault_rounds + graph_rounds, code_hash=h(code), **ab)
+            if ab["verdict"] == "Graph nicht genutzt" and budget(graph_rounds, MAX_GRAPH_REPAIRS):
+                graph_rounds += 1
+                from_hash = h(code)
+                ev = {"claim_id": claim.id, "runde": graph_rounds, "from_hash": from_hash,
+                      "acc_full": ab["accuracy_full"], "acc_ablated": ab["accuracy_ablated"]}
+                head = (f"Graph-Reparatur Runde {graph_rounds}: Code {from_hash} nutzt den Graph nicht "
+                        f"(Genauigkeit mit Kanten {ab['accuracy_full']:.4f}, ohne {ab['accuracy_ablated']:.4f})")
+                ok, code, v0, note0 = repair("graph", graph_rounds,
+                                             GRAPH_REPAIR_MESSAGE.format(full=ab["accuracy_full"], ablated=ab["accuracy_ablated"]), head, ev)
+                if not ok:
+                    break
+                self._emit("graph_repair", result="repariert", to_hash=h(code), **ev)
+                notes.append(f"{head}; neuer Code {h(code)}")
+                continue
+            break
         discarded.discard(h(code))   # Reparatur kann denselben Code liefern; der finale Code zaehlt nie als verworfen
-        if rounds:
-            dossier.graph_repairs[claim.id] = rounds
+        if fault_rounds:
+            dossier.fault_repairs[claim.id] = fault_rounds
+        if graph_rounds:
+            dossier.graph_repairs[claim.id] = graph_rounds
         return v0, note0, code, ab, notes, discarded
 
     def _run_seed(
@@ -618,12 +697,15 @@ class Orchestrator:
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
                     cost_usd=self.spent_usd, metrics=res.get("metrics"), coverage=res.get("coverage"),
+                    diagnostics=res.get("diagnostics"),
                 ))
+                self.__dict__.setdefault("_diag", {})[(code_hash, seed)] = res.get("diagnostics")
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)
             self._emit("attempt", claim_id=claim.id, seed=seed, n=n, branch_id=branch, parent_snapshot=snapshot,
                        code_hash=code_hash, status=status, measured=value, seconds=round(time.time() - t0, 1),
-                       error=(summary or "")[-400:] or None)
+                       error=(summary or "")[-400:] or None, stdout_tail=res.get("stdout_tail"),
+                       diagnostics=res.get("diagnostics"))
             if res.get("baselines"):
                 dossier.baselines = res["baselines"]
             if value is not None:

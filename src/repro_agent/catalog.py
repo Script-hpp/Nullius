@@ -241,6 +241,7 @@ def verdict_dict(entry: dict, dossier, run_dir: Path | None = None) -> dict:
         "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
         "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
         "graph_repairs": dossier.graph_repairs.get(claim.id, 0),
+        "fault_repairs": dossier.fault_repairs.get(claim.id, 0),
         "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),
     }
 

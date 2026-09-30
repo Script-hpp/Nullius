@@ -38,6 +38,8 @@ class Attempt:
     metrics: dict | None = None   # alle Metriken des Harness (nicht nur die des Claims)
     # Zeilenabdeckung des Agenten-Codes (nur erster vollstaendiger Seed-Lauf): {"executed": [...], "missing": [...]}
     coverage: dict | None = None
+    # Kennzahlen der Vorhersagen (pred_std, target_std, corr); nur fuer uns, nie in einem Agenten-Prompt
+    diagnostics: dict | None = None
 
 
 @dataclass
@@ -91,6 +93,7 @@ class Dossier:
     ablations: dict = field(default_factory=dict)   # claim_id -> Graph-Ablation (Seed 0), siehe ablation_gcn.md
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
+    fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
     def save(self, timestamp: str) -> Path:
@@ -117,6 +120,7 @@ class Dossier:
             baselines=data.get("baselines"),
             warnings=data.get("warnings", []),
             graph_repairs=data.get("graph_repairs", {}),
+            fault_repairs=data.get("fault_repairs", {}),
         )
 
     def condensed_for_reasoning(self) -> str:

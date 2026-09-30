@@ -56,6 +56,7 @@ class TargetEvidence:
     arxiv_version: str | None
     caveat: str | None = None   # z. B. Spaltenzuordnung nicht belegt
     column_check: str = "nicht pruefbar"   # "ok" (Kopfzeile geparst, Position stimmt) | "nicht pruefbar"
+    from_store: bool = False    # True: aus gespeicherter Extraktion (Fixture) gelesen, kein neuer Modellaufruf
 
 
 class ExtractionInvalid(RuntimeError):
@@ -279,7 +280,7 @@ def extract_target_cached(
     key = hashlib.sha256(raw.encode()).hexdigest()[:16]
     path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
     if path.exists():
-        ev = TargetEvidence(**json.loads(path.read_text()))
+        ev = TargetEvidence(**{**json.loads(path.read_text()), "from_store": True})
         ev.caveat, ev.column_check = _column_status(   # immer neu berechnen, auch fuer alte Fixtures
             paper.text, ev.quote, ev.value, method, dataset, metric, percent
         )

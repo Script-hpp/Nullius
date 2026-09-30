@@ -26,6 +26,9 @@ def render_markdown(dossier: Dossier) -> str:
         n = dossier.graph_repairs.get(verdict.claim_id)
         if n:
             lines.append(f"Graph-Reparaturen: {n} (Ablation meldete Graph nicht genutzt, Code wurde neu geschrieben)")
+        nf = dossier.fault_repairs.get(verdict.claim_id)
+        if nf:
+            lines.append(f"Fehler-Reparaturen: {nf} (Ergebnis schlechter als eine triviale Baseline, Code wurde neu geschrieben)")
         lines.append(verdict.explanation)
         claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
         ev = claim.target_evidence if claim else None

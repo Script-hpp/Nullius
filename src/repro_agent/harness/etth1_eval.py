@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np  # noqa: E402
 
+import diagnostics  # noqa: E402
 import etth1_data  # noqa: E402
 import metrics  # noqa: E402
 
@@ -63,6 +64,7 @@ def main() -> None:
         "status": "ok",
         "metrics": {"mse": metrics.mse(p, t), "mae": metrics.mae(p, t)},
         "baselines": base,
+        "diagnostics": diagnostics.prediction_diagnostics(pred, truth),
     }))
 
 
