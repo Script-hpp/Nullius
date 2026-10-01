@@ -16,15 +16,15 @@ const EXAMPLE_RUN = '#/run/kipf_gcn_2017--20260929-130133'
 function TopBar() {
   const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
   return (
-    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-5 px-5 sm:px-10">
+    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-3 px-4 sm:gap-5 sm:px-10">
       <Wordmark />
-      <div className="flex items-center gap-5 sm:gap-7">
+      <div className="flex items-center gap-3 sm:gap-7">
         <a href="#discover" className={link}>Discover</a>
         <a href="#catalog" className={link}>Catalog</a>
         <a href="#overview" className={link}>Runs</a>
         <a href="#benchmark" className={link}>Benchmark</a>
         <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
-        <a href="#discover" className="rounded-full border border-fg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
+        <a href="#discover" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
         <ThemeSwitch />
       </div>
     </header>
