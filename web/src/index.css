@@ -234,3 +234,4 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 
 /* KaTeX in running text: its default is larger than the surrounding font; colour follows currentColor. */
 .katex { font-size: 1.04em; }
+.katex-display { margin: 0.15em 0; }

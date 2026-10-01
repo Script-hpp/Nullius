@@ -1,6 +1,7 @@
 // "Play this check in 30 seconds" as a film: six scenes built only from the data of one real run. Pure functions: the scene plan, what each
 // scene shows, and the sentences. Nothing here is invented; a scene whose data is missing is left out.
 import type { Event, Json } from './data'
+import { splitFormulas } from './latex.ts'
 import { buildStory, lineDiff, type Card, type DiffLine } from './repairStory.ts'
 
 export const FILM_MS = 30_000
@@ -69,13 +70,15 @@ function cut(l: string, width: number) {
 
 // The plan for the film: a title (small label) and the first steps. A heading or an all-bold first line is the title, not a step; steps are the
 // list items (or, in a plan without a list, the first longer lines).
-export function planItems(plan: string, n = 3, width = 110): { title: string | null; steps: string[] } {
+export function planItems(plan: string, n = 3, width = 110): { title: string | null; steps: string[]; numbers: number[] } {
   const lines = plan.split('\n').filter((l) => l.trim())
   const t = lines.find(isTitle)
   const rest = lines.filter((l) => l !== t)
   const items = rest.filter(isItem)
-  const steps = (items.length ? items : rest.filter((l) => stripMarkdown(l).length > 12)).map(stripMarkdown).filter(Boolean).slice(0, n).map((l) => cut(l, width))
-  return { title: t ? cut(stripMarkdown(t), 70) : null, steps }
+  const chosen = (items.length ? items : rest.filter((l) => stripMarkdown(l).length > 12)).filter((l) => stripMarkdown(l)).slice(0, n)
+  // the number of a step is the one written in the plan ("3. ..."), else its position; the agent's code comments refer to these numbers
+  const numbers = chosen.map((l, i) => Number(l.match(/^\s*(\d+)[.)]\s/)?.[1] ?? i + 1))
+  return { title: t ? cut(stripMarkdown(t), 70) : null, steps: chosen.map((l) => cut(stripMarkdown(l), width)), numbers }
 }
 
 // Text for display: "^(-1/2)" and "^2" become superscripts, nothing else is interpreted. A word that holds a formula stays in one piece (no line break
@@ -198,3 +201,101 @@ export const eventsForClaim = (events: Event[], claimId: string): Event[] => eve
 
 // The first scene says "finds the number" only if the run really has the quote it was found in.
 export const tavilySentence = (hasEvidence: boolean) => (hasEvidence ? 'Tavily reads the paper and finds the number it reports.' : 'Tavily reads the paper and the page of its code.')
+
+// ---- plan cards ----
+// "Model: 2-layer GCN: ..." -> category "Model" and the rest. A category is the text before the first colon if it is short and plain; otherwise none.
+export function splitCategory(step: string): { category: string | null; body: string } {
+  const m = step.match(/^([^:]{2,40}?):\s+(\S[\s\S]*)$/)
+  if (!m || /[=^()$→]|->/.test(m[1])) return { category: null, body: step }
+  return { category: m[1].trim(), body: m[2].trim() }
+}
+
+const ARROW = /→|⟶|->/
+// An arrow chain "X → GCN(16, ReLU) → softmax" as a pipeline: the text in front of it (up to the last colon) and the nodes. Arrows inside
+// brackets do not split. Null if there is no chain of at least two nodes, or a node is long (then it is prose, not a pipeline).
+export function pipelineOf(body: string): { lead: string; nodes: string[] } | null {
+  const parts: string[] = []
+  let depth = 0, from = 0
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i]
+    if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c)) depth = Math.max(0, depth - 1)
+    else if (depth === 0) {
+      const m = body.slice(i).match(/^(→|⟶|->)/)
+      if (m) { parts.push(body.slice(from, i)); i += m[0].length - 1; from = i + 1 }
+    }
+  }
+  if (parts.length === 0) return null
+  parts.push(body.slice(from))
+  const first = parts[0].trim()
+  const colon = first.lastIndexOf(': ')
+  const lead = colon >= 0 ? first.slice(0, colon + 1) : ''
+  const nodes = [colon >= 0 ? first.slice(colon + 2).trim() : first, ...parts.slice(1).map((p) => p.trim())].filter(Boolean)
+  if (nodes.length < 2 || nodes.some((n) => n.length > 48) || lead.length > 70 || !ARROW.test(body)) return null
+  return { lead, nodes }
+}
+
+// ---- plan step <-> code ----
+// The agent's own mapping comment at the top of its code ("# 1. Model -> NLinear class"). Only a mapping whose category matches a shown plan
+// step AND whose named function, class or constant really is defined in the code counts; nothing else is linked.
+export type CodeLink = { step: number; name: string; lines: string[] }
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+export type MapEntry = { category: string | null; number: number | null; target: string }
+// Two forms of the agent's comment: "# 1. Model -> NLinear class" (by category) and "# Plan step 3 -> implemented in: normalize_x" (by number).
+export function mappingComments(code: string): MapEntry[] {
+  const out: MapEntry[] = []
+  for (const l of code.split('\n').slice(0, 80)) {
+    const byNumber = l.match(/^\s*#\s*Plan step\s+(\d+)\s*->\s*implemented in:?\s*(.+?)\s*$/i)
+    if (byNumber) { out.push({ category: null, number: Number(byNumber[1]), target: byNumber[2] }); continue }
+    const byCategory = l.match(/^\s*#\s*\d+\.?\s*(.+?)\s*->\s*(.+?)\s*$/)
+    if (byCategory) out.push({ category: byCategory[1], number: null, target: byCategory[2] })
+  }
+  return out
+}
+
+export function definitionLine(code: string, name: string): number {
+  const re = new RegExp(`^\\s*(?:(?:async\\s+)?def|class)\\s+${name}\\b|^${name}\\s*(?::[^=\\n]+)?=`)
+  return code.split('\n').findIndex((l) => re.test(l))
+}
+
+export function planCodeLinks(code: string, steps: { category: string | null; number: number }[], linesPer = 3, width = 78): CodeLink[] {
+  const map = mappingComments(code)
+  const lines = code.split('\n')
+  const out: CodeLink[] = []
+  steps.forEach((st, step) => {
+    const m = map.find((x) => (x.number != null ? x.number === st.number : x.category != null && st.category != null && norm(x.category) === norm(st.category)))
+    if (!m) return
+    for (const name of [...new Set(m.target.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [])]) {
+      const at = definitionLine(code, name)
+      if (at < 0) continue
+      const snippet = lines.slice(at, at + linesPer + 3).filter((l) => l.trim() && !l.trim().startsWith('#')).slice(0, linesPer).map((l) => (l.length > width ? l.slice(0, width - 1) + '…' : l))
+      if (snippet.length) out.push({ step, name, lines: snippet })
+      return
+    }
+  })
+  return out
+}
+
+// How much room a plan card needs (1 = one text line plus its label): formulas and long arrow chains take more. Used to show as many
+// steps as fit the column without cutting a card; the steps shown are always the first ones, in order.
+export function cardWeight(step: string): number {
+  const { body } = splitCategory(step)
+  const maths = splitFormulas(body).filter((s) => s.kind === 'math').length
+  if (maths > 0) return 1 + 0.45 * maths
+  const pipe = pipelineOf(body)
+  if (pipe) return 1 + (pipe.nodes.length >= 4 ? 0.7 : 0.35)
+  return body.length > 70 ? 1.35 : 1
+}
+
+export function fitSteps(steps: string[], budget: number): string[] {
+  const out: string[] = []
+  let used = 0
+  for (const s of steps) {
+    const w = cardWeight(s)
+    if (out.length > 0 && used + w > budget) break
+    out.push(s)
+    used += w
+  }
+  return out
+}

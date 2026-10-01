@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Check, Search, X } from 'lucide-react'
 import { ResultBand } from '../ResultChart'
 import { splitFormulas } from '../../latex'
-import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, mathWords, measurements, planItems, sourceDomains, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
+import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, mathWords, measurements, pipelineOf, fitSteps, planCodeLinks, planItems, sourceDomains, splitCategory, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
 import { TONE_TEXT_VAR, TONE_VAR, type Tone } from '../../labels'
 import type { Event, Json } from '../../data'
 
@@ -36,16 +36,16 @@ function PlainMath({ text }: { text: string }) {
 }
 
 // One formula span set in LaTeX. The text stays visible until KaTeX has rendered; if KaTeX reports an error, the plain text stays.
-function Tex({ text, latex }: { text: string; latex: string }) {
+function Tex({ text, latex, display = false }: { text: string; latex: string; display?: boolean }) {
   const [html, setHtml] = useState<string | null>(null)
   useEffect(() => {
     let live = true
     loadKatex().then((k) => {
-      const out = k.renderToString(latex, { throwOnError: false, output: 'html', strict: 'ignore' })
+      const out = k.renderToString(latex, { throwOnError: false, output: 'html', strict: 'ignore', displayMode: display })
       if (live && !out.includes('katex-error')) setHtml(out)
     }).catch(() => undefined)
     return () => { live = false }
-  }, [latex])
+  }, [latex, display])
   if (html === null) return <span className="whitespace-nowrap"><PlainMath text={text} /></span>
   return <span className="whitespace-nowrap" aria-label={text} dangerouslySetInnerHTML={{ __html: html }} />
 }
@@ -103,30 +103,93 @@ function TavilyScene({ d, p }: { d: SceneData; p: number }) {
 }
 
 // ---- 2. Nemotron plans and writes code ----
+const useWide = () => {
+  const q = typeof matchMedia === 'function' ? matchMedia('(min-width: 720px)') : null
+  const [wide, setWide] = useState(q?.matches ?? true)
+  useEffect(() => { if (!q) return; const f = () => setWide(q.matches); q.addEventListener('change', f); return () => q.removeEventListener('change', f) }, [q])
+  return wide
+}
+
+// One plan step as a card: the category in small caps, then the plan's own text. A formula is set as a centred display line, an arrow chain
+// as a row of chips. Only the plan's words are shown, none are added or reworded.
+function PlanCard({ step, i, p, active }: { step: string; i: number; p: number; active: boolean }) {
+  const { category, body } = splitCategory(step)
+  const t = ramp(p, i * 0.1, i * 0.1 + 0.14)
+  const segs = splitFormulas(body)
+  const first = segs.findIndex((x) => x.kind === 'math')
+  const pipe = first < 0 ? pipelineOf(body) : null
+  const text = 'text-[clamp(11px,1.6cqw,14.5px)] leading-snug text-fg-3'
+  const lead = first > 0 ? segs.slice(0, first).map((x) => x.text).join('').trim() : ''
+  const maths = segs.filter((x) => x.kind === 'math')
+  const tail = first >= 0 ? segs.slice(first).filter((x) => x.kind === 'text').map((x) => x.text.trim()).filter((x) => x.replace(/[;,.:\s]/g, '')).join(' ') : ''
+  return (
+    <li className="list-none rounded-xl border bg-surface-2 px-[1.8cqw] py-[1.1cqw]"
+      style={{ opacity: t, transform: `translate(${(1 - t) * -28}px, ${(1 - t) * 10}px)`, borderColor: active ? 'var(--chart-target)' : 'var(--c-line)', boxShadow: active ? '0 0 0 1px var(--chart-target), 0 4px 18px color-mix(in srgb, var(--chart-target) 22%, transparent)' : undefined, transition: 'border-color 200ms, box-shadow 200ms' }}>
+      {category && <div className="mb-[0.5cqw] text-[clamp(9px,1.2cqw,11px)] font-semibold uppercase tracking-[0.16em] text-muted" style={{ fontVariantCaps: 'all-small-caps' }}>{category}</div>}
+      {first >= 0 ? (
+        <div className="min-w-0">
+          {lead && <div className={text}>{lead}</div>}
+          <div className="flex flex-wrap items-center justify-center gap-x-[3cqw] gap-y-[0.4cqw] py-[0.3cqw] text-[1.08em] text-fg-2">
+            {maths.map((m, j) => <Tex key={j} text={m.text} latex={m.kind === 'math' ? m.latex : ''} display />)}
+          </div>
+          {tail && <div className={`${text} text-fg-4`}>{tail}</div>}
+        </div>
+      ) : pipe ? (
+        <div className="min-w-0">
+          {pipe.lead && <div className={`${text} mb-[0.7cqw]`}>{pipe.lead}</div>}
+          <div className="flex flex-wrap items-center gap-x-[0.6cqw] gap-y-[0.6cqw]">
+            {pipe.nodes.map((n, j) => (
+              <span key={j} className="inline-flex items-center gap-[0.6cqw]">
+                {j > 0 && <span aria-hidden className="text-muted">→</span>}
+                <span className="rounded-md border border-line-strong bg-raised px-[0.9cqw] py-[0.3cqw] font-mono text-[clamp(9.5px,1.3cqw,12.5px)] text-fg-3">{n}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : <div className={text}><Formula text={body} /></div>}
+    </li>
+  )
+}
+
 function CodeScene({ d, p }: { d: SceneData; p: number }) {
-  const { title: planTitle, steps: bullets } = d.plan ? planItems(d.plan, 3) : { title: null, steps: [] }
-  const lines = d.firstCode ? codeLines(d.firstCode, 14) : []
-  const text = lines.join('\n')
+  const wide = useWide()
+  const plan = d.plan ? planItems(d.plan, 6) : { title: null, steps: [] as string[], numbers: [] as number[] }
+  const planTitle = plan.title
+  const steps = fitSteps(plan.steps, wide ? 5.2 : 3.2)   // as many of the first steps as fit without cutting a card
+  const links = d.firstCode ? planCodeLinks(d.firstCode, steps.map((s) => ({ category: splitCategory(s).category, number: plan.numbers[plan.steps.indexOf(s)] }))) : []   // only steps the agent's own comment maps to code that really exists
+  const linked = links.length > 0
+  const lines = d.firstCode ? codeLines(d.firstCode, wide ? 14 : 7) : []
+  const blocks = linked ? links.map((l) => l.lines.join('\n')) : lines.length ? [lines.join('\n')] : []
+  const total = blocks.reduce((n, b) => n + b.length, 0)
+  const k = Math.round(total * ramp(p, 0.22, 0.92))
+  const starts = blocks.map((_, i) => blocks.slice(0, i).reduce((n, x) => n + x.length, 0))
+  const shown = blocks.map((b, i) => typed(b, (k - starts[i]) / b.length))
+  const activeBlock = k >= total ? -1 : blocks.findIndex((b, i) => k < starts[i] + b.length)
+  const activeStep = linked && activeBlock >= 0 && k > 0 ? links[activeBlock].step : -1
   return (
     <div className="flex h-full flex-col">
       <Sentence>{SENTENCE.code()}</Sentence>
-      <div className={`${body} grid gap-[2.5cqw] ${bullets.length && lines.length ? '@xl:grid-cols-[1fr_1.5fr]' : ''}`}>
-        {bullets.length > 0 && (
-          <div className="min-w-0">
-            {planTitle && <div className="mb-[1.4cqw] text-[clamp(9px,1.3cqw,11px)] font-semibold uppercase tracking-[0.14em] text-muted">{planTitle}</div>}
-            <ol className="m-0 flex list-none flex-col gap-[1.2cqw] p-0">
-              {bullets.map((b, i) => (
-                <li key={i} className="flex gap-2 text-[clamp(11px,1.65cqw,15px)] leading-snug text-fg-3" style={{ opacity: ramp(p, i * 0.12, i * 0.12 + 0.12), transform: `translateY(${(1 - ramp(p, i * 0.12, i * 0.12 + 0.12)) * 8}px)` }}>
-                  <span className="font-mono text-muted">{i + 1}</span><span className="min-w-0"><Formula text={b} /></span>
-                </li>
-              ))}
+      <div className={`${body} grid gap-[2.5cqw] ${steps.length && blocks.length ? '@xl:grid-cols-[1fr_1.35fr]' : ''}`}>
+        {steps.length > 0 && (
+          <div className="flex min-h-0 min-w-0 flex-col justify-center overflow-hidden">
+            {planTitle && <div className="mb-[1.2cqw] text-[clamp(9px,1.3cqw,11px)] font-semibold uppercase tracking-[0.14em] text-muted">{planTitle}</div>}
+            <ol className="m-0 flex list-none flex-col gap-[1cqw] p-0">
+              {steps.map((st, i) => <PlanCard key={i} step={st} i={i} p={p} active={i === activeStep} />)}
             </ol>
           </div>
         )}
-        {lines.length > 0 && (
-          <div className="relative min-h-0 overflow-hidden rounded-xl border border-line bg-raised p-[1.8cqw]">
+        {blocks.length > 0 && (
+          <div className="relative flex min-h-0 flex-col justify-center overflow-hidden rounded-xl border border-line bg-raised p-[1.8cqw]">
             <span className={`absolute right-3 top-2 rounded-full border border-line-strong px-2 py-0.5 ${mono} text-fg-4`}>Version 1</span>
-            <pre className={`m-0 overflow-hidden whitespace-pre text-fg-3 ${mono}`}><code>{typed(text, ramp(p, 0.25, 0.92))}<span className="text-fg-4">▌</span></code></pre>
+            <div className="flex flex-col gap-[1.2cqw]">
+              {blocks.map((_, i) => (
+                <div key={i} className="border-l-2 pl-[1.2cqw]" style={{ borderColor: linked && i === activeBlock ? 'var(--chart-target)' : 'var(--c-line)', opacity: shown[i] ? 1 : 0.25, transition: 'border-color 200ms' }}>
+                  {linked && <div className="mb-[0.3cqw] text-[clamp(9px,1.15cqw,10.5px)] font-semibold uppercase tracking-wider text-muted">{links[i].name}</div>}
+                  <pre className={`m-0 overflow-hidden whitespace-pre text-fg-3 ${mono}`}><code>{shown[i]}{i === activeBlock && <span className="text-fg-4">▌</span>}</code></pre>
+                </div>
+              ))}
+            </div>
+            {linked && <p className="mb-0 mt-[1.4cqw] text-[clamp(9px,1.15cqw,10.5px)] leading-snug text-muted">Excerpts: where the agent&rsquo;s own comments say it implemented each plan step.</p>}
           </div>
         )}
       </div>
