@@ -12,6 +12,7 @@ import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { PaperHead } from './PaperHead'
 import { Film } from './film/Film'
+import { ReadmeBadge } from './ReadmeBadge'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
@@ -151,6 +152,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       <StepStrip steps={steps} onStep={onStep} />
 
       <RepairStory events={run.events} claimId={claim.id} codeLoader={codeLoader} />
+
+      <ReadmeBadge ref_={ref_} />
 
       <section id="sec-details" className="scroll-mt-4 min-w-0" aria-label="Details">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Details</div>

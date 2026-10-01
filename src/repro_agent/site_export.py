@@ -14,6 +14,7 @@ from pathlib import Path
 
 import yaml
 
+from .badge import write_badge
 from .dossier import REPO_ROOT, Dossier
 
 OUT = Path(os.environ.get("REPRO_EXPORT_DIR") or REPO_ROOT / "web" / "public" / "data")
@@ -103,6 +104,7 @@ def export_run(run: Path, out: Path, titles: dict[str, str]) -> dict:
         shutil.copy(chosen, dest / "plan.md")
     for version in run.glob("*.py"):   # jede Code-Version: <claim>_<hash>.py -> code_<hash>.py (Replay zeigt Version 1, 2, ...)
         shutil.copy(version, dest / f"code_{version.stem.rsplit('_', 1)[-1]}.py")
+    write_badge(dest, Dossier.load(dest / "dossier.json"), ts, catalog=paper_id.startswith("disc_"))
     att = [a for a in dossier["attempts"] if a["measured"] is not None] or dossier["attempts"]
     code = next(iter(run.glob(f"*_{att[-1]['code_hash']}.py")), None) if att else None
     if code:
