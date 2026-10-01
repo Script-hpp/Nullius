@@ -179,13 +179,13 @@ function CodeScene({ d, p }: { d: SceneData; p: number }) {
           </div>
         )}
         {blocks.length > 0 && (
-          <div className="relative flex min-h-0 flex-col justify-center overflow-hidden rounded-xl border border-line bg-raised p-[1.8cqw]">
+          <div className="relative flex min-h-0 flex-col self-start overflow-hidden rounded-xl border border-line bg-raised p-[1.8cqw] pt-[4.2cqw] @xl:pt-[3cqw]">
             <span className={`absolute right-3 top-2 rounded-full border border-line-strong px-2 py-0.5 ${mono} text-fg-4`}>Version 1</span>
             <div className="flex flex-col gap-[1.2cqw]">
               {blocks.map((_, i) => (
                 <div key={i} className="border-l-2 pl-[1.2cqw]" style={{ borderColor: linked && i === activeBlock ? 'var(--chart-target)' : 'var(--c-line)', opacity: shown[i] ? 1 : 0.25, transition: 'border-color 200ms' }}>
                   {linked && <div className="mb-[0.3cqw] text-[clamp(9px,1.15cqw,10.5px)] font-semibold uppercase tracking-wider text-muted">{links[i].name}</div>}
-                  <pre className={`m-0 overflow-hidden whitespace-pre text-fg-3 ${mono}`}><code>{shown[i]}{i === activeBlock && <span className="text-fg-4">▌</span>}</code></pre>
+                  <pre className={`m-0 overflow-hidden whitespace-pre text-fg-3 ${mono}`}><code>{shown[i]}{i === activeBlock && <span className="text-fg-4">▌</span>}<span className="invisible">{blocks[i].slice(shown[i].length)}</span></code></pre>
                 </div>
               ))}
             </div>
