@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { FILM_MS, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planBullets, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
+import { FILM_MS, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planItems, mathWords, stripMarkdown, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
 import type { Event } from './data.ts'
 
 const all: SceneId[] = ['tavily', 'code', 'repair', 'sandbox', 'harness', 'verdict']
@@ -54,9 +54,43 @@ test('code lines: no blanks or comment-only lines, limited, long lines cut', () 
   assert.ok(codeLines('z = "' + 'a'.repeat(200) + '"')[0].length <= 78)
 })
 
-test('plan bullets: markdown stripped, short lines dropped', () => {
-  const b = planBullets('**Reproduction Plan: GCN on Cora**\n\n1. **Model**: 2-layer GCN with dropout 0.5\n- Optimizer: Adam, lr 0.01\nok\n')
-  assert.deepEqual(b, ['Reproduction Plan: GCN on Cora', 'Model: 2-layer GCN with dropout 0.5', 'Optimizer: Adam, lr 0.01'])
+const KIPF_PLAN = readFileSync(new URL('../public/data/kipf_gcn_2017/20260929-130133/plan.md', import.meta.url), 'utf8')
+
+test('plan items on the real Kipf plan: the bold first line is the title, the list items are the steps', () => {
+  const { title, steps } = planItems(KIPF_PLAN, 3)
+  assert.equal(title, 'Reproduction Plan: GCN on Cora (Planetoid split)')
+  assert.equal(steps.length, 3)
+  assert.equal(steps[0], 'Model: 2-layer GCN: X → GCN(16, ReLU, dropout) → GCN(7, linear, dropout) → softmax')
+  assert.ok(steps[1].startsWith('Propagation: Ã = A + I; Â = D̃^(-1/2) Ã D̃^(-1/2)'))
+  assert.ok(steps.every((l) => !/[*`#]/.test(l) && !/^\d+[.)]/.test(l)))
+})
+
+test('plan items: heading line is a title, a plan without a list falls back to longer lines, nothing else is dropped', () => {
+  assert.deepEqual(planItems('# Plan for X\n\n- Use a linear layer with 96 outputs\n- Train with Adam\n', 3), { title: 'Plan for X', steps: ['Use a linear layer with 96 outputs', 'Train with Adam'] })
+  assert.deepEqual(planItems('First we normalise the data per channel.\nThen a linear model is fitted.\nok', 3), { title: null, steps: ['First we normalise the data per channel.', 'Then a linear model is fitted.'] })
+  assert.equal(planItems('', 3).steps.length, 0)
+})
+
+test('plan items: long lines are cut at a space, never in the middle of a word', () => {
+  const long = '1. ' + 'word '.repeat(40)
+  const [l] = planItems(long, 1, 50).steps
+  assert.ok(l.endsWith('…') && l.length <= 51 && !/wor…$/.test(l))
+})
+
+test('stripMarkdown removes markers only', () => {
+  assert.equal(stripMarkdown('  - **Loss**: `MSE` on 96 steps'), 'Loss: MSE on 96 steps')
+  assert.equal(stripMarkdown('## Heading'), 'Heading')
+})
+
+test('math words: superscripts for ^(...) and ^x, formulas stay one piece, nothing else is interpreted', () => {
+  const w = mathWords('Â = D̃^(-1/2) Ã D̃^(-1/2) and x^2 or 2^-3')
+  const formulas = w.filter((x) => x.formula)
+  assert.equal(formulas.length, 4)
+  assert.deepEqual(formulas[0].parts, [{ kind: 'text', text: 'D̃' }, { kind: 'sup', text: '-1/2' }])
+  assert.deepEqual(formulas[2].parts, [{ kind: 'text', text: 'x' }, { kind: 'sup', text: '2' }])
+  assert.deepEqual(formulas[3].parts, [{ kind: 'text', text: '2' }, { kind: 'sup', text: '-3' }])
+  assert.equal(w.map((x) => x.parts.map((p) => p.text).join('')).join('').replace(/\s+/g, ' ').includes('and'), true)
+  assert.equal(mathWords('no formula here').every((x) => !x.formula), true)
 })
 
 test('typed: a prefix of the text, clamped', () => {

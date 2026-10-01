@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Search, X } from 'lucide-react'
 import { ResultBand } from '../ResultChart'
-import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, measurements, planBullets, sourceDomains, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
+import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, mathWords, measurements, planItems, sourceDomains, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
 import { TONE_TEXT_VAR, TONE_VAR, type Tone } from '../../labels'
 import type { Event, Json } from '../../data'
 
@@ -21,6 +21,14 @@ function Sentence({ children }: { children: ReactNode }) {
 const body = 'min-h-0 flex-1 px-[4cqw] pb-[3cqw] pt-[2.2cqw] @xl:px-[3cqw] @xl:pb-[2.4cqw]'
 const small = 'text-[clamp(10px,1.45cqw,13px)]'
 const mono = 'font-mono text-[clamp(9.5px,1.35cqw,12.5px)] leading-[1.5]'
+
+// Text with superscripts for ^(...) and ^x; a word with a formula is never broken across lines.
+function Formula({ text }: { text: string }) {
+  return <>{mathWords(text).map((w, i) => {
+    const inner = w.parts.map((x, j) => (x.kind === 'sup' ? <sup key={j} className="text-[0.75em] leading-none">{x.text}</sup> : x.text))
+    return w.formula ? <span key={i} className="whitespace-nowrap">{inner}</span> : <span key={i}>{inner}</span>
+  })}</>
+}
 
 function Pill({ children, on, tone }: { children: ReactNode; on: number; tone?: string }) {
   return (
@@ -71,7 +79,7 @@ function TavilyScene({ d, p }: { d: SceneData; p: number }) {
 
 // ---- 2. Nemotron plans and writes code ----
 function CodeScene({ d, p }: { d: SceneData; p: number }) {
-  const bullets = d.plan ? planBullets(d.plan, 3) : []
+  const { title: planTitle, steps: bullets } = d.plan ? planItems(d.plan, 3) : { title: null, steps: [] }
   const lines = d.firstCode ? codeLines(d.firstCode, 14) : []
   const text = lines.join('\n')
   return (
@@ -79,13 +87,16 @@ function CodeScene({ d, p }: { d: SceneData; p: number }) {
       <Sentence>{SENTENCE.code()}</Sentence>
       <div className={`${body} grid gap-[2.5cqw] ${bullets.length && lines.length ? '@xl:grid-cols-[1fr_1.5fr]' : ''}`}>
         {bullets.length > 0 && (
-          <ol className="m-0 flex list-none flex-col gap-[1.2cqw] p-0">
-            {bullets.map((b, i) => (
-              <li key={i} className={`flex gap-2 text-[clamp(11px,1.65cqw,15px)] leading-snug text-fg-3`} style={{ opacity: ramp(p, i * 0.12, i * 0.12 + 0.12), transform: `translateY(${(1 - ramp(p, i * 0.12, i * 0.12 + 0.12)) * 8}px)` }}>
-                <span className="font-mono text-muted">{i + 1}</span><span>{b}</span>
-              </li>
-            ))}
-          </ol>
+          <div className="min-w-0">
+            {planTitle && <div className="mb-[1.4cqw] text-[clamp(9px,1.3cqw,11px)] font-semibold uppercase tracking-[0.14em] text-muted">{planTitle}</div>}
+            <ol className="m-0 flex list-none flex-col gap-[1.2cqw] p-0">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex gap-2 text-[clamp(11px,1.65cqw,15px)] leading-snug text-fg-3" style={{ opacity: ramp(p, i * 0.12, i * 0.12 + 0.12), transform: `translateY(${(1 - ramp(p, i * 0.12, i * 0.12 + 0.12)) * 8}px)` }}>
+                  <span className="font-mono text-muted">{i + 1}</span><span className="min-w-0"><Formula text={b} /></span>
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
         {lines.length > 0 && (
           <div className="relative min-h-0 overflow-hidden rounded-xl border border-line bg-raised p-[1.8cqw]">
