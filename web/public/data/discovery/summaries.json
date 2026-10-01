@@ -1,12 +1,12 @@
 {
   "2511.08094": {
-    "summary": "This paper proposes a new kind of graph neural network, a program that learns from data connected like a network. Here the network is scientific articles that cite each other (the Cora benchmark). It reports 82.92% accuracy at sorting the articles into topics.",
-    "source": "Example text written by hand from the paper title and the claim quote; not model output",
-    "example": true
+    "summary": "The paper proposes a new learning technique for linked scientific articles, tests it on the Cora citation dataset, and claims about 83% correct labeling.",
+    "source": "arXiv abstract (2511.08094) and the claim found by Discovery",
+    "generated_by": "Nemotron Super (Token Factory)"
   },
   "2601.21866": {
-    "summary": "This paper proposes a forecasting model that combines several specialised sub-models, called experts, to predict how a time series continues. It reports an MSE of 0.350 when predicting the next 96 steps on the ETTh1 benchmark.",
-    "source": "Example text written by hand from the paper title and the claim quote; not model output",
-    "example": true
+    "summary": "The paper proposes a system using multiple specialized parts to predict future electricity transformer readings, claiming an average squared error of 0.35.",
+    "source": "arXiv abstract (2601.21866) and the claim found by Discovery",
+    "generated_by": "Nemotron Super (Token Factory)"
   }
 }
