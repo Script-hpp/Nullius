@@ -21,6 +21,7 @@ WORDS = {
     "nicht reproduzierbar (Setup)": ("setup not reproducible", "gray"),
     "Agenten-Fehler vermutet": ("agent error suspected", "violet"),
 }
+MEASURED_VERDICTS = ("reproduziert", "teilweise", "nicht reproduziert")   # nur dann steht "with our setup" im Abzeichen
 NOT_ASSESSABLE = "nicht bewertbar (Methode nicht umgesetzt)"
 OVERALL = {   # nur Gesamtaussagen, die ueber Achse 1 hinaus etwas sagen (web/src/labels.ts OVERALL)
     "Zielwert erreicht mit anderem Modell": "overall: target reached with a different model",
@@ -46,14 +47,16 @@ def badge_lines(dossier: Dossier, timestamp: str, catalog: bool = False) -> dict
     """Texte und Farbe des Abzeichens; None, wenn kein Urteil mit Messwert da ist."""
     if not dossier.verdicts or not dossier.claims:
         return None
-    v = dossier.verdicts[0]
-    claim = next((c for c in dossier.claims if c.id == v.claim_id), dossier.claims[0])
+    by_id = {c.id: c for c in dossier.claims}
+    # das Abzeichen zeigt den Paper-Claim, nie Placebo oder Einwand; ohne Paper-Claim mit Urteil: erstes Urteil
+    v = next((x for x in dossier.verdicts if x.claim_id in by_id and by_id[x.claim_id].origin == "paper"), dossier.verdicts[0])
+    claim = by_id.get(v.claim_id, dossier.claims[0])
     gesamt = v.gesamtaussage
     if catalog and gesamt == NOT_ASSESSABLE:
         word, tone = "not assessable", "gray"
     else:
         word, tone = WORDS.get(v.urteil, (v.urteil, "gray"))
-    has_value = v.measured_mean == v.measured_mean and v.urteil in ("reproduziert", "teilweise", "nicht reproduziert")
+    has_value = v.measured_mean == v.measured_mean and v.urteil in MEASURED_VERDICTS
     if word == "not assessable":   # wie das Zeugnis: die Messung sagt nichts ueber die Behauptung
         nums = f"method not implemented · claimed {_value(claim.metric, claim.target)}"
     else:
@@ -66,7 +69,7 @@ def badge_lines(dossier: Dossier, timestamp: str, catalog: bool = False) -> dict
     elif gesamt in OVERALL:
         extra.append(OVERALL[gesamt])
     return {
-        "label": "Nullius", "verdict": f"{word} with our setup", "tone": tone,
+        "label": "Nullius", "verdict": f"{word} with our setup" if v.urteil in MEASURED_VERDICTS and word != "not assessable" else word, "tone": tone,
         "detail": " · ".join([nums, *extra]), "date": _date(timestamp),
     }
 

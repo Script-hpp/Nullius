@@ -46,7 +46,7 @@ def test_overall_statement_when_method_was_judged():
 
 def test_catalog_not_assessable_hides_the_measurement():
     t = badge_lines(make("nicht reproduziert", 0.55, methode="nein"), "20260930-000000", catalog=True)   # nicht bewertbar
-    assert t["verdict"] == "not assessable with our setup" and "measured" not in t["detail"] and t["tone"] == "gray"
+    assert t["verdict"] == "not assessable" and "measured" not in t["detail"] and t["tone"] == "gray"
 
 
 def test_no_verdict_gives_no_badge(tmp_path):
@@ -72,3 +72,19 @@ def test_export_run_writes_badge_next_to_dossier(tmp_path):
     se.export_run(run, out, {})
     svg = (out / "kipf_gcn_2017" / "20260929-130133" / "badge.svg").read_text()
     assert "reproduced with our setup" in svg and "measured 82.1%" in svg
+
+
+def test_with_our_setup_only_for_measured_verdicts():
+    assert badge_lines(make("teilweise"), "20260101-000000")["verdict"] == "partially reproduced with our setup"
+    assert badge_lines(make("Agenten-Fehler vermutet"), "20260101-000000")["verdict"] == "agent error suspected"
+    assert badge_lines(make("nicht reproduzierbar (Setup)", float("nan")), "20260101-000000")["verdict"] == "setup not reproducible"
+
+
+def test_badge_uses_the_paper_claim_never_placebo_or_objection():
+    d = make()
+    d.claims = [Claim("p", "Placebo", "accuracy", 0.95, 0.01, "s", "placebo"), Claim("o", "Einwand", "accuracy", 0.5, 0.01, "s", "einwand"), d.claims[0]]
+    d.verdicts = [Verdict("p", "nicht reproduziert", 0.82, 0.0, "x"), Verdict("o", "teilweise", 0.82, 0.0, "x"), d.verdicts[0]]
+    t = badge_lines(d, "20260101-000000")
+    assert t["verdict"] == "reproduced with our setup" and "claimed 81.5%" in t["detail"]
+    d.claims[2] = Claim("c", "t", "accuracy", 0.815, 0.01, "s", "einwand")   # kein Paper-Claim: Fallback erstes Urteil
+    assert badge_lines(d, "20260101-000000")["verdict"] == "not reproduced with our setup"
