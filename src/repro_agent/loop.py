@@ -27,6 +27,7 @@ from pathlib import Path
 import yaml
 
 from .catalog import discovery_details, load_catalog_claims
+from . import community
 from .claims_source import ExtractionInvalid, PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .costs import BudgetExceeded
@@ -663,6 +664,54 @@ class Orchestrator:
                        url=ev.url, arxiv_version=ev.arxiv_version, column_check=ev.column_check, caveat=ev.caveat,
                        from_store=ev.from_store)
 
+    def _community_round(self, paper: dict, dossier: Dossier) -> None:
+        """Community-Check (nur Produktpfad, Tavily live): "What others found" einmal je Lauf, "Possible explanations" nur fuer Claims mit
+        Urteil teilweise/nicht reproduziert. Laeuft nach dem letzten Urteil, liest Verdicts nur, schreibt nur dossier.community/explanations
+        und Ereignisse. Fehler werden zur Warnung, Abrechnungsfehler laufen durch. Ergebnis je arXiv-ID 7 Tage im Cache (logs/)."""
+        if not (getattr(self, "graph_repair", False) and getattr(self, "use_tavily", False) and getattr(self, "tavily_mode", None) == "live"):
+            return
+        from .llm import BillingBlocked
+        title, dataset = paper.get("title", ""), paper.get("dataset", "")
+        arxiv_id = paper["arxiv_url"].rstrip("/").split("/abs/")[-1]
+        deviating = [v.claim_id for v in dossier.verdicts if v.urteil in community.DEVIATING]
+        repo_url = (dossier.repo or {}).get("url")
+        try:
+            entry = community.cache_get(arxiv_id)
+            mode = "cache" if entry else "live"
+            if entry is None:
+                entry = {"ts": time.time()}
+                calls_before = self._tavily_calls
+                entry["community"] = community.what_others_found(
+                    self._tavily_getter()(), self.llm, title, arxiv_id, dataset, repo_url, getattr(self, "_repo_files", None),
+                    paper.get("community"))
+                entry["live_calls"] = self._tavily_calls - calls_before
+                community.cache_put(arxiv_id, entry)   # bezahlte Treffer nie verlieren, auch wenn Rolle 6 danach scheitert
+            if deviating and entry.get("explanations") is None:
+                entry["explanations"] = community.possible_explanations(self._tavily_getter()(), self.llm, title, arxiv_id, dataset)
+                mode = "live" if mode == "live" else "cache+live"
+            if mode != "cache":
+                community.cache_put(arxiv_id, entry)
+        except BillingBlocked:
+            raise
+        except Exception as exc:   # der Check ist Beigabe: ein Fehler darf Lauf und Urteil nie beruehren
+            self._warn(f"Community-Check fehlgeschlagen: {type(exc).__name__}: {exc}")
+            return
+        found = dict(entry["community"], mode=mode, queried_at=datetime.fromtimestamp(entry["ts"], timezone.utc).isoformat(timespec="seconds"))
+        dossier.community = found
+        for page in found.get("pages", []):
+            rec = {"kind": "community", "url": page["url"], "mode": "live" if mode != "cache" else "cache", "n_chars": page["n_chars"],
+                   "retrieved_at": found["queried_at"], "sha256": page["sha256"]}
+            dossier.sources.append(rec)
+            self._emit("source", **rec)
+        self._emit("community", mode=mode, n_findings=len(found["findings"]), dropped=found["dropped"], queries=found["queries"],
+                   reused_discovery=found["reused_discovery"], findings=found["findings"])
+        if deviating and entry.get("explanations"):
+            expl = entry["explanations"]
+            for cid in deviating:
+                dossier.explanations[cid] = {"items": expl["items"], "dropped": expl["dropped"], "mode": mode}
+            self._emit("explanations", claim_ids=deviating, mode=mode, n_items=len(expl["items"]), dropped=expl["dropped"],
+                       items=expl["items"])
+
     def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
         """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
         docs = [Doc("paper", self.paper_text.text)]
@@ -1235,6 +1284,7 @@ class Orchestrator:
         try:
             for claim in claims:
                 self.run_claim(paper, claim, task, snapshot, dossier, run_dir)
+            self._community_round(paper, dossier)   # erst nach allen Urteilen; nur Bericht
         finally:
             dossier.save(ts)
             (run_dir / "zeugnis.md").write_text(render_markdown(dossier))

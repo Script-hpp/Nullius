@@ -175,6 +175,7 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
         "id": entry["id"], "title": entry["title"], "arxiv_url": f"https://arxiv.org/abs/{entry['arxiv_id']}",
         "dataset": task, "seeds": entry.get("seeds") or TASK_SEEDS[task], "source": "catalog",
         "warnings": warnings, "input_length": input_length, "discovery_quote": quote,
+        "community": list(cand.get("community") or []),   # Discovery-Treffer (url, title, snippet): der Community-Check liest sie statt neu zu suchen
         "claims": [{"id": claim_id, "keep_target": True,   # bei Abweichung Rolle 2 gegen Discovery bleibt der Discovery-Wert
                     "extract": {"method": method, "dataset": entry["candidate"]["dataset"], "metric": extract_metric,
                                 "percent": metric == "accuracy"}}],
