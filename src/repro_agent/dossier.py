@@ -40,9 +40,9 @@ class Attempt:
     coverage: dict | None = None
     # Kennzahlen der Vorhersagen (pred_std, target_std, corr); nur fuer uns, nie in einem Agenten-Prompt
     diagnostics: dict | None = None
-    # Code-Kandidaten (Produktpfad, A1): Index des Kandidaten, Validierungsergebnis (nur Seed 0), ob er gewaehlt wurde
     # ETTh1: dieselbe Metrik ueber die Fenster eines Loaders mit drop_last=True je Batchgroesse (harness/droplast.py); nur Dossier/Zeugnis, nie Prompt
     metrics_droplast: dict | None = None
+    # Code-Kandidaten (Produktpfad, A1): Index des Kandidaten, Validierungsergebnis (nur Seed 0), ob er gewaehlt wurde
     candidate: int | None = None
     chosen: bool | None = None
     val: dict | None = None

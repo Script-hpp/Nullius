@@ -2,8 +2,11 @@
 Fenstern. Die Zahlen kommen aus harness/droplast.py (Attempt.metrics_droplast), gehen nur ins Dossier und Zeugnis und nie in einen Prompt.
 
 Regel (Reviewer, 2026-10-03): Hinweis, wenn es eine Batchgroesse b gibt mit
-    |Behauptung - droplast(b)| <= NEAR_FRACTION * Toleranz   UND   |Behauptung - droplast(b)| < |Behauptung - Vollwert|.
-Die Paperzahl trifft die drop_last-Rechnung also fast genau und besser als die volle Auswertung. Zwei Texte (Web/Zeugnis):
+    |Behauptung - droplast(b)| <= NEAR_FRACTION * Toleranz   UND   |Behauptung - droplast(b)| < |Behauptung - Vollwert|
+    UND   |Behauptung - Vollwert| > NEAR_FRACTION * Toleranz.
+Die Paperzahl trifft die drop_last-Rechnung also fast genau und besser als die volle Auswertung. Der dritte Teil ist Zusatz des Workers
+(2026-10-04, lokale Pruefung): ohne ihn feuert der Hinweis, wenn schon der Vollwert fast genau trifft (SparseTSF: Vollwert 0,3620 gegen
+drop_last(32) 0,3620 bei Behauptung 0,362; NLinear: 0,3746 gegen 0,3735 bei 0,374), obwohl es nichts zu erklaeren gibt. Zwei Texte (Web/Zeugnis):
 (a) Vollwert ausserhalb der Toleranz: "may explain the difference"; (b) Vollwert innerhalb der Toleranz: "matches almost exactly ... still within tolerance".
 """
 
@@ -34,14 +37,14 @@ def droplast_note(metric: str, claimed: float, tolerance: float, full: float, pe
     if metric not in ("mse", "mae") or not per_seed or tolerance <= 0:
         return None
     sizes = sorted({b for d in per_seed for b in d}, key=int)
-    best = None
+    best, near_full = None, abs(claimed - full)
     for b in sizes:
         rows = [d[b] for d in per_seed if b in d and metric in d[b]]
         if not rows:
             continue
         value = statistics.mean(r[metric] for r in rows)
         dist = abs(claimed - value)
-        if dist <= NEAR_FRACTION * tolerance and dist < abs(claimed - full) and (best is None or dist < best[0]):
+        if near_full > NEAR_FRACTION * tolerance and dist <= NEAR_FRACTION * tolerance and dist < near_full and (best is None or dist < best[0]):
             best = (dist, b, value, rows[0])
     if best is None:
         return None
@@ -53,3 +56,17 @@ def droplast_note(metric: str, claimed: float, tolerance: float, full: float, pe
         "kind": "within_tolerance" if abs(claimed - full) <= tolerance else "outside_tolerance",
         "batch_context": BATCH_CONTEXT.get(b), "n_seeds": len(per_seed), "sources": SOURCES,
     }
+
+
+def droplast_text(note: dict) -> str:
+    """Englischer Hinweistext fuer Zeugnis (Markdown) und Web. Beobachtung, kein Vorwurf. Zahlen nur aus dem Hinweis-Objekt."""
+    n, total, b = note["windows_dropped"], note["windows_total"], note["batch_size"]
+    fmt = lambda x: f"{x:.4f}"
+    lead = (f"The paper's number matches our measurement almost exactly if the last {n} of {total} test windows are skipped, "
+            f"as a data loader with drop_last=True does at batch size {b}")
+    ctx = f" ({note['batch_context']})" if note.get("batch_context") else ""
+    if note["kind"] == "within_tolerance":
+        return (f"{lead}{ctx}. With all {total} windows we measure {fmt(note['full'])}, which is still within tolerance of the claimed "
+                f"{fmt(note['claimed'])}. With the last windows skipped we measure {fmt(note['droplast'])}. This is an observation, not a criticism.")
+    return (f"{lead}{ctx}. With all {total} windows we measure {fmt(note['full'])}; with the last windows skipped, {fmt(note['droplast'])}, "
+            f"against a claimed {fmt(note['claimed'])}. This may explain the difference. It is an observation, not a criticism.")

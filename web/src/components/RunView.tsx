@@ -12,6 +12,7 @@ import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { PaperHead } from './PaperHead'
 import { Film } from './film/Film'
+import { DropLast } from './DropLast'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
@@ -147,6 +148,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
 
       <Trust fidelityUnchecked={fidelityUnchecked} />
+
+      <DropLast dossier={d} claimId={claim.id} />
 
       <StepStrip steps={steps} onStep={onStep} />
 
