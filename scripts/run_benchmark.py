@@ -29,6 +29,7 @@ DIRTY = bool(subprocess.run(["git", "status", "--porcelain", "src"], capture_out
 N_GEN = 3
 STORE = REPO_ROOT / "runs" / "benchmark.jsonl"
 STORE_V2 = REPO_ROOT / "runs" / "benchmark_v2.jsonl"
+STORE_V3 = REPO_ROOT / "runs" / "benchmark_v3.jsonl"   # v3: wie v2, Code nach Fehleranalyse (benchmark_v3.md)
 V2_BUDGET_GROSS_USD = 6.0    # benchmark_v2.md: kein neuer Lauf, wenn die Bruttokosten im v2-Store diese Grenze erreicht haben
 V2_VAT = 0.19
 # Annahmen der Schaetzung (Dry-Run); v2 mit Reparaturschleifen teurer als v1 -> Faktor, Dauer nicht gemessen
@@ -112,8 +113,9 @@ def dry_run(v2: bool, papers: list[str], rows: list[dict], paper_specs: dict[str
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    v2, dry = "--v2" in sys.argv, "--dry-run" in sys.argv
-    claims_map, store = (CLAIMS_V2, STORE_V2) if v2 else (CLAIMS, STORE)
+    v3 = "--v3" in sys.argv
+    v2, dry = "--v2" in sys.argv or v3, "--dry-run" in sys.argv
+    claims_map, store = (CLAIMS_V2, STORE_V3 if v3 else STORE_V2) if v2 else (CLAIMS, STORE)
     papers = args or list(claims_map)
     all_papers = yaml.safe_load((REPO_ROOT / "benchmark" / "papers.yaml").read_text())["papers"]
     yaml_targets = {c["id"]: c["target"] for p in all_papers for c in p.get("claims", [])}
@@ -138,7 +140,7 @@ def main() -> None:
                 if v2 and gross_spent(rows) >= V2_BUDGET_GROSS_USD:   # Abbruchkriterium benchmark_v2.md
                     print(f"Budget-Grenze v2 erreicht ({gross_spent(rows):.2f} $ brutto >= {V2_BUDGET_GROSS_USD:.2f} $). Stopp vor {paper} {arm} Generierung {g}.")
                     return
-                base = {"paper": paper, "arm": arm, "generation": g, "code_commit": CODE_COMMIT + ("+dirty" if DIRTY else ""), **({"config": "v2_graph_repair"} if v2 else {})}
+                base = {"paper": paper, "arm": arm, "generation": g, "code_commit": CODE_COMMIT + ("+dirty" if DIRTY else ""), **({"config": "v3_graph_repair" if v3 else "v2_graph_repair"} if v2 else {})}
                 try:
                     d = orch.run(paper)
                 except BillingBlocked:
