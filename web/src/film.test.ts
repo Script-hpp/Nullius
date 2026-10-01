@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { FILM_MS, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planItems, mathWords, stripMarkdown, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
+import { FILM_MS, addressBar, cardWeight, fitSteps, mappingComments, definitionLine, pipelineOf, planCodeLinks, splitCategory, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planItems, mathWords, stripMarkdown, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
 import type { Event } from './data.ts'
 
 const all: SceneId[] = ['tavily', 'code', 'repair', 'sandbox', 'harness', 'verdict']
@@ -66,8 +66,8 @@ test('plan items on the real Kipf plan: the bold first line is the title, the li
 })
 
 test('plan items: heading line is a title, a plan without a list falls back to longer lines, nothing else is dropped', () => {
-  assert.deepEqual(planItems('# Plan for X\n\n- Use a linear layer with 96 outputs\n- Train with Adam\n', 3), { title: 'Plan for X', steps: ['Use a linear layer with 96 outputs', 'Train with Adam'] })
-  assert.deepEqual(planItems('First we normalise the data per channel.\nThen a linear model is fitted.\nok', 3), { title: null, steps: ['First we normalise the data per channel.', 'Then a linear model is fitted.'] })
+  assert.deepEqual(planItems('# Plan for X\n\n- Use a linear layer with 96 outputs\n- Train with Adam\n', 3), { title: 'Plan for X', steps: ['Use a linear layer with 96 outputs', 'Train with Adam'], numbers: [1, 2] })
+  assert.deepEqual(planItems('First we normalise the data per channel.\nThen a linear model is fitted.\nok', 3), { title: null, steps: ['First we normalise the data per channel.', 'Then a linear model is fitted.'], numbers: [1, 2] })
   assert.equal(planItems('', 3).steps.length, 0)
 })
 
@@ -157,4 +157,89 @@ test('duration text', () => {
 test('first sentence only claims a found number when there is evidence', () => {
   assert.match(tavilySentence(true), /finds the number it reports/)
   assert.doesNotMatch(tavilySentence(false), /number/)
+})
+
+test('category split: text before the first colon, only if short and plain', () => {
+  assert.deepEqual(splitCategory('Model: 2-layer GCN: X → GCN(16)'), { category: 'Model', body: '2-layer GCN: X → GCN(16)' })
+  assert.deepEqual(splitCategory('Lookback / Horizon: 336 / 96, 7 channels'), { category: 'Lookback / Horizon', body: '336 / 96, 7 channels' })
+  assert.deepEqual(splitCategory('Row-normalize the vectors'), { category: null, body: 'Row-normalize the vectors' })
+  assert.equal(splitCategory('Z = f(x): then more').category, null)   // a formula is not a category
+  const real = planItems(KIPF_PLAN, 4).steps.map((s) => splitCategory(s).category)
+  assert.deepEqual(real, ['Model', 'Propagation', 'Features', 'Adjacency'])
+})
+
+test('pipeline: arrow chains become nodes, arrows inside brackets do not split, prose is not a pipeline', () => {
+  const p = pipelineOf('2-layer GCN: X → GCN(16, ReLU, dropout) → GCN(7, linear, dropout) → softmax')!
+  assert.equal(p.lead, '2-layer GCN:')
+  assert.deepEqual(p.nodes, ['X', 'GCN(16, ReLU, dropout)', 'GCN(7, linear, dropout)', 'softmax'])
+  assert.deepEqual(pipelineOf('f(a -> b) -> g')!.nodes, ['f(a -> b)', 'g'])
+  assert.equal(pipelineOf('Adam, lr=0.01, full-batch gradient descent'), null)
+  assert.equal(pipelineOf('We first normalise every channel of the input and then, much later in the long pipeline of steps → done'), null)
+  assert.equal(pipelineOf('A → B')!.lead, '')
+})
+
+const NLINEAR_CODE = `import torch
+# Plan step -> implemented in: function or class name
+# 1. Model -> NLinear class
+# 2. Lookback / Horizon -> constants LOOKBACK, HORIZON
+# 3. Preprocessing -> normalize_window, denormalize_prediction functions
+# 4. Training data -> create_windows function
+# 9. Seeding -> missing_function function
+LOOKBACK = 336
+HORIZON = 96
+class NLinear(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.l = torch.nn.Linear(LOOKBACK, HORIZON)
+
+def normalize_window(x):
+    last = x[-1:]
+    return x - last, last
+`
+
+const steps5 = [['Model', 1], ['Lookback / Horizon', 2], ['Preprocessing', 3], ['Training data', 4], ['Seeding', 5]].map(([category, number]) => ({ category: category as string, number: number as number }))
+
+test('plan <-> code links: only comments whose category matches and whose name is really defined', () => {
+  const links = planCodeLinks(NLINEAR_CODE, steps5)
+  assert.deepEqual(links.map((l) => [l.step, l.name]), [[0, 'NLinear'], [1, 'LOOKBACK'], [2, 'normalize_window']])   // create_windows is not defined, missing_function neither
+  assert.equal(links[0].lines[0], 'class NLinear(torch.nn.Module):')
+  assert.equal(links[1].lines[0], 'LOOKBACK = 336')
+  assert.deepEqual(planCodeLinks(NLINEAR_CODE, [{ category: 'Optimizer', number: 9 }, { category: null, number: 10 }]), [])   // no matching category: no link
+  assert.deepEqual(planCodeLinks('import os\nx = 1\n', [{ category: 'Model', number: 1 }]), [])                                // no mapping comments: no link
+})
+
+const BY_NUMBER_CODE = `# Plan step 1 -> implemented in: NLinear class
+# Plan step 2 -> implemented in: LOOKBACK, HORIZON variables
+# Plan step 3 -> implemented in: normalize_last_value / denormalize_last_value
+# Plan step 4 -> implemented in: not_there function
+
+LOOKBACK = 336
+class NLinear:
+    pass
+def normalize_last_value(x):
+    return x
+`
+
+test('plan <-> code links by step number ("Plan step 3 -> implemented in: ..."), using the numbers written in the plan', () => {
+  const links = planCodeLinks(BY_NUMBER_CODE, [{ category: 'Model', number: 1 }, { category: 'Whatever', number: 3 }, { category: 'Other', number: 4 }])
+  assert.deepEqual(links.map((l) => [l.step, l.name]), [[0, 'NLinear'], [1, 'normalize_last_value']])   // step 4: not_there is not defined, no link
+  assert.deepEqual(planItems('1. **A**: x is long enough\n3. **B**: y is long enough\n', 5).numbers, [1, 3])
+})
+
+test('mapping comments are read from the top of the code only', () => {
+  assert.deepEqual(mappingComments(NLINEAR_CODE).map((m) => m.category), ['Model', 'Lookback / Horizon', 'Preprocessing', 'Training data', 'Seeding'])
+  assert.deepEqual(mappingComments(BY_NUMBER_CODE).map((m) => m.number), [1, 2, 3, 4])
+  assert.equal(mappingComments('x = 1\n'.repeat(100) + '# 1. Model -> X\n').length, 0)
+  assert.equal(definitionLine(NLINEAR_CODE, 'HORIZON'), 8)
+})
+
+test('fit steps: the first steps that fit the budget, at least one, formulas weigh more than plain text', () => {
+  const steps = planItems(KIPF_PLAN, 6).steps
+  assert.ok(cardWeight(steps[1]) > cardWeight(steps[2]))          // formula card > plain card
+  assert.ok(cardWeight(steps[0]) > cardWeight(steps[2]))          // long arrow chain > plain card
+  assert.deepEqual(fitSteps(steps, 5.2), steps.slice(0, 3))
+  assert.deepEqual(fitSteps(steps, 3.2), steps.slice(0, 1))
+  assert.deepEqual(fitSteps(steps, 0.1), steps.slice(0, 1))       // never empty
+  assert.deepEqual(fitSteps([], 5), [])
+  assert.equal(fitSteps(['Plain: a', 'Plain: b', 'Plain: c', 'Plain: d'], 3.2).length, 3)
 })
