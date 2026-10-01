@@ -134,3 +134,30 @@ def test_no_deviation_means_no_repair(tmp_path):
 def test_prompt_lists_aspects_and_files():
     p = build_prompt("code", REPO, "Cora")
     assert "=== FILE args.py ===" in p and "stopping criterion" in p and "SCRIPT:\ncode" in p
+
+
+def test_failed_llm_call_keeps_code_and_finishes_run(tmp_path):
+    """v4-Abbruch: Super liefert leere Antwort (Denken zehrt Token-Limit auf), Client wirft RuntimeError nach 5 Versuchen.
+    Der optionale Abgleich darf den Lauf nicht beenden; Urteil mit altem Code, Ereignis result=error."""
+    o, calls, asks, events, claim, d, sb = make({C0: 0.7}, [C1])
+
+    def failing(role, system, user, **kw):
+        asks.append((role, user, kw))
+        raise RuntimeError("LLM-Aufruf fehlgeschlagen nach 5 Versuchen: Antwort ohne Inhalt")
+
+    o._ask = failing
+    run(o, claim, d, tmp_path)
+    assert calls["repair"] == [] and d.repo_diff["c"]["result"] == "error" and len(d.verdicts) == 1
+    assert d.verdicts[0].measured_mean == pytest.approx(0.80) and asks[0][2]["max_tokens"] == 16000
+
+
+def test_cost_limit_still_propagates(tmp_path):
+    from repro_agent.loop import CostLimitExceeded
+    o, calls, asks, events, claim, d, sb = make({C0: 0.7}, [C1])
+
+    def over(role, system, user, **kw):
+        raise CostLimitExceeded("limit")
+
+    o._ask = over
+    with pytest.raises(CostLimitExceeded):
+        run(o, claim, d, tmp_path)

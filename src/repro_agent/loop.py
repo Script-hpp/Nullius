@@ -29,6 +29,7 @@ import yaml
 from .catalog import discovery_details, load_catalog_claims
 from .claims_source import ExtractionInvalid, PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
+from .costs import BudgetExceeded
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
 from .events import EventLog
@@ -37,7 +38,7 @@ from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
 from .harness.repair_hints import fault_message, val_fault_message
 from .harness.verify import agent_fault_suspected, judge
-from .llm import LLMClient, LLMResponse
+from .llm import BillingBlocked, LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
 from .repo_diff import find_deviations, repair_message, as_dicts
@@ -86,6 +87,7 @@ INFRA_RETRIES = 3       # Wiederholungen eines Versuchs bei Sandbox-Infrastruktu
 INFRA_BACKOFF_S = 5.0
 TRIAGE_CHARS = 1500
 WORKDIR = "/work"
+REPO_DIFF_MAX_TOKENS = 16000   # A2: ~16k Prompt-Token; mit 6000 zehrte Super das Limit mit Denken auf (v4-Abbruch)
 CODE_RETRY_MAX_TOKENS = 24000   # Wiederholung nach fehlendem Code-Block oder abgeschnittener Antwort
 CODE_ONLY_NOTE = (
     "\n\nIMPORTANT: Reply with the complete script in one ```python block and nothing else. "
@@ -872,9 +874,16 @@ class Orchestrator:
 
         discarded = set(discarded)
         files = self._repo_files
-        devs, dropped, cuts = find_deviations(
-            lambda system, user: self._ask("extract", system, user, max_tokens=6000, temperature=0.0), code, files,
-            dataset or "the dataset")
+        try:   # optionaler Schritt: ein Fehlschlag (z. B. Antwort leer, weil das Denken das Token-Limit aufzehrt) beendet nie den Lauf
+            devs, dropped, cuts = find_deviations(
+                lambda system, user: self._ask("extract", system, user, max_tokens=REPO_DIFF_MAX_TOKENS, temperature=0.0),
+                code, files, dataset or "the dataset")
+        except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
+            raise
+        except (RuntimeError, ValueError) as exc:
+            self._emit("repo_diff", claim_id=claim.id, result="error", reason=str(exc)[:300], from_hash=h(code))
+            dossier.repo_diff[claim.id] = {"result": "error", "reason": str(exc)[:300], "from_hash": h(code)}
+            return v0, code, graph_ab, ["Repo-Abgleich fehlgeschlagen (LLM-Antwort unbrauchbar), alter Code bleibt"], discarded
         info = {"deviations": as_dicts(devs), "dropped": len(dropped), "truncation": cuts, "from_hash": h(code)}
         if not devs:
             self._emit("repo_diff", claim_id=claim.id, result="no_deviation", **info)

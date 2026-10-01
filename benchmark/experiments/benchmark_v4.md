@@ -2,6 +2,8 @@
 
 Stand 2026-10-01. **Alles wie Benchmark v3** (`benchmark_v3.md`, dort wiederum wie `benchmark_v2.md`: 8 Einheiten, Referenzurteile, Toleranzen, Seeds, Placebos, Zählregel "Mehrheit über 3 Generierungen", Arme A ohne / B mit Tavily, Rollen 2/4 aus Fixtures, Rolle 5 live in Arm B, LLM-Cache aus). Unterschied: Code-Stand mit Block A komplett, A1-A3 (`docs/roadmap_quality.md`), Budgetstopp 8 $ brutto statt 6 $ (drei Code-Kandidaten je Claim).
 
+**Vorgeschichte (Neustart):** Ein erster v4-Start (`45769bb`, 2026-10-01 19:23) wurde nach 5 Läufen abgebrochen: In Arm B endeten alle Shchur-Läufe als "abgebrochen", weil der A2-Abgleichaufruf (Super, rund 16 000 Prompt-Token, `max_tokens` 6000) das ganze Limit mit Denken verbrauchte und keine Antwort lieferte; nach 5 Versuchen beendete der Fehler den ganzen Lauf. Fix vor dem Neustart: Limit 16 000 Token, und ein Fehlschlag des optionalen Abgleichs beendet nie den Lauf (Ereignis `repo_diff` mit `result: error`, alter Code bleibt; Kosten-, Budget- und Abrechnungsfehler laufen weiter durch). Geprüft am echten Fall (Shchur-Repo, 9 827 Ausgabe-Token, Abschluss `stop`). Rohdaten des Abbruchs: `runs/benchmark_v4_aborted.jsonl`, `logs/bench_v4_aborted/`; sie zählen nicht. Sonst keine Änderung.
+
 ## Änderungen gegenüber v3 (nur Produktpfad `graph_repair=True`, beide Arme)
 
 Grundlage: Fehlermuster `failure_patterns_v3.md` (M1-M7) und `results/benchmark_v3.md` (2 von 8 Einheiten in beiden Armen, Hauptursache "keine Mehrheit" und knapp daneben).
@@ -25,7 +27,7 @@ Keine Änderung an Test-Harness, Toleranzen, Referenzurteilen, Zielwerten, Fixtu
 
 ## Durchführung
 
-Code-Stand: Commit dieser Datei (enthält Flag `--v4`, Store `runs/benchmark_v4.jsonl`, Konfiguration `v4_block_a`). Drei Prozesse:
+Code-Stand: Commit des Neustarts (diese Datei, mit dem Fix oben) (enthält Flag `--v4`, Store `runs/benchmark_v4.jsonl`, Konfiguration `v4_block_a`). Drei Prozesse:
 
 ```
 LLM_PROVIDER=tokenfactory LLM_CACHE=off MAX_PARALLEL_SEEDS=3 .venv/bin/python scripts/run_benchmark.py --v4 shchur_pitfalls_2018 kipf_gcn_2017 wu_sgc_2019
