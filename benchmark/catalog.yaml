@@ -115,21 +115,22 @@ candidates:
 
         You signed in with another tab or window. You switched accounts on another tab or window. ## Latest commit. ## Folders
         and files. | Name | Name | Last commit message | Last comm'
-  checked_at: '2026-09-30T18:47:17Z'
-  cost_gross_usd: 0.0929
+  checked_at: '2026-09-30T22:05:53Z'
+  cost_gross_usd: 0.1549
   verdict:
-    urteil: Agenten-Fehler vermutet
-    measured_mean: 2.319149
-    measured_std: 0.022178
-    seeds: 3
+    urteil: nicht reproduzierbar (Setup)
+    measured_mean: null
+    measured_std: null
+    seeds: 0
     target: 0.35
     tolerance: 0.01
-    gesamtaussage: Agenten-Fehler vermutet
+    gesamtaussage: nicht reproduzierbar (Setup)
     graph_repairs: 0
-    run_dir: runs/disc_2601_21866/20260930-204237
+    fault_repairs: 0
+    run_dir: runs/disc_2601_21866/20260930-235615
   jury:
     ready: false
-    reason: 'Gesamtaussage: Agenten-Fehler vermutet'
+    reason: 'Gesamtaussage: nicht reproduzierbar (Setup)'
 - id: disc_2609_30894
   arxiv_id: '2609.30894'
   title: Training Graph Foundation Models on The Web Graph
@@ -204,18 +205,19 @@ candidates:
     protocol: passt
     found_by: tavily
     reason: Code found, validated via README.
-  checked_at: '2026-09-30T18:19:19Z'
-  cost_gross_usd: 0.0246
+  checked_at: '2026-09-30T22:33:10Z'
+  cost_gross_usd: 0.0542
   verdict:
-    urteil: nicht reproduziert
-    measured_mean: 0.782998
-    measured_std: 0.017567
-    seeds: 10
+    urteil: Agenten-Fehler vermutet
+    measured_mean: 0.236253
+    measured_std: 0.038255
+    seeds: 5
     target: 0.8292
     tolerance: 0.01
-    gesamtaussage: vorlaeufig
+    gesamtaussage: Agenten-Fehler vermutet
     graph_repairs: 0
-    run_dir: runs/disc_2511_08094/20260930-200050
+    fault_repairs: 1
+    run_dir: runs/disc_2511_08094/20261001-000553
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: 'Gesamtaussage: Agenten-Fehler vermutet'

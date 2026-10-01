@@ -52,5 +52,16 @@
   "timestamp": "20260930-204237",
   "catalog_id": "disc_2601_21866",
   "gesamtaussage": "Agenten-Fehler vermutet"
+ },
+ {
+  "id": "disc_2511_08094--20260930-221657",
+  "paper_id": "disc_2511_08094",
+  "title": "Stuart-Landau Oscillatory Graph Neural Network",
+  "timestamp": "20260930-221657",
+  "note": "live quick check, 3 seeds",
+  "live": true,
+  "seeds": 3,
+  "catalog_id": "disc_2511_08094",
+  "gesamtaussage": "vorlaeufig"
  }
 ]
