@@ -143,3 +143,9 @@ def test_crash_repair_gets_web_hints_in_product_path(tmp_path):
     o._attempt = lambda *a, **k: ("b", next(it))
     value, _, _ = _run(o, tmp_path)
     assert value == 0.8 and "Web search results" in o.calls[0][1]
+
+
+def test_error_hints_live_in_fixture_mode_when_benchmark_v4_flag_set():
+    o = _hint_orch("fixture")
+    o.error_search_live = True
+    assert "stackoverflow.com" in o._error_hints(pytypes.SimpleNamespace(id="c"), TB)

@@ -73,7 +73,7 @@ def evaluate(rows: list[dict], refs: dict) -> str:
         if r["paper"] in ref:
             by[(r["paper"], r["arm"], r["origin"])].append(r)
     units = list(ref)
-    out = [f"# Benchmark {'v3' if any(r.get('config') == 'v3_graph_repair' for r in rows) else 'v2'} ({len(rows)} Urteile aus {len(rows) // 2} Läufen)\n",
+    out = [f"# Benchmark {next((c[:2] for c in (r.get('config', '') for r in rows) if c[:2] in ('v3', 'v4')), 'v2')} ({len(rows)} Urteile aus {len(rows) // 2} Läufen)\n",
            "Vorab-Festlegung: `../benchmark_v2.md`. Rohdaten: `runs/benchmark_v2.jsonl`. Alle Urteile vorläufig: **method fidelity not checked** (Achse 2). "
            "Die Zahlen messen „Zielwert laut Harness erreicht“, nicht „Methode reproduziert“. Keine Signifikanzaussagen.\n"]
 

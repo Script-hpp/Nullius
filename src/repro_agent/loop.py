@@ -173,6 +173,7 @@ class Orchestrator:
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
+        error_search_live: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
@@ -180,6 +181,7 @@ class Orchestrator:
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
         self.tavily_mode = tavily_mode or os.getenv("TAVILY_MODE", "live")
+        self.error_search_live = error_search_live   # Benchmark v4: Rolle 5 live, Rollen 2/4 aus Fixtures
         if self.tavily_mode not in ("live", "fixture"):
             raise ValueError(f"TAVILY_MODE muss live oder fixture sein, nicht {self.tavily_mode!r}")
         self._tavily_calls = 0
@@ -336,7 +338,8 @@ class Orchestrator:
     def _error_hints(self, claim: Claim, summary: str | None) -> str:
         """Rolle 5 (nur Produktpfad, Tavily live): Websuche mit der Fehlerzeile, Treffer als Hinweis an `code`.
         Kein LLM, keine Teststatistik (nur der Fehlertext des Agenten-Codes geht hinaus)."""
-        if not (getattr(self, "use_tavily", False) and getattr(self, "tavily_mode", None) == "live"):
+        live = getattr(self, "tavily_mode", None) == "live" or getattr(self, "error_search_live", False)
+        if not (getattr(self, "use_tavily", False) and live):
             return ""
         q = error_query(summary or "")
         with self._lock:
