@@ -98,6 +98,9 @@ class Dossier:
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
     fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
+    # Community-Check nach dem Urteil (nur Bericht, nie Teil des Urteils): {"findings", "dropped", "pages", "queries", "mode", ...} bzw. None
+    community: dict | None = None
+    explanations: dict = field(default_factory=dict)   # claim_id -> {"items": [...], "dropped": n}; nur bei teilweise/nicht reproduziert
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
@@ -127,6 +130,8 @@ class Dossier:
             graph_repairs=data.get("graph_repairs", {}),
             fault_repairs=data.get("fault_repairs", {}),
             repo_diff=data.get("repo_diff", {}),
+            community=data.get("community"),
+            explanations=data.get("explanations", {}),
         )
 
     def condensed_for_reasoning(self) -> str:
