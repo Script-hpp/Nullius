@@ -106,11 +106,32 @@ class CostLimitExceeded(RuntimeError):
     pass
 
 
-def extract_code(text: str) -> str:
+def extract_code(text: str, lenient: bool = False) -> str:
     blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", text, flags=re.S)
+    if not blocks and lenient:   # nur Produktpfad (graph_repair): andere Sprachmarke, offener Block, Code ohne Block
+        blocks = re.findall(r"```[A-Za-z0-9_+-]*[ \t]*\r?\n(.*?)(?:```|\Z)", text, flags=re.S)
+        blocks = [b for b in blocks if _is_python(b)]
+        if not blocks and _is_python(text) and re.search(r"^(import|from) ", text, flags=re.M):
+            blocks = [text]
     if not blocks:
         raise ValueError("Keine Code-Block in der Antwort des Modells")
     return max(blocks, key=len)
+
+
+def _is_python(src: str) -> bool:
+    import ast
+    try:
+        ast.parse(src)
+        return bool(src.strip())
+    except (SyntaxError, ValueError):
+        return False
+
+
+TIMEOUT_REPAIR_MESSAGE = (
+    "The script exceeded the training time limit of {limit} s on CPU. Keep the method, architecture and "
+    "hyperparameters, but make it faster: vectorize, no Python loops over nodes, edges or samples, "
+    "use sparse or batched tensor operations."
+)
 
 
 def claim_specs(paper: dict) -> dict[str, dict]:
@@ -272,9 +293,10 @@ class Orchestrator:
                 last = ValueError("Antwort abgeschnitten (finish_reason length)")
                 continue
             try:
-                return extract_code(resp.content)
+                return extract_code(resp.content, lenient=getattr(self, "graph_repair", False))
             except ValueError as exc:
                 last = exc
+                self._emit("code_missing", try_n=i + 1, content_tail=(resp.content or "")[-1500:])   # Diagnose
         raise last  # type: ignore[misc]
 
     def write_code(self, plan: str, task: Task) -> str:
@@ -723,14 +745,23 @@ class Orchestrator:
                 dossier.baselines = res["baselines"]
             if value is not None:
                 return value, None, code
+            product = getattr(self, "graph_repair", False)
             if status == "timeout":
-                return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
+                if not product:
+                    return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
+                summary = TIMEOUT_REPAIR_MESSAGE.format(limit=TRAIN_TIMEOUT_S)   # Produktpfad: schneller machen
             if n < self.settings.max_attempts_per_claim:
                 try:
                     self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
                     code = self.repair_code(plan, task, code, summary or "")
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
-                    return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
+                    if not product:
+                        return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
+                    try:   # Produktpfad: Code neu aus dem Plan schreiben statt abbrechen
+                        self._emit("rewrite", claim_id=claim.id, seed=seed, from_hash=code_hash)
+                        code = self.write_code(plan, task)
+                    except ValueError as exc2:
+                        return None, f"Seed {seed}: Reparatur und Neuschreiben ohne Code-Block ({exc2}), Abbruch nach {n} Versuchen", code
         last_line = (summary or "").strip().splitlines()[-1][:200] if summary else ""
         return None, f"Seed {seed}: kein gueltiger Lauf nach {n} Versuchen (letzter Fehler: {last_line})", code
 
