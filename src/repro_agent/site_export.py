@@ -92,8 +92,15 @@ def export_run(run: Path, out: Path, titles: dict[str, str]) -> dict:
     for name in ("dossier.json", "events.jsonl", "zeugnis.md"):
         if (run / name).exists():
             shutil.copy(run / name, dest / name)
-    for plan in run.glob("*_plan.md"):
-        shutil.copy(plan, dest / "plan.md")
+    # plan.md is the plan of the paper claim the page shows (the first one with origin "paper"), never a placebo's or an objection's
+    claims = dossier.get("claims") or []
+    first = next((c for c in claims if c.get("origin") == "paper"), claims[0] if claims else None)
+    plans = list(run.glob("*_plan.md"))
+    own = run / f"{first['id']}_plan.md" if first else None
+    chosen = own if own is not None and own.exists() else (plans[0] if len(plans) == 1 else None)   # several plans and none is the claim's: none
+    (dest / "plan.md").unlink(missing_ok=True)
+    if chosen:
+        shutil.copy(chosen, dest / "plan.md")
     for version in run.glob("*.py"):   # jede Code-Version: <claim>_<hash>.py -> code_<hash>.py (Replay zeigt Version 1, 2, ...)
         shutil.copy(version, dest / f"code_{version.stem.rsplit('_', 1)[-1]}.py")
     att = [a for a in dossier["attempts"] if a["measured"] is not None] or dossier["attempts"]
