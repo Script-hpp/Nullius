@@ -43,6 +43,12 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread }: {
   return (
     <div>
       {vals.length > 0 ? (
+        <>
+        <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
+          <li className="flex items-center gap-3"><span className="inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4 bg-fg-4/40" />Each dot is one <Term term="seed">run with a different random start</Term>.</li>
+          <li className="flex items-center gap-3"><span className="inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} />The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</li>
+          <li className="flex items-center gap-3"><span className="inline-block h-4 w-0.5 shrink-0 rounded-full" style={{ background: color }} />The solid line is our mean over all runs; the dashed line is the claim.</li>
+        </ul>
         <figure className="m-0 mt-2" aria-label={`Claimed ${fmt(claim.target)}; measured ${vals.map(fmt).join(', ')}`}>
           <div className="relative h-24 mx-2">
             {/* tolerance band and claimed line */}
@@ -63,16 +69,13 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread }: {
               <>
                 <div className="absolute top-[2rem] w-0.5 h-8 -translate-x-1/2 rounded-full" style={{ left: pos(mean), background: color }} />
                 <div className="absolute top-[4.6rem] -translate-x-1/2 whitespace-nowrap text-[11px] font-mono font-semibold" style={{ left: pos(mean), color }}>
-                  Mean {fmt(mean)}{std !== null ? ` ± ${fmtSpread(std)}` : ''}
+                  Our mean {fmt(mean)}{std !== null ? ` ± ${fmtSpread(std)}` : ''}
                 </div>
               </>
             )}
           </div>
-          <figcaption className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted leading-relaxed">
-            <span className="inline-flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full border border-fg-4 bg-fg-4/40" /> one dot per <Term term="seed">random start</Term></span>
-            <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 h-2.5 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /> allowed <Term term="tolerance">tolerance</Term> around the claim ({fmt(lo)} to {fmt(hi)})</span>
-          </figcaption>
         </figure>
+        </>
       ) : (
         <p className="m-0 text-sm text-muted italic">No valid measurements to plot.</p>
       )}

@@ -12,11 +12,11 @@ const ICON: Record<StepKind, typeof Search> = {
   paper: BookOpen, src_paper: Search, src_readme: FileText, src_repo: Search, src_error: AlertTriangle,
   claim: Quote, plan: ListChecks, code: FileCode2, seed: Box, harness: ShieldCheck, verdict: Gavel,
 }
-const NODE_W = 264     // sizes are fixed so the view can be fitted before the browser has measured anything
-const NODE_H = 78
-const SEED_W = 220     // single seed nodes (up to three seeds); more seeds become one node
+const NODE_W = 340     // sizes are fixed so the view can be fitted before the browser has measured anything
+const NODE_H = 150     // title, one fact of the run and the full sentence on what happens (no tooltip, no clamp)
+const SEED_W = 300     // single seed nodes (up to three seeds); more seeds become one node
 const GAP = 28
-const ROW_H = 122
+const ROW_H = 190
 const NARROW = 760     // below this viewport width the graph is one column
 
 type Data = { step: StepNode; selected: boolean }
@@ -30,7 +30,7 @@ function StepNodeView({ data }: NodeProps<Node<Data>>) {
   return (
     <div role="button" tabIndex={0} aria-label={`${step.title}: ${step.sub ?? step.state}`} aria-pressed={selected}
       style={{ width: nodeW(step), height: NODE_H, borderColor: selected ? 'var(--c-fg)' : border, borderStyle: step.state === 'pending' ? 'dashed' : 'solid', borderWidth: selected ? 2 : 1 }}
-      className={`rounded-lg bg-surface-2 text-left cursor-pointer overflow-hidden px-3.5 py-3 ${step.state === 'pending' ? 'opacity-70' : ''} ${step.state === 'active' ? 'animate-pulse' : ''}`}>
+      className={`rounded-lg bg-surface-2 text-left cursor-pointer overflow-hidden px-4 py-3.5 ${step.state === 'pending' ? 'opacity-70' : ''} ${step.state === 'active' ? 'animate-pulse' : ''}`}>
       <Handle id="t" type="target" position={Position.Top} style={handle} />
       <Handle id="s" type="source" position={Position.Bottom} style={handle} />
       <Handle id="ls" type="source" position={Position.Left} style={handle} />
@@ -44,7 +44,8 @@ function StepNodeView({ data }: NodeProps<Node<Data>>) {
           {step.state === 'done' ? <CheckCircle2 className="w-4 h-4 text-tone-green" /> : step.state === 'failed' ? <XCircle className="w-4 h-4 text-tone-red" /> : step.state === 'active' ? <Loader2 className="w-4 h-4 animate-spin text-fg-3" /> : <CircleDashed className="w-4 h-4 text-subtle" />}
         </span>
       </div>
-      {step.sub && <div className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-muted">{step.sub}</div>}
+      {step.sub && <div className="mt-1 truncate font-mono text-[12px] leading-snug text-fg-3">{step.sub}</div>}
+      <div className="mt-1.5 text-[12.5px] leading-snug text-fg-4">{step.what}</div>
     </div>
   )
 }
@@ -170,9 +171,9 @@ function StepGraphInner({ events, running, codeLoader, planFull, metricHint }: {
 
   return (
     <div>
-      <div className="mb-3 flex items-start gap-2 text-[12px] leading-relaxed text-muted">
+      <div className="mb-4 flex items-start gap-2 leading-relaxed text-muted">
         <Lightbulb className="mt-0.5 w-3.5 h-3.5 shrink-0" />
-        <span>Each box is one step of the run. Click a box to see what happens there, why it matters and the real data of this run. Dashed purple lines are repair loops.</span>
+        <span className="text-[14px] text-fg-3">Each box is one step of the run, with a sentence on what happens in it. Click a box to see why it matters and the real data of this run. Dashed purple lines are repair loops.</span>
       </div>
       <div style={{ height: Math.max(420, height + 48) }} className="overflow-hidden rounded-xl border border-line bg-surface-2" aria-label="Flow graph of the run">
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04, maxZoom: 1 }} minZoom={0.3} maxZoom={1.6}

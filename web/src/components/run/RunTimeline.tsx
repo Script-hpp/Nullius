@@ -311,14 +311,13 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
                       {delta != null && <span className="text-muted"> · {delta >= 0 ? '+' : '−'}{Math.abs(delta).toFixed(m.metric === 'accuracy' ? 1 : 3)}{m.metric === 'accuracy' ? ' pp' : ''} vs. claimed</span>}
                     </p>
                   )}
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted">Each seed is an independent run in its own sandbox branch. The verdict uses the mean.</p>
-                  <p className="mt-3 flex items-start gap-2 rounded-lg border border-line bg-surface p-2.5 text-[11px] leading-relaxed text-fg-4">
+                  <p className="mt-3 flex items-start gap-2 rounded-lg border border-line bg-surface p-3 text-[13px] leading-relaxed text-fg-3">
                     <ShieldCheck className="mt-0.5 w-3.5 h-3.5 shrink-0 text-muted" />
                     The agent only writes predictions. Our harness loads the true labels itself and computes the score, so the agent cannot fake the number.
                   </p>
                 </>
               ) : (
-                <p className="text-[12px] leading-relaxed text-muted">The first measurement appears here when seed 0 has finished. Bars show one seed each, the band is the claimed value ± tolerance.</p>
+                <p className="m-0 text-[14px] leading-relaxed text-fg-3">The first measurement appears here when seed 0 has finished. Each bar will be one seed; the band is the claimed value ± tolerance.</p>
               )}
             </Section>
 

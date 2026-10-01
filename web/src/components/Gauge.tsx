@@ -24,6 +24,11 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
 
   return (
     <div className="flex flex-col flex-1">
+      <ul className="m-0 mb-5 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
+        <li className="flex items-center gap-3"><span className="inline-block h-3 w-4 shrink-0 rounded-sm bg-fill-mid opacity-60" />Each bar is one run: one seed, in its own sandbox branch.</li>
+        <li className="flex items-center gap-3"><span className="inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} />The band is the claimed value ± tolerance ({f(lo)} to {f(hi)}); the dashed line is the claim, the dotted line our mean.</li>
+        <li className="flex items-center gap-3"><span className="inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4" />The verdict uses the mean of all runs, so single bars may fall outside the band.{shownBase.length ? ' Gray lines are trivial baselines.' : ''}</li>
+      </ul>
       <div style={{ width: '100%', height: 260, minHeight: 260 }} className="flex-1 mt-2">
         <ResponsiveContainer width="100%" height="100%" minHeight={260}>
           <BarChart data={data} margin={{ top: 20, right: 12, bottom: 0, left: 0 }}>
@@ -32,9 +37,9 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
             <YAxis domain={domain} tickFormatter={f} tick={{ fill: 'var(--chart-axis)', fontSize: 11, fontFamily: 'monospace' }} tickLine={false} axisLine={false} width={65} allowDataOverflow />
             
             <ReferenceArea y1={lo} y2={hi} fill="var(--chart-target)" fillOpacity={0.08} stroke="var(--chart-target)" strokeOpacity={0.0} />
-            <ReferenceLine y={claim.target} stroke="var(--chart-target)" strokeWidth={1} strokeDasharray="5 5" label={{ value: `Target: ${f(claim.target)}`, fill: 'var(--chart-target)', fontSize: 11, position: 'insideBottomLeft', fontFamily: 'monospace', offset: 8 }} />
+            <ReferenceLine y={claim.target} stroke="var(--chart-target)" strokeWidth={1} strokeDasharray="5 5" label={{ value: `Claimed ${f(claim.target)}`, fill: 'var(--chart-target)', fontSize: 11, position: 'insideBottomLeft', fontFamily: 'monospace', offset: 8 }} />
             
-            <ReferenceLine y={mean} stroke="var(--chart-mean)" strokeDasharray="3 3" label={{ value: `Mean: ${f(mean)}`, fill: 'var(--chart-mean)', fontSize: 11, position: 'insideTopRight', fontFamily: 'monospace', offset: 8 }} />
+            <ReferenceLine y={mean} stroke="var(--chart-mean)" strokeDasharray="3 3" label={{ value: `Our mean ${f(mean)}`, fill: 'var(--chart-mean)', fontSize: 11, position: 'insideTopRight', fontFamily: 'monospace', offset: 8 }} />
             
             {shownBase.map(([k, v]) => <ReferenceLine key={k} y={v} stroke="var(--chart-gray)" strokeDasharray="2 4" label={{ value: k, fill: 'var(--chart-axis)', fontSize: 10, position: 'insideBottomRight' }} />)}
             
@@ -46,10 +51,9 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-muted leading-relaxed mt-4 pt-4 border-t border-line/50">
-        One bar per seed (one run in its own sandbox branch). Band = claimed value ± tolerance ({f(lo)} to {f(hi)}). The verdict uses the <b>mean</b> of all seeds, so single bars may fall outside the band.
-        {shownBase.length < baselines.length && ' Trivial baselines outside the range are omitted: ' + baselines.filter((b) => !shownBase.includes(b)).map(([k, v]) => `${k} ${f(v)}`).join(', ') + '.'}
-      </p>
+      {shownBase.length < baselines.length && (
+        <p className="mb-0 mt-4 text-[13px] leading-relaxed text-fg-4">Trivial baselines outside the range are not drawn: {baselines.filter((b) => !shownBase.includes(b)).map(([k, v]) => `${k} ${f(v)}`).join(', ')}.</p>
+      )}
     </div>
   )
 }
