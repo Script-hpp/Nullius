@@ -231,3 +231,6 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 
 /* Film: a measurement drops into the tolerance band. */
 @keyframes film-drop { from { opacity: 0; transform: translate(-50%, calc(-50% - 22px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+
+/* KaTeX in running text: its default is larger than the surrounding font; colour follows currentColor. */
+.katex { font-size: 1.04em; }
