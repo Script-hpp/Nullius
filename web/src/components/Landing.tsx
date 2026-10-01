@@ -11,9 +11,9 @@ function WordsVsMeasurement() {
           <Quote className="w-3.5 h-3.5" /> The paper claims
         </div>
         <p className="text-fg-3 text-sm leading-relaxed">
-          GCN, a model that sorts scientific articles into topics, reaches <span className="text-fg font-medium">81.5%</span> accuracy on the Cora benchmark.
+          Kipf &amp; Welling (2017) report <span className="text-fg font-medium">81.5%</span> accuracy for their GCN model on the Cora benchmark (Table 2).
         </p>
-        <div className="mt-auto text-[11px] text-muted">A claim in words (Kipf &amp; Welling, 2017). Anyone can write it down.</div>
+        <div className="mt-auto text-[11px] text-muted">A claim in words, paraphrased. Anyone can write it down.</div>
       </div>
 
       {/* Divider between the two cards: a line with a ruler mark (horizontal on phones, vertical from md) */}
