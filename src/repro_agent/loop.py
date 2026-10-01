@@ -74,6 +74,10 @@ GRAPH_REPAIR_MESSAGE = (
 CANDIDATES = 3          # Code-Kandidaten pro Claim im Produktpfad (A1); Temperatur 0.2, 0.5, 0.8, Auswahl nur ueber Validierung
 CANDIDATE_TEMP_STEP = 0.3
 LOWER_IS_BETTER_VAL = ("mse", "mae")
+PRODUCT_LIB_NOTE = (
+    " Libraries such as torch_geometric, torch_scatter, torch_sparse, dgl and ogb are NOT installed and are forbidden: "
+    "write every layer in plain PyTorch (dense or torch.sparse operations)."
+)
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
@@ -351,11 +355,11 @@ class Orchestrator:
         raise last  # type: ignore[misc]
 
     def _product_notes(self, task: Task) -> str:
-        """Nur Produktpfad: Validierungsvorhersagen fuer die Kandidatenauswahl (A1)."""
+        """Nur Produktpfad: verbotene Bibliotheken schon beim ersten Schreiben (M3), Validierungsvorhersagen fuer die Kandidatenauswahl (A1)."""
         if not getattr(self, "graph_repair", False):
             return ""
         val_notes = getattr(task, "val_notes", "")
-        return f" {val_notes}" if val_notes else ""
+        return PRODUCT_LIB_NOTE + (f" {val_notes}" if val_notes else "")
 
     def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
         return self._code_from_llm(

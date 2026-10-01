@@ -227,3 +227,26 @@ def test_cost_log_lines_not_interleaved_under_threads(monkeypatch, tmp_path):
     lines = (tmp_path / "costs.jsonl").read_text().splitlines()
     assert len(lines) == 240 and all(json.loads(x) for x in lines)
     assert c.total_cost_usd == pytest.approx(0.24)
+
+
+def test_forbidden_library_hint_in_first_prompt_and_repair_prompt_product_path_only():
+    """M3: Hinweis schon im Code-Prompt (write_code) und im Reparatur-Prompt; Pfad ohne Flag bleibt wie bisher."""
+    seen = {}
+    for flag in (False, True):
+        o = Orchestrator.__new__(Orchestrator)
+        o.details, o.graph_repair = [], flag
+        o._code_from_llm = lambda system, user, **kw: user
+        t = cora_task()
+        seen[flag] = (o.write_code("plan", t), o.repair_code("plan", t, "x = 1", "boom"))
+    for text in seen[True]:
+        assert "are NOT installed and are forbidden" in text and "dgl" in text and "ogb" in text and "plain PyTorch" in text
+    for text in seen[False]:
+        assert "are NOT installed and are forbidden" not in text and "val_predictions" not in text
+    # Pfad ohne Flag: Prompt exakt wie vor A1/A3
+    t = cora_task()
+    assert seen[False][0] == (
+        f"{t.data_description}\n\n\n\nReproduction plan:\nplan\n\nThe script runs WITHOUT network access and must not download "
+        f"anything, spawn processes or use eval/exec. {t.code_notes} Write train.py implementing this plan.")
+    assert seen[False][1] == (
+        f"{t.data_description}\n\n\n\nReproduction plan:\nplan\n\nThis script failed:\n```python\nx = 1\n```\nProblem: boom\n\n"
+        "Return the corrected full script.")
