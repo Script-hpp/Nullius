@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { ArrowRight, ChevronDown } from 'lucide-react'
-import '@fontsource-variable/inter-tight'
-import '@fontsource/instrument-serif/latin-400-italic.css'
 import { ThemeSwitch } from './ThemeSwitch'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'

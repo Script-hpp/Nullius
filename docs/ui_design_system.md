@@ -9,16 +9,11 @@
 ## 2. Sprache (STRIKT)
 - **100% Englisch:** Das gesamte UI, alle Logs, alle Metriken und alle Source-Files müssen auf Englisch sein. Es darf kein einziges deutsches Wort sichtbar sein.
 
-## 3. Typografie & Farbpalette
-- **Schriften:** 
-  - UI-Text: Inter oder Geist Sans.
-  - Zahlen, Metriken, Code: JetBrains Mono (font-mono) für absolute Präzision.
-- **Farben (Tailwind Kontext):**
-  - Background: `bg-zinc-950` (Body), `bg-zinc-900` (Cards/Panels).
-  - Borders: `border-zinc-800` (fein, niemals klobig).
-  - Text: `text-zinc-50` (Headlines), `text-zinc-400` (Body), `text-zinc-500` (Meta-Daten).
-  - Akzente: Emerald (`text-emerald-400`, `fill-emerald-500/50`) für "Verified/Pass", Amber (`text-amber-400`, `fill-amber-500/50`) für "Partial/Out of Range", Rose (`text-rose-400`) für "Fail".
-- **Keine Hintergrundfarben für Status-Tags:** Nur Text und Icon in Farbe, niemals ein farbiger Kasten im Hintergrund.
+## 3. Typografie & Farbpalette (Stand Auftrag 17: eine Ästhetik für die ganze App)
+- **Eine Palette, die der Landing Page.** Hell: Creme (`--c-bg #f5f1e8`, Karten `#fbf8f1`, Linien `#ddd7c9`, Text `#161513`). Dunkel: Fast-Schwarz (`--c-bg #0b0a09`, Karten `#11100e`, Linien `#26241f`, Text `#f1eee6`). Alle Werte als Token in `web/src/index.css` (`:root` und `:root[data-theme='light']`), Komponenten benutzen nur die Token-Klassen (`bg-bg`, `bg-surface`, `text-fg-4`, `border-line` ...), nie feste Farben. Kein zinc mehr als Basis.
+- **Schriften:** Headlines und Wortmarke in Inter Tight (`font-grotesk`, `h1` global), Wortmarken-Akzent „in verba“ in Instrument Serif Italic (`font-serif-italic`), UI-Text in der System-Sans, Zahlen, Metriken, Code in JetBrains Mono (`font-mono`). Fonts über `@fontsource` (SIL OFL), geladen in `main.tsx`.
+- **Statusfarben bleiben:** Emerald (bestanden/reproduziert), Amber (teilweise), Rose (nicht reproduziert/Fehler), Violett (Hinweis/unklar). Nur Text und Icon in Farbe, nie ein farbiger Kasten als Hintergrund. Muted-Text ist so gewählt, dass er auf Creme und Fast-Schwarz 4,5:1 erreicht.
+- **Ton:** ruhige Flächen, viel Weißraum, feine Linien, wenig Schatten. Keine Neon-Farben, keine Gradienten, keine Emojis.
 
 ## 4. UI-Komponenten & Layout
 - **Allgemein:** Großzügiger Whitespace. Cards mit `p-6` Padding. Hover-Effekte auf Cards (`hover:border-zinc-700 hover:bg-zinc-900/80 transition-all`).

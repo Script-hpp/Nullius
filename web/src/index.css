@@ -46,34 +46,34 @@
 
 :root {
   color-scheme: dark;
-  --c-bg: #000;
-  --c-surface: #0a0a0a;
-  --c-surface-2: #0c0c0c;
-  --c-panel: oklch(14.1% 0.005 285.823);
-  --c-raised: oklch(21% 0.006 285.885);
-  --c-raised-2: oklch(27.4% 0.006 286.033);
-  --c-dot: oklch(37% 0.013 285.805);
-  --c-fill-lo: oklch(44.2% 0.017 285.786);
-  --c-fill-mid: oklch(70.5% 0.015 286.067);
-  --c-fill-hi: oklch(87.1% 0.006 286.286);
-  --c-fill-max: oklch(92% 0.004 286.32);
-  --c-inverse: oklch(96.7% 0.001 286.375);
-  --c-inverse-hover: #fff;
-  --c-on-inverse: oklch(14.1% 0.005 285.823);
-  --c-line: oklch(27.4% 0.006 286.033);
-  --c-line-faint: oklch(21% 0.006 285.885);
-  --c-line-strong: oklch(37% 0.013 285.805);
-  --c-line-stronger: oklch(44.2% 0.017 285.786);
-  --c-fg-max: #fff;
-  --c-fg-strong: oklch(98.5% 0 none);
-  --c-fg: oklch(96.7% 0.001 286.375);
-  --c-fg-2: oklch(92% 0.004 286.32);
-  --c-fg-3: oklch(87.1% 0.006 286.286);
-  --c-fg-4: oklch(70.5% 0.015 286.067);
+  --c-bg: #0b0a09;
+  --c-surface: #11100e;
+  --c-surface-2: #13120f;
+  --c-panel: #12110f;
+  --c-raised: #1c1a16;
+  --c-raised-2: #27241f;
+  --c-dot: #3a372f;
+  --c-fill-lo: #4a463d;
+  --c-fill-mid: #8f8b81;
+  --c-fill-hi: #c9c5ba;
+  --c-fill-max: #e6e2d8;
+  --c-inverse: #f1eee6;
+  --c-inverse-hover: #ffffff;
+  --c-on-inverse: #0b0a09;
+  --c-line: #26241f;
+  --c-line-faint: #1d1b17;
+  --c-line-strong: #3a372f;
+  --c-line-stronger: #524e44;
+  --c-fg-max: #ffffff;
+  --c-fg-strong: #f1eee6;
+  --c-fg: #f1eee6;
+  --c-fg-2: #dcd8cf;
+  --c-fg-3: #b9b5aa;
+  --c-fg-4: #a09c92;
   /* AA on the dark surfaces (4.5:1 on #0c0c0c): was zinc-500 4.05:1 and zinc-600 2.53:1 */
-  --c-muted: #81818a;
-  --c-subtle: #797982;
-  --c-faint: oklch(37% 0.013 285.805);
+  --c-muted: #8a867d;
+  --c-subtle: #82796f;
+  --c-faint: #3a372f;
   --c-tone-green: oklch(76.5% 0.177 163.223);
   --c-tone-amber: oklch(82.8% 0.189 84.429);
   --c-tone-red: oklch(71.2% 0.194 13.428);
@@ -87,56 +87,56 @@
   --c-tone-violet-solid: oklch(60.6% 0.25 292.717);
   --c-tone-blue-solid: oklch(62.3% 0.214 259.815);
   /* non-Tailwind surfaces: body text, charts, React Flow */
-  --c-body-text: #ededed;
-  --c-scroll-thumb: #27272a;
-  --c-scroll-thumb-hover: #52525b;
-  --c-flow-ctl-bg: #111111;
-  --c-flow-ctl-fg: #ededed;
-  --c-flow-ctl-line: #27272a;
-  --chart-grid: #27272a;
-  --chart-axis: #81818a;
+  --c-body-text: #f1eee6;
+  --c-scroll-thumb: #2f2c26;
+  --c-scroll-thumb-hover: #4a463d;
+  --c-flow-ctl-bg: #12110f;
+  --c-flow-ctl-fg: #f1eee6;
+  --c-flow-ctl-line: #2f2c26;
+  --chart-grid: #26241f;
+  --chart-axis: #8a867d;
   --chart-green: #10b981;
   --chart-amber: #f59e0b;
   --chart-red: #f43f5e;
   --chart-violet: #8b5cf6;
-  --chart-gray: #71717a;
+  --chart-gray: #7a766d;
   --chart-target: #10b981;
   --chart-mean: #60a5fa;
-  --chart-tooltip-bg: #0a0a0a;
-  --chart-tooltip-line: #27272a;
-  --chart-tooltip-fg: #f4f4f5;
-  --chart-cursor: rgba(255, 255, 255, 0.05);
+  --chart-tooltip-bg: #12110f;
+  --chart-tooltip-line: #3a372f;
+  --chart-tooltip-fg: #f1eee6;
+  --chart-cursor: rgba(241, 238, 230, 0.05);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --c-bg: #fafafa;
-  --c-surface: #ffffff;
-  --c-surface-2: #ffffff;
-  --c-panel: #ffffff;
-  --c-raised: #f4f4f5;
-  --c-raised-2: #e4e4e7;
-  --c-dot: #a1a1aa;
-  --c-fill-lo: #a1a1aa;
-  --c-fill-mid: #71717a;
-  --c-fill-hi: #52525b;
-  --c-fill-max: #27272a;
-  --c-inverse: #18181b;
-  --c-inverse-hover: #000;
-  --c-on-inverse: #fafafa;
-  --c-line: #e4e4e7;
-  --c-line-faint: #ececee;
-  --c-line-strong: #d4d4d8;
-  --c-line-stronger: #a1a1aa;
-  --c-fg-max: #000;
-  --c-fg-strong: #09090b;
-  --c-fg: #18181b;
-  --c-fg-2: #27272a;
-  --c-fg-3: #3f3f46;
-  --c-fg-4: #52525b;
-  --c-muted: #5f5f68;
-  --c-subtle: #696971;
-  --c-faint: #a1a1aa;
+  --c-bg: #f5f1e8;
+  --c-surface: #fbf8f1;
+  --c-surface-2: #fbf8f1;
+  --c-panel: #fbf8f1;
+  --c-raised: #ebe6da;
+  --c-raised-2: #e0dacb;
+  --c-dot: #b3ad9f;
+  --c-fill-lo: #b3ad9f;
+  --c-fill-mid: #8a857a;
+  --c-fill-hi: #6a665d;
+  --c-fill-max: #2b2926;
+  --c-inverse: #161513;
+  --c-inverse-hover: #000000;
+  --c-on-inverse: #f5f1e8;
+  --c-line: #ddd7c9;
+  --c-line-faint: #e6e0d3;
+  --c-line-strong: #c7c0af;
+  --c-line-stronger: #a8a190;
+  --c-fg-max: #000000;
+  --c-fg-strong: #161513;
+  --c-fg: #161513;
+  --c-fg-2: #2b2926;
+  --c-fg-3: #4a4741;
+  --c-fg-4: #5f5b52;
+  --c-muted: #6f6a5f;
+  --c-subtle: #6f6a5f;
+  --c-faint: #b3ad9f;
   --c-tone-green: #047857;
   --c-tone-amber: #b45309;
   --c-tone-red: #be123c;
@@ -149,25 +149,25 @@
   --c-tone-red-solid: #f43f5e;
   --c-tone-violet-solid: #8b5cf6;
   --c-tone-blue-solid: #3b82f6;
-  --c-body-text: #18181b;
-  --c-scroll-thumb: #d4d4d8;
-  --c-scroll-thumb-hover: #a1a1aa;
-  --c-flow-ctl-bg: #ffffff;
-  --c-flow-ctl-fg: #18181b;
-  --c-flow-ctl-line: #d4d4d8;
-  --chart-grid: #e4e4e7;
-  --chart-axis: #52525b;
+  --c-body-text: #161513;
+  --c-scroll-thumb: #cfc8b8;
+  --c-scroll-thumb-hover: #a8a190;
+  --c-flow-ctl-bg: #fbf8f1;
+  --c-flow-ctl-fg: #161513;
+  --c-flow-ctl-line: #cfc8b8;
+  --chart-grid: #ddd7c9;
+  --chart-axis: #5f5b52;
   --chart-green: #10b981;
   --chart-amber: #f59e0b;
   --chart-red: #f43f5e;
   --chart-violet: #8b5cf6;
-  --chart-gray: #71717a;
+  --chart-gray: #8a857a;
   --chart-target: #047857;
   --chart-mean: #1d4ed8;
-  --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-line: #d4d4d8;
-  --chart-tooltip-fg: #18181b;
-  --chart-cursor: rgba(0, 0, 0, 0.05);
+  --chart-tooltip-bg: #fbf8f1;
+  --chart-tooltip-line: #c7c0af;
+  --chart-tooltip-fg: #161513;
+  --chart-cursor: rgba(22, 21, 19, 0.05);
 }
 
 html, body, #root { 
@@ -199,7 +199,7 @@ a, button, .panel { transition: all 0.2s ease-out; }
   --xy-controls-button-color: var(--c-flow-ctl-fg); 
   --xy-controls-button-border-color: var(--c-flow-ctl-line);
 }
-::selection { background: #3b82f6; color: #fff; }
+::selection { background: var(--c-inverse); color: var(--c-on-inverse); }
 .react-flow__handle { opacity: 0; pointer-events: none; }
 
 /* Scrollbar styling for a cleaner look */
@@ -214,18 +214,9 @@ a, button, .panel { transition: all 0.2s ease-out; }
   [data-hero-fade] { transition: none !important; }
 }
 
-/* Landing page: warm cream (light) / near black (dark), scoped so the rest of the app keeps its palette.
-   Fonts: Inter Tight (headline, wordmark) and Instrument Serif Italic (wordmark accent), both SIL OFL via @fontsource. */
-.landing {
-  --c-bg: #f5f1e8; --c-fg: #161513; --c-fg-max: #000; --c-fg-strong: #161513; --c-fg-2: #2b2926; --c-fg-3: #4a4741; --c-fg-4: #6a665d;
-  --c-muted: #8a857a; --c-subtle: #8a857a; --c-line: #ddd7c9; --c-line-faint: #e6e0d3; --c-line-strong: #c7c0af; --c-raised: #ebe6da;
-  --c-inverse: #161513; --c-on-inverse: #f5f1e8; --c-inverse-hover: #000; --c-surface: #f5f1e8;
-  background: var(--c-bg); color: var(--c-fg);
-}
-:root[data-theme='dark'] .landing {
-  --c-bg: #0b0a09; --c-fg: #f1eee6; --c-fg-max: #fff; --c-fg-strong: #f1eee6; --c-fg-2: #dcd8cf; --c-fg-3: #b9b5aa; --c-fg-4: #8f8b81;
-  --c-muted: #7a766d; --c-subtle: #7a766d; --c-line: #26241f; --c-line-faint: #1d1b17; --c-line-strong: #3a372f; --c-raised: #1a1814;
-  --c-inverse: #f1eee6; --c-on-inverse: #0b0a09; --c-inverse-hover: #fff; --c-surface: #0b0a09;
-}
+/* One palette for the whole app (the landing page look): warm cream in light mode, near black in dark mode. Status colors stay emerald/amber/rose.
+   Fonts: Inter Tight (headlines, wordmark) and Instrument Serif Italic (wordmark accent), both SIL OFL via @fontsource. */
 .font-grotesk { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-serif; }
 .font-serif-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }
+
+h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-serif; letter-spacing: -0.04em; }
