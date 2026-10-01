@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Search, X } from 'lucide-react'
 import { ResultBand } from '../ResultChart'
+import { splitFormulas } from '../../latex'
 import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, mathWords, measurements, planItems, sourceDomains, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
 import { TONE_TEXT_VAR, TONE_VAR, type Tone } from '../../labels'
 import type { Event, Json } from '../../data'
@@ -22,12 +23,36 @@ const body = 'min-h-0 flex-1 px-[4cqw] pb-[3cqw] pt-[2.2cqw] @xl:px-[3cqw] @xl:p
 const small = 'text-[clamp(10px,1.45cqw,13px)]'
 const mono = 'font-mono text-[clamp(9.5px,1.35cqw,12.5px)] leading-[1.5]'
 
-// Text with superscripts for ^(...) and ^x; a word with a formula is never broken across lines.
-function Formula({ text }: { text: string }) {
+// KaTeX is loaded on demand (its own chunk, fonts bundled locally, no CDN) the first time a formula is shown.
+let katexLoad: Promise<typeof import('katex').default> | null = null
+const loadKatex = () => (katexLoad ??= Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(([k]) => k.default))
+
+// Text with ^(...) and ^x as superscripts, nothing else interpreted: the fallback when KaTeX is not there yet or cannot parse a span.
+function PlainMath({ text }: { text: string }) {
   return <>{mathWords(text).map((w, i) => {
     const inner = w.parts.map((x, j) => (x.kind === 'sup' ? <sup key={j} className="text-[0.75em] leading-none">{x.text}</sup> : x.text))
     return w.formula ? <span key={i} className="whitespace-nowrap">{inner}</span> : <span key={i}>{inner}</span>
   })}</>
+}
+
+// One formula span set in LaTeX. The text stays visible until KaTeX has rendered; if KaTeX reports an error, the plain text stays.
+function Tex({ text, latex }: { text: string; latex: string }) {
+  const [html, setHtml] = useState<string | null>(null)
+  useEffect(() => {
+    let live = true
+    loadKatex().then((k) => {
+      const out = k.renderToString(latex, { throwOnError: false, output: 'html', strict: 'ignore' })
+      if (live && !out.includes('katex-error')) setHtml(out)
+    }).catch(() => undefined)
+    return () => { live = false }
+  }, [latex])
+  if (html === null) return <span className="whitespace-nowrap"><PlainMath text={text} /></span>
+  return <span className="whitespace-nowrap" aria-label={text} dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+// Plan text: formula spans in LaTeX (src/latex.ts), the rest as written.
+function Formula({ text }: { text: string }) {
+  return <>{splitFormulas(text).map((s, i) => (s.kind === 'math' ? <Tex key={i} text={s.text} latex={s.latex} /> : <PlainMath key={i} text={s.text} />))}</>
 }
 
 function Pill({ children, on, tone }: { children: ReactNode; on: number; tone?: string }) {
