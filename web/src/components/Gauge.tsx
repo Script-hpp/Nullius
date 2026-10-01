@@ -43,7 +43,7 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
             <ReferenceArea y1={lo} y2={hi} fill="var(--chart-target)" fillOpacity={0.08} stroke="var(--chart-target)" strokeOpacity={0.0} />
             <ReferenceLine y={claim.target} stroke="var(--chart-target)" strokeWidth={1} strokeDasharray="5 5" label={{ value: `Target: ${f(claim.target)}`, fill: 'var(--chart-target)', fontSize: 11, position: 'insideBottomLeft', fontFamily: 'monospace', offset: 8 }} />
             
-            <ReferenceLine y={mean} stroke="var(--chart-mean)" strokeDasharray="3 3" label={{ value: `Mean: ${f(mean)}`, fill: 'var(--chart-mean)', fontSize: 11, position: 'insideTopLeft', fontFamily: 'monospace', offset: 8 }} />
+            <ReferenceLine y={mean} stroke="var(--chart-mean)" strokeDasharray="3 3" label={{ value: `Mean: ${f(mean)}`, fill: 'var(--chart-mean)', fontSize: 11, position: 'insideTopRight', fontFamily: 'monospace', offset: 8 }} />
             
             {shownBase.map(([k, v]) => <ReferenceLine key={k} y={v} stroke="var(--chart-gray)" strokeDasharray="2 4" label={{ value: k, fill: 'var(--chart-axis)', fontSize: 10, position: 'insideBottomRight' }} />)}
             
