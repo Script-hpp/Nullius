@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Home, Layers, CheckCircle, Database, Search, Menu, X, Library } from 'lucide-react'
+import { Home, LayoutDashboard, Layers, CheckCircle, Database, Search, Menu, X, Library } from 'lucide-react'
 import { ThemeSwitch } from './ThemeSwitch'
 
 export function Layout({ children, currentHash }: { children: ReactNode, currentHash: string }) {
@@ -7,13 +7,18 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
 
   const isDiscover = currentHash === 'discover'
   const isCatalog = currentHash === 'catalog'
-  const isHome = currentHash === '' || currentHash === '#' || currentHash === '#/'
+  const isHome = currentHash === '' || currentHash === '/'
+  const isOverview = currentHash === 'overview'
   const item = (active: boolean) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-raised/80 text-fg' : 'text-fg-4 hover:text-fg hover:bg-raised/50'}`
 
   const nav = (
     <nav className="space-y-1 px-3" onClick={() => setMenuOpen(false)}>
       <a href="#" className={item(isHome)}>
         <Home className="w-4 h-4" />
+        Home
+      </a>
+      <a href="#overview" className={item(isOverview)}>
+        <LayoutDashboard className="w-4 h-4" />
         Overview
       </a>
       <a href="#discover" className={item(isDiscover)}>
@@ -24,7 +29,7 @@ export function Layout({ children, currentHash }: { children: ReactNode, current
         <Library className="w-4 h-4" />
         Catalog
       </a>
-      <a href="#" className={item(!isHome && (currentHash.includes('/run/') || currentHash.startsWith('/live/')))}>
+      <a href="#overview" className={item(currentHash.includes('/run/') || currentHash.startsWith('/live/'))}>
         <Layers className="w-4 h-4" />
         Live Runs
       </a>

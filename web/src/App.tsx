@@ -8,6 +8,7 @@ import { ReplayPlayer } from './components/run/ReplayPlayer'
 import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
+import { Landing } from './components/Landing'
 import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
@@ -253,7 +254,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 md:px-8 pb-20">
       <div className="pt-2">
-        <a href="#" className="inline-flex items-center gap-1.5 text-muted text-xs font-medium uppercase tracking-wider hover:text-fg-2 transition-colors">
+        <a href="#overview" className="inline-flex items-center gap-1.5 text-muted text-xs font-medium uppercase tracking-wider hover:text-fg-2 transition-colors">
           <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Overview
         </a>
       </div>
@@ -372,7 +373,7 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
+        {hash === '' || hash === '/' ? <Landing /> : hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
