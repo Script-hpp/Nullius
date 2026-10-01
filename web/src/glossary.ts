@@ -10,6 +10,8 @@ export const GLOSSARY: Record<string, string> = {
   reproduced: 'Our rebuild reached the claimed number within the tolerance. It does not prove the method matches the paper; that is not checked yet.',
   placebo: 'A control claim with a deliberately wrong target value. A trustworthy checker must reject it.',
   sandbox: 'An isolated computer in the cloud where the experiment code runs. It has no network access during training.',
+  harness: 'Our checking program. The agent only writes predictions; the harness loads the true answers itself, computes the score and compares it with the claim. The agent cannot touch it.',
+  'sandbox branch': 'A copy of the sandbox. Each seed runs in its own branch, and a failed attempt can be thrown away without harm.',
   branch: 'A copy of the sandbox. Each seed runs in its own branch, and a failed attempt can be thrown away without harm.',
 }
 

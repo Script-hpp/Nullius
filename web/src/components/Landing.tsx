@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { ThemeSwitch } from './ThemeSwitch'
+import { Wordmark } from './Wordmark'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 
@@ -11,14 +12,6 @@ import { prefersReducedMotion } from './hero/config'
 const REPO = 'https://github.com/Script-hpp/Nullius'
 const EXAMPLE_RUN = '#/run/kipf_gcn_2017--20260929-130133'
 
-function Wordmark() {
-  return (
-    <a href="#/" className="font-grotesk text-[19px] font-semibold tracking-[-0.04em] text-fg no-underline" aria-label="Nullius in verba">
-      nullius <span className="font-serif-italic text-[22px] font-normal tracking-normal">in verba</span>
-    </a>
-  )
-}
-
 function TopBar() {
   const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
   return (
@@ -27,6 +20,7 @@ function TopBar() {
       <div className="flex items-center gap-5 sm:gap-7">
         <a href="#discover" className={link}>Discover</a>
         <a href="#catalog" className={link}>Catalog</a>
+        <a href="#overview" className={link}>Runs</a>
         <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
         <a href="#discover" className="rounded-full border border-fg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
         <ThemeSwitch />
