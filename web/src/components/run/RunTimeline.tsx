@@ -133,7 +133,7 @@ function PhaseCard({ phase, index, open, onToggle, t0, loader, planFull, waiting
 }) {
   const active = phase.state === 'active'
   return (
-    <section id={`phase-${phase.id}`} className={`rounded-xl border bg-panel/50 scroll-mt-4 ${active ? 'border-line-stronger' : 'border-line'} ${phase.state === 'pending' ? 'opacity-60' : ''}`}>
+    <section id={`phase-${phase.id}`} className={`rounded-xl border bg-surface scroll-mt-4 ${active ? 'border-line-stronger' : 'border-line'} ${phase.state === 'pending' ? 'opacity-75' : ''}`}>
       <button onClick={onToggle} disabled={phase.state === 'pending'} aria-expanded={open}
         className="flex w-full items-start gap-3 p-4 text-left cursor-pointer disabled:cursor-default">
         <span className="mt-0.5 shrink-0">
@@ -149,6 +149,8 @@ function PhaseCard({ phase, index, open, onToggle, t0, loader, planFull, waiting
             {hintFor}
           </span>
           {phase.state === 'done' && phase.summary && <span className="mt-1 block text-[12px] text-fg-4">{phase.summary}</span>}
+          {phase.state === 'active' && <span className="mt-1 block text-[12px] text-fg-4">{phase.what}</span>}
+          {phase.state === 'pending' && <span className="mt-1 block text-[12px] text-muted">{phase.what}</span>}
         </span>
         {phase.state !== 'pending' && <ChevronDown className={`mt-1 w-4 h-4 shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
@@ -203,8 +205,8 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
   const now = useNow(running && mode === 'live')
   const [manual, setManual] = useState<Partial<Record<PhaseId, boolean>>>({})
   const endRef = useRef<HTMLDivElement>(null)
-  const [following, setFollowing] = useState(true)
-  const followRef = useRef(true)
+  const [following, setFollowing] = useState(false)   // the page starts with the intro and the step strip: follow only once the reader is at the end
+  const followRef = useRef(false)
   const setFollow = (v: boolean) => { followRef.current = v; setFollowing(v) }
   // Follow new events until the reader scrolls up (wheel, touch, keys or a scroll that moves up). Growing content never stops following.
   useEffect(() => {

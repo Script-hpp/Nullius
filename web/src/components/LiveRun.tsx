@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { RunTimeline } from './run/RunTimeline'
+import { NextStep, PageIntro } from './page'
+import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { StepGraph } from './run/StepGraph'
 import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
 import { translateClaim } from '../labels'
@@ -26,29 +28,31 @@ export function LiveRun({ jobId }: { jobId: string }) {
   const shownStatus = status === 'running' && !events.some((e) => e.type === 'started') ? 'connecting' : status
   const bad = status === 'error' || status === 'lost' || status === 'unknown'
 
+  const steps = buildSteps(events, null, { running: !ended, metric: entry?.claim.metric })
+  const PHASE_OF: Partial<Record<StepId, string>> = { paper: 'live-top', claim: 'phase-claim', sources: 'phase-setup', plan: 'phase-plan', code: 'phase-code', sandbox: 'phase-sandbox', check: 'phase-seeds', verdict: 'phase-verdict', community: 'phase-community' }
+  const onStep = (id: StepId) => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    document.getElementById(PHASE_OF[id] ?? 'live-top')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  }
+
   return (
-    <main className="mx-auto max-w-6xl px-4 md:px-8 pb-24">
-      <div className="pt-2 mb-6">
-        <a href="#catalog" className="inline-flex items-center gap-1.5 text-muted text-xs font-medium uppercase tracking-wider hover:text-fg-2 transition-colors">
-          <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to catalog
+    <main id="live-top" className="mx-auto max-w-6xl px-4 pb-24 md:px-8">
+      <div className="pt-6">
+        <a href="#catalog" className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted no-underline transition-colors hover:text-fg-2">
+          <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to catalog
         </a>
       </div>
-
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-3 text-muted text-xs font-mono mb-2">
-          <span>live reproduction</span>
-          {queued && <span>• {queued.quick ? 'quick check, 3 seeds' : 'full run'}</span>}
-          <span className={`inline-flex items-center gap-1.5 font-sans font-semibold uppercase tracking-wider ${bad ? 'text-tone-red' : status === 'finished' ? 'text-tone-green' : 'text-fg-3'}`}>
-            {status === 'finished' ? <CheckCircle2 className="w-3.5 h-3.5" /> : bad ? <AlertCircle className="w-3.5 h-3.5" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+      <PageIntro kicker={`Live check${queued ? ` · ${queued.quick ? 'quick check, 3 seeds' : 'full run'}` : ''} · ${STATUS_TEXT[shownStatus]}`} title={entry?.title ?? 'Reproduction run'}
+        what="You are watching one check as it happens. Our agent rebuilds the paper's experiment in isolated sandboxes while our harness measures the result."
+        look="The nine steps below fill in as they finish. Open the running step to see what happens in it and why it matters.">
+        <p className="mb-0 mt-8 flex items-center gap-3 text-[13px] text-fg-4">
+          <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider ${bad ? 'text-tone-red' : status === 'finished' ? 'text-tone-green' : 'text-fg-3'}`}>
+            {status === 'finished' ? <CheckCircle2 className="h-3.5 w-3.5" /> : bad ? <AlertCircle className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {STATUS_TEXT[shownStatus]}
           </span>
-        </div>
-        <h1 className="min-h-8 text-2xl font-semibold tracking-tight text-fg">{entry?.title ?? 'Reproduction run'}</h1>
-        <p className="mt-2 min-h-5 max-w-3xl text-[13px] leading-relaxed text-fg-4">
-          {claimText ? <>Claim: {claimText}. </> : null}
-          {ended ? 'Below is what the agent and the harness did.' : 'Watch the agent re-run this claim in an isolated sandbox. Each step says what happens and why.'}
+          {claimText ? <span>Claim: {claimText}</span> : null}
         </p>
-      </div>
+      </PageIntro>
 
       {bad && (
         <div className="mb-6 rounded-xl border border-line bg-panel/50 p-5">
@@ -72,13 +76,20 @@ export function LiveRun({ jobId }: { jobId: string }) {
         </div>
       )}
 
-      <section className="mb-10" aria-label="Step graph">
+      <div className="mb-14"><StepStrip steps={steps} onStep={onStep} /></div>
+
+      <section id="step-graph" className="mb-12 scroll-mt-4" aria-label="Step graph">
         <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">Step graph</h2>
         <StepGraph events={events} running={!ended} metricHint={entry?.claim.metric} />
       </section>
 
       <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">Log</h2>
       <RunTimeline events={events} mode="live" running={!ended} lastReceived={lastReceived} evidenceRunId={runId} metricHint={entry?.claim.metric} />
+      {status === 'finished' && runId
+        ? <NextStep title="Read the certificate" text="The check is finished. Open the certificate: the verdict in one sentence, claimed against measured, and why the number can be trusted." label="Open the certificate" href={`#/run/${runId}`} />
+        : bad
+          ? <NextStep title="Try another entry" text="This run did not finish. The catalog lists the checks that did, each with its evidence." label="Back to the catalog" href="#catalog" />
+          : <NextStep title="When it finishes" text="The certificate of this check appears here as soon as the verdict is in. Until then, the catalog lists finished checks you can read." label="Open the catalog" href="#catalog" />}
     </main>
   )
 }
