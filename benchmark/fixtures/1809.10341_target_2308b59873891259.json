@@ -1,0 +1,13 @@
+{
+ "value": 0.823,
+ "quote": "X, A DGI (ours) 82.3 ± 0.6% 71.8 ± 0.7% 76.8 ± 0.6%",
+ "table": "Table 2",
+ "url": "https://arxiv.org/pdf/1809.10341",
+ "source_kind": "pdf",
+ "retrieved_at": "2026-09-29T14:11:26+00:00",
+ "sha256": "13391570da821d59a80313576f68db70e1ca9ba5b204d21086bbb6f5f4fca4b3",
+ "arxiv_version": null,
+ "caveat": null,
+ "column_check": "ok",
+ "from_store": false
+}

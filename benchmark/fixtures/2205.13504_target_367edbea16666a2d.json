@@ -1,0 +1,13 @@
+{
+ "value": 0.374,
+ "quote": "ETTh1  96 0.80% 0.375 0.397 0.374 0.394 0.375 0.399 0.376 0.419 0.449 0.459 0.865 0.713 0.664 0.612 0.878 0.740 1.295 0.713",
+ "table": "Table 2",
+ "url": "https://arxiv.org/pdf/2205.13504v3",
+ "source_kind": "pdf",
+ "retrieved_at": "2026-09-28T20:37:23+00:00",
+ "sha256": "93bdde5362cb5af76ceac37c8f56de351c7d14f2c7c1daa1eef86339388b834d",
+ "arxiv_version": "v3",
+ "caveat": null,
+ "column_check": "ok",
+ "from_store": false
+}
