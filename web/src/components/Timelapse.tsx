@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import { ResultBand } from './ResultChart'
 import { buildSteps, type Step } from './run/StepStrip'
-import { TIMELAPSE_MS, countAt, durationText, eventsForClaim, partialDossier } from '../timelapse'
+import { TIMELAPSE_MS, closingLines, countAt, durationText, eventsForClaim, partialDossier } from '../timelapse'
 import { TONE_VAR, type Tone } from '../labels'
 import type { Event, Json } from '../data'
 
 // "Play this check in 30 seconds": the finished run played back in a fixed 30 s. Step bar fills, sandbox branches appear, measurements fall
 // into the tolerance band, then the verdict. Same data as the replay; only the clock is compressed.
-export function Timelapse({ events, dossier, claim, tone, resultLabel, fmt, fmtSpread, autoplay, hasPlan }: {
-  events: Event[]; dossier: Json; claim: Json; tone: Tone; resultLabel: string; fmt: (x: number) => string; fmtSpread: (x: number) => string
+export function Timelapse({ events, dossier, claim, tone, resultLabel, sentence, fidelityUnchecked, overall, fmt, fmtSpread, autoplay, hasPlan }: {
+  events: Event[]; dossier: Json; claim: Json; tone: Tone; resultLabel: string; sentence: string; fidelityUnchecked: boolean; overall?: string | null; fmt: (x: number) => string; fmtSpread: (x: number) => string
   autoplay: boolean; hasPlan: boolean
 }) {   // autoplay: start at once when the panel opens
   const claimEvents = useMemo(() => eventsForClaim(events, claim.id), [events, claim.id])
@@ -40,10 +40,13 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, fmt, fmtS
   const atEnd = count >= total && total > 0
   const part = useMemo(() => partialDossier(dossier, claim.id, seen, atEnd), [dossier, claim.id, seen, atEnd])
   const steps: Step[] = useMemo(() => buildSteps(seen, part, { running: !atEnd, hasPlan, metric: claim.metric }), [seen, part, atEnd, hasPlan, claim.metric])
+  // steps that did not happen in this run at all are not shown (decided on the whole run, so the bar does not change while it plays)
+  const hidden = useMemo(() => new Set(buildSteps(claimEvents, dossier, { running: false, hasPlan, metric: claim.metric }).filter((s) => s.status === 'skipped').map((s) => s.id)), [claimEvents, dossier, hasPlan, claim.metric])
+  const bar = steps.filter((s) => !hidden.has(s.id))
   const attempts = seen.filter((e) => e.type === 'attempt')
   const verdictShown = (part.verdicts ?? []).length > 0
   const took = durationText(events)
-  const doneSteps = steps.filter((s) => s.status === 'done').length
+  const doneSteps = bar.filter((s) => s.status === 'done').length
 
   const btn = 'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium'
   const start = () => { setElapsed(0); setPlaying(true) }
@@ -56,20 +59,20 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, fmt, fmtS
           <button type="button" onClick={() => (atEnd || elapsed === 0 ? start() : setPlaying((p) => !p))} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
             {playing ? <><Pause className="h-3.5 w-3.5" />Pause</> : <><Play className="h-3.5 w-3.5" />{atEnd ? 'Play again' : elapsed === 0 ? 'Play' : 'Resume'}</>}
           </button>
-          <button type="button" onClick={start} className={`${btn} border-line text-fg-3 hover:bg-raised`}><RotateCcw className="h-3.5 w-3.5" />Restart</button>
+          {!atEnd && elapsed > 0 && <button type="button" onClick={start} className={`${btn} border-line text-fg-3 hover:bg-raised`}><RotateCcw className="h-3.5 w-3.5" />Restart</button>}
         </div>
       </div>
 
-      <div className="mt-6" role="progressbar" aria-label="Steps done" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneSteps}>
+      <div className="mt-6" role="progressbar" aria-label="Steps done" aria-valuemin={0} aria-valuemax={bar.length} aria-valuenow={doneSteps}>
         <div className="flex gap-1">
-          {steps.map((s) => (
+          {bar.map((s) => (
             <div key={s.id} className="min-w-0 flex-1">
               <div className="h-1.5 rounded-full bg-raised-2" style={{ background: s.status === 'done' ? 'var(--c-fg-4)' : s.status === 'running' ? 'var(--c-line-strong)' : undefined, transition: reduce ? undefined : 'background 300ms' }} />
               <div className={`mt-2 hidden truncate text-[10px] uppercase tracking-wider md:block ${s.status === 'done' ? 'text-fg-3' : 'text-muted'}`}>{s.title}</div>
             </div>
           ))}
         </div>
-        <div className="mt-3 text-[12px] text-muted md:hidden">{doneSteps} of {steps.length} steps done</div>
+        <div className="mt-3 text-[12px] text-muted md:hidden">{doneSteps} of {bar.length} steps done</div>
       </div>
 
       <div className="mt-6 min-w-0">
@@ -86,7 +89,16 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, fmt, fmtS
         <ResultBand dossier={part} claimId={claim.id} tone={verdictShown ? tone : 'gray'} fmt={fmt} fmtSpread={fmtSpread} />
       </div>
       <div className="mt-4 min-h-[2.5rem]">
-        {verdictShown && <div className="font-grotesk text-2xl font-semibold tracking-[-0.03em]" style={{ color: TONE_VAR[tone] }}>{resultLabel}</div>}
+        {verdictShown && (() => {
+          const c = closingLines({ label: resultLabel, sentence, fidelityUnchecked, overall })
+          return (
+            <div>
+              <div className="font-grotesk text-2xl font-semibold tracking-[-0.03em]" style={{ color: TONE_VAR[tone] }}>{c.label}</div>
+              <p className="mb-0 mt-2 max-w-3xl text-[14px] leading-relaxed text-fg-3">{c.sentence}</p>
+              {c.note && <p className="mb-0 mt-1 text-[13px] text-muted">{c.note}</p>}
+            </div>
+          )
+        })()}
       </div>
     </section>
   )

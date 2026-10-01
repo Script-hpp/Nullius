@@ -16,7 +16,7 @@ import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
-import { RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
+import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
 
 type Tab = 'graph' | 'evidence' | 'tree' | 'log' | 'files'
 
@@ -53,6 +53,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const resColor = colorForTone(res.tone)
   const fidelityUnchecked = !v?.methode || v.methode === 'nicht geprueft'
   const fmt = (x: number) => showValue(claim.metric, x)
+  const sentence = resultSentence(claim, v, ref_.gesamtaussage)   // one string for the verdict section and the time-lapse
   const steps = buildSteps(run.events, d, { running: false, hasPlan: !!run.plan, metric: claim.metric })
 
   const tabs = [
@@ -97,7 +98,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
       <section id="sec-verdict" className="scroll-mt-4 border-t-2 pt-10" style={{ borderTopColor: TONE_VAR[res.tone] }} aria-label="The verdict">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">The verdict in one sentence</div>
-        <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{resultSentence(claim, v, ref_.gesamtaussage)}</p>
+        <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{sentence}</p>
         {run.events.length > 0 && !timelapse && (
           <button type="button" onClick={() => { setTimelapse(true); window.setTimeout(() => scrollTo('sec-timelapse'), 50) }}
             className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-5 py-2.5 text-sm font-medium text-fg hover:bg-raised/60">
@@ -137,7 +138,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       </section>
 
       {timelapse && run.events.length > 0 && (
-        <Timelapse events={run.events} dossier={d} claim={claim} tone={res.tone} resultLabel={res.label} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} autoplay hasPlan={!!run.plan} />
+        <Timelapse events={run.events} dossier={d} claim={claim} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked} overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} autoplay hasPlan={!!run.plan} />
       )}
 
       <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />

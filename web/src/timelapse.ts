@@ -32,3 +32,9 @@ export function partialDossier(dossier: Json, claimId: string, seen: Event[], at
   const verdictSeen = seen.some((e) => e.type === 'verdict' && e.claim_id === claimId)
   return { ...dossier, attempts, verdicts: verdictSeen ? dossier.verdicts : [] }
 }
+
+// The closing lines of the time-lapse: exactly what the certificate says, taken from the same strings (label and verdict sentence are computed once
+// in RunView and handed over; nothing is worded again here).
+export function closingLines(o: { label: string; sentence: string; fidelityUnchecked: boolean; overall?: string | null }): { label: string; sentence: string; note: string | null } {
+  return { label: o.label, sentence: o.sentence, note: o.fidelityUnchecked ? 'Method fidelity not checked.' : o.overall ?? null }
+}

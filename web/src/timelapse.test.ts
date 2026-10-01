@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { TIMELAPSE_MS, countAt, durationText, eventsForClaim, partialDossier } from './timelapse.ts'
+import { TIMELAPSE_MS, closingLines, countAt, durationText, eventsForClaim, partialDossier } from './timelapse.ts'
 import type { Event } from './data.ts'
 
 test('the length is fixed: after 30 s every event is shown, whatever their number', () => {
@@ -44,4 +44,12 @@ test('partial dossier: measurements arrive one by one, the verdict only with its
   const withVerdict = partialDossier(dossier, 'a', [...seen, { ts: 2, type: 'verdict', claim_id: 'a' }] as Event[], false)
   assert.equal(withVerdict.verdicts.length, 1)
   assert.equal(partialDossier(dossier, 'a', seen, true), dossier)
+})
+
+test('closing lines carry the certificate sentence verbatim and the fidelity note', () => {
+  const sentence = 'Reproduced with our setup (target value reached): measured 82.1% against the reported 81.5%.'
+  const c = closingLines({ label: 'REPRODUCED', sentence, fidelityUnchecked: true, overall: 'Paper reproduced' })
+  assert.deepEqual(c, { label: 'REPRODUCED', sentence, note: 'Method fidelity not checked.' })
+  assert.equal(closingLines({ label: 'REPRODUCED', sentence, fidelityUnchecked: false, overall: 'Target reached with different model' }).note, 'Target reached with different model')
+  assert.equal(closingLines({ label: 'NOT REPRODUCED', sentence, fidelityUnchecked: false }).note, null)
 })
