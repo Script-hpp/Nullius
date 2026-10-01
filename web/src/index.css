@@ -207,3 +207,9 @@ a, button, .panel { transition: all 0.2s ease-out; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--c-scroll-thumb); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--c-scroll-thumb-hover); }
+
+/* Handwritten lettering on the landing page (components/hero/WrittenText.tsx) */
+@keyframes nullius-write { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  [data-hero-fade] { transition: none !important; }
+}

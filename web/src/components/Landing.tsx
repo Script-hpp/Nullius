@@ -1,119 +1,153 @@
-import { ArrowRight, Check, FileText, GitBranch, Quote, Ruler, ShieldCheck, X } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ThemeSwitch } from './ThemeSwitch'
+import { WrittenText } from './hero/WrittenText'
+import { prefersReducedMotion } from './hero/config'
 
-// Start page: one sentence, "words vs. measurement" as a picture, three steps, one button.
-// The example numbers come from a real, earlier run (GCN on Cora, web/public/data/kipf_gcn_2017) and are labelled as such.
+// Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke, then one sentence and two buttons.
+// Further down: claim vs. measurement, three steps, limits. The example numbers come from a real, earlier run
+// (GCN on Cora, web/public/data/kipf_gcn_2017) and are labelled as such. Benchmark numbers stay TBD until the evaluation exists.
 
-function WordsVsMeasurement() {
+const REPO = 'https://github.com/Script-hpp/Nullius'
+const EXAMPLE_RUN = '#/run/kipf_gcn_2017--20260929-130133'
+
+function TopBar() {
+  const link = 'text-sm text-fg-4 hover:text-fg transition-colors no-underline'
   return (
-    <div className="relative grid gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-0 items-stretch">
-      <div className="rounded-xl border border-line bg-panel/50 p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
-          <Quote className="w-3.5 h-3.5" /> The paper claims
-        </div>
-        <p className="text-fg-3 text-sm leading-relaxed">
-          Kipf &amp; Welling (2017) report <span className="text-fg font-medium">81.5%</span> accuracy for their GCN model on the Cora benchmark (Table 2).
-        </p>
-        <div className="mt-auto text-[11px] text-muted">A claim in words, paraphrased. Anyone can write it down.</div>
-      </div>
+    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-end gap-5 px-5 sm:gap-7 sm:px-10">
+      <a href="#discover" className={link}>Discover</a>
+      <a href="#catalog" className={link}>Catalog</a>
+      <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
+      <ThemeSwitch />
+    </header>
+  )
+}
 
-      {/* Divider between the two cards: a line with a ruler mark (horizontal on phones, vertical from md) */}
-      <div className="flex md:flex-col items-center justify-center gap-0 py-1 md:py-0 md:px-5" aria-hidden="true">
-        <div className="h-px w-10 md:h-10 md:w-px bg-line-strong" />
-        <div className="w-9 h-9 rounded-full border border-line-strong bg-surface flex items-center justify-center text-fg-4">
-          <Ruler className="w-4 h-4" />
+function Hero() {
+  const [shown, setShown] = useState(prefersReducedMotion())   // false until the lettering is written
+  const fade = (delay = 0) => ({
+    style: { opacity: shown ? 1 : 0, transform: shown ? 'none' : 'translateY(10px)', transition: `opacity 900ms ease ${delay}ms, transform 900ms ease ${delay}ms` },
+    'data-hero-fade': true,
+  })
+  return (
+    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-24 pt-24 text-center">
+      <WrittenText onDone={() => setShown(true)} className="w-[min(880px,88vw)] text-fg" />
+      {/* collapsed while the lettering is written (it sits in the middle of the screen), then opens and moves it up */}
+      <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="mx-auto mt-12 max-w-4xl sm:mt-16" {...fade()}>
+            <h1 className="m-0 text-3xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-5xl lg:text-6xl">
+              We check machine-learning papers by rebuilding their experiments.
+            </h1>
+            <p className="mx-auto mb-0 mt-6 max-w-xl text-base leading-relaxed text-fg-4 sm:text-lg">
+              A paper reports a number. Nullius builds the experiment again, measures it independently and tells you whether the number can be reproduced.
+            </p>
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4" {...fade(150)}>
+            <a href="#discover" className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
+              Try it <ArrowRight className="h-4 w-4" />
+            </a>
+            <a href={EXAMPLE_RUN} className="inline-flex items-center gap-2 rounded-full border border-line-strong px-6 py-3 text-sm font-medium text-fg no-underline transition-colors hover:bg-raised/60">
+              See a finished check
+            </a>
+          </div>
         </div>
-        <div className="h-px w-10 md:h-10 md:w-px bg-line-strong" />
       </div>
+      <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
+        aria-label="Scroll down" className="absolute bottom-8 cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3" {...fade(400)}>
+        <ChevronDown className="h-6 w-6" />
+      </button>
+    </section>
+  )
+}
 
-      <div className="rounded-xl border border-line bg-panel/50 p-6 flex flex-col gap-4">
-        <div className="flex items-center justify-between text-muted text-[10px] font-semibold uppercase tracking-widest">
-          <span className="flex items-center gap-2"><Ruler className="w-3.5 h-3.5" /> We measured</span>
-          <span className="normal-case tracking-normal font-normal">Example, earlier run</span>
+function ClaimVsMeasurement() {
+  return (
+    <section id="claim" className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
+      <div className="grid gap-14 md:grid-cols-2 md:gap-0">
+        <div className="md:pr-14">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">The paper reports</div>
+          <div className="mt-6 font-mono text-6xl font-light tracking-tight text-fg-3 sm:text-7xl">81.5%</div>
+          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
+            Kipf &amp; Welling (2017) report 81.5% accuracy for their GCN model on the Cora benchmark (Table 2). A claim in words, paraphrased. Anyone can write it down.
+          </p>
         </div>
-        <div className="flex items-end gap-3">
-          <span className="font-mono text-4xl font-semibold text-tone-green leading-none">82.1%</span>
-          <span className="font-mono text-xs text-fg-4 pb-1">± 0.7 over 10 runs</span>
+        <div className="border-t border-line pt-14 md:border-l md:border-t-0 md:pl-14 md:pt-0">
+          <div className="flex items-baseline justify-between gap-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <span>We measured</span>
+            <span className="font-normal normal-case tracking-normal">Example, earlier run</span>
+          </div>
+          <div className="mt-6 font-mono text-6xl font-light tracking-tight text-tone-green sm:text-7xl">82.1%</div>
+          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
+            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Reproduced with our setup.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-tone-green text-xs font-medium uppercase tracking-wider">
-          <Check className="w-4 h-4" /> Reproduced with our setup
-        </div>
-        <div className="mt-auto text-[11px] text-muted">A measurement. Taken by a program the agent cannot touch.</div>
       </div>
-    </div>
+    </section>
   )
 }
 
 const STEPS = [
-  { icon: FileText, title: 'Read the claim', text: 'Tavily reads the paper and its code page. We keep only numbers that appear word for word in the text.' },
-  { icon: GitBranch, title: 'Rebuild it', text: 'An AI agent writes its own version of the experiment and runs it in isolated sandboxes, one run per random seed.' },
-  { icon: ShieldCheck, title: 'Measure it', text: 'A separate checker, which the agent cannot change, scores the results and compares them with the claim.' },
+  { n: '01', title: 'Read the claim', text: 'Tavily reads the paper and its code page. We keep only numbers that appear word for word in the text.' },
+  { n: '02', title: 'Rebuild it', text: 'An AI agent writes its own version of the experiment and runs it in isolated sandboxes, one run per random seed.' },
+  { n: '03', title: 'Measure it', text: 'A separate checker, which the agent cannot change, scores the results and compares them with the claim.' },
 ]
 
 function Steps() {
   return (
-    <ol className="grid gap-4 md:grid-cols-3 list-none p-0 m-0">
-      {STEPS.map((s, i) => (
-        <li key={s.title} className="rounded-xl border border-line bg-panel/50 p-6 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <s.icon className="w-5 h-5 text-fg-3" />
-            <span className="font-mono text-[11px] text-muted">0{i + 1}</span>
-          </div>
-          <h3 className="text-base font-semibold text-fg">{s.title}</h3>
-          <p className="text-[13px] text-fg-4 leading-relaxed m-0">{s.text}</p>
-        </li>
-      ))}
-    </ol>
+    <section className="mx-auto max-w-5xl px-6 pb-24 sm:pb-32">
+      <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How it works</h2>
+      <ol className="m-0 mt-8 grid list-none gap-0 border-t border-line p-0 md:grid-cols-3">
+        {STEPS.map((s, i) => (
+          <li key={s.n} className={`py-10 md:py-12 ${i > 0 ? 'border-t border-line md:border-l md:border-t-0 md:pl-10' : ''} ${i < 2 ? 'md:pr-10' : ''}`}>
+            <div className="font-mono text-4xl font-light text-fg-4">{s.n}</div>
+            <h3 className="m-0 mt-5 text-xl font-semibold text-fg">{s.title}</h3>
+            <p className="mb-0 mt-3 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function Footer() {
+  return (
+    <section className="mx-auto max-w-5xl px-6 pb-28">
+      <div className="grid gap-14 border-t border-line pt-14 md:grid-cols-2 md:gap-0">
+        <div className="md:pr-14">
+          <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Does it work?</h2>
+          <p className="mb-0 mt-5 text-lg leading-relaxed text-fg-3">
+            We tested it on papers with known results: <span className="font-mono text-fg">TBD of 8</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">TBD of 8</span> without it.
+          </p>
+          <p className="mb-0 mt-4 max-w-md text-[13px] leading-relaxed text-muted">
+            A match means the target value was reached. Whether the method matches the paper is not checked yet.
+          </p>
+        </div>
+        <div className="md:border-l md:border-line md:pl-14">
+          <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Built with</h2>
+          <ul className="m-0 mt-5 flex list-none flex-col gap-3 p-0 text-[15px] leading-relaxed text-fg-4">
+            <li><span className="font-medium text-fg">NVIDIA Nemotron</span> on Nebius Token Factory plans the experiment and writes the code.</li>
+            <li><span className="font-medium text-fg">Nebius Sandboxes</span> run every experiment in isolation.</li>
+            <li><span className="font-medium text-fg">Tavily</span> finds and reads the papers, live.</li>
+          </ul>
+        </div>
+      </div>
+      <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-8 text-sm text-muted">
+        <span>Nullius in verba: take nobody&rsquo;s word for it.</span>
+        <a href="#discover" className="inline-flex items-center gap-2 text-fg no-underline hover:text-fg-max">Try it <ArrowRight className="h-4 w-4" /></a>
+      </div>
+    </section>
   )
 }
 
 export function Landing() {
   return (
-    <div className="mx-auto max-w-5xl px-4 md:px-8 pb-20">
-      <section className="pt-8 md:pt-16 pb-10 md:pb-14 max-w-3xl">
-        <div className="text-muted text-[11px] font-semibold uppercase tracking-widest mb-4">Nullius in verba: take nobody&rsquo;s word for it</div>
-        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-fg leading-tight m-0">
-          We check machine-learning papers by rebuilding their experiments.
-        </h1>
-        <p className="text-fg-4 text-base md:text-lg leading-relaxed mt-5 mb-8">
-          A paper reports a number. Nullius builds the experiment again, measures it independently and tells you whether the number can be reproduced.
-        </p>
-        <div className="flex flex-wrap items-center gap-4">
-          <a href="#discover" className="px-5 py-2.5 bg-inverse text-on-inverse text-sm font-medium rounded-lg hover:bg-inverse-hover transition-colors shadow-sm flex items-center gap-2 no-underline">
-            Try it <ArrowRight className="w-4 h-4" />
-          </a>
-          <a href="#catalog" className="text-sm text-fg-4 hover:text-fg transition-colors">Browse finished checks</a>
-        </div>
-      </section>
-
-      <section className="pb-12" aria-label="Claim and measurement">
-        <WordsVsMeasurement />
-      </section>
-
-      <section className="pb-12" aria-label="How it works">
-        <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted mb-4">How it works</h2>
-        <Steps />
-      </section>
-
-      <section className="pb-12 grid gap-4 md:grid-cols-2" aria-label="Results and building blocks">
-        <div className="rounded-xl border border-line bg-panel/50 p-6 flex flex-col gap-3">
-          <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted m-0">Does it work?</h2>
-          <p className="text-fg-3 text-sm leading-relaxed m-0">
-            We tested it on papers with known results: <span className="font-mono text-fg">TBD of 8</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">TBD of 8</span> without it.
-          </p>
-          <p className="text-[12px] text-muted leading-relaxed m-0">
-            <X className="inline w-3.5 h-3.5 mr-1 align-text-bottom" />
-            A match means the target value was reached. Whether the method matches the paper is not checked yet.
-          </p>
-        </div>
-        <div className="rounded-xl border border-line bg-panel/50 p-6 flex flex-col gap-3">
-          <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted m-0">Built with</h2>
-          <ul className="list-none p-0 m-0 flex flex-col gap-2 text-sm text-fg-3">
-            <li><span className="text-fg font-medium">NVIDIA Nemotron</span> on Nebius Token Factory plans the experiment and writes the code.</li>
-            <li><span className="text-fg font-medium">Nebius Sandboxes</span> run every experiment in isolation.</li>
-            <li><span className="text-fg font-medium">Tavily</span> finds and reads the papers, live.</li>
-          </ul>
-        </div>
-      </section>
+    <div className="relative min-h-screen bg-bg font-sans text-fg">
+      <TopBar />
+      <Hero />
+      <ClaimVsMeasurement />
+      <Steps />
+      <Footer />
     </div>
   )
 }

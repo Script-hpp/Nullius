@@ -392,10 +392,12 @@ export default function App() {
   const ref = m && runs?.find((r) => r.id === decodeURIComponent(m[1]))
   const live = hash.match(/^\/live\/([^?]+)$/)
   
+  if (hash === '' || hash === '/') return <Landing />   // full-screen start page, no sidebar
+
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === '' || hash === '/' ? <Landing /> : hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
+        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
