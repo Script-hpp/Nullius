@@ -92,7 +92,7 @@ def dry_run(v2: bool, papers: list[str], rows: list[dict], paper_specs: dict[str
     v1_rows = [json.loads(x) for x in STORE.read_text().splitlines()] if STORE.exists() else []
     mean = mean_cost_net(rows or v1_rows)   # v2-Schaetzung vor dem ersten Lauf aus v1
     factor = V2_COST_FACTOR if v2 else 1.0
-    lines = [f"Benchmark {'v2 (graph_repair=True)' if v2 else 'v1 (graph_repair=False)'}; Tavily-Modus fixture; Store {(STORE_V3 if "--v3" in sys.argv else STORE_V2 if v2 else STORE).name}",
+    lines = [f"Benchmark {'v2 (graph_repair=True)' if v2 else 'v1 (graph_repair=False)'}; Tavily-Modus fixture; Store {(STORE_V3 if '--v3' in sys.argv else STORE_V2 if v2 else STORE).name}",
              f"{len(runs)} offene Laeufe ({len(papers)} Papers x {len(ARMS)} Arme x {N_GEN} Generierungen, bereits vorhandene abgezogen)"]
     for p in papers:
         spec = paper_specs[p]
