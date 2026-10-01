@@ -10,12 +10,13 @@ import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { Landing } from './components/Landing'
 import { ResultChart } from './components/ResultChart'
+import { StepGraph } from './components/run/StepGraph'
 import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
 import { getText, loadIndex, loadRun, runDir, type Json, type RunData, type RunRef } from './data'
 import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
-import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info } from 'lucide-react'
+import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info, Workflow } from 'lucide-react'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -241,7 +242,7 @@ function Home({ runs }: { runs: RunRef[] }) {
 function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   const [run, setRun] = useState<RunData | null>(null)
   const [selected, setSelected] = useState<Json | null>(null)
-  const [activeTab, setActiveTab] = useState<'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' ? 'log' : 'evidence')
+  const [activeTab, setActiveTab] = useState<'graph' | 'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' || initialTab === 'evidence' || initialTab === 'tree' || initialTab === 'files' ? initialTab : 'graph')
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
   const finalHash = useMemo(() => {
@@ -266,6 +267,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
   const resColorClass = colorForTone(res.tone)
 
   const tabs = [
+    { id: 'graph', label: 'Step Graph', icon: <Workflow className="w-4 h-4" /> },
     { id: 'evidence', label: 'Data & Evidence', icon: <FileText className="w-4 h-4" /> },
     { id: 'log', label: 'Execution Log', icon: <ActivityIcon className="w-4 h-4" /> },
     { id: 'tree', label: 'Branch Tree', icon: <Network className="w-4 h-4" /> },
@@ -358,6 +360,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
         
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}>
+            {activeTab === 'graph' && <StepGraph events={run.events} running={false} codeLoader={codeLoader} planFull={run.plan} metricHint={claim.metric} />}
             {activeTab === 'evidence' && <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />}
             {activeTab === 'log' && <ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} />}
             {activeTab === 'tree' && <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />}

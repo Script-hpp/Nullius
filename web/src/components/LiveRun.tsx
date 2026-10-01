@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { RunTimeline } from './run/RunTimeline'
+import { StepGraph } from './run/StepGraph'
 import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
 import { translateClaim } from '../labels'
 import { loadIndex, type RunRef } from '../data'
@@ -71,6 +72,12 @@ export function LiveRun({ jobId }: { jobId: string }) {
         </div>
       )}
 
+      <section className="mb-10" aria-label="Step graph">
+        <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">Step graph</h2>
+        <StepGraph events={events} running={!ended} metricHint={entry?.claim.metric} />
+      </section>
+
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted">Log</h2>
       <RunTimeline events={events} mode="live" running={!ended} lastReceived={lastReceived} evidenceRunId={runId} metricHint={entry?.claim.metric} />
     </main>
   )

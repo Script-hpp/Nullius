@@ -49,7 +49,7 @@ function useCode(hash: string, inline: string | undefined, loader?: (hash: strin
   return inline ?? (loaded?.hash === hash ? loaded.text : null)
 }
 
-function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (hash: string) => Promise<string | null>; planFull?: string | null }) {
+export function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (hash: string) => Promise<string | null>; planFull?: string | null }) {
   const [all, setAll] = useState(false)
   if (ex.kind === 'quote') return <blockquote className="mt-2 border-l-2 border-line-strong pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">{ex.quote}</blockquote>
   if (ex.kind === 'error') return <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-2.5 font-mono text-[11px] text-muted">{ex.text}</pre>
