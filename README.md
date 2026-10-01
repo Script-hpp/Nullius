@@ -167,6 +167,8 @@ What the numbers say:
 - **No placebo passed.** None of the 48 placebo verdicts (deliberately wrong target value) was "reproduced"; one was "partially". Units where the placebo majority was a failure count as not detected.
 - Cost of the whole benchmark: 1.04 $ gross without, 2.56 $ with Tavily (model cost only).
 
+**Benchmark v3** (all 48 runs, code `4bab96e`, pre-registered in [`benchmark/experiments/benchmark_v3.md`](benchmark/experiments/benchmark_v3.md), results in [`results/benchmark_v3.md`](benchmark/experiments/results/benchmark_v3.md)): after a failure analysis of v2 we added fixes for code extraction, repair after timeouts, Tavily error search (role 5), repository search (role 1), following local imports and extracting implementation details. Agreement stayed at **2 of 8 units in both arms**; the units that agree changed (with Tavily, Kipf-GCN and NLinear now agree in all or most generations, SGC got worse because repository defaults replaced the tuned value). Failures of real claims with Tavily fell from 6 to 3 of 24, and single "reproduced" verdicts rose from 7 to 8. **No placebo was ever "reproduced"** (0 of 48 in v3, 0 of 48 in v2). Every miss is listed with its cause in [`results/failure_log_v3.md`](benchmark/experiments/results/failure_log_v3.md) and [`failure_patterns_v3.md`](benchmark/experiments/failure_patterns_v3.md). Method fidelity was not checked.
+
 An earlier, frozen benchmark run (v1, four papers, product configuration off) is kept as history in [`docs/research_log.md`](docs/research_log.md) and is not repeated here.
 
 **Limits, stated up front.**
