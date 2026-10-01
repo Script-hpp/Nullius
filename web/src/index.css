@@ -225,3 +225,6 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 .logo-light { display: none; }
 :root[data-theme='light'] .logo-light { display: block; }
 :root[data-theme='light'] .logo-dark { display: none; }
+
+/* Time-lapse: a branch square appears with a small pop. */
+@keyframes tl-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); } }

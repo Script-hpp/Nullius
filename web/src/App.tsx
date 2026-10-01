@@ -129,7 +129,8 @@ export default function App() {
     window.addEventListener(DATA_CHANGED, load)   // a live run finished: index.json has a new entry
     return () => window.removeEventListener(DATA_CHANGED, load)
   }, [])
-  const m = hash.match(/^\/run\/([^?]+)(?:\?tab=(\w+))?$/)
+  const m = hash.match(/^\/run\/([^?]+)(?:\?(.*))?$/)
+  const query = new URLSearchParams(m?.[2] ?? '')
   const ref = m && runs?.find((r) => r.id === decodeURIComponent(m[1]))
   const live = hash.match(/^\/live\/([^?]+)$/)
   
@@ -143,7 +144,7 @@ export default function App() {
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
           </div>
-        ) : ref ? <RunView ref_={ref} initialTab={m?.[2]} key={ref.id} /> : <Home runs={runs} />}
+        ) : ref ? <RunView ref_={ref} initialTab={query.get('tab') ?? undefined} playTimelapse={query.get('play') === '1'} key={ref.id} /> : <Home runs={runs} />}
       </div>
     </Layout>
   )

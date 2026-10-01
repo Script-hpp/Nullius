@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, Code, FileText, Network, Workflow, Activity as ActivityIcon, ArrowRight } from 'lucide-react'
+import { BookOpen, Code, Play, FileText, Network, Workflow, Activity as ActivityIcon, ArrowRight } from 'lucide-react'
 import { BranchTree } from './BranchTree'
 import { CatalogCallout } from './CatalogBits'
 import { EvidenceSplit } from './Evidence'
@@ -10,12 +10,13 @@ import { ResultBand } from './ResultChart'
 import { ReplayPlayer } from './run/ReplayPlayer'
 import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
+import { Timelapse } from './Timelapse'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
-import { RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
+import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
 
 type Tab = 'graph' | 'evidence' | 'tree' | 'log' | 'files'
 
@@ -25,11 +26,12 @@ const scrollTo = (id: string) => {
 }
 
 // The certificate of one check: verdict in one sentence, claimed against measured, why to trust it, the nine steps, then the details.
-export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
+export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: RunRef; initialTab?: string; playTimelapse?: boolean }) {
   const [run, setRun] = useState<RunData | null>(null)
   const [selected, setSelected] = useState<Json | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>(initialTab === 'log' || initialTab === 'evidence' || initialTab === 'tree' || initialTab === 'files' ? initialTab : 'graph')
   const [file, setFile] = useState<'code' | 'plan'>('code')
+  const [timelapse, setTimelapse] = useState(playTimelapse)   // the 30-second panel, opened by the button or by ?play=1
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
   const finalHash = useMemo(() => {
@@ -51,6 +53,7 @@ export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: strin
   const resColor = colorForTone(res.tone)
   const fidelityUnchecked = !v?.methode || v.methode === 'nicht geprueft'
   const fmt = (x: number) => showValue(claim.metric, x)
+  const sentence = resultSentence(claim, v, ref_.gesamtaussage)   // one string for the verdict section and the time-lapse
   const steps = buildSteps(run.events, d, { running: false, hasPlan: !!run.plan, metric: claim.metric })
 
   const tabs = [
@@ -95,7 +98,13 @@ export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: strin
 
       <section id="sec-verdict" className="scroll-mt-4 border-t-2 pt-10" style={{ borderTopColor: TONE_VAR[res.tone] }} aria-label="The verdict">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">The verdict in one sentence</div>
-        <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{resultSentence(claim, v, ref_.gesamtaussage)}</p>
+        <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{sentence}</p>
+        {run.events.length > 0 && !timelapse && (
+          <button type="button" onClick={() => { setTimelapse(true); window.setTimeout(() => scrollTo('sec-timelapse'), 50) }}
+            className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-5 py-2.5 text-sm font-medium text-fg hover:bg-raised/60">
+            <Play className="h-4 w-4" />Play this check in 30 seconds
+          </button>
+        )}
         <div className="mt-10 grid items-start gap-10 lg:grid-cols-3">
           <div className="min-w-0">
             <h2 className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] ${resColor}`}>{res.label}</h2>
@@ -127,6 +136,10 @@ export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: strin
           </div>
         </div>
       </section>
+
+      {timelapse && run.events.length > 0 && (
+        <Timelapse events={run.events} dossier={d} claim={claim} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked} overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} autoplay hasPlan={!!run.plan} />
+      )}
 
       <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
 
