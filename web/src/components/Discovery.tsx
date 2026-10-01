@@ -11,6 +11,7 @@ import {
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
 } from '../discovery'
 import { Glossed } from './Glossed'
+import { NextStep, PageIntro } from './page'
 import { useSummary } from '../summaries'
 
 type Mode = 'idle' | 'live' | 'replay' | 'done'
@@ -112,6 +113,15 @@ function QuoteView({ quote, target }: { quote?: string; target?: number }) {
   )
 }
 
+// One plain sentence per funnel stage, shown under the number (visible, not a tooltip).
+const FUNNEL_TEXT = [
+  'Papers Tavily returned for the benchmark search.',
+  'Papers whose protocol and results Tavily read in full. A run reads at most three per benchmark.',
+  'A result we can quote word for word from the results table.',
+  'The paper splits the data the way our task does, so the numbers are comparable.',
+  'A claim we can re-run. The catalog lists the ones that have been run.',
+]
+
 function Funnel({ funnel }: { funnel: DiscoveryView['funnel'] }) {
   const max = Math.max(1, ...funnel.map((f) => f.value))
   const t = useTween()
@@ -123,7 +133,7 @@ function Funnel({ funnel }: { funnel: DiscoveryView['funnel'] }) {
             <span className="text-fg-4">{f.label}</span>
             <span className="font-mono text-fg-2">{f.value}</span>
           </div>
-          {f.note && <div className="mt-0.5 text-[11px] text-subtle">{f.note}</div>}
+          <div className="mt-0.5 text-[11px] leading-relaxed text-muted">{FUNNEL_TEXT[i]}{f.note ? ` ${f.note}.` : ''}</div>
           <div className="mt-1.5 h-1.5 rounded-sm bg-raised">
             <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-fill-max' : 'bg-fill-lo'}`}
               initial={false} animate={{ width: `${(f.value / max) * 100}%` }} transition={t} />
@@ -150,7 +160,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
-      className="rounded-xl border border-line bg-panel/50 p-5">
+      className="rounded-xl border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <h3 className="text-[14px] font-semibold leading-snug text-fg">{p.title}</h3>
         <span className="font-mono text-[10px] text-muted shrink-0">{p.id}</span>
@@ -370,14 +380,11 @@ export function Discovery() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Live Paper Discovery</h1>
-        <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-fg-4">
-          Tavily searches the web for new papers on benchmarks we can re-run, reads only the protocol and results sections, and proposes checkable claims.
-        </p>
-      </div>
+      <PageIntro kicker="Discover" title="Find papers worth checking"
+        what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. It reads only the protocol and results, and keeps claims it can quote word for word."
+        look="Press Replay recorded run to watch a real search play back, no access code needed. Papers appear on the right as they are found, each with a short summary." />
 
-      <div className="mb-6 rounded-xl border border-line bg-panel/50 p-5">
+      <div className="mb-6 rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div>
             <div className={label}>Benchmarks</div>
@@ -414,6 +421,9 @@ export function Discovery() {
           </div>
         </div>
 
+        <p className="mb-0 mt-4 max-w-3xl text-[12px] leading-relaxed text-muted">
+          Replay needs no access code. A live run searches the web right now, spends Tavily credits and model calls, and so needs the code; one run at a time.
+        </p>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
           <span className={`inline-flex items-center gap-1.5 font-medium uppercase tracking-wider ${mode === 'live' ? 'text-tone-green' : 'text-fg-3'}`}>
             <Radio className="w-3.5 h-3.5" />{status}
@@ -432,6 +442,15 @@ export function Discovery() {
         )}
       </div>
 
+      {!events.length && mode === 'idle' ? (
+        <div className="rounded-xl border border-line bg-surface p-8 text-center">
+          <p className="font-grotesk m-0 text-2xl font-semibold tracking-[-0.03em] text-fg">Nothing has run yet</p>
+          <p className="mx-auto mb-0 mt-3 max-w-xl text-[15px] leading-relaxed text-fg-4">
+            Start with the recorded run: on the left you will see every Tavily call as it happens, on the right the funnel from found papers down to checkable claims.
+          </p>
+          <button onClick={startReplay} className={`${btn} mt-6 border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}><RotateCcw className="w-4 h-4" />Replay recorded run</button>
+        </div>
+      ) : (
       <div className="grid gap-6 lg:grid-cols-2 items-start">
         <Section title="Tavily research feed" hint="live API calls">
           <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted">
@@ -464,6 +483,9 @@ export function Discovery() {
           </Section>
         </div>
       </div>
+      )}
+      <NextStep title="See what the checks found" text="Candidates that were run through the full loop are listed in the catalog, each with the claimed number, the measured number and its evidence."
+        label="Open the catalog" href="#catalog" />
     </main>
   )
 }
