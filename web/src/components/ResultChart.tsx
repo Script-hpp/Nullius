@@ -6,7 +6,7 @@ const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
 
 // "Claimed vs. measured" in one picture (the only chart on top of the page; the per-seed bars sit under Details): the claimed value with its tolerance band and every measured seed as a dot.
 // Plain HTML positioning (no SVG text) so labels stay readable on a phone.
-export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, domain, showKey = true, pending }: {
+export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, domain, showKey = true, pending, animateDots = false }: {
   dossier: Json
   claimId: string
   tone: Tone
@@ -15,6 +15,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
   claimed?: number                             // what-if view: draw this claim instead of the real one (the measurements stay)
   domain?: [number, number]                    // fixed axis range, so the band moves against standing dots
   showKey?: boolean
+  animateDots?: boolean                        // film: a new dot drops into the band
   pending?: string                             // time-lapse, before the first measurement: draw band and claimed line anyway, with this hint
 }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
@@ -67,7 +68,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
             {/* one dot per seed */}
             {lanes.map(({ x, lane }, i) => (
               <div key={i} title={`Run ${i + 1}: ${fmt(x)}`} className="absolute top-[3.0rem] w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-fg-4 bg-fg-4/40"
-                style={{ left: pos(x), marginTop: LANE_PX[lane] }} />
+                style={{ left: pos(x), marginTop: LANE_PX[lane], animation: animateDots ? 'film-drop 420ms cubic-bezier(.2,.8,.3,1)' : undefined }} />
             ))}
             {/* mean */}
             {mean !== null && (
