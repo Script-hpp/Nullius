@@ -30,6 +30,8 @@ N_GEN = 3
 STORE = REPO_ROOT / "runs" / "benchmark.jsonl"
 STORE_V2 = REPO_ROOT / "runs" / "benchmark_v2.jsonl"
 STORE_V3 = REPO_ROOT / "runs" / "benchmark_v3.jsonl"
+STORE_V4 = REPO_ROOT / "runs" / "benchmark_v4.jsonl"
+V4_BUDGET_GROSS_USD = 8.0    # benchmark_v4.md: drei Code-Kandidaten je Claim, daher hoehere Grenze als v2/v3
 V2_BUDGET_GROSS_USD = 6.0    # benchmark_v2.md: kein neuer Lauf, wenn die Bruttokosten im v2-Store diese Grenze erreicht haben
 V2_VAT = 0.19
 # Annahmen der Schaetzung (Dry-Run); v2 mit Reparaturschleifen teurer als v1 -> Faktor, Dauer nicht gemessen
@@ -92,7 +94,7 @@ def dry_run(v2: bool, papers: list[str], rows: list[dict], paper_specs: dict[str
     v1_rows = [json.loads(x) for x in STORE.read_text().splitlines()] if STORE.exists() else []
     mean = mean_cost_net(rows or v1_rows)   # v2-Schaetzung vor dem ersten Lauf aus v1
     factor = V2_COST_FACTOR if v2 else 1.0
-    lines = [f"Benchmark {'v2 (graph_repair=True)' if v2 else 'v1 (graph_repair=False)'}; Tavily-Modus fixture; Store {(STORE_V3 if '--v3' in sys.argv else STORE_V2 if v2 else STORE).name}",
+    lines = [f"Benchmark {'v2 (graph_repair=True)' if v2 else 'v1 (graph_repair=False)'}; Tavily-Modus fixture; Store {(STORE_V4 if '--v4' in sys.argv else STORE_V3 if '--v3' in sys.argv else STORE_V2 if v2 else STORE).name}",
              f"{len(runs)} offene Laeufe ({len(papers)} Papers x {len(ARMS)} Arme x {N_GEN} Generierungen, bereits vorhandene abgezogen)"]
     for p in papers:
         spec = paper_specs[p]
@@ -106,16 +108,17 @@ def dry_run(v2: bool, papers: list[str], rows: list[dict], paper_specs: dict[str
     hours = len(runs) * MINUTES_PER_RUN / 60
     lines.append(f"Geschaetzte Dauer: {hours:.0f} h seriell, etwa {hours / 3:.0f} h mit 3 parallelen Prozessen (Annahme {MINUTES_PER_RUN} min je Lauf, nicht gemessen)")
     if v2:
-        lines.append(f"Budget-Grenze v2: {V2_BUDGET_GROSS_USD:.2f} $ brutto; bisher im Store {gross_spent(rows):.2f} $")
+        lines.append(f"Budget-Grenze: {V4_BUDGET_GROSS_USD if '--v4' in sys.argv else V2_BUDGET_GROSS_USD:.2f} $ brutto; bisher im Store {gross_spent(rows):.2f} $")
     lines.append("Keine Aufrufe ausgefuehrt.")
     return "\n".join(lines)
 
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    v3 = "--v3" in sys.argv
+    v4 = "--v4" in sys.argv
+    v3 = "--v3" in sys.argv or v4   # v4 = v3-Konfiguration mit neuem Code-Stand (Block A), eigener Store
     v2, dry = "--v2" in sys.argv or v3, "--dry-run" in sys.argv
-    claims_map, store = (CLAIMS_V2, STORE_V3 if v3 else STORE_V2) if v2 else (CLAIMS, STORE)
+    claims_map, store = (CLAIMS_V2, STORE_V4 if v4 else STORE_V3 if v3 else STORE_V2) if v2 else (CLAIMS, STORE)
     papers = args or list(claims_map)
     all_papers = yaml.safe_load((REPO_ROOT / "benchmark" / "papers.yaml").read_text())["papers"]
     yaml_targets = {c["id"]: c["target"] for p in all_papers for c in p.get("claims", [])}
@@ -138,10 +141,10 @@ def main() -> None:
             for arm, orch in arms.items():
                 if any(r["paper"] == paper and r["arm"] == arm and r["generation"] == g for r in rows):
                     continue
-                if v2 and gross_spent(rows) >= V2_BUDGET_GROSS_USD:   # Abbruchkriterium benchmark_v2.md
-                    print(f"Budget-Grenze v2 erreicht ({gross_spent(rows):.2f} $ brutto >= {V2_BUDGET_GROSS_USD:.2f} $). Stopp vor {paper} {arm} Generierung {g}.")
+                if v2 and gross_spent(rows) >= (limit := V4_BUDGET_GROSS_USD if v4 else V2_BUDGET_GROSS_USD):   # Abbruchkriterium benchmark_v2.md
+                    print(f"Budget-Grenze v2 erreicht ({gross_spent(rows):.2f} $ brutto >= {limit:.2f} $). Stopp vor {paper} {arm} Generierung {g}.")
                     return
-                base = {"paper": paper, "arm": arm, "generation": g, "code_commit": CODE_COMMIT + ("+dirty" if DIRTY else ""), **({"config": "v3_fixes_role5" if v3 else "v2_graph_repair"} if v2 else {})}
+                base = {"paper": paper, "arm": arm, "generation": g, "code_commit": CODE_COMMIT + ("+dirty" if DIRTY else ""), **({"config": "v4_block_a" if v4 else "v3_fixes_role5" if v3 else "v2_graph_repair"} if v2 else {})}
                 try:
                     d = orch.run(paper)
                 except BillingBlocked:

@@ -61,7 +61,7 @@ def test_dry_run_makes_no_calls_and_reports_cost(monkeypatch):
 
     monkeypatch.setattr(rb, "Orchestrator", boom)
     out = rb.dry_run(True, list(rb.CLAIMS_V2), [], PAPERS, rb.CLAIMS_V2)
-    assert "48 offene Laeufe" in out and "brutto" in out and "Budget-Grenze v2: 6.00" in out and "Keine Aufrufe ausgefuehrt" in out
+    assert "48 offene Laeufe" in out and "brutto" in out and "Budget-Grenze: 6.00" in out and "Keine Aufrufe ausgefuehrt" in out
     assert "shchur_gat_2018" in out and "zeng_nlinear_2023" in out
 
 
