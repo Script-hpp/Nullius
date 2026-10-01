@@ -228,3 +228,6 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 
 /* Time-lapse: a branch square appears with a small pop. */
 @keyframes tl-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); } }
+
+/* Film: a measurement drops into the tolerance band. */
+@keyframes film-drop { from { opacity: 0; transform: translate(-50%, calc(-50% - 22px)); } to { opacity: 1; transform: translate(-50%, -50%); } }

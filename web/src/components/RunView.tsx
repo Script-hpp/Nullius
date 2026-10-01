@@ -11,7 +11,7 @@ import { ReplayPlayer } from './run/ReplayPlayer'
 import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { PaperHead } from './PaperHead'
-import { Timelapse } from './Timelapse'
+import { Film } from './film/Film'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
@@ -80,11 +80,21 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
   return (
     <main className="mx-auto max-w-6xl space-y-16 px-4 pb-20 md:px-8">
+      {timelapse && run.events.length > 0 && (
+        <Film events={run.events} dossier={d} claim={claim} title={run.ref.title} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked}
+          overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))}
+          plan={run.plan} finalCode={run.code} codeLoader={codeLoader} autoplay />
+      )}
       <div>
-        <div className="pt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
           <a href="#overview" className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted no-underline transition-colors hover:text-fg-2">
             <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to runs
           </a>
+          {run.events.length > 0 && !timelapse && (
+            <button type="button" onClick={() => setTimelapse(true)} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-4 py-2 text-[13px] font-medium text-fg hover:bg-raised/60">
+              <Play className="h-3.5 w-3.5" />Play this check in 30 seconds
+            </button>
+          )}
         </div>
         <PageIntro kicker={`${run.ref.paper_id} · ${parseDate(run.ref.timestamp)}`} title={run.ref.title} head={<PaperHead head={head} />}
           what="This is the certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it."
@@ -102,12 +112,6 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       <section id="sec-verdict" className="scroll-mt-4 border-t-2 pt-10" style={{ borderTopColor: TONE_VAR[res.tone] }} aria-label="The verdict">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">The verdict in one sentence</div>
         <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{sentence}</p>
-        {run.events.length > 0 && !timelapse && (
-          <button type="button" onClick={() => { setTimelapse(true); window.setTimeout(() => scrollTo('sec-timelapse'), 50) }}
-            className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-5 py-2.5 text-sm font-medium text-fg hover:bg-raised/60">
-            <Play className="h-4 w-4" />Play this check in 30 seconds
-          </button>
-        )}
         <div className="mt-10 grid items-start gap-10 lg:grid-cols-3">
           <div className="min-w-0">
             <h2 className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] ${resColor}`}>{res.label}</h2>
@@ -139,10 +143,6 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           </div>
         </div>
       </section>
-
-      {timelapse && run.events.length > 0 && (
-        <Timelapse events={run.events} dossier={d} claim={claim} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked} overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} autoplay hasPlan={!!run.plan} />
-      )}
 
       <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
 
