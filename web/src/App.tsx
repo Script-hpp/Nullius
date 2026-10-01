@@ -13,10 +13,11 @@ import { ResultChart } from './components/ResultChart'
 import { StepGraph } from './components/run/StepGraph'
 import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
+import { NextStep, PageIntro } from './components/page'
 import { Badge, Section, toPercent } from './components/ui'
 import { getText, loadIndex, loadRun, runDir, type Json, type RunData, type RunRef } from './data'
 import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
-import { ArrowRight, BookOpen, Activity, PlayCircle, BarChart2, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info, Workflow } from 'lucide-react'
+import { ArrowRight, BookOpen, Activity, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info, Workflow } from 'lucide-react'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -104,67 +105,44 @@ function resultSentence(claim: Json, v: Json | undefined, gesamt?: string): stri
   return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${verdict}.`
 }
 
-function DashboardHeader({ count, reproduced, partial }: { count: number; reproduced: number; partial: number }) {
+// Counters come from the run index and the loaded dossiers; nothing is typed in by hand.
+function Counters({ items }: { items: { label: string; value: number; tone?: Tone }[] }) {
   return (
-    <div className="mb-10">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">Overview</h1>
+    <dl className="m-0 grid grid-cols-2 gap-0 border-y border-line md:grid-cols-4">
+      {items.map((it, i) => (
+        <div key={it.label} className={`py-6 ${i % 2 ? 'border-l border-line pl-6' : ''} ${i > 1 ? 'border-t border-line md:border-t-0' : ''} ${i > 0 ? 'md:border-l md:border-line md:pl-8' : ''}`}>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{it.label}</dt>
+          <dd className={`m-0 mt-2 font-mono text-4xl font-light tracking-tight ${it.tone ? colorForTone(it.tone) : 'text-fg'}`}>{it.value}</dd>
         </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-transparent border border-line text-fg-3 text-sm font-medium rounded-lg hover:bg-raised-2 transition-colors shadow-sm cursor-pointer">
-            Filter runs
-          </button>
-          <a href="#discover" className="px-4 py-2 bg-inverse text-on-inverse border border-transparent text-sm font-medium rounded-lg hover:bg-inverse-hover hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer no-underline">
-            <PlayCircle className="w-4 h-4" />
-            Discover papers
-          </a>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
-          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
-            <Activity className="w-3.5 h-3.5 text-fg-4" />
-            Total Runs
-          </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">{count}</span>
-        </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
-          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
-            <CheckCircle2 className="w-3.5 h-3.5 text-tone-green" />
-            Reproduced
-          </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">{reproduced}</span>
-        </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
-          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
-            <AlertCircle className="w-3.5 h-3.5 text-tone-amber" />
-            Partially
-          </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">{partial}</span>
-        </div>
-        <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
-          <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
-            <BarChart2 className="w-3.5 h-3.5 text-tone-blue" />
-            Datasets
-          </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">3</span>
-        </div>
-      </div>
-    </div>
+      ))}
+    </dl>
   )
 }
 
 function Home({ runs }: { runs: RunRef[] }) {
   const [data, setData] = useState<Record<string, RunData>>({})
   useEffect(() => { runs.forEach((r) => loadRun(r).then((d) => setData((x) => ({ ...x, [r.id]: d })))) }, [runs])
+  const urteil = (r: RunRef) => data[r.id]?.dossier?.verdicts?.[0]?.urteil
+  const reproduced = runs.filter((r) => urteil(r) === 'reproduziert')
+  const partial = runs.filter((r) => urteil(r) === 'teilweise').length
+  const papers = new Set(runs.map((r) => r.paper_id)).size
+  const example = reproduced[0] ?? runs[0]
+  // several runs of one paper: say which one a card is ("Run 2 of 3 for this paper"), oldest first
+  const sameCount = (r: RunRef) => runs.filter((x) => x.paper_id === r.paper_id).length
+  const runNo = (r: RunRef) => runs.filter((x) => x.paper_id === r.paper_id).sort((a, b) => a.timestamp.localeCompare(b.timestamp)).findIndex((x) => x.id === r.id) + 1
   return (
-    <main className="mx-auto max-w-6xl px-4 md:px-8 pb-16">
-      <DashboardHeader count={runs.length} reproduced={runs.filter((r) => data[r.id]?.dossier?.verdicts?.[0]?.urteil === 'reproduziert').length} partial={runs.filter((r) => data[r.id]?.dossier?.verdicts?.[0]?.urteil === 'teilweise').length} />
-      
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted">Recent Evaluations</h2>
+    <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
+      <PageIntro kicker="Runs" title="Finished checks"
+        what="Each card is one finished check. A paper reported a number, Nullius rebuilt the experiment and measured it again. Reproduced means our number landed within the allowed tolerance of the claim."
+        look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
+      <Counters items={[
+        { label: 'Checks', value: runs.length }, { label: 'Reproduced', value: reproduced.length, tone: 'green' },
+        { label: 'Partially', value: partial, tone: 'amber' }, { label: 'Papers', value: papers },
+      ]} />
+
+      <div className="mb-6 mt-14 flex items-baseline justify-between gap-4">
+        <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">All checks</h2>
+        <span className="text-[12px] text-muted">Measured with our setup. Method fidelity not checked.</span>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -173,61 +151,50 @@ function Home({ runs }: { runs: RunRef[] }) {
           const v = d?.dossier?.verdicts?.[0]
           const claim = d?.dossier?.claims?.[0]
           const res = v ? (r.catalog_id ? catalogLabel(v.urteil, r.gesamtaussage) : de2en(RESULT, v.urteil)) : null
-          
           let delta = null
           if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
-          
           return (
-            <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="flex flex-col p-6 rounded-xl border border-line bg-panel/50 no-underline transition-all duration-200 hover:border-line-strong hover:bg-raised/80 group cursor-pointer block">
-              
-              <div className="flex justify-between items-start mb-5">
-                <div className="flex items-center gap-2 text-fg-4 text-[11px] font-medium font-mono uppercase tracking-wider">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  {r.paper_id}
-                </div>
-                <div className="text-[11px] font-medium text-muted uppercase tracking-wider">{parseDate(r.timestamp)}</div>
-              </div>
-              
-              <div className="flex flex-col gap-2.5 mb-5">
-                {v ? (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Badge tone={res!.tone}>{res!.label}</Badge>
-                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
-                  </div>
-                ) : <span className="text-[10px] text-muted uppercase tracking-widest font-semibold">Evaluating...</span>}
-                <h3 className="text-lg font-semibold leading-snug text-fg group-hover:text-fg-max transition-colors">{r.title}</h3>
-              </div>
-              
-              <p className="text-[13px] text-fg-4 line-clamp-2 leading-relaxed mb-6">
-                {claim ? translateClaim(claim.text) : 'Evaluating target metrics...'}
-              </p>
-              
-              <div className="mt-auto border-t border-line/50 pt-4 flex flex-col gap-2 w-full text-sm">
+            <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              className="group flex cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline transition-colors duration-200 hover:border-line-strong">
+              <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-muted uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
+                    <Badge tone={res!.tone}>{res!.label}</Badge>
+                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
+                  </>
+                ) : <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Evaluating...</span>}
+              </div>
+              <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">{r.title}</h3>
+              <p className="mb-6 mt-3 line-clamp-2 text-[14px] leading-relaxed text-fg-4">{claim ? translateClaim(claim.text) : 'Evaluating target metrics...'}</p>
+              <div className="mt-auto flex w-full flex-col gap-2 border-t border-line pt-4 text-sm">
+                {v ? (
+                  <>
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Claimed</span>
                       <span className="font-mono text-fg-4">{showValue(claim?.metric, claim?.target)}</span>
                     </div>
-                    <div className="flex justify-between items-start w-full pt-1">
-                      <span className="text-muted uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
+                    <div className="flex w-full items-start justify-between pt-1">
+                      <span className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted">Measured</span>
                       <div className="flex flex-col items-end gap-1">
-                        <span className={`font-mono font-bold text-lg leading-none ${colorForTone(res!.tone)}`}>{showValue(claim?.metric, v.measured_mean)}</span>
+                        <span className={`font-mono text-lg font-bold leading-none ${colorForTone(res!.tone)}`}>{showValue(claim?.metric, v.measured_mean)}</span>
                         {delta && <span className={`font-mono text-[10px] ${delta.color}`}>{delta.text}</span>}
                       </div>
                     </div>
                   </>
-                ) : (
-                  <div className="h-10 flex items-center">
-                    <span className="text-xs text-subtle font-mono">Running sandbox...</span>
-                  </div>
-                )}
+                ) : <span className="font-mono text-xs text-subtle">Running sandbox...</span>}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+                  <span className="inline-flex items-center gap-1.5"><BookOpen className="h-3 w-3" />{sameCount(r) > 1 ? `Run ${runNo(r)} of ${sameCount(r)} for this paper` : 'One run for this paper'}</span>
+                  <span>{parseDate(r.timestamp)}</span>
+                </div>
               </div>
             </motion.a>
           )
         })}
       </div>
+
+      <NextStep title={example ? 'See how one check ends' : 'Find a paper to check'}
+        text={example ? 'Open a finished check: the verdict in one sentence, the steps the agent took, and why the number can be trusted.' : 'No checks yet. Discover papers that report results on a benchmark we can rebuild.'}
+        label={example ? 'Open an example' : 'Discover papers'} href={example ? `#/run/${example.id}` : '#discover'} />
     </main>
   )
 }
