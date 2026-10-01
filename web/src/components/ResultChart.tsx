@@ -1,17 +1,15 @@
 import type { Json } from '../data'
 import { TONE_VAR, type Tone } from '../labels'
 import { Term } from './Glossed'
-import { Section } from './ui'
 
 const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
 
-// "Claimed vs. measured" in one picture: the claimed value with its tolerance band and every measured seed as a dot.
+// "Claimed vs. measured" in one picture (the only chart on top of the page; the per-seed bars sit under Details): the claimed value with its tolerance band and every measured seed as a dot.
 // Plain HTML positioning (no SVG text) so labels stay readable on a phone.
-export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSpread }: {
+export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread }: {
   dossier: Json
   claimId: string
   tone: Tone
-  verdictText: string                          // one sentence built from the data by the caller
   fmt: (x: number) => string                   // value format of the metric (percent for accuracy, plain number for MSE/MAE)
   fmtSpread: (x: number) => string
 }) {
@@ -21,8 +19,6 @@ export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSprea
     .filter((a: Json) => a.claim_id === claimId && typeof a.measured === 'number')
     .map((a: Json) => a.measured)
   if (!claim) return null
-  const fidelityUnchecked = !verdict?.methode || verdict.methode === 'nicht geprueft'
-
   const lo = claim.target - claim.tolerance
   const hi = claim.target + claim.tolerance
   const all = [...vals, lo, hi]
@@ -45,11 +41,9 @@ export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSprea
   const color = TONE_VAR[tone]
 
   return (
-    <Section title="Claimed vs. measured" hint={vals.length ? `${vals.length} ${vals.length === 1 ? 'run' : 'runs'}` : undefined}>
-      <p className="text-[15px] md:text-base text-fg-2 leading-relaxed font-medium max-w-3xl m-0">{verdictText}</p>
-
+    <div>
       {vals.length > 0 ? (
-        <figure className="m-0 mt-8" aria-label={`Claimed ${fmt(claim.target)}; measured ${vals.map(fmt).join(', ')}`}>
+        <figure className="m-0 mt-2" aria-label={`Claimed ${fmt(claim.target)}; measured ${vals.map(fmt).join(', ')}`}>
           <div className="relative h-24 mx-2">
             {/* tolerance band and claimed line */}
             <div className="absolute top-6 h-12 rounded-sm" style={{ left: pos(lo), width: `calc(${pos(hi)} - ${pos(lo)})`, background: 'var(--chart-target)', opacity: 0.14 }} />
@@ -80,14 +74,9 @@ export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSprea
           </figcaption>
         </figure>
       ) : (
-        <p className="mt-6 text-sm text-muted italic">No valid measurements to plot.</p>
+        <p className="m-0 text-sm text-muted italic">No valid measurements to plot.</p>
       )}
 
-      <p className="mt-6 pt-4 border-t border-line/50 text-[12px] text-muted leading-relaxed m-0">
-        {fidelityUnchecked
-          ? <><b className="text-fg-4">Method fidelity not checked.</b> The number was measured by an independent program; whether our code follows the paper&rsquo;s method is not verified.</>
-          : 'Method fidelity was assessed; see the evidence tab for details.'}
-      </p>
-    </Section>
+    </div>
   )
 }

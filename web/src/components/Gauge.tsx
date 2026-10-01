@@ -1,15 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ATTEMPT, de2en, type Tone } from '../labels'
 import type { Json } from '../data'
 import { toPercent } from './ui'
-
-const CHART_COLORS: Record<Tone, string> = {
-  green: 'var(--chart-green)',
-  amber: 'var(--chart-amber)',
-  red: 'var(--chart-red)',
-  violet: 'var(--chart-violet)',
-  gray: 'var(--chart-gray)'
-}
 
 export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: string }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
@@ -50,13 +41,13 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
             <Tooltip cursor={{ fill: 'var(--chart-cursor)' }} contentStyle={{ background: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-line)', borderRadius: 8, color: 'var(--chart-tooltip-fg)' }}
               formatter={(v) => [f(Number(v)), 'Measured']} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={700}>
-              {data.map((d: Json, i: number) => <Cell key={i} fill={CHART_COLORS[de2en(ATTEMPT, d.status).tone]} fillOpacity={0.5} />)}
+              {data.map((_: Json, i: number) => <Cell key={i} fill="var(--c-fill-mid)" fillOpacity={0.55} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
       <p className="text-xs text-muted leading-relaxed mt-4 pt-4 border-t border-line/50">
-        Green band = Target ± tolerance ({f(lo)} to {f(hi)}). Bars = Sandbox executions (seeds). The final verdict is based on the <b>mean</b> of all stable runs.
+        One bar per seed (one run in its own sandbox branch). Band = claimed value ± tolerance ({f(lo)} to {f(hi)}). The verdict uses the <b>mean</b> of all seeds, so single bars may fall outside the band.
         {shownBase.length < baselines.length && ' Trivial baselines outside the range are omitted: ' + baselines.filter((b) => !shownBase.includes(b)).map(([k, v]) => `${k} ${f(v)}`).join(', ') + '.'}
       </p>
     </div>

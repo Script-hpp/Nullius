@@ -1,23 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Layout } from './components/Layout'
-import { AttemptChart } from './components/Gauge'
-import { BranchTree } from './components/BranchTree'
-import { EvidenceSplit } from './components/Evidence'
-import { ReplayPlayer } from './components/run/ReplayPlayer'
 import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { Landing } from './components/Landing'
-import { ResultChart } from './components/ResultChart'
-import { StepGraph } from './components/run/StepGraph'
 import { DATA_CHANGED } from './live'
-import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
+import { PreliminaryChip } from './components/CatalogBits'
 import { NextStep, PageIntro } from './components/page'
-import { Badge, Section, toPercent } from './components/ui'
-import { getText, loadIndex, loadRun, runDir, type Json, type RunData, type RunRef } from './data'
-import { NOT_ASSESSABLE, RESULT, TONE_VAR, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
-import { ArrowRight, BookOpen, Activity, CheckCircle2, AlertCircle, FileText, Activity as ActivityIcon, Code, Network, XCircle, HelpCircle, Info, Workflow } from 'lucide-react'
+import { RunView } from './components/RunView'
+import { colorForTone, getDelta, parseDate, showValue } from './format'
+import { Badge } from './components/ui'
+import { loadIndex, loadRun, type RunData, type RunRef } from './data'
+import { RESULT, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
+import { BookOpen, Activity } from 'lucide-react'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -27,82 +23,6 @@ const useHash = () => {
     return () => removeEventListener('hashchange', f)
   }, [])
   return h
-}
-
-function parseDate(ts: string) {
-  const dateStr = ts.split('-')[0]
-  if (dateStr.length !== 8) return ts
-  const d = new Date(parseInt(dateStr.slice(0,4)), parseInt(dateStr.slice(4,6))-1, parseInt(dateStr.slice(6,8)))
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function colorForTone(tone: Tone) {
-  if (tone === 'green') return 'text-tone-green'
-  if (tone === 'amber') return 'text-tone-amber'
-  if (tone === 'red') return 'text-tone-red'
-  if (tone === 'violet') return 'text-tone-violet'
-  return 'text-fg-4'
-}
-
-function iconForTone(tone: Tone) {
-  if (tone === 'green') return <CheckCircle2 className="w-5 h-5 text-tone-green mt-0.5 shrink-0" />
-  if (tone === 'amber') return <AlertCircle className="w-5 h-5 text-tone-amber mt-0.5 shrink-0" />
-  if (tone === 'red') return <XCircle className="w-5 h-5 text-tone-red mt-0.5 shrink-0" />
-  if (tone === 'violet') return <HelpCircle className="w-5 h-5 text-tone-violet mt-0.5 shrink-0" />
-  return <Info className="w-5 h-5 text-fg-4 mt-0.5 shrink-0" />
-}
-
-// MSE/MAE are plain decimals, never percent; accuracy is a share shown as percent.
-const showValue = (metric: string | undefined, x: any) => (metric && metric !== 'accuracy' ? (x == null ? '–' : Number(x).toFixed(3)) : toPercent(x))
-
-function getDelta(measured: any, target: any, metric?: string) {
-  if (measured === null || measured === undefined || target === null || target === undefined) return null
-  const m = Number(measured)
-  let t = Number(target)
-  if (Number.isNaN(m) || Number.isNaN(t)) return null
-  
-  const plain = !!metric && metric !== 'accuracy'
-  const mVal = plain ? m : (m <= 2.0 && m > 0) ? m * 100 : m
-  const tVal = plain ? t : (t <= 2.0 && t > 0) ? t * 100 : t
-  
-  const diff = mVal - tVal
-  if (plain) {
-    if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-muted' }
-    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-tone-green' : 'text-tone-red' }
-  }
-  // percentage points, same wording as the catalog
-  if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-muted' }
-  if (diff > 0) return { text: `+${diff.toFixed(1)} pp vs. claimed`, color: 'text-tone-green' }
-  return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-tone-red' }
-}
-
-// All runs: always "with our setup", never a verdict on the paper (method fidelity is not checked).
-function getCatalogStatement(claimed: string, measured: string, urteil: string, gesamt?: string) {
-  if (gesamt === NOT_ASSESSABLE) return `The code did not implement the method, so the measurement (${measured}) says nothing about the reported ${claimed}.`
-  if (urteil === 'reproduziert') return `Reproduced with our setup: measured ${measured} against the reported ${claimed}.`
-  if (urteil === 'teilweise') return `Partially reproduced with our setup: measured ${measured} against the reported ${claimed}.`
-  if (urteil === 'nicht reproduziert') return `Not reproduced with our setup: measured ${measured} against the reported ${claimed}. This is not a finding about the paper.`
-  return `No valid measurement with our setup against the reported ${claimed}.`
-}
-
-// Our own verdict words; never "verified": method fidelity is not checked.
-const RESULT_WORDS: Record<string, string> = {
-  'reproduziert': 'reproduced with our setup (target value reached)',
-  'teilweise': 'partially reproduced with our setup',
-  'nicht reproduziert': 'not reproduced with our setup',
-  'Agenten-Fehler vermutet': 'agent error suspected (says nothing about the paper)',
-  'nicht reproduzierbar (Setup)': 'not reproducible with our setup',
-}
-
-// One sentence from the data: what we measured against what was claimed, with the verdict label.
-function resultSentence(claim: Json, v: Json | undefined, gesamt?: string): string {
-  const target = showValue(claim.metric, claim.target)
-  if (!v || v.measured_mean == null || gesamt === NOT_ASSESSABLE) {
-    return v ? getCatalogStatement(target, showValue(claim.metric, v.measured_mean), v.urteil, gesamt) : `No verdict yet for the claimed ${target}.`
-  }
-  const spread = v.measured_std == null ? '' : ` (± ${claim.metric === 'accuracy' ? (v.measured_std * 100).toFixed(1) : Number(v.measured_std).toFixed(3)})`
-  const verdict = RESULT_WORDS[String(v.urteil)] ?? 'no valid verdict with our setup'
-  return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${verdict}.`
 }
 
 // Counters come from the run index and the loaded dossiers; nothing is typed in by hand.
@@ -195,153 +115,6 @@ function Home({ runs }: { runs: RunRef[] }) {
       <NextStep title={example ? 'See how one check ends' : 'Find a paper to check'}
         text={example ? 'Open a finished check: the verdict in one sentence, the steps the agent took, and why the number can be trusted.' : 'No checks yet. Discover papers that report results on a benchmark we can rebuild.'}
         label={example ? 'Open an example' : 'Discover papers'} href={example ? `#/run/${example.id}` : '#discover'} />
-    </main>
-  )
-}
-
-function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
-  const [run, setRun] = useState<RunData | null>(null)
-  const [selected, setSelected] = useState<Json | null>(null)
-  const [activeTab, setActiveTab] = useState<'graph' | 'evidence' | 'tree' | 'log' | 'files'>(initialTab === 'log' || initialTab === 'evidence' || initialTab === 'tree' || initialTab === 'files' ? initialTab : 'graph')
-  useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
-  // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
-  const finalHash = useMemo(() => {
-    const att: Json[] = (run?.dossier?.attempts ?? []).filter((x: Json) => x.measured != null)
-    return att.length ? att[att.length - 1].code_hash : null
-  }, [run])
-  const codeLoader = useCallback((hash: string) => getText(`${runDir(ref_)}code_${hash}.py`).then((t) => t ?? (hash === finalHash ? run?.code ?? null : null)), [ref_, finalHash, run])
-  
-  if (!run) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 text-muted">Loading run data…</main>
-  const d = run.dossier
-  const claim: Json = d.claims?.[0]
-  const v: Json = d.verdicts?.[0]
-  if (!claim) return <main className="mx-auto max-w-6xl px-4 md:px-8 py-10 text-muted">Empty run.</main>
-  
-  const isCatalog = !!ref_.catalog_id   // discovery candidate run through the loop
-  const res = v ? (isCatalog ? catalogLabel(v.urteil, ref_.gesamtaussage) : de2en(RESULT, v.urteil)) : { label: 'NO VERDICT', tone: 'gray' as const }
-  const attempts: Json[] = (d.attempts ?? []).filter((a: Json) => a.claim_id === claim.id)
-  const paperUrl = claim.target_evidence?.url
-  
-  let delta = null
-  if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
-  const resColorClass = colorForTone(res.tone)
-
-  const tabs = [
-    { id: 'graph', label: 'Step Graph', icon: <Workflow className="w-4 h-4" /> },
-    { id: 'evidence', label: 'Data & Evidence', icon: <FileText className="w-4 h-4" /> },
-    { id: 'log', label: 'Execution Log', icon: <ActivityIcon className="w-4 h-4" /> },
-    { id: 'tree', label: 'Branch Tree', icon: <Network className="w-4 h-4" /> },
-    { id: 'files', label: 'Raw Files', icon: <Code className="w-4 h-4" /> },
-  ] as const
-
-  return (
-    <main className="mx-auto max-w-6xl space-y-8 px-4 md:px-8 pb-20">
-      <div className="pt-2">
-        <a href="#overview" className="inline-flex items-center gap-1.5 text-muted text-xs font-medium uppercase tracking-wider hover:text-fg-2 transition-colors">
-          <ArrowRight className="w-3.5 h-3.5 rotate-180" /> Back to Overview
-        </a>
-      </div>
-      
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pb-8">
-        <div className="flex items-center gap-3 text-muted text-xs mb-3 font-mono">
-          <span>{run.ref.paper_id}</span>
-          <span>•</span>
-          <span>{parseDate(run.ref.timestamp)}</span>
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight text-fg leading-tight">{run.ref.title}</h1>
-        <p className="mt-4 text-lg text-fg-4 max-w-3xl leading-relaxed">{translateClaim(claim.text)}</p>
-        
-        {paperUrl && (
-          <a className="inline-flex items-center gap-2 mt-5 text-sm font-medium text-tone-blue hover:text-tone-blue-hover transition-colors" href={paperUrl} target="_blank" rel="noreferrer">
-            <BookOpen className="w-4 h-4" />
-            View Source Paper
-          </a>
-        )}
-      </motion.div>
-
-      {isCatalog && <CatalogCallout run={run} claimId={claim.id} gesamt={ref_.gesamtaussage} />}
-
-      <ResultChart dossier={d} claimId={claim.id} tone={res.tone}
-        verdictText={resultSentence(claim, v, ref_.gesamtaussage)}
-        fmt={(x) => showValue(claim.metric, x)}
-        fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
-
-      {/* Split Layout: Verdict & Chart */}
-      <div className="grid gap-6 lg:grid-cols-3 items-stretch">
-        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2 min-w-0" style={{ borderTopColor: TONE_VAR[res.tone] }}>
-          <div className="mb-8">
-            <h3 className={`text-4xl font-bold tracking-tight mt-2 ${resColorClass}`}>{res.label}</h3>
-          </div>
-          
-          <div className="space-y-4 mb-8">
-            <div className="flex justify-between items-center w-full">
-              <span className="text-muted uppercase tracking-widest text-[10px] font-semibold">Claimed</span>
-              <span className="font-mono text-fg-3 text-lg">{showValue(claim.metric, claim.target)}</span>
-            </div>
-            <div className="flex justify-between items-start w-full pt-4 border-t border-line/50">
-              <span className="text-muted uppercase tracking-widest text-[10px] font-semibold mt-1">Measured</span>
-              <div className="flex flex-col items-end gap-1.5">
-                <span className={`font-mono font-bold text-3xl leading-none ${resColorClass}`}>{showValue(claim.metric, v?.measured_mean)}</span>
-                {delta && <span className={`font-mono text-[11px] mt-1 ${delta.color}`}>{delta.text}</span>}
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-start gap-3 mt-8">
-            {iconForTone(res.tone)}
-            <div>
-              <p className="text-[13px] text-fg-3 leading-relaxed font-medium">
-                {v
-                  ? getCatalogStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v.measured_mean), v.urteil, ref_.gesamtaussage)
-                  : `No verdict yet for the claimed ${showValue(claim.metric, claim.target)}.`}
-              </p>
-              <p className="text-[11px] text-muted mt-2 font-mono">Margin of Error: ±{claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)}</p>
-            </div>
-          </div>
-        </Section>
-        
-        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 flex flex-col min-w-0">
-          <AttemptChart dossier={d} claimId={claim.id} />
-        </Section>
-      </div>
-
-      {/* Tabs Layout */}
-      <div className="mt-12">
-        <div className="flex gap-2 border-b border-line/50 pb-px mb-6 overflow-x-auto">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} 
-              aria-current={activeTab === t.id ? 'page' : undefined}
-              className={`flex shrink-0 items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${activeTab === t.id ? 'border-fg text-fg' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-        
-        <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}>
-            {activeTab === 'graph' && <StepGraph events={run.events} running={false} codeLoader={codeLoader} planFull={run.plan} metricHint={claim.metric} />}
-            {activeTab === 'evidence' && <EvidenceSplit claimId={claim.id} dossier={d} events={run.events} selected={selected} />}
-            {activeTab === 'log' && <ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} />}
-            {activeTab === 'tree' && <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />}
-            {activeTab === 'files' && (
-              <div className="space-y-6">
-                <div className="p-4 bg-tone-amber-solid/10 border border-tone-amber-solid/20 text-tone-amber rounded-lg text-sm flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <p>These raw files are primarily used by developers to debug the agent's behavior. They contain internal Markdown structure.</p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-raised border border-line text-fg-3 hover:bg-raised-2">Agent Code</button>
-                  <button className="px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg bg-raised border border-line text-fg-3 hover:bg-raised-2">Execution Plan</button>
-                </div>
-                <pre className="font-mono h-96 overflow-auto whitespace-pre-wrap rounded-xl p-5 bg-surface border border-line/50 text-fg-4 text-[12px] leading-relaxed">
-                  {run.code || 'No code snapshot available.'}
-                </pre>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
     </main>
   )
 }
