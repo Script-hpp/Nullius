@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight, ChevronDown, Play } from 'lucide-react'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
 import { useBenchmark } from '../benchmark'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
+import { FEATURED_RUN_ID } from '../featured'
 
 // Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke, then one sentence and two buttons.
 // Further down: claim vs. measurement, three steps, limits. The example numbers come from a real, earlier run
 // (GCN on Cora, web/public/data/kipf_gcn_2017) and are labelled as such. Benchmark numbers stay TBD until the evaluation exists.
 
 const REPO = 'https://github.com/Script-hpp/Nullius'
-const EXAMPLE_RUN = '#/run/kipf_gcn_2017--20260929-130133'
+const EXAMPLE_RUN = `#/run/${FEATURED_RUN_ID}`
+const TIMELAPSE_RUN = `#/run/${FEATURED_RUN_ID}?play=1`
 
 function TopBar() {
   const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
@@ -58,6 +60,9 @@ function Hero() {
             </a>
             <a href={EXAMPLE_RUN} className="inline-flex items-center gap-2 rounded-full border border-line-strong px-6 py-3 text-sm font-medium text-fg no-underline transition-colors hover:bg-raised/60">
               See a finished check
+            </a>
+            <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-fg-4 no-underline transition-colors hover:text-fg">
+              <Play className="h-4 w-4" />Watch one in 30 seconds
             </a>
           </div>
         </div>
