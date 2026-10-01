@@ -13,7 +13,7 @@ Stand 2026-10-01, vom Nutzer bestätigt. Abgabe 30.10.2026, 18:00 MEZ. Ziel: ein
 1. **v3 abschließen** (heute): Auswertung `results/benchmark_v3.md`, Fehlerprotokoll neu erzeugen, v2 und v3 im README.
 2. **Block A, Agent verbessern** (Reviewer, Tests mit Fakes), dann **Benchmark v4** über Nacht (Vorab-Festlegung vor dem Start).
 3. **Block B, Benchmark erweitern** (worker-2 recherchiert parallel, nur Doku und Fixtures, keine echten Aufrufe; Reviewer macht die echten Läufe).
-4. **Block C, Produkt** (Deployment, Demo-URL, UI, Video, Devpost).
+4. **Block C, Produkt** (Jury-Erlebnis C0, Deployment, Demo-URL, UI, Video, Devpost). C0 kann parallel zu Block A laufen (Frontend, worker-2).
 
 ## Block A: Agent verbessern
 
@@ -37,6 +37,19 @@ Messung: **Benchmark v4** wie v3 (8 Einheiten, beide Arme, 3 Generierungen, Plac
 worker-2 recherchiert B1/B2 (Paperliste mit belegten Zielwerten, Repo-Links, Aufwand je Einheit), nur Doku; der Reviewer prüft und macht echte Läufe. Kontingent des Nutzers schonen: klar begrenzte Aufträge.
 
 ## Block C: Produkt
+
+### C0: Jury-Erlebnis (vom Nutzer als sehr wichtig markiert, 2026-10-01)
+
+Die Jury muss ohne Vorwissen in wenigen Minuten verstehen, was Nullius tut, und jeden Schritt nachvollziehen können.
+
+1. **Landing Page** (neu, vor der heutigen Overview): einfach und eindrucksvoll. Ein Satz, was Nullius tut ("We check machine-learning papers by rebuilding their experiments"), das Motiv "Worte vs. Messung" visuell (Behauptung links, Messung rechts, Haken/Kreuz), drei Schritte als Grafik, ein Knopf "Try it" (führt zu Discover). Darunter knapp: Benchmark-Kernaussage, Nemotron/Token Factory/Nebius Sandboxes/Tavily als Bausteine. Keine Textwand. Design nach "Design Philosophy" (`CLAUDE.md`), Dark/Light.
+2. **Discover mit einfacher Paper-Erklärung:** Zu jedem gefundenen Paper erklärt ein Nemotron-Aufruf in 2-3 einfachen Sätzen, worum es geht und was die geprüfte Behauptung bedeutet (Zielgruppe: Jury ohne ML-Fachwissen, z. B. "This paper proposes a new way for a computer to classify scientific articles by looking at which articles cite each other. It claims 81.5 % accuracy."). Grundlage nur Abstract und Claim-Zitat; die Erklärung ist als "AI summary" gekennzeichnet und nennt die Quelle (arXiv). Gespeichert je Paper, kein Aufruf pro Seitenaufruf (Kosten). Fachbegriffe beim Überfahren erklärt (Tooltip: "accuracy", "Cora", "seed").
+3. **Jeder Schritt nachvollziehbar, als Grafik:** Der Lauf als Ablaufgraph (React Flow ist vorhanden): Paper → Claim (Zitat) → Tavily-Quellen (Paper-Text, README, Repo, Fehlersuche) → Plan (Nemotron Ultra) → Code (Nemotron Super) → Sandbox-Branches je Seed → Harness (unabhängig, Testlabels nur hier) → Urteil. Jeder Knoten klickbar mit Kurzerklärung in einfacher Sprache ("What happens here", "Why this matters") und den echten Daten des Laufs (Zitat, Plan, Code, Messwerte). Im Live-Lauf füllt sich der Graph Schritt für Schritt; im Zeugnis ist er der Einstieg. Reparaturen und Rollbacks als sichtbare Schleifen.
+4. **Ergebnis verständlich:** Behauptet vs. gemessen als einfache Grafik (Zielwert mit Toleranzband, gemessene Seeds als Punkte), Urteil in einem Satz ("Our rebuild reached 81.9 % (± 0.7) against the claimed 81.5 %: reproduced."), Grenzen sichtbar ("method fidelity not checked").
+
+Umsetzung: Frontend (`web/`) durch worker-2 mit Fake-API und Screenshots; die Erklär-Funktion (Nemotron) als kleiner Endpunkt mit Cache, echte Aufrufe durch den Reviewer.
+
+### C1: Weitere Produktpunkte
 
 - Deployment (Coolify, `docs/deploy.md`) und Demo-URL, Pflicht, erreichbar bis 15.12.2026.
 - "What others found" und "Possible explanations" (Tavily, geplant in `docs/idea_tavily_community_check.md`).
