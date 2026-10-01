@@ -30,7 +30,7 @@ test('parallel candidates: results are matched in order, never to the same hash 
   const errs = repairs.filter((r) => r.source === 'error')
   const targets = errs.map((r) => r.toHash).filter(Boolean)
   assert.equal(new Set(targets).size, targets.length)
-  assert.equal(errs[0].toHash, '7f1cece332d0')          // first repair of e33c... -> first attempt with n = 2
+  assert.equal(errs[0].toHash, '7f1cece332d0')
   assert.equal(errs[1].toHash, '4696c7a0bc01')
   assert.ok(errs[0].toVersion === 2 && errs[0].fromVersion === 1)
 })
@@ -47,6 +47,39 @@ test('a failed new version says so with the last error line', () => {
   const failing = repairs.filter((r) => r.outcome.tone === 'fail')
   assert.ok(failing.length >= 1)
   assert.ok(failing.every((r) => r.outcome.text.startsWith('It failed again:') || r.outcome.text.startsWith('It was rejected:')))
+})
+
+test('parallel candidates are told apart: each card names its candidate and results follow the same candidate', () => {
+  const errs = repairs.filter((r) => r.source === 'error')
+  assert.deepEqual(errs.map((r) => r.candidate), [2, 1, 2, 1, 1])
+  // candidate 2: e33c -> 7f1c (n = 2); candidate 1: 46a2 -> 4696 (n = 2) -> 1db7 (n = 3)
+  assert.deepEqual(errs.map((r) => [r.fromHash, r.toHash]).slice(0, 4), [
+    ['e33c912af040', '7f1cece332d0'], ['46a26ac1502a', '4696c7a0bc01'], ['7f1cece332d0', '0ed5e001fe19'], ['4696c7a0bc01', '1db723ca1231'],
+  ])
+  assert.deepEqual(errs.map((r) => [r.fromVersion, r.toVersion]), [[1, 2], [1, 2], [2, 3], [2, 3], [3, 4]])
+})
+
+test('to_hash in the repair event wins over the inferred result', () => {
+  const ev = [
+    { ts: 0, type: 'attempt', claim_id: 'c', seed: 0, n: 1, code_hash: 'aaa', status: 'fehler', measured: null, error: 'ValueError: x' },
+    { ts: 1, type: 'repair', claim_id: 'c', seed: 0, from_hash: 'aaa', to_hash: 'bbb', error: 'ValueError: x' },
+    { ts: 2, type: 'attempt', claim_id: 'c', seed: 0, n: 2, code_hash: 'zzz', status: 'fehler', measured: null, error: 'other' },
+    { ts: 3, type: 'attempt', claim_id: 'c', seed: 0, n: 2, code_hash: 'bbb', status: 'stabil', measured: 0.5, error: null },
+  ] as never
+  const [card] = buildStory(ev, 'c') as Extract<Card, { kind: 'repair' }>[]
+  assert.equal(card.toHash, 'bbb')
+  assert.deepEqual(card.outcome, { tone: 'ok', text: 'It ran. Valid measurement: 0.500.' })
+})
+
+test('a repair_result event after the repair names the fixed code', () => {
+  const ev = [
+    { ts: 0, type: 'attempt', claim_id: 'c', seed: 0, n: 1, code_hash: 'aaa', status: 'fehler', measured: null, error: 'ValueError: x' },
+    { ts: 1, type: 'repair', claim_id: 'c', seed: 0, from_hash: 'aaa', error: 'ValueError: x' },
+    { ts: 2, type: 'attempt', claim_id: 'c', seed: 0, n: 2, code_hash: 'zzz', status: 'fehler', measured: null, error: 'other' },
+    { ts: 3, type: 'repair_result', claim_id: 'c', seed: 0, from_hash: 'aaa', to_hash: 'bbb' },
+    { ts: 4, type: 'attempt', claim_id: 'c', seed: 0, n: 2, code_hash: 'bbb', status: 'stabil', measured: 0.5, error: null },
+  ] as never
+  assert.equal((buildStory(ev, 'c')[0] as Extract<Card, { kind: 'repair' }>).toHash, 'bbb')
 })
 
 test('events of other claims are ignored', () => {

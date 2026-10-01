@@ -7,7 +7,7 @@ export type Card =
   | { kind: 'candidates'; text: string }
   | { kind: 'repo_diff'; text: string; fromHash: string | null; toHash: string | null }
   | {
-      kind: 'repair'; source: 'error' | 'fault' | 'graph'; fromVersion: number; toVersion: number | null; fromHash: string; toHash: string | null
+      kind: 'repair'; source: 'error' | 'fault' | 'graph'; candidate: number | null; fromVersion: number; toVersion: number | null; fromHash: string; toHash: string | null
       problemTitle: string; problem: string; search: { query: string; links: { url: string; domain: string }[] } | null; outcome: Outcome
     }
 
@@ -50,17 +50,27 @@ function versions(pairs: [string, string | null][]): Map<string, number> {
 
 export function buildStory(events: Event[], claimId: string): Card[] {
   const idx = events.map((e, i) => [e, i] as const).filter(([e]) => e.claim_id === claimId || e.claim_id === undefined)
-  // Error repairs: the repair event only knows the failed code. Its result is the next unclaimed attempt of the same seed with n + 1
-  // (parallel candidates interleave, so first come, first served). Fault and graph repairs name both hashes themselves.
+  // Error repairs: a newer loop names the fixed code (to_hash on the repair event or a repair_result event). Older events only know the failed code: the result is then the next
+  // attempt of the same candidate (attempt.candidate) with n + 1; without candidates (older runs), the next unclaimed attempt of the same
+  // seed with n + 1, first come first served.
   const claimed = new Set<number>()
   const resolved = new Map<number, string | null>()
   for (const [e, i] of idx) {
     if (e.type !== 'repair') continue
+    // exact: the repair event itself, or the repair_result event that the loop writes once the fixed code exists
+    const exact = str(e.to_hash) || str(idx.find(([x, j]) => j > i && x.type === 'repair_result' && x.from_hash === e.from_hash && x.seed === e.seed)?.[0].to_hash)
+    if (exact) { resolved.set(i, exact); continue }
     const failed = [...idx].reverse().find(([x, j]) => j < i && x.type === 'attempt' && x.code_hash === e.from_hash)
     const n = failed ? num(failed[0].n) : null
-    const next = n == null ? undefined : idx.find(([x, j]) => j > i && !claimed.has(j) && x.type === 'attempt' && x.seed === e.seed && num(x.n) === n + 1)
+    const cand = failed ? num(failed[0].candidate) : null
+    const next = n == null ? undefined : idx.find(([x, j]) => j > i && !claimed.has(j) && x.type === 'attempt' && x.seed === e.seed && num(x.n) === n + 1
+      && (cand == null || num(x.candidate) === cand))
     if (next) claimed.add(next[1])
     resolved.set(i, next ? str(next[0].code_hash) : null)
+  }
+  const candidateOf = (hash: string): number | null => {
+    const a = events.find((x) => x.type === 'attempt' && x.claim_id === claimId && x.code_hash === hash && num(x.candidate) != null)
+    return a ? num(a.candidate) : null
   }
   const pairs: [string, string | null][] = []
   for (const [e, i] of idx) {
@@ -111,7 +121,7 @@ export function buildStory(events: Event[], claimId: string): Card[] {
         problem = `Accuracy with edges ${fmt(num(e.acc_full))}, without edges ${fmt(num(e.acc_ablated))}.`
       }
       cards.push({
-        kind: 'repair', source, fromHash: from, toHash: to || null, fromVersion: ver.get(from) ?? 1, toVersion: to ? ver.get(to) ?? null : null,
+        kind: 'repair', source, candidate: candidateOf(from), fromHash: from, toHash: to || null, fromVersion: ver.get(from) ?? 1, toVersion: to ? ver.get(to) ?? null : null,
         problemTitle: title, problem, search, outcome: outcomeOf(events, claimId, to || null),
       })
     }

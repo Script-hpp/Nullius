@@ -65,7 +65,7 @@ function CardView({ c, codeLoader }: { c: Card; codeLoader: Loader }) {
       </Shell>
     )
   }
-  const label = c.toVersion ? `Version ${c.fromVersion} to version ${c.toVersion}` : `After version ${c.fromVersion}`
+  const label = `${c.candidate != null ? `Candidate ${c.candidate + 1} · ` : ''}${c.toVersion ? `version ${c.fromVersion} to version ${c.toVersion}` : `after version ${c.fromVersion}`}`
   const ok = c.outcome.tone === 'ok'
   return (
     <Shell icon={<Wrench className="h-3.5 w-3.5" />} label={label}>
