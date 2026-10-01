@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, ChevronDown } from 'lucide-react'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
+import { useBenchmark } from '../benchmark'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 
@@ -21,6 +22,7 @@ function TopBar() {
         <a href="#discover" className={link}>Discover</a>
         <a href="#catalog" className={link}>Catalog</a>
         <a href="#overview" className={link}>Runs</a>
+        <a href="#benchmark" className={link}>Benchmark</a>
         <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
         <a href="#discover" className="rounded-full border border-fg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
         <ThemeSwitch />
@@ -121,16 +123,17 @@ function Steps() {
 }
 
 function Footer() {
+  const sum = useBenchmark()?.versions[0]?.summary   // numbers come from the exported benchmark file; TBD until it exists
   return (
     <section className="mx-auto max-w-5xl px-6 pb-28">
       <div className="grid gap-14 border-t border-line pt-14 md:grid-cols-2 md:gap-0">
         <div className="md:pr-14">
           <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Does it work?</h2>
           <p className="mb-0 mt-5 text-lg leading-relaxed text-fg-3">
-            We tested it on papers with known results: <span className="font-mono text-fg">TBD of 8</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">TBD of 8</span> without it.
+            We tested it on papers with known results: <span className="font-mono text-fg">{sum ? `${sum.agree_B} of ${sum.n_units}` : 'TBD'}</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">{sum ? `${sum.agree_A} of ${sum.n_units}` : 'TBD'}</span> without it.
           </p>
           <p className="mb-0 mt-4 max-w-md text-[13px] leading-relaxed text-muted">
-            A match means the target value was reached. Whether the method matches the paper is not checked yet.
+            A match means the target value was reached. Whether the method matches the paper is not checked yet. <a href="#benchmark" className="text-fg-3 underline underline-offset-4 hover:text-fg">How the benchmark works</a>
           </p>
         </div>
         <div className="md:border-l md:border-line md:pl-14">

@@ -13,6 +13,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
     { label: 'Discover', href: '#discover', active: currentHash === 'discover' },
     { label: 'Catalog', href: '#catalog', active: currentHash === 'catalog' },
     { label: 'Runs', href: '#overview', active: runs },
+    { label: 'Benchmark', href: '#benchmark', active: currentHash === 'benchmark' },
   ]
   const link = (active: boolean) => `text-sm no-underline transition-colors ${active ? 'text-fg underline decoration-fg-4 decoration-1 underline-offset-[6px]' : 'text-fg-4 hover:text-fg'}`
 

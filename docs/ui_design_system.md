@@ -46,3 +46,13 @@
 - Rohe Markdown- oder CSV-Dumps (müssen gerendert oder versteckt werden).
 - Standard-Chart-Farben (Gelb/Grün aus der Bibliothek).
 - Technisches Jargon in Logs oder Beschreibungen (muss für Laien verständlich sein).
+
+
+## 7. Bausteine der geführten Seiten (Auftrag 17)
+- **`PageIntro`** (`components/page.tsx`): jede Seite beginnt mit Kicker, Titel (Inter Tight), „What you see here“ und „What to look at first“ als sichtbarer Text.
+- **`NextStep`**: jede Seite endet mit einem klaren nächsten Schritt (Landing → Try it → Discover/Catalog → Live → Zeugnis → Benchmark).
+- **`StepStrip`** (`components/run/StepStrip.tsx`): neun nummerierte Schritte (Paper, Claim, Sources, Plan, Code, Sandbox runs, Independent check, Verdict, What others found) mit einem Satz und Status (Done / Running / Waiting / Not part of this run), abgeleitet aus Ereignissen und Dossier; Klick springt zum Abschnitt.
+- **Zeugnis:** Urteil in einem Satz, Claimed vs. Measured mit einer Grafik (Punkte und Band), „Why you can trust this number“ (drei Punkte) und „Limits“, dann der Schritt-Streifen, dann Details (Tabs).
+- **Grafiken:** Erklärung vor der Grafik in normaler Textgröße als zwei bis drei Zeilen mit Symbol, Beschriftung direkt an der Grafik (Claimed, Our mean), keine Legende darunter. Jeder Knoten des Schritt-Graphen zeigt seinen Satz sichtbar.
+- **Tooltips** nur noch für Fachbegriffe (Glossar `src/glossary.ts`: accuracy, MSE, seed, Cora, ETTh1, harness, placebo, sandbox branch).
+- **Benchmark-Seite** liest `web/public/data/benchmark.json`; ohne Datei zeigt sie einen ehrlichen Leerzustand.

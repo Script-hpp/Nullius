@@ -45,9 +45,9 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread }: {
       {vals.length > 0 ? (
         <>
         <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
-          <li className="flex items-center gap-3"><span className="inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4 bg-fg-4/40" />Each dot is one <Term term="seed">run with a different random start</Term>.</li>
-          <li className="flex items-center gap-3"><span className="inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} />The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</li>
-          <li className="flex items-center gap-3"><span className="inline-block h-4 w-0.5 shrink-0 rounded-full" style={{ background: color }} />The solid line is our mean over all runs; the dashed line is the claim.</li>
+          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4 bg-fg-4/40" /><span>Each dot is one <Term term="seed">run with a different random start</Term>.</span></li>
+          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /><span>The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</span></li>
+          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-4 w-0.5 shrink-0 rounded-full" style={{ background: color }} /><span>The solid line is our mean over all runs; the dashed line is the claim.</span></li>
         </ul>
         <figure className="m-0 mt-2" aria-label={`Claimed ${fmt(claim.target)}; measured ${vals.map(fmt).join(', ')}`}>
           <div className="relative h-24 mx-2">
