@@ -1,6 +1,8 @@
 # Idee: Tavily-Rollen 3/7 und 6 in den Produktlauf einbauen
 
-Stand: 2026-10-01. Status: **dokumentiert, nicht programmiert.** Umsetzung frühestens nach Ende von Benchmark v2 (`src/` eingefroren).
+Stand: 2026-10-02. Status: **gebaut auf Branch `community-check`, nicht gemerged** (erst nach Benchmark v4). Umsetzung: `src/repro_agent/community.py`, Einbindung `Orchestrator._community_round` (nach allen Urteilen), Dossier-Felder `community` und `explanations`, Zeugnis-Abschnitte, Karte `web/src/components/CommunityCard.tsx` direkt nach "Claimed vs. Measured" und vor den Tabs, Live-Phase "What others found". Tests nur mit Fakes (`tests/test_community.py`); der erste echte Tavily-Aufruf steht aus (Reviewer).
+
+Entscheidungen (Reviewer, 2026-10-02): Karte vor dem Branch-Baum; Crawl der Repo-Issues nur, wenn das Repo bekannt ist und die Suche keine Issue-Seite dieses Repos lieferte (limit 3); keine Sprachfilter; Ergebnis je arXiv-ID 7 Tage in `logs/community_cache.json`; Discovery-Community-Treffer (`candidate.community` im Katalog) ersetzen die Suche (ein Extract statt einer Search); Etiketten deterministisch (Protokollhinweis, Reproduktionsbericht, sonstiges), keine LLM-Einstufung; Rolle-6-Erklärungen nie in Plan, Code oder Urteil.
 
 ## Ausgangslage
 
