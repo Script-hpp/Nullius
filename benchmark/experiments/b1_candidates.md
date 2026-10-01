@@ -39,7 +39,7 @@ Zahlen = Zielwert im Paper, MSE für ETTh1, Accuracy für Cora (in %, wir rechne
 | 17 | **GraphSAGE-mean** (Cora-LCC) | **79,2 ± 7,7** (Shchur Tabelle 1 `GS-mean 79 .2 ± 7.7 71 .6 ± 1.9 ...`). Hohe Streuung. | Ja | – | Ja | 3 h (Mittelwert-Aggregator, Vollbatch) | wegen std 7,7 und 30 Splits: Mittelwert kann stark schwanken, Urteil instabil | Nein/Risiko (std 7,7 erzeugt „keine Mehrheit") |
 | 18 | **MLP** (Cora-LCC) | **58,2 ± 2,1** (Shchur Tabelle 1 `MLP 58 .2 ± 2.1 59 .1 ± 2.3 70 .0 ± 2.1 36 .8 ± 1.0`). | Ja | – | Ja | 1 h | reproduziert | Nein als Paper-Einheit (Baseline, kein Paper-Claim); als Kalibrier-Einheit denkbar |
 
-## Empfehlung (6 Einheiten, 3 pro Task-Familie)
+## Empfehlung (Stand der Recherche, vor den Referenzläufen; Entscheidungen nach den Läufen: Abschnitt „Referenzläufe“ unten)
 
 Reihenfolge nach Nutzen minus Aufwand. Alle brauchen vorab Rolle-2-Fixture und Referenzlauf.
 
@@ -60,3 +60,37 @@ Zusatz (optional, falls 7. und 8. nötig): iTransformer ETTh1-96 (0,386, vom Feh
 - Laufzeiten sind Schätzungen, nicht gemessen.
 - ARMA-Split und GCNII-Laufzeit prüfen, bevor die Einheit in die Vorab-Festlegung kommt.
 - Ob RLinear und andere frühe Zahlen betroffen sind, steht nicht im Paper; nur der Referenzlauf klärt das.
+
+## Referenzläufe (2026-10-02, lokal auf der CPU, Branch `b-references`)
+
+Eigene Referenzlösungen im Harness-Vertrag (`tests/reference/`), gerechnet mit `scripts/run_reference_local.py` (lokal, 16 Threads, kein Sandbox-Aufruf, kein LLM; Daten und Metrik aus `src/repro_agent/harness/`). Hyperparameter nur aus dem Paper bzw. dem offiziellen Repo (Quelle im Kopf jeder Datei), **nicht auf den Zielwert getunt**; ein Lauf pro Seed, Seeds 0 bis 4. Toleranz ±0,01 wie bei DLinear.
+
+| Einheit | Datei | Seeds | Mittel ± Std | Ziel | Abstand | Laufzeit je Seed | Referenzurteil | Ergebnisdatei |
+|---|---|---|---|---|---|---|---|---|
+| SparseTSF ETTh1-96 (MSE) | `sparsetsf_reference.py` | 5 | **0,3607 ± 0,0011** | 0,362 (Tabelle 11, nach Korrektur) | 0,0013 | 6 s (max 7 s) | **reproduziert** | `results/b1_reference_sparsetsf.txt` |
+| RLinear ETTh1-96 (MSE) | `rlinear_reference.py` | 5 | **0,3704 ± 0,0008** | 0,366 (Tabelle 2) | 0,0044 | 7 s (max 7 s) | **reproduziert** | `results/b1_reference_rlinear.txt` |
+| GCNII Cora (Accuracy) | `gcnii_cora_reference.py` | 1 (Seed 0, Lauf abgebrochen) | 0,8480 | 0,855 (Tabelle 2) | 0,0070 | **463 s** (869 Epochen, 16 Threads) | (nur Seed 0: reproduziert) | – |
+
+Einzelwerte SparseTSF: 0,3590, 0,3616, 0,3605, 0,3606, 0,3618. RLinear: 0,3699, 0,3697, 0,3713, 0,3712, 0,3699. GCNII Seed 0: bester Validierungsloss 0,8131, Validierungsgenauigkeit 0,8340.
+
+### Entscheidungen des Reviewers
+
+- **SparseTSF und RLinear sind im Benchmark** (Ziel wie oben, Referenzurteil wie gemessen, Toleranz wie DLinear). Eintrag für die Vorab-Festlegung: `sparsetsf_2024` Ziel 0,362, Referenzmittel 0,3607, Seeds 5, Herkunft (R); `rlinear_2023` Ziel 0,366, Referenzmittel 0,3704, Seeds 5, Herkunft (R).
+- **GCNII verworfen für den Benchmark:** 463 s je Seed bei 16 Threads (869 Epochen, 64 Schichten). Die Sandbox hat weniger Kerne, der Agenten-Timeout liegt bei 600 s (`TRAIN_TIMEOUT_S`), die Aufgabe nennt „< 5 minutes". Die 10-Seeds-Läufe wurden abgebrochen; es gibt nur den Seed-0-Wert und die Laufzeit. Der Seed-0-Wert (0,848 gegen 0,855) zeigt, dass die Referenz das Paper trifft, aber ein Agent würde fast sicher in den Timeout laufen.
+- **ARMA verworfen:** Der Paper-Text (v7) nennt für die Zitationsnetze nur „The models are trained using 20 labels per document class"; Größe von Validierungs- und Testset und der Name des Splits stehen nicht im Text. Die Daten stammen aus den Planetoid-Dateien von Kipf (`github.com/tkipf/gcn`). Das Spektral-Beispiel (`examples/node_prediction/citation_arma.py`) nutzt die Standardmasken, aber andere Hyperparameter als Tabelle 6 und Abschnitt 7.1 des Papers (Beispiel: L2 5e-5, 20 000 Epochen, Geduld 100; Paper: L2 5e-4, 2000 Epochen, Early Stopping nach 50 Epochen). Der Zielwert 83,4 ist so nicht eindeutig unserem Task zuzuordnen.
+
+### Beleg für die Ursache der Abweichung bei RLinear (und SparseTSF): `drop_last` im Test-Loader
+
+Der Fehler ist im Code der Autoren sichtbar. Die Referenzen wurden zusätzlich so ausgewertet, als würde der Test-Loader den letzten unvollständigen Batch verwerfen (`scripts/run_reference_local.py`, Funktion `run_one`: erste `(2785 // 128) * 128 = 2688` Fenster, also 97 von 2785 Fenstern weniger; Batchgröße 128 wie in den Skripten der Autoren). Das ist eine **Nachbildung**, kein Lauf des Autorencodes.
+
+| | Code der Autoren | Zeile | Paperwert | Unsere Referenz (alle 2785 Fenster) | Nachbildung `drop_last`, Batch 128 |
+|---|---|---|---|---|---|
+| RLinear | `github.com/plumprc/RTSF`, Stand `0fec00104f` (2023-09-13), `data_provider/data_factory.py:16-18`: `if flag == 'test':` ... `drop_last = True`; Skript `script.md:3` (ETTh1: `--batch_size 128 ... --seq_len 336 --pred_len 96`, ohne `--drop`, also Dropout 0,1) | `data_factory.py:18` | **0,366** | 0,3704 | **0,3665** (Urteil: reproduziert; Abstand 0,0005 zum Paperwert) |
+| SparseTSF | `github.com/lss-1138/SparseTSF`, Stand `b8c2740eec` (2026-03-04), `data_provider/data_factory.py:18-20`: `if flag == 'test':` ... `drop_last = False  # fix bug` (Fehler im Repo korrigiert); Skript `scripts/SparseTSF/linear/etth1.sh` (Batch 256, lr 0,02, L=720) | `data_factory.py:20` | 0,359 (Tabelle 2, vor Korrektur) bzw. 0,362 (Tabelle 11, nach Korrektur) | 0,3607 | 0,3587 (Nachbildung bei Batch 128; das Repo nutzt Batch 256, also fiele mehr weg: 2785 mod 256 = 225 Fenster) |
+
+Lesart: Unsere ehrliche Auswertung liegt bei RLinear 0,0044 über dem Paperwert, die Nachbildung des Fehlers trifft ihn auf 0,0005. Das stützt die Aussage, dass der Paperwert unter dem `drop_last`-Fehler entstand. Es **beweist** sie nicht (Batchgröße und Hyperparameter der Autoren sind nicht bitgleich nachgebildet, ein Lauf des Autorencodes fand nicht statt). Beide Abstände liegen innerhalb der Toleranz 0,01, das Urteil bleibt in beiden Fällen „reproduziert". Bei SparseTSF sind beide Paperwerte (vor/nach Korrektur) für uns „reproduziert".
+
+### Offen
+
+- GCNII bleibt als Referenzlösung im Repo (`tests/reference/gcnii_cora_reference.py`), aber nicht im Benchmark; ein Lauf mit weniger Schichten oder Epochen wäre eine andere Einheit (nicht gewollt).
+- Die Referenzläufe laufen lokal, nicht in der Nebius-Sandbox; Laufzeiten dort können abweichen (RLinear und SparseTSF mit 6 bis 7 s weit unter dem Timeout).
