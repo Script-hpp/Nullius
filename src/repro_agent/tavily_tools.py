@@ -26,11 +26,11 @@ class TavilyTools:
             self.on_call(role, endpoint, target, n)
         return result
 
-    def find_material(self, paper_title: str) -> dict:
+    def find_material(self, paper_title: str, domains: list[str] | None = None) -> dict:
         """Rolle 1: Repo, Datensatz, Projektseite finden."""
         return self._note(1, "search", paper_title, self._client.search(
             query=paper_title,
-            include_domains=RESEARCH_DOMAINS,
+            include_domains=domains or RESEARCH_DOMAINS,
         ))
 
     def read_claims(self, arxiv_html_url: str) -> dict:

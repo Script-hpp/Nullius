@@ -21,6 +21,7 @@ from .sandbox.base import Sandbox
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "fixtures" / "repos"
 MAX_FILES = 12
 MAX_FILE_CHARS = 30_000
+MAX_IMPORTED = 6   # zusaetzliche, von den gewaehlten Dateien importierte lokale Module
 MAX_LISTING = 600
 
 GITHUB_RE = re.compile(r"https?://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?(?=[\s)\]>.,;\"']|$)")
@@ -53,7 +54,55 @@ def find_repo_url(paper_text: str) -> str | None:
         hits = [h.start() for h in WEAK_HINT.finditer(window)]
         if hits and (best is None or len(window) - max(hits) < best[0]):
             best = (len(window) - max(hits), f"https://github.com/{m.group(1)}/{m.group(2)}")
-    return best[1] if best else None
+    if best:
+        return best[1]
+    repos = {(m.group(1), m.group(2)) for m in GITHUB_RE.finditer(paper_text)}
+    if len(repos) == 1:   # genau ein Repo im Text (z. B. Fussnote ohne Hinweiswort): eindeutig genug
+        owner, name = repos.pop()
+        return f"https://github.com/{owner}/{name}"
+    return None
+
+
+def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture") -> str | None:
+    """Rolle 1, wenn das Paper keinen Code-Link hat: Tavily-Suche auf github.com. Ein Treffer zaehlt nur, wenn sein
+    Text die arXiv-ID oder den vollen Titel nennt. Ergebnis wird als Fixture gespeichert (gleicher Treffer fuer jede Generierung)."""
+    fixture = fixture_dir / f"search_{arxiv_id}.json"
+    if fixture.exists():
+        return json.loads(fixture.read_text()).get("url")
+    res = get_tavily().find_material(title, domains=["github.com"])
+    norm = lambda t: re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).strip()
+    url = None
+    for r in (res or {}).get("results", []):
+        m = re.match(r"https?://github\.com/([\w.-]+)/([\w.-]+)", r.get("url", ""))
+        text = norm(r.get("content", "") + " " + r.get("title", ""))
+        if m and (arxiv_id in (r.get("content", "") + r.get("url", "")) or norm(title) in text):
+            url = f"https://github.com/{m.group(1)}/{m.group(2)}"
+            break
+    fixture_dir.mkdir(parents=True, exist_ok=True)
+    fixture.write_text(json.dumps({"title": title, "arxiv_id": arxiv_id, "url": url, "mode": mode,
+                                   "candidates": [r.get("url") for r in (res or {}).get("results", [])]}, indent=1))
+    return url
+
+
+IMPORT_RE = re.compile(r"^\s*(?:from\s+([\w.]+)\s+import\s+([\w, ]+)|import\s+([\w.]+))", re.M)
+
+
+def imported_files(files: dict[str, str], listing: list[str]) -> list[str]:
+    """Lokale Module, die die gewaehlten Dateien importieren (eine Ebene): dort stehen oft Schichten und Vorverarbeitung."""
+    have, out = set(files), []
+    paths = set(listing)
+    for path, text in files.items():
+        if not path.endswith(".py"):
+            continue
+        base = path.rsplit("/", 1)[0] if "/" in path else ""
+        for a, names, b in IMPORT_RE.findall(text):
+            mod = (a or b).replace(".", "/")
+            cands = [f"{mod}.py", f"{mod}/__init__.py", f"{base}/{mod}.py" if base else None]
+            cands += [f"{mod}/{n.strip()}.py" for n in names.split(",") if n.strip()]   # from utils import layers
+            for cand in cands:
+                if cand and cand in paths and cand not in have and cand not in out:
+                    out.append(cand)
+    return out
 
 
 def _repo_key(url: str) -> str:
@@ -111,11 +160,15 @@ def read_repo(
     listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
     chosen = select_files(llm, listing, claim_text, dataset)
     files = {}
-    for path in chosen:
-        try:
-            files[path] = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")[:MAX_FILE_CHARS]
-        except (OSError, UnicodeDecodeError):
-            continue
+
+    def read(paths):
+        for path in paths:
+            try:
+                files[path] = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")[:MAX_FILE_CHARS]
+            except (OSError, UnicodeDecodeError):
+                continue
+    read(chosen)
+    read(imported_files(files, listing)[:MAX_IMPORTED])
     dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing))
     fixture_dir.mkdir(parents=True, exist_ok=True)
     fixture.write_text(json.dumps(asdict(dump), ensure_ascii=False, indent=1))

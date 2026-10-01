@@ -149,3 +149,40 @@ def test_error_hints_live_in_fixture_mode_when_benchmark_v4_flag_set():
     o = _hint_orch("fixture")
     o.error_search_live = True
     assert "stackoverflow.com" in o._error_hints(pytypes.SimpleNamespace(id="c"), TB)
+
+
+# ---- Repo-Funde (Rolle 1, Link ohne Hinweiswort, Importe) ---------------------
+from repro_agent.repo_source import find_repo_url, imported_files, search_repo_url  # noqa: E402
+
+
+def test_single_repo_link_without_hint_is_used():
+    assert find_repo_url("matrix where aij \n\n1https://github.com/Tiiiger/SGC \n\nvi and") == "https://github.com/Tiiiger/SGC"
+    assert find_repo_url("see https://github.com/a/b and https://github.com/c/d") is None
+
+
+def test_imported_local_modules_are_added():
+    files = {"models/gat.py": "from utils import layers\nimport numpy as np\n", "execute_cora.py": "from models import GAT\n"}
+    listing = ["models/gat.py", "execute_cora.py", "utils/layers.py", "models/__init__.py", "utils/process.py"]
+    got = imported_files(files, listing)
+    assert "utils/layers.py" in got and "utils/process.py" not in got
+
+
+class FakeSearch:
+    def __init__(self, results):
+        self.results, self.n = results, 0
+
+    def find_material(self, title, domains=None):
+        self.n += 1
+        assert domains == ["github.com"]
+        return {"results": self.results}
+
+
+def test_repo_search_accepts_only_hits_that_name_the_paper(tmp_path):
+    t = "Pitfalls of Graph Neural Network Evaluation"
+    fake = FakeSearch([{"url": "https://github.com/x/other", "content": "some GNN code"},
+                       {"url": "https://github.com/shchur/gnn-benchmark/tree/master", "content": "Code for Pitfalls of Graph Neural Network Evaluation"}])
+    assert search_repo_url(t, "1811.05868", lambda: fake, fixture_dir=tmp_path) == "https://github.com/shchur/gnn-benchmark"
+    assert search_repo_url(t, "1811.05868", lambda: fake, fixture_dir=tmp_path) == "https://github.com/shchur/gnn-benchmark"
+    assert fake.n == 1   # zweiter Aufruf aus der Fixture
+    none = FakeSearch([{"url": "https://github.com/x/other", "content": "unrelated"}])
+    assert search_repo_url(t, "0000.00000", lambda: none, fixture_dir=tmp_path) is None

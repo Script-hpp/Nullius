@@ -40,7 +40,7 @@ from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
-from .repo_source import fetch_readme, find_repo_url, read_repo
+from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
 from .setup_details import Doc, SetupDetail, extract_setup_details, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
@@ -599,9 +599,16 @@ class Orchestrator:
         if self.paper_only:
             return docs, None
         url = find_repo_url(self.paper_text.text)
+        get_tavily = self._tavily_getter()
+        if not url and getattr(self, "graph_repair", False) and getattr(self, "_paper_title", None):
+            try:   # Rolle 1 (Produktpfad): Paper ohne Code-Link, Repo per Tavily-Suche; Treffer muss Paper nennen
+                calls_before = self._tavily_calls
+                url = search_repo_url(self._paper_title, self.paper_text.arxiv_id, get_tavily, mode=self.tavily_mode)
+                self._emit("repo_search", title=self._paper_title, url=url, live=self._tavily_calls > calls_before)
+            except Exception as exc:
+                self._warn(f"Rolle 1 (Repo-Suche) fehlgeschlagen: {exc}")
         if not url:
             return docs, None
-        get_tavily = self._tavily_getter()
         calls_before = self._tavily_calls
         readme = fetch_readme(url, get_tavily, mode=self.tavily_mode)
         if readme:
@@ -935,6 +942,7 @@ class Orchestrator:
         repo_info = None
         extra_details = discovery_details(paper)   # Katalog: Eingabelaenge, Quelle Discovery-Zitat
         if self.use_setup_details and self.paper_text is not None:
+            self._paper_title = paper.get("title")
             docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])
             self.details, dropped = extract_setup_details(
                 self.llm, docs, claims[0].text, paper["dataset"]

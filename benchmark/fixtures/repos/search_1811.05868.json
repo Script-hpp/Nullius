@@ -1,0 +1,18 @@
+{
+ "title": "Pitfalls of Graph Neural Network Evaluation",
+ "arxiv_id": "1811.05868",
+ "url": "https://github.com/shchur/gnn-benchmark",
+ "mode": "live",
+ "candidates": [
+  "https://github.com/cf020031308/cf020031308.github.io/blob/master/papers/2018-pitfalls-of-graph-neural-network-evaluation/readme.md",
+  "https://github.com/shchur/gnn-benchmark",
+  "https://github.com/gasteigerjo/ppnp",
+  "https://github.com/rusty1s/pytorch_geometric/issues/1581",
+  "https://github.com/shchur/gnn-benchmark/blob/master/setup.py",
+  "https://github.com/zxj32/uncertainty-GNN",
+  "https://github.com/naganandy/graph-based-deep-learning-literature/blob/master/conference-publications/folders/submissions_iclr/2024.md",
+  "https://github.com/yazdotai/graph-networks",
+  "https://github.com/LTS4/gnn_statistics/blob/master/README.md",
+  "https://github.com/EdisonLeeeee/Graph-Adversarial-Learning"
+ ]
+}
