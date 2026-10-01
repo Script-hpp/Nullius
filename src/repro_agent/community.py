@@ -56,11 +56,25 @@ def keywords(title: str, arxiv_id: str) -> tuple[str, ...]:
     return tuple(k for k in (arxiv_id.lower(), " ".join((title or "").lower().split())) if k)
 
 
+NOISE_HOSTS = ("scirp.org", "semanticscholar.org", "researchgate.net", "scholar.google", "paperswithcode.com", "connectedpapers.com")
+
+
+def repo_slug(repo_url: str | None) -> str | None:
+    m = re.match(r"https?://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", (repo_url or "").rstrip("/"))
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+
+def drop_noise(results: dict | None, arxiv_id: str) -> dict:
+    """Entfernt die eigene arXiv-Seite des Papers (abs/pdf/html, jede Version) und Zitier-Aggregatoren aus Treffern."""
+    own = re.compile(rf"arxiv\.org/(?:abs|pdf|html)/{re.escape(arxiv_id)}(?:v\d+)?(?:\.pdf)?/?$", re.I)
+    keep = [r for r in (results or {}).get("results", [])
+            if not own.search(r.get("url", "")) and not any(h in r.get("url", "").lower() for h in NOISE_HOSTS)]
+    return {**(results or {}), "results": keep}
+
+
 def _issue_hit_of(repo_url: str | None, urls: list[str]) -> bool:
-    if not repo_url:
-        return False
-    base = repo_url.rstrip("/").lower().split("github.com/")[-1]
-    return any(u.lower().split("github.com/")[-1].startswith(base + "/issues") for u in urls if "github.com/" in u.lower())
+    slug = repo_slug(repo_url)
+    return bool(slug) and any(u.lower().startswith(f"https://github.com/{slug.lower()}/issues") for u in urls)
 
 
 def _load_cache(path: Path) -> dict:
@@ -97,25 +111,34 @@ def _pages(docs: list[Doc]) -> list[dict]:
 def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_url: str | None,
                       repo_files: dict[str, str] | None, prior_hits: list[dict] | None, now: float | None = None) -> dict:
     """Ergebnis: {"findings": [...], "dropped", "pages": [...], "queries": [...], "reused_discovery": bool, "calls": [...]}.
-    Aufrufe: Search (oder Extract der Discovery-Treffer) und hoechstens ein Issue-Crawl."""
+    Aufrufe: Search (oder Extract der Discovery-Treffer); bei bekanntem Repo ohne Issue-Treffer aus ihm eine Search auf dessen Issues
+    und nur wenn auch die nichts liefert ein Issue-Crawl. Zitier-Aggregatoren und die eigene arXiv-Seite fallen heraus, Seiten des
+    Paper-Repos brauchen den Titel nicht."""
     calls, queries = [], []
     prior_urls = [h.get("url") for h in (prior_hits or []) if h.get("url")]
     if prior_urls:   # Discovery hat schon Treffer: URLs lesen statt neu zu suchen
         res = tools.read_pages(prior_urls, MAX_READ)
         calls.append("extract")
         queries.append({"kind": "discovery_hits", "urls": prior_urls[:MAX_READ]})
-        urls_seen = prior_urls
     else:
         res = tools.search_community(title, MAX_PAGES)
         calls.append("search")
         queries.append({"kind": "search", "title": title})
-        urls_seen = [r.get("url", "") for r in (res or {}).get("results", [])]
-    crawl = None
-    if repo_url and not _issue_hit_of(repo_url, urls_seen):
-        crawl = tools.crawl_issues(repo_url, MAX_CRAWL)
-        calls.append("crawl")
-        queries.append({"kind": "crawl", "url": repo_url.rstrip("/") + "/issues"})
-    docs = docs_from_collect({"search": res, "crawl": crawl}, keywords(title, arxiv_id))
+    res = drop_noise(res, arxiv_id)
+    urls_seen = [r.get("url", "") for r in res.get("results", [])] if not prior_urls else prior_urls
+    slug, crawl, repo_res = repo_slug(repo_url), None, None
+    if slug and not _issue_hit_of(repo_url, urls_seen):
+        # Issues des Paper-Repos per Suche (bis 5 Treffer); der Crawl der neuesten Issues nur als Rueckfall, wenn auch das nichts lieferte
+        repo_res = tools.search_repo_issues(slug, MAX_PAGES)
+        calls.append("search")
+        queries.append({"kind": "repo_search", "repo": slug})
+        if not _issue_hit_of(repo_url, [r.get("url", "") for r in (repo_res or {}).get("results", [])]):
+            crawl = tools.crawl_issues(repo_url, MAX_CRAWL)
+            calls.append("crawl")
+            queries.append({"kind": "crawl", "url": repo_url.rstrip("/") + "/issues"})
+    exempt = (f"https://github.com/{slug.lower()}/",) if slug else ()   # Seiten des Paper-Repos brauchen den Titel nicht
+    docs = docs_from_collect({"search": {"results": res.get("results", []) + (repo_res or {}).get("results", [])}, "crawl": crawl},
+                             keywords(title, arxiv_id), exempt)
     kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files)
     findings = [asdict(Finding(o.topic, o.statement, o.quote, o.source, classify(o.statement, o.quote, o.protocol), o.repo_check)) for o in kept]
     return {"findings": findings, "dropped": dropped, "pages": _pages(docs), "queries": queries,

@@ -26,10 +26,10 @@ ERRATUM = "Erratum: Table 2 of GraphNet: Better Node Classification was recomput
 
 
 class FakeTools:
-    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None):
+    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None):
         self.calls = []
         self.search_pages = search_pages if search_pages is not None else [("https://github.com/a/b/issues/1", PAGE_ISSUE), ("https://example.org/r", PAGE_REPORT)]
-        self.crawl_pages, self.read, self.explain_pages = crawl_pages or [], read_pages or [], explain_pages or []
+        self.crawl_pages, self.read, self.explain_pages, self.repo_pages = crawl_pages or [], read_pages or [], explain_pages or [], repo_pages or []
 
     @staticmethod
     def _res(pages):
@@ -38,6 +38,10 @@ class FakeTools:
     def search_community(self, title, limit=5):
         self.calls.append(("search", title))
         return self._res(self.search_pages)
+
+    def search_repo_issues(self, slug, limit=5):
+        self.calls.append(("repo_search", slug))
+        return self._res(self.repo_pages)
 
     def crawl_issues(self, repo_url, limit=3):
         self.calls.append(("crawl", repo_url, limit))
@@ -126,21 +130,64 @@ def test_no_llm_classification_calls_beyond_extraction():
     assert llm.n == 2                                                                                  # ein extract-Aufruf je Seite, sonst keiner
 
 
-def test_calls_search_once_and_crawl_only_if_repo_known_and_no_issue_hit_from_it():
-    tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
-    o = orch(tools, FakeLLM([REPORT]))
-    o._community_round(paper(), dossier(repo={"url": "https://github.com/a/b"}))
-    assert [c[0] for c in tools.calls] == ["search", "crawl"] and tools.calls[1][2] == community.MAX_CRAWL == 3
-    # Search lieferte schon eine Issue-Seite dieses Repos: kein Crawl
+def test_repo_issues_by_search_crawl_only_as_fallback():
+    repo = {"url": "https://github.com/a/b"}
+    # Search ohne Issue-Treffer des Repos, Repo-Suche liefert eine Issue-Seite: kein Crawl
+    tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)], repo_pages=[("https://github.com/a/b/issues/7", "Issue about reproduce accuracy " + ISSUE)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([REPORT, ISSUE]))._community_round(paper(), d)
+    assert [c[0] for c in tools.calls] == ["search", "repo_search"] and tools.calls[1][1] == "a/b"
+    assert "https://github.com/a/b/issues/7" in [p["url"] for p in d.community["pages"]]            # Repo-Seite braucht den Titel nicht
+    # auch die Repo-Suche leer: Crawl als Rueckfall, limit 3
     community.CACHE_PATH.unlink(missing_ok=True)
-    tools2 = FakeTools()
-    orch(tools2, FakeLLM([ISSUE]))._community_round(paper(), dossier(repo={"url": "https://github.com/a/b"}))
-    assert [c[0] for c in tools2.calls] == ["search"]
-    # kein Repo: nie Crawl
+    tools2 = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
+    orch(tools2, FakeLLM([REPORT]))._community_round(paper(), dossier(repo=repo))
+    assert [c[0] for c in tools2.calls] == ["search", "repo_search", "crawl"] and tools2.calls[2][2] == community.MAX_CRAWL == 3
+    # Search lieferte schon eine Issue-Seite dieses Repos: weder Repo-Suche noch Crawl
     community.CACHE_PATH.unlink(missing_ok=True)
-    tools3 = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
-    orch(tools3, FakeLLM([REPORT]))._community_round(paper(), dossier(), )
+    tools3 = FakeTools()
+    orch(tools3, FakeLLM([ISSUE]))._community_round(paper(), dossier(repo=repo))
     assert [c[0] for c in tools3.calls] == ["search"]
+    # kein Repo: nie Repo-Suche oder Crawl
+    community.CACHE_PATH.unlink(missing_ok=True)
+    tools4 = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
+    orch(tools4, FakeLLM([REPORT]))._community_round(paper(), dossier())
+    assert [c[0] for c in tools4.calls] == ["search"]
+
+
+FIXTURE = json.loads((__import__("pathlib").Path(__file__).parent / "fixtures" / "community_kipf_raw.json").read_text())
+
+
+def test_real_kipf_raw_data_citation_pages_dropped_repo_issues_kept():
+    """Rohdaten des ersten echten Aufrufs (Kipf GCN, tkipf/gcn): Zitierseiten und die eigene arXiv-Seite fallen raus, Repo-Issues bleiben."""
+    search = FIXTURE["search"]["results"]
+    crawl = FIXTURE["crawl"]["results"]
+    kept = community.drop_noise({"results": search}, "1609.02907")["results"]
+    urls = [r["url"] for r in kept]
+    assert not any("scirp.org" in u or "semanticscholar" in u or "arxiv.org/abs/1609.02907" in u for u in urls)
+    assert "https://ojs.aaai.org/index.php/AAAI/article/view/11604/11463" in urls and "https://tkipf.github.io/graph-convolutional-networks" in urls
+    title = "Semi-Supervised Classification with Graph Convolutional Networks"
+    kws = community.keywords(title, "1609.02907")
+    # alter Filter: die kurzen Repo-Issues nennen den Titel nicht und fielen weg
+    from repro_agent.objections import docs_from_collect
+    assert not [d for d in docs_from_collect({"crawl": {"results": crawl}}, kws) if "github.com/tkipf/gcn/issues" in d.name]
+    kept_issues = docs_from_collect({"crawl": {"results": crawl}}, kws, ("https://github.com/tkipf/gcn/",))
+    assert {d.name for d in kept_issues} == {r["url"] for r in crawl}
+    # Pipeline: Search (Rohdaten), Repo-Suche leer, Crawl (Rohdaten) -> Repo-Issues werden gelesen, Zitierseiten nicht
+    tools = FakeTools(search_pages=[(r["url"], r["raw_content"]) for r in search], crawl_pages=[(r["url"], r["raw_content"]) for r in crawl])
+    quote = "I'm trying the train the model in my own conell data, where the training is getting completed without any error."
+    o, d = orch(tools, FakeLLM([quote])), dossier(repo={"url": "https://github.com/tkipf/gcn"})
+    o._community_round({**paper(), "title": title, "arxiv_url": "https://arxiv.org/abs/1609.02907"}, d)
+    read = {p["url"] for p in d.community["pages"]}
+    assert {r["url"] for r in crawl} <= read
+    assert not any("scirp" in u or "semanticscholar" in u or u.endswith("abs/1609.02907") for u in read)
+    assert [c[0] for c in tools.calls] == ["search", "repo_search", "crawl"]
+
+
+def test_noise_filter_handles_versions_and_pdf():
+    res = {"results": [{"url": u} for u in ("https://arxiv.org/abs/2501.00001v2", "https://arxiv.org/pdf/2501.00001", "https://arxiv.org/abs/2501.99999",
+                                            "https://www.researchgate.net/x", "https://github.com/a/b/issues/1")]}
+    assert [r["url"] for r in community.drop_noise(res, "2501.00001")["results"]] == ["https://arxiv.org/abs/2501.99999", "https://github.com/a/b/issues/1"]
 
 
 def test_discovery_hits_replace_the_search(cache_file):
