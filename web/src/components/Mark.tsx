@@ -1,6 +1,6 @@
 // Nullius mark: a tolerance bracket around a point, [ • ] (the claim lies within the tolerance). Geometry is fixed; only the stroke weight
 // follows the size (large 1.8, up to 32 px 2.2, up to 16 px 2.6). Colour is currentColor, so it follows the theme.
-export const markStroke = (size: number) => (size <= 16 ? 2.6 : size <= 32 ? 2.2 : 1.8)
+const markStroke = (size: number) => (size <= 16 ? 2.6 : size <= 32 ? 2.2 : 1.8)
 
 export function Mark({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
