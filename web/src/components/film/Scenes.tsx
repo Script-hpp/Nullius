@@ -156,7 +156,8 @@ function SandboxScene({ d, p }: { d: SceneData; p: number }) {
         <svg viewBox="0 0 100 46" className="h-full w-full" role="img" aria-label={`A snapshot and ${n} sandbox branches, one per seed`} preserveAspectRatio="xMidYMid meet">
           <motion.g initial={false} style={{ opacity: ramp(p, 0, 0.12) }}>
             <rect x="38" y="2" width="24" height="8" rx="2" fill="var(--c-raised)" stroke="var(--c-line-strong)" strokeWidth="0.4" />
-            <text x="50" y="7.2" textAnchor="middle" fontSize="2.6" fill="var(--c-fg-3)" fontFamily="var(--font-mono, monospace)">snapshot</text>
+            <text className="hidden @xl:block" x="50" y="7" textAnchor="middle" fontSize="2.6" fontWeight="500" fill="var(--c-fg-3)">Snapshot</text>
+            <text className="@xl:hidden" x="50" y="7.6" textAnchor="middle" fontSize="4" fontWeight="500" fill="var(--c-fg-3)">Snapshot</text>
           </motion.g>
           {br.map((b, i) => {
             const x = branchX(i, n) * 100
@@ -168,7 +169,7 @@ function SandboxScene({ d, p }: { d: SceneData; p: number }) {
               <g key={b.seed}>
                 <path d={`M50 10 C 50 24, ${x} 22, ${x} 34`} fill="none" stroke="var(--c-line-strong)" strokeWidth="0.35" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - line} />
                 <circle cx={x} cy={34 + r} r={r * node} fill={color} opacity={0.9} />
-                {n <= 12 && <text x={x} y={34 + 2 * r + 4.5} textAnchor="middle" fontSize="2.1" fill="var(--c-muted)" opacity={node} fontFamily="var(--font-mono, monospace)">seed {b.seed}</text>}
+                {n <= 12 && <text className="hidden font-mono @xl:block" x={x} y={34 + 2 * r + 4} textAnchor="middle" fontSize="1.6" fill="var(--c-muted)" opacity={node}>seed {b.seed}</text>}
               </g>
             )
           })}

@@ -55,7 +55,8 @@ export function Film({ events, dossier, claim, title, tone, resultLabel, sentenc
 
   return (
     <section id="sec-film" aria-label="This check as a film" className="@container min-w-0 pt-6">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-surface @xl:aspect-video">
+      {/* 16:9 on wide screens, but never taller than the space left under the header and above the controls: the stage gets narrower, its content scales with it */}
+      <div className="relative mx-auto aspect-[3/4] w-full overflow-hidden rounded-2xl border border-line bg-surface [container-type:inline-size] @xl:aspect-video @xl:w-[min(100%,calc((100svh-12.5rem)*16/9))]">
         <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-[4cqw] pt-[3cqw] @xl:px-[3cqw] @xl:pt-[2cqw]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span key={scene.id} initial={reduce ? false : { opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={reduce ? undefined : { opacity: 0 }} transition={{ duration: 0.25 }}
