@@ -74,11 +74,21 @@ class TavilyTools:
             exclude_domains=["scirp.org", "semanticscholar.org", "researchgate.net", "scholar.google.com", "paperswithcode.com", "connectedpapers.com"],
         ))
 
+    def search_method_critique(self, method: str, dataset: str, limit: int = 5) -> dict:
+        """Rolle 3: methodenzentrierte Suche nach Kritik-Papers und Re-Evaluationen (z. B. Shchur 2018 "Pitfalls" fuer GCN auf Cora).
+        Ergaenzt die Titel-Suche, ersetzt sie nicht."""
+        return self._note(3, "search", f"{method} {dataset}", self._client.search(
+            query=f'{method} {dataset} reproducibility OR re-evaluation OR pitfalls OR "could not reproduce"',
+            max_results=limit, include_raw_content="text", include_domains=["arxiv.org", "openreview.net"],
+        ))
+
     def search_repo_issues(self, owner_repo: str, limit: int = 5) -> dict:
-        """Rolle 3: Issues des Paper-Repos per Suche statt der drei neuesten per Crawl (Query "<owner>/<repo> issue reproduce accuracy results")."""
+        """Rolle 3: Issues des Paper-Repos per Suche statt der drei neuesten per Crawl: Query "<repo> reproduce results accuracy",
+        beschraenkt auf github.com/<owner>/<repo>."""
+        repo = owner_repo.split("/")[-1]
         return self._note(3, "search", owner_repo, self._client.search(
-            query=f"{owner_repo} issue reproduce accuracy results", max_results=limit, include_raw_content="text",
-            include_domains=["github.com"],
+            query=f"{repo} reproduce results accuracy", max_results=limit, include_raw_content="text",
+            include_domains=[f"github.com/{owner_repo}"],
         ))
 
     def crawl_issues(self, repo_url: str, limit: int = 3) -> dict:

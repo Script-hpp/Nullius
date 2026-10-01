@@ -673,17 +673,19 @@ class Orchestrator:
         from .llm import BillingBlocked
         title, dataset = paper.get("title", ""), paper.get("dataset", "")
         arxiv_id = paper["arxiv_url"].rstrip("/").split("/abs/")[-1]
+        spec = ((paper.get("claims") or [{}])[0].get("extract") or {})
+        method, dataset = spec.get("method"), spec.get("dataset") or dataset   # aus dem Claim (Methode, Datensatz des Papers)
         deviating = [v.claim_id for v in dossier.verdicts if v.urteil in community.DEVIATING]
         repo_url = (dossier.repo or {}).get("url")
         try:
             entry = community.cache_get(arxiv_id)
             mode = "cache" if entry else "live"
             if entry is None:
-                entry = {"ts": time.time()}
+                entry = {"ts": time.time(), "v": community.CACHE_VERSION}
                 calls_before = self._tavily_calls
                 entry["community"] = community.what_others_found(
                     self._tavily_getter()(), self.llm, title, arxiv_id, dataset, repo_url, getattr(self, "_repo_files", None),
-                    paper.get("community"))
+                    paper.get("community"), method=method)
                 entry["live_calls"] = self._tavily_calls - calls_before
                 community.cache_put(arxiv_id, entry)   # bezahlte Treffer nie verlieren, auch wenn Rolle 6 danach scheitert
             if deviating and entry.get("explanations") is None:

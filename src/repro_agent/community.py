@@ -19,11 +19,14 @@ from pathlib import Path
 
 from .claims_source import _norm
 from .dossier import REPO_ROOT
-from .objections import Objection, docs_from_collect, extract_objections
+from .objections import Objection, extract_objections
 from .setup_details import Doc, _chunks, _parse_list
 
 CACHE_PATH = REPO_ROOT / "logs" / "community_cache.json"
 CACHE_TTL_S = 7 * 86400
+CACHE_VERSION = 2        # 2: Seitenfilter, Methoden-Query, Fund muss Methode oder Titel nennen (aeltere Eintraege werden ignoriert)
+MAX_PAGE_CHARS = 60_000  # laengere Seiten sind Sammlungen/Dumps, keine Diskussion
+COLLECTION_RE = re.compile(r"gist\.github\.com|awesome[-_]|paper[-_]?club|reading[-_ ]?list|papers?[-_]we[-_]love|/awesome", re.I)
 MAX_PAGES = 5            # Treffer der Suche
 MAX_CRAWL = 3            # Seiten des Issue-Crawls (immer limit)
 MAX_READ = 3             # Discovery-Treffer, die statt einer Suche gelesen werden
@@ -34,6 +37,9 @@ REPORT_RE = re.compile(r"(could not|couldn.t|cannot|can.t|unable to|fail(?:ed|s)
                        r"not reproducible|reproduction|replicat|reproduc", re.I)
 
 
+KIND_LABEL = {KIND_PROTOCOL: "Protocol note", KIND_REPORT: "Reproduction report", KIND_OTHER: "Note"}
+
+
 @dataclass
 class Finding:
     topic: str
@@ -42,6 +48,7 @@ class Finding:
     url: str
     kind: str
     repo_check: str
+    label: str = ""          # Anzeigename der Art (aus `kind`), damit kein Leser ein leeres Etikett sieht
 
 
 def classify(statement: str, quote: str, protocol: bool) -> str:
@@ -74,7 +81,8 @@ def drop_noise(results: dict | None, arxiv_id: str) -> dict:
 
 def _issue_hit_of(repo_url: str | None, urls: list[str]) -> bool:
     slug = repo_slug(repo_url)
-    return bool(slug) and any(u.lower().startswith(f"https://github.com/{slug.lower()}/issues") for u in urls)
+    return bool(slug) and any(u.lower().startswith(tuple(f"https://github.com/{slug.lower()}/{k}" for k in ("issues", "pull", "discussions")))
+                              for u in urls)
 
 
 def _load_cache(path: Path) -> dict:
@@ -91,7 +99,7 @@ def _save_cache(path: Path, cache: dict) -> None:
 
 def cache_get(arxiv_id: str, now: float | None = None, path: Path | None = None) -> dict | None:
     entry = _load_cache(path or CACHE_PATH).get(arxiv_id)
-    if not entry or (now or time.time()) - entry.get("ts", 0) > CACHE_TTL_S:
+    if not entry or entry.get("v") != CACHE_VERSION or (now or time.time()) - entry.get("ts", 0) > CACHE_TTL_S:
         return None
     return entry
 
@@ -103,17 +111,55 @@ def cache_put(arxiv_id: str, entry: dict, path: Path | None = None) -> None:
     _save_cache(p, cache)
 
 
+def is_collection(url: str) -> bool:
+    """Sammelseiten (gists, awesome-Listen, Paper-Clubs, Leselisten) sind keine Diskussion eines Papers."""
+    return bool(COLLECTION_RE.search(url or ""))
+
+
+def _word(text: str, name: str) -> bool:
+    return bool(name) and re.search(rf"(?<![A-Za-z0-9]){re.escape(name.lower())}(?![A-Za-z0-9])", text.lower()) is not None
+
+
+def names_paper(text: str, title: str, arxiv_id: str, method: str | None) -> bool:
+    """Der Text nennt den Methodennamen (ganzes Wort), den vollen Titel oder die arXiv-ID."""
+    low = " ".join(text.lower().split())
+    return (" ".join((title or "").lower().split()) in low and bool(title)) or (bool(arxiv_id) and arxiv_id.lower() in low) or _word(text, method or "")
+
+
+def select_docs(items: list[dict], title: str, arxiv_id: str, exempt: tuple[str, ...] = (), method: str | None = None,
+                dataset: str | None = None, method_hits: set[str] = frozenset()) -> list[Doc]:
+    """Seiten, die gelesen werden: kein Duplikat, nicht leer, <= MAX_PAGE_CHARS, keine Sammelseite. Seiten des Paper-Repos (exempt) sind
+    gesetzt; sonst muss der Text das Paper nennen (arXiv-ID oder voller Titel); Treffer der Methoden-Query (`method_hits`, URLs) auch mit
+    Methodenname plus Datensatz im Text (Kritik-Papers nennen selten den Titel)."""
+    docs, seen = [], set()
+    kws = keywords(title, arxiv_id)
+    for it in items:
+        url, text = it.get("url", ""), it.get("raw_content") or it.get("content") or ""
+        if not text or url in seen or len(text) > MAX_PAGE_CHARS or is_collection(url):
+            continue
+        seen.add(url)
+        low = text.lower()
+        if exempt and url.lower().startswith(tuple(exempt)):
+            docs.append(Doc(url, text))
+        elif any(k in low for k in kws) or (url in method_hits and _word(text, method or "") and _word(text, dataset or "")):
+            docs.append(Doc(url, text))
+    return docs
+
+
 def _pages(docs: list[Doc]) -> list[dict]:
     import hashlib
     return [{"url": d.name, "n_chars": len(d.text), "sha256": hashlib.sha256(d.text.encode()).hexdigest()} for d in docs]
 
 
 def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_url: str | None,
-                      repo_files: dict[str, str] | None, prior_hits: list[dict] | None, now: float | None = None) -> dict:
+                      repo_files: dict[str, str] | None, prior_hits: list[dict] | None, now: float | None = None,
+                      method: str | None = None) -> dict:
     """Ergebnis: {"findings": [...], "dropped", "pages": [...], "queries": [...], "reused_discovery": bool, "calls": [...]}.
     Aufrufe: Search (oder Extract der Discovery-Treffer); bei bekanntem Repo ohne Issue-Treffer aus ihm eine Search auf dessen Issues
     und nur wenn auch die nichts liefert ein Issue-Crawl. Zitier-Aggregatoren und die eigene arXiv-Seite fallen heraus, Seiten des
-    Paper-Repos brauchen den Titel nicht."""
+    Paper-Repos brauchen den Titel nicht. Mit bekannter Methode kommt eine methodenzentrierte Suche auf arxiv.org/openreview.net dazu
+    (Kritik-Papers wie Shchur 2018). Seiten > 60k Zeichen und Sammelseiten fallen heraus; ein Fund bleibt nur, wenn Zitat oder Satz Methode,
+    Titel oder arXiv-ID nennen (Repo-Seiten ausgenommen)."""
     calls, queries = [], []
     prior_urls = [h.get("url") for h in (prior_hits or []) if h.get("url")]
     if prior_urls:   # Discovery hat schon Treffer: URLs lesen statt neu zu suchen
@@ -125,6 +171,11 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
         calls.append("search")
         queries.append({"kind": "search", "title": title})
     res = drop_noise(res, arxiv_id)
+    method_res = None
+    if method and dataset:
+        method_res = drop_noise(tools.search_method_critique(method, dataset, MAX_PAGES), arxiv_id)
+        calls.append("search")
+        queries.append({"kind": "method_search", "method": method, "dataset": dataset})
     urls_seen = [r.get("url", "") for r in res.get("results", [])] if not prior_urls else prior_urls
     slug, crawl, repo_res = repo_slug(repo_url), None, None
     if slug and not _issue_hit_of(repo_url, urls_seen):
@@ -137,10 +188,18 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
             calls.append("crawl")
             queries.append({"kind": "crawl", "url": repo_url.rstrip("/") + "/issues"})
     exempt = (f"https://github.com/{slug.lower()}/",) if slug else ()   # Seiten des Paper-Repos brauchen den Titel nicht
-    docs = docs_from_collect({"search": {"results": res.get("results", []) + (repo_res or {}).get("results", [])}, "crawl": crawl},
-                             keywords(title, arxiv_id), exempt)
+    items = (res.get("results", []) + (method_res or {}).get("results", []) + (repo_res or {}).get("results", [])
+             + list((crawl or {}).get("results", [])))
+    docs = select_docs(items, title, arxiv_id, exempt, method, dataset, {r.get("url", "") for r in (method_res or {}).get("results", [])})
     kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files)
-    findings = [asdict(Finding(o.topic, o.statement, o.quote, o.source, classify(o.statement, o.quote, o.protocol), o.repo_check)) for o in kept]
+    n_before = len(kept)
+    kept = [o for o in kept if o.source.lower().startswith(exempt) if exempt] + [
+        o for o in kept if not (exempt and o.source.lower().startswith(exempt)) and names_paper(f"{o.statement} {o.quote}", title, arxiv_id, method)]
+    dropped += n_before - len(kept)   # Aussage ohne Methode/Titel im Satz oder Zitat: zu allgemein
+    findings = []
+    for o in kept:
+        kind = classify(o.statement, o.quote, o.protocol)
+        findings.append(asdict(Finding(o.topic, o.statement, o.quote, o.source, kind, o.repo_check, KIND_LABEL[kind])))
     return {"findings": findings, "dropped": dropped, "pages": _pages(docs), "queries": queries,
             "reused_discovery": bool(prior_urls), "calls": calls}
 
@@ -168,7 +227,7 @@ def _explain_chunk(llm, chunk: str, title: str, dataset: str) -> list:
 def possible_explanations(tools, llm, title: str, arxiv_id: str, dataset: str) -> dict:
     """Rolle 6: eine Search nach Errata/neuerer Version/Issues; jede Erklaerung mit geprueftem Zitat, ungepruefte Hypothese. Keine Branches."""
     res = tools.clarify_discrepancy(title)
-    docs = docs_from_collect({"search": res}, keywords(title, arxiv_id))[:MAX_CHUNKS]
+    docs = select_docs(drop_noise(res, arxiv_id).get("results", []), title, arxiv_id)[:MAX_CHUNKS]
     jobs = [(d, c) for d in docs for c in _chunks(d.text[:60000])][:MAX_CHUNKS]
     with ThreadPoolExecutor(max_workers=4) as pool:
         raw = list(pool.map(lambda j: _explain_chunk(llm, j[1], title, dataset), jobs))
