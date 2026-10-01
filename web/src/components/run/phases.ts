@@ -5,7 +5,7 @@ import { VERDICT_SENTENCE } from '../../labels'
 // Turns the flat event list of a run into phases with grouped rows. Pure: every number comes from an event, a missing value drops the line.
 
 export type Actor = 'tavily' | 'nemotron' | 'sandbox' | 'harness' | 'system'
-export type PhaseId = 'claim' | 'setup' | 'plan' | 'code' | 'sandbox' | 'seeds' | 'verdict'
+export type PhaseId = 'claim' | 'setup' | 'plan' | 'code' | 'sandbox' | 'seeds' | 'verdict' | 'community'
 export type Expand =
   | { kind: 'plan'; text: string }
   | { kind: 'code'; hash: string; version: number; inline?: string }
@@ -68,7 +68,7 @@ export type RunModel = {
 
 export const ACTOR_LABEL: Record<Actor, string> = { tavily: 'Tavily', nemotron: 'Nemotron', sandbox: 'Sandbox', harness: 'Harness', system: 'System' }
 
-const SHORT: Record<PhaseId, string> = { claim: 'Claim', setup: 'Setup', plan: 'Plan', code: 'Code', sandbox: 'Sandbox', seeds: 'Seeds', verdict: 'Verdict' }
+const SHORT: Record<PhaseId, string> = { claim: 'Claim', setup: 'Setup', plan: 'Plan', code: 'Code', sandbox: 'Sandbox', seeds: 'Seeds', verdict: 'Verdict', community: 'Community' }
 const PHASE_TEXT: Record<PhaseId, { title: string; actors: Actor[]; what: string; why: string }> = {
   claim: {
     title: 'Check the claimed number', actors: ['tavily', 'nemotron'],
@@ -105,8 +105,13 @@ const PHASE_TEXT: Record<PhaseId, { title: string; actors: Actor[]; what: string
     what: 'The harness compares the mean with the claimed value inside a fixed tolerance.',
     why: 'The tolerance is set before the run, so the verdict cannot be tuned afterwards.',
   },
+  community: {
+    title: 'What others found', actors: ['tavily', 'nemotron'],
+    what: 'After the verdict, Tavily looks for public discussion of the paper (GitHub issues, reviews). Nemotron lists what it says, each statement with a verbatim quote.',
+    why: 'Words next to measurement. These notes are reported only and never change the verdict.',
+  },
 }
-const ORDER: PhaseId[] = ['claim', 'setup', 'plan', 'code', 'sandbox', 'seeds', 'verdict']
+const ORDER: PhaseId[] = ['claim', 'setup', 'plan', 'code', 'sandbox', 'seeds', 'verdict', 'community']
 
 const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : x != null && x !== '' && Number.isFinite(Number(x)) ? Number(x) : null)
 const short = (s: string, n = 140) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
@@ -138,7 +143,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const discarded = new Set(events.filter((e) => (e.type === 'graph_repair' || e.type === 'fault_repair') && e.result === 'repariert').map((e) => String(e.from_hash)))
   const graphTask = events.some((e) => e.type === 'ablation') || metric === 'accuracy'
 
-  const rows: Record<PhaseId, Row[]> = { claim: [], setup: [], plan: [], code: [], sandbox: [], seeds: [], verdict: [] }
+  const rows: Record<PhaseId, Row[]> = { claim: [], setup: [], plan: [], code: [], sandbox: [], seeds: [], verdict: [], community: [] }
   const versions: string[] = []
   const codeInline = new Map<string, string>()
   const planFull = events.find((e) => e.type === 'plan_text')?.text as string | undefined
@@ -158,11 +163,11 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         tavilyCalls++
         const url = String(e.target ?? '')
         const role = Number(e.role)
-        const phase: PhaseId = role === 4 ? 'setup' : 'claim'
+        const phase: PhaseId = role === 4 ? 'setup' : role === 3 || role === 6 ? 'community' : 'claim'
         const isUrl = /^https?:/.test(url)
         const r: Row = {
           id, ts: e.ts, raw: [e], actor: 'tavily', tone: 'amber',
-          title: role === 4 ? 'Tavily Extract: code repository README' : role === 2 ? 'Tavily Extract: paper page' : isUrl ? 'Tavily Extract' : 'Tavily Search',
+          title: role === 4 ? 'Tavily Extract: code repository README' : role === 2 ? 'Tavily Extract: paper page' : role === 6 ? 'Tavily Search: errata and newer versions' : role === 3 ? (e.endpoint === 'crawl' ? 'Tavily Crawl: repository issues' : e.endpoint === 'extract' ? 'Tavily Extract: discussion pages' : 'Tavily Search: public discussion') : isUrl ? 'Tavily Extract' : 'Tavily Search',
           detail: isUrl ? host(url) : short(url, 120),
         }
         rows[phase].push(r)
@@ -177,6 +182,8 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         if (existing) {
           existing.detail = [existing.detail, read].filter(Boolean).join(' · ')
           existing.raw.push(e)
+        } else if (e.kind === 'community') {
+          push('community', { actor: 'tavily', tone: 'amber', title: e.mode === 'live' ? 'Tavily read a discussion page' : 'Discussion page loaded from the 7-day cache', detail: [host(url), read].filter(Boolean).join(' · ') })
         } else {
           push(e.kind === 'readme' ? 'setup' : 'claim', {
             actor: 'tavily', tone: 'amber', title: e.mode === 'live' ? `Tavily Extract: ${e.kind === 'readme' ? 'README' : 'paper page'}` : `Saved copy of the ${e.kind === 'readme' ? 'README' : 'paper page'} loaded`,
@@ -296,6 +303,19 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         })
         break
       }
+      case 'community': {
+        const n = num(e.n_findings) ?? 0
+        push('community', { actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: n ? 'violet' : 'gray',
+          title: n ? `${n} public note${n === 1 ? '' : 's'} found` : 'No public discussion found',
+          detail: `${e.mode === 'cache' ? 'From the 7-day cache. ' : ''}Each note carries a verbatim quote; ${num(e.dropped) ?? 0} statement${num(e.dropped) === 1 ? '' : 's'} without a quote in the page dropped. Not part of the verdict.` })
+        break
+      }
+      case 'explanations': {
+        const n = num(e.n_items) ?? 0
+        push('community', { actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: n ? 'violet' : 'gray',
+          title: n ? `${n} possible explanation${n === 1 ? '' : 's'} (unverified)` : 'No explanation found in public sources', detail: 'Hypotheses with a quote, not tested by us.' })
+        break
+      }
       case 'verdict': {
         const s = VERDICT_SENTENCE[String(e.urteil)] ?? String(e.urteil)
         push('verdict', { actor: 'harness', tone: e.urteil === 'reproduziert' ? 'green' : e.urteil === 'teilweise' ? 'amber' : e.urteil === 'nicht reproduziert' ? 'red' : 'gray', title: s, detail: `Mean ${fmtValue(metric, num(e.mean))} over the seeds, spread ${fmtValue(metric, num(e.std))}.` })
@@ -342,9 +362,12 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     sandbox: laterSeeds || verdictSeen || (seedsTotal === 1 && seed0 && (hasAblation || !graphTask)),
     seeds: verdictSeen,
     verdict: verdictSeen,
+    community: seen.has('community'),
   }
-  if (!opts.running) for (const k of ORDER) if (rows[k].length && !done[k]) done[k] = verdictSeen   // aborted run: nothing stays "active"
-  const activeId = opts.running ? ORDER.find((k) => !done[k]) ?? null : null
+  // The community check runs after the verdict and only in live product runs: the phase exists once its first event arrives.
+  const order = ORDER.filter((k) => k !== 'community' || rows.community.length > 0 || seen.has('community'))
+  if (!opts.running) for (const k of order) if (rows[k].length && !done[k]) done[k] = verdictSeen   // aborted run: nothing stays "active"
+  const activeId = opts.running ? order.find((k) => !done[k]) ?? null : null
 
   const first = events[0]?.ts ?? null
   const last = events.length ? events[events.length - 1].ts : null
@@ -369,6 +392,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     ].filter(Boolean).join(' · ') || null,
     seeds: stats && seedsTotal ? `${stats.n} of ${seedsTotal} seeds, mean ${fmtValue(metric, stats.mean)} ± ${fmtValue(metric, stats.std)}` : null,
     verdict: verdictEv ? (VERDICT_SENTENCE[String(verdictEv.urteil)] ?? String(verdictEv.urteil)) : null,
+    community: (() => { const c = events.filter((e) => e.type === 'community').pop(); return c ? (num(c.n_findings) ? `${c.n_findings} public note${c.n_findings === 1 ? '' : 's'}, not part of the verdict` : 'No public discussion found') : null })(),
   }
 
   const medSeconds = median(attempts.filter((a) => a.seed > 0 && a.seconds != null).map((a) => a.seconds as number))
@@ -390,8 +414,9 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     const left = seedsTotal ? Math.max(0, seedsTotal - okSeeds.size) : null
     waiting = left === 0 ? 'All seeds finished. The harness is computing the verdict.' : `${left != null ? `${left} seed${left === 1 ? '' : 's'} still training` : 'Seeds are training'} in parallel sandbox branches${medSeconds ? `, about ${fmtSeconds(medSeconds)} each` : ''}.`
   } else if (activeId === 'verdict') waiting = 'The harness is computing the verdict.'
+  else if (activeId === 'community') waiting = 'The verdict is final. Tavily is checking public discussion of the paper; this never changes the verdict.'
 
-  const phases: Phase[] = ORDER.map((id) => {
+  const phases: Phase[] = order.map((id) => {
     const t = PHASE_TEXT[id]
     const state: PhaseState = done[id] ? 'done' : activeId === id ? 'active' : 'pending'
     const what = id === 'sandbox' && !graphTask ? 'Seed 0 trains in an isolated sandbox and the harness scores it.' : t.what

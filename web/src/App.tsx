@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Layout } from './components/Layout'
 import { AttemptChart } from './components/Gauge'
 import { BranchTree } from './components/BranchTree'
+import { CommunityCard } from './components/CommunityCard'
 import { EvidenceSplit } from './components/Evidence'
 import { ReplayPlayer } from './components/run/ReplayPlayer'
 import { Discovery } from './components/Discovery'
@@ -337,6 +338,8 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
           <AttemptChart dossier={d} claimId={claim.id} />
         </Section>
       </div>
+
+      <CommunityCard dossier={d} claimId={claim.id} />
 
       {/* Tabs Layout */}
       <div className="mt-12">
