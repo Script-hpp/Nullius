@@ -35,7 +35,7 @@ from .events import EventLog
 from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
-from .harness.repair_hints import fault_message
+from .harness.repair_hints import fault_message, val_fault_message
 from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
@@ -838,6 +838,19 @@ class Orchestrator:
                 f"({parts})" + ("" if reason == "val" else "; Rueckfall ohne Val-Wert"))
         return v0, note0, code, ab, notes, discarded, win["i"], [note]
 
+    def _val_fault_check(self, claim: Claim, code_hash: str, seed: int) -> str | None:
+        """Klassifikation: Validierungs-Genauigkeit (vom Harness mit eigenen Val-Labels) unter der Mehrheitsklasse-Baseline = Zufallsniveau,
+        typisch falsche Zuordnung Vorhersage -> Knoten (M1). Deterministisch, kein LLM; der Hinweis an `code` enthaelt keine Zahlen."""
+        if claim.metric != "accuracy":
+            return None
+        val = self.__dict__.get("_val", {}).get((code_hash, seed))
+        if not isinstance(val, dict) or val.get("value") is None:
+            return None
+        base = (val.get("baselines") or {}).get("majority")
+        if base is not None and val["value"] < base:
+            return f"Validierungs-Genauigkeit {val['value']:.4f} unter der Mehrheitsklasse-Baseline {base:.4f}"
+        return None
+
     def _fault_check(self, claim: Claim, dossier: Dossier, code_hash: str, seed: int, v0: float) -> str | None:
         """Schlechter als eine triviale Baseline? (harness/verify.agent_fault_suspected, deterministisch, kein LLM)"""
         att = next((x for x in reversed(dossier.attempts) if x.claim_id == claim.id and x.seed == seed
@@ -888,12 +901,15 @@ class Orchestrator:
 
         while True:
             fault = self._fault_check(claim, dossier, h(code), seed, v0)
-            if fault and budget(fault_rounds, MAX_FAULT_REPAIRS):
+            val_fault = None if fault else self._val_fault_check(claim, h(code), seed)   # M1: Zufallsniveau auf Validierung
+            if (fault or val_fault) and budget(fault_rounds, MAX_FAULT_REPAIRS):
                 fault_rounds += 1
                 from_hash = h(code)
                 diag = getattr(self, "_diag", {}).get((from_hash, seed)) or {}
                 pred_std = diag.get("pred_std") if isinstance(diag, dict) else None
-                message = fault_message(claim.metric, v0, claim.target, dossier.baselines, pred_std)
+                message = (fault_message(claim.metric, v0, claim.target, dossier.baselines, pred_std) if fault
+                           else val_fault_message())
+                fault = fault or val_fault
                 ev = {"claim_id": claim.id, "runde": fault_rounds, "from_hash": from_hash, "measured": v0,
                       "baselines": {k: v.get(claim.metric) for k, v in (dossier.baselines or {}).items() if isinstance(v, dict)}}
                 head = f"Fehler-Reparatur Runde {fault_rounds}: Code {from_hash} schlechter als triviale Baseline ({fault})"

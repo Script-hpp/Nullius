@@ -16,7 +16,7 @@ CHECKLIST_FORECAST = (
     "- Choose a learning rate that fits the model you actually train; a very large rate on a wide linear layer overfits and predicts worse than zero.\n"
 )
 CHECKLIST_CLASSIFICATION = (
-    "- Predictions must be one class id per test node id, in the order of the test ids; prediction i belongs to node i.\n"
+    "- Predictions must be one class id per test node id. The model outputs one row per node of the FULL graph: take pred = output.argmax(1) and index it with the ids, pred[test_ids] (and pred[val_ids]). Never zip the ids with the first outputs; id k is a node index, not a row position of a shorter list.\n"
     "- Train only on the training labels. Features, labels and node indices must stay aligned; do not shuffle one without the other.\n"
     "- Use the graph edges as the plan describes (adjacency with self loops, symmetric normalisation), not just the node features.\n"
     "- If you keep the best epoch, copy the weights with copy.deepcopy(model.state_dict()); state_dict() alone only references the live tensors and the restore does nothing.\n"
@@ -39,3 +39,17 @@ def fault_message(metric: str, measured: float, target: float, baselines: dict |
     lines.append((CHECKLIST_FORECAST if forecast else CHECKLIST_CLASSIFICATION).rstrip())
     lines.append("Keep the method described in the plan: fix the implementation, do not replace the method by a simpler one.")
     return "\n".join(lines)
+
+
+VAL_FAULT_MESSAGE = (
+    "Your script ran, but on the validation nodes its predictions are worse than always predicting the most frequent class, "
+    "so they are at chance level: the mapping from model output to node ids is most likely wrong, not the paper.\n"
+    "Check these points and return the corrected full script:\n"
+    + CHECKLIST_CLASSIFICATION.rstrip() + "\n"
+    "Keep the method described in the plan: fix the implementation, do not replace the method by a simpler one."
+)
+
+
+def val_fault_message() -> str:
+    """Fester Hinweis (kein LLM, keine Zahlen): Validierungs-Genauigkeit unter der Mehrheitsklasse-Baseline des Harness."""
+    return VAL_FAULT_MESSAGE
