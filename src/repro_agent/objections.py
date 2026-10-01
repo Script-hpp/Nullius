@@ -27,8 +27,10 @@ class Objection:
     repo_check: str        # bestaetigt | widerlegt | nicht pruefbar
 
 
-def docs_from_collect(collected: dict, must_mention: tuple[str, ...]) -> list[Doc]:
-    """Seiten aus Search (raw_content) und Crawl; nur solche, die das Paper nennen (Stichwoerter, klein geschrieben)."""
+def docs_from_collect(collected: dict, must_mention: tuple[str, ...], exempt_prefixes: tuple[str, ...] = ()) -> list[Doc]:
+    """Seiten aus Search (raw_content) und Crawl; nur solche, die das Paper nennen (Stichwoerter, klein geschrieben).
+    Seiten, deren URL mit einem Praefix aus `exempt_prefixes` beginnt (klein geschrieben; Issues des Paper-Repos), brauchen den Namen nicht:
+    ein Issue im Repo des Papers spricht vom Repo, nicht vom Titel."""
     docs, seen = [], set()
     items = list((collected.get("search") or {}).get("results", [])) + list((collected.get("crawl") or {}).get("results", []))
     for it in items:
@@ -36,7 +38,8 @@ def docs_from_collect(collected: dict, must_mention: tuple[str, ...]) -> list[Do
         if not text or url in seen:
             continue
         seen.add(url)
-        if any(k.lower() in text.lower() for k in must_mention):
+        exempt = bool(exempt_prefixes) and url.lower().startswith(tuple(exempt_prefixes))
+        if exempt or any(k.lower() in text.lower() for k in must_mention):
             docs.append(Doc(url, text))
     return docs
 

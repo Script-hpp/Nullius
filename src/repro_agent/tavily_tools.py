@@ -65,9 +65,20 @@ class TavilyTools:
         return {"search": search, "crawl": crawl}
 
     def search_community(self, paper_title: str, limit: int = 5) -> dict:
-        """Rolle 3 (Community-Check): Search mit Rohtext der Treffer. Entspricht dem Search-Teil von `collect_objections`."""
+        """Rolle 3 (Community-Check): Search nach Kritik und Reproduktionsberichten, mit Rohtext der Treffer. Nur Orte, an denen
+        Diskussion steht; Zitier-Aggregatoren sind ausgeschlossen (die eigene arXiv-Seite filtert `community.drop_noise`)."""
         return self._note(3, "search", paper_title, self._client.search(
-            query=f"{paper_title} reproducibility issues criticism evaluation", max_results=limit, include_raw_content="text",
+            query=f'{paper_title} reproduce OR reproducibility OR "could not reproduce" OR issue',
+            max_results=limit, include_raw_content="text",
+            include_domains=["github.com", "openreview.net", "arxiv.org", "reddit.com"],
+            exclude_domains=["scirp.org", "semanticscholar.org", "researchgate.net", "scholar.google.com", "paperswithcode.com", "connectedpapers.com"],
+        ))
+
+    def search_repo_issues(self, owner_repo: str, limit: int = 5) -> dict:
+        """Rolle 3: Issues des Paper-Repos per Suche statt der drei neuesten per Crawl (Query "<owner>/<repo> issue reproduce accuracy results")."""
+        return self._note(3, "search", owner_repo, self._client.search(
+            query=f"{owner_repo} issue reproduce accuracy results", max_results=limit, include_raw_content="text",
+            include_domains=["github.com"],
         ))
 
     def crawl_issues(self, repo_url: str, limit: int = 3) -> dict:
