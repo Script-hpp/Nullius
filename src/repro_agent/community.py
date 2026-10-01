@@ -135,9 +135,10 @@ def select_docs(items: list[dict], title: str, arxiv_id: str, exempt: tuple[str,
     kws = keywords(title, arxiv_id)
     for it in items:
         url, text = it.get("url", ""), it.get("raw_content") or it.get("content") or ""
-        if not text or url in seen or len(text) > MAX_PAGE_CHARS or is_collection(url):
+        key = url.split("#")[0].split("?")[0].rstrip("/").lower()   # issues/14 und issues/14?timeline_page=1 sind dieselbe Seite
+        if not text or key in seen or len(text) > MAX_PAGE_CHARS or is_collection(url):
             continue
-        seen.add(url)
+        seen.add(key)
         low = text.lower()
         if exempt and url.lower().startswith(tuple(exempt)):
             docs.append(Doc(url, text))
