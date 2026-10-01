@@ -250,3 +250,33 @@ def test_forbidden_library_hint_in_first_prompt_and_repair_prompt_product_path_o
     assert seen[False][1] == (
         f"{t.data_description}\n\n\n\nReproduction plan:\nplan\n\nThis script failed:\n```python\nx = 1\n```\nProblem: boom\n\n"
         "Return the corrected full script.")
+
+
+def test_candidate_without_code_is_skipped(tmp_path):
+    """Liefert ein Kandidat keinen Code (ValueError/RuntimeError aus dem LLM-Pfad), laeuft der Lauf mit den uebrigen weiter;
+    der Index des Kandidaten bleibt erhalten."""
+    o, sb, temps, events = setup({C0: 0.80, C2: 0.70}, {C0: 0.70, C2: 0.75})
+
+    def write_code(plan, task, temperature=0.2):
+        temps.append(temperature)
+        if len(temps) == 2:
+            raise ValueError("kein Code-Block")
+        return {1: C0, 3: C2}[len(temps)]
+
+    o.write_code = write_code
+    d = run(o, tmp_path)
+    (ev,) = [kw for t, kw in events if t == "candidates"]
+    assert [c["index"] for c in ev["candidates"]] == [0, 2] and ev["chosen"] == 2
+    assert [kw["candidate"] for t, kw in events if t == "code_missing"] == [1]
+    assert d.verdicts[0].measured_mean == pytest.approx(0.70)
+
+
+def test_all_candidates_without_code_end_run(tmp_path):
+    o, sb, temps, events = setup({C0: 0.8}, {C0: 0.7})
+
+    def write_code(plan, task, temperature=0.2):
+        raise ValueError("kein Code-Block")
+
+    o.write_code = write_code
+    with pytest.raises(RuntimeError, match="Kein Code-Kandidat"):
+        run(o, tmp_path)

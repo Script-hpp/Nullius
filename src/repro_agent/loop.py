@@ -819,14 +819,27 @@ class Orchestrator:
             return hashlib.sha256(c.encode()).hexdigest()[:12]
 
         codes: list[str] = []
-        for i in range(k):
-            c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
+        idx: list[int] = []
+        last_exc: Exception | None = None
+        for i in range(k):   # ein Kandidat ohne Code faellt weg; erst wenn keiner Code liefert, endet der Lauf wie ohne A1
+            try:
+                c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
+            except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
+                raise
+            except (RuntimeError, ValueError) as exc:
+                last_exc = exc
+                self._emit("code_missing", claim_id=claim.id, candidate=i, reason=str(exc)[:300])
+                continue
             codes.append(c)
+            idx.append(i)
             self._announce_code(claim, c)
             self._emit("code_written", claim_id=claim.id, code_hash=h(c), candidate=i)
+        if not codes:   # RuntimeError: der Benchmark haelt den Lauf als 'abgebrochen' fest, statt dass der Prozess endet
+            raise RuntimeError(f"Kein Code-Kandidat lieferte Code: {last_exc}")
 
-        def one(i: int) -> dict:
-            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, codes[i], seed, i)
+        def one(j: int) -> dict:
+            i = idx[j]
+            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, codes[j], seed, i)
             res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": set(), "faults": 0}
             if v0 is not None:   # Kandidatenphase: nur Fehler-Check; Graph-Ablation nur fuer den Sieger
                 v0, note0, code, ab, notes, disc, faults = self._seed0_quality_loop(
@@ -837,7 +850,7 @@ class Orchestrator:
             return res
 
         with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, k)) as pool:
-            results = list(pool.map(one, range(k)))
+            results = list(pool.map(one, range(len(codes))))
         runnable = [r for r in results if r["v0"] is not None]
         if runnable:
             pick, reason = select_candidate([r["val"] for r in runnable])
