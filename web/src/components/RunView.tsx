@@ -10,10 +10,12 @@ import { ResultBand } from './ResultChart'
 import { ReplayPlayer } from './run/ReplayPlayer'
 import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
+import { PaperHead } from './PaperHead'
 import { Timelapse } from './Timelapse'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
+import { useHead } from '../useHead'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
 import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
@@ -32,6 +34,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const [activeTab, setActiveTab] = useState<Tab>(initialTab === 'log' || initialTab === 'evidence' || initialTab === 'tree' || initialTab === 'files' ? initialTab : 'graph')
   const [file, setFile] = useState<'code' | 'plan'>('code')
   const [timelapse, setTimelapse] = useState(playTimelapse)   // the 30-second panel, opened by the button or by ?play=1
+  const head = useHead(ref_.paper_id)
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
   const finalHash = useMemo(() => {
@@ -83,7 +86,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to runs
           </a>
         </div>
-        <PageIntro kicker={`${run.ref.paper_id} · ${parseDate(run.ref.timestamp)}`} title={run.ref.title}
+        <PageIntro kicker={`${run.ref.paper_id} · ${parseDate(run.ref.timestamp)}`} title={run.ref.title} head={<PaperHead head={head} />}
           what="This is the certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it."
           look="Read the verdict sentence first, then compare claimed and measured. The nine steps below show how we got there, and why the number can be trusted." />
         <p className="m-0 max-w-3xl text-lg leading-relaxed text-fg-4">Claim: {translateClaim(claim.text)}</p>

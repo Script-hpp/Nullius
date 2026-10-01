@@ -7,6 +7,15 @@ export type PaperSummary = {
   source: string             // what the summary is based on
   generated_by?: string      // model role that wrote it
   example?: boolean          // true: placeholder text written by hand, not model output
+  // Paper head (scripts/make_summaries.py): who wrote it, where, when. Every field has its own source.
+  title?: string
+  paper_ids?: string[]       // runs and catalog entries that belong to this arXiv paper
+  authors?: string[]
+  authors_source?: string
+  year?: number | null
+  venue?: { name: string; quote: string }
+  institutions?: { name: string; quote: string }[]
+  institutions_source?: string
 }
 
 let cache: Promise<Record<string, PaperSummary>> | null = null

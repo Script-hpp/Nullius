@@ -8,6 +8,8 @@ import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
 import { translateClaim } from '../labels'
 import { loadIndex, type RunRef } from '../data'
 import { useCatalog } from '../catalog'
+import { PaperHead } from './PaperHead'
+import { useHead } from '../useHead'
 
 const STATUS_TEXT = { connecting: 'Connecting', running: 'Running', finished: 'Finished', error: 'Failed', lost: 'Connection lost', unknown: 'Not found' } as const
 
@@ -19,6 +21,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
 
   const queued = events.find((e) => e.type === 'queued')
   const entry = catalog?.find((c) => c.id === queued?.catalog_id)
+  const head = useHead(entry?.id)
   const seedsN = Number(events.find((e) => e.type === 'run_start')?.seeds)   // the seed count of this run, from the job itself; unknown before run_start
   const kind = queued ? (queued.quick ? 'quick check' : 'full run') + (Number.isFinite(seedsN) && seedsN > 0 ? `, ${seedsN} seeds` : '') : ''
   const claimText = useMemo(() => {
@@ -44,7 +47,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
           <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to catalog
         </a>
       </div>
-      <PageIntro kicker={`Live check${kind ? ` · ${kind}` : ''} · ${STATUS_TEXT[shownStatus]}`} title={entry?.title ?? 'Reproduction run'}
+      <PageIntro kicker={`Live check${kind ? ` · ${kind}` : ''} · ${STATUS_TEXT[shownStatus]}`} title={entry?.title ?? 'Reproduction run'} head={<PaperHead head={head} />}
         what="You are watching one check as it happens. Our agent rebuilds the paper's experiment in isolated sandboxes while our harness measures the result."
         look="The nine steps below fill in as they finish. Open the running step to see what happens in it and why it matters.">
         <p className="mb-0 mt-8 flex items-center gap-3 text-[13px] text-fg-4">

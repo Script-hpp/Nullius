@@ -5,11 +5,12 @@ import { Glossed } from './Glossed'
 // Building blocks shared by every page: the intro every page starts with, and the "Next" every page ends with.
 
 // "What you see here" (one plain sentence) and "What to look at first" (where to start). Visible text, never a tooltip.
-export function PageIntro({ kicker, title, what, look, children }: { kicker?: string; title: string; what: string; look: string; children?: ReactNode }) {
+export function PageIntro({ kicker, title, what, look, head, children }: { kicker?: string; title: string; what: string; look: string; head?: ReactNode; children?: ReactNode }) {
   return (
     <header className="pb-10 pt-10 md:pt-14">
       {kicker && <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{kicker}</div>}
       <h1 className="font-grotesk m-0 mt-3 text-4xl font-semibold leading-[1.02] text-fg sm:text-5xl">{title}</h1>
+      {head}
       <div className="mt-8 grid gap-6 border-t border-line pt-8 md:grid-cols-2 md:gap-0">
         <div className="md:pr-12">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted"><Info className="h-3.5 w-3.5" />What you see here</div>
