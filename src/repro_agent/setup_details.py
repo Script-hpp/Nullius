@@ -158,8 +158,59 @@ def extract_setup_details(
     return kept, len(dropped)
 
 
-def format_for_prompt(details: list[SetupDetail]) -> str:
+REPO_DEFAULT_MARK = "repository default (the paper may tune this per dataset)"
+_DEFAULT_ARG = re.compile(r"default\s*=")
+
+
+def is_repo_default(d: SetupDetail) -> bool:
+    """Wert stammt aus einem argparse-Default (`add_argument(..., default=...)`) einer Repo-Datei, nicht aus dem Paper-Text."""
+    return d.source.startswith("repo:") and bool(_DEFAULT_ARG.search(d.quote))
+
+
+def format_for_prompt(details: list[SetupDetail], mark_defaults: bool = False) -> str:
+    """mark_defaults (nur Produktpfad): Repo-Defaults als solche kennzeichnen (M7)."""
     if not details:
         return ""
-    lines = [f"- {d.topic}: {d.value}  ({d.source}: \"{d.quote}\")" for d in details]
+    lines = [f"- {d.topic}: {d.value}  ({d.source}: \"{d.quote}\")"
+             + (f"  [{REPO_DEFAULT_MARK}]" if mark_defaults and is_repo_default(d) else "") for d in details]
     return "Setup details from the paper and its code repository (verified quotes):\n" + "\n".join(lines)
+
+
+def _key(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def _same_topic(a: str, b: str) -> bool:
+    ka, kb = _key(a), _key(b)
+    return bool(ka and kb) and (ka == kb or (min(len(ka), len(kb)) >= 4 and (ka in kb or kb in ka)))
+
+
+def _numbers(value: str) -> tuple[str, ...]:
+    return tuple(sorted(re.findall(r"\d+(?:\.\d+)?(?:e-?\d+)?", value.lower())))
+
+
+def find_conflicts(details: list[SetupDetail]) -> list[tuple[SetupDetail, SetupDetail]]:
+    """Paare (Paper-Angabe, Repo-Angabe) zum selben Thema mit verschiedenem Wert (Zahlen verschieden, sonst Text verschieden)."""
+    papers = [d for d in details if d.source == "paper"]
+    repos = [d for d in details if d.source.startswith("repo")]
+    out = []
+    for p in papers:
+        for r in repos:
+            if not _same_topic(p.topic, r.topic):
+                continue
+            np_, nr = _numbers(p.value), _numbers(r.value)
+            differ = np_ != nr if (np_ and nr) else _key(p.value) != _key(r.value)
+            if differ:
+                out.append((p, r))
+    return out
+
+
+def format_conflicts(details: list[SetupDetail]) -> str:
+    """Plan-Prompt (nur Produktpfad): gleiche Einstellung, verschiedene Werte in Paper und Repo, beide mit Quelle."""
+    pairs = find_conflicts(details)
+    if not pairs:
+        return ""
+    lines = [f"- {p.topic}: paper says {p.value} ({p.source}: \"{p.quote}\"); repository says {r.value} ({r.source}: \"{r.quote}\")"
+             for p, r in pairs]
+    return ("Paper and repository give different values for the same setting. In your plan name both with their source, "
+            "and say which one you use and why:\n" + "\n".join(lines))

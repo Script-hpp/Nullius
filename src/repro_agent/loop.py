@@ -41,7 +41,7 @@ from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
 from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
-from .setup_details import Doc, SetupDetail, extract_setup_details, format_for_prompt
+from .setup_details import Doc, SetupDetail, extract_setup_details, format_conflicts, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
@@ -318,7 +318,8 @@ class Orchestrator:
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
         user = (
             f"Paper: {paper['title']}\nClaim: {claim.text} (target {claim.target}, {claim.metric})\n\n"
-            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
+            f"{task.data_description}\n\n{self._details_prompt()}\n\n"
+            f"{self._conflicts_prompt()}"
             "Write a short reproduction plan: model architecture, all hyperparameters and training "
             "protocol as described in the paper. Mark every value you are NOT sure about with "
             "'(uncertain)'. Max 15 lines."
@@ -328,6 +329,15 @@ class Orchestrator:
             self._emit("plan_retry", reason="code" if text.lstrip().startswith("```") or "import " in text else "too_long")
             text = self._ask("reasoning", PLAN_SYSTEM, user + PLAN_RETRY_NOTE, temperature=0.4).content
         return text
+
+    def _details_prompt(self) -> str:
+        """Setup-Angaben im Prompt; im Produktpfad sind Repo-Defaults (argparse) gekennzeichnet (M7)."""
+        return format_for_prompt(self.details, mark_defaults=getattr(self, "graph_repair", False))
+
+    def _conflicts_prompt(self) -> str:
+        """Nur Produktpfad: Paper-Wert und Repo-Wert fuer dasselbe Thema im Plan-Prompt, beide mit Quelle (M7)."""
+        text = format_conflicts(self.details) if getattr(self, "graph_repair", False) else ""
+        return text + "\n\n" if text else ""
 
     def _fidelity_note(self) -> str:
         """Nur Katalog/API (Flag): Kernmechanismus des Plans umsetzen, Kommentarblock Plan step -> function. Anleitung, kein Pruefer."""
@@ -364,7 +374,7 @@ class Orchestrator:
     def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
         return self._code_from_llm(
             CODE_SYSTEM,
-            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
+            f"{task.data_description}\n\n{self._details_prompt()}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
             f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan."
@@ -375,7 +385,7 @@ class Orchestrator:
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
         return self._code_from_llm(
             CODE_SYSTEM,
-            f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
+            f"{task.data_description}\n\n{self._details_prompt()}\n\n"
             f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script."
             f"{self._product_notes(task)}{self._fidelity_note()}",
