@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2 } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
+import { PaperHead } from './PaperHead'
+import { useHead } from '../useHead'
 import { NextStep, PageIntro } from './page'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
@@ -15,6 +17,7 @@ type LiveControl = { available: boolean; busy: boolean; hasCode: boolean; starti
 
 function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
   const v = e.verdict
+  const head = useHead(e.id)
   const canRun = live.available && e.status !== 'nicht_laufbar'
   const why = live.busy ? 'Another run is active' : !live.hasCode ? 'Enter the access code first' : undefined
   return (
@@ -28,6 +31,7 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
         <span>Claim <span className="text-fg-3">{e.claim.method ?? '–'}</span></span>
         <span>{STATUS_TEXT[e.status]}</span>
       </div>
+      <PaperHead head={head} compact />
 
       {v ? (
         <div className="mt-4 space-y-4">

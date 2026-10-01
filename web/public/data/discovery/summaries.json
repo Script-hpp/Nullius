@@ -2,11 +2,324 @@
   "2511.08094": {
     "summary": "The paper proposes a new learning technique for linked scientific articles, tests it on the Cora citation dataset, and claims about 83% correct labeling.",
     "source": "arXiv abstract (2511.08094) and the claim found by Discovery",
-    "generated_by": "Nemotron Super (Token Factory)"
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Kaicheng Zhang",
+      "David N. Reynolds",
+      "Piero Deidda",
+      "Francesco Tudisco"
+    ],
+    "year": 2025,
+    "authors_source": "arXiv abstract page (2511.08094)",
+    "institutions": [
+      {
+        "name": "University of Edinburgh",
+        "quote": "University of Edinburgh, Edinburgh, UK"
+      },
+      {
+        "name": "Institute of Applied Mathematics and Mechanics",
+        "quote": "Affiliation:Institute of Applied Mathematics and Mechanics"
+      },
+      {
+        "name": "University of Warsaw",
+        "quote": "University of Warsaw, Warsaw, Poland"
+      },
+      {
+        "name": "Gran Sasso Science Institute",
+        "quote": "Affiliation:Gran Sasso Science Institute, L’Aquila, Italy"
+      },
+      {
+        "name": "Scuola Normale Superiore",
+        "quote": "Affiliation:Scuola Normale Superiore, Pisa, Italy"
+      },
+      {
+        "name": "Miniml.AI",
+        "quote": "Affiliation:Miniml.AI, Edinburgh, UK"
+      }
+    ],
+    "institutions_source": "arXiv HTML v2, read with Tavily Extract",
+    "paper_ids": [
+      "disc_2511_08094"
+    ],
+    "title": "Stuart-Landau Oscillatory Graph Neural Network"
   },
   "2601.21866": {
     "summary": "The paper proposes a system using multiple specialized parts to predict future electricity transformer readings, claiming an average squared error of 0.35.",
     "source": "arXiv abstract (2601.21866) and the claim found by Discovery",
-    "generated_by": "Nemotron Super (Token Factory)"
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Evandro S. Ortigossa",
+      "Guy Lutsker",
+      "Eran Segal"
+    ],
+    "year": 2026,
+    "authors_source": "arXiv abstract page (2601.21866)",
+    "institutions": [
+      {
+        "name": "Weizmann Institute of Science",
+        "quote": "Department of Computer Science and Applied Mathematics, Weizmann Institute of Science, Rehovot, Israel"
+      },
+      {
+        "name": "Mohamed bin Zayed University of Artificial Intelligence",
+        "quote": "Mohamed bin Zayed University of Artificial Intelligence, Abu Dhabi, UAE"
+      }
+    ],
+    "institutions_source": "arXiv HTML v2, read with Tavily Extract",
+    "paper_ids": [
+      "disc_2601_21866"
+    ],
+    "title": "MoHETS: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts"
+  },
+  "1609.02907": {
+    "summary": "The paper proposes a simple way for a computer to learn each article's topic by also considering article citations; the data is Cora, about 2,700 citing scientific articles; it claims the method correctly identifies the topic for roughly 81.5 out of every 100 articles.",
+    "source": "arXiv abstract (1609.02907) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Thomas N. Kipf",
+      "Max Welling"
+    ],
+    "year": 2016,
+    "authors_source": "arXiv abstract page (1609.02907)",
+    "institutions": [
+      {
+        "name": "University of Amsterdam",
+        "quote": "University of Amsterdam"
+      },
+      {
+        "name": "Canadian Institute for Advanced Research (CIFAR)",
+        "quote": "Canadian Institute for Advanced Research (CIFAR)"
+      }
+    ],
+    "institutions_source": "arXiv PDF v4, read with Tavily Extract",
+    "venue": {
+      "name": "ICLR 2017",
+      "quote": "Published as a conference paper at ICLR 2017"
+    },
+    "paper_ids": [
+      "kipf_gcn_2017"
+    ],
+    "title": "Semi-Supervised Classification with Graph Convolutional Networks"
+  },
+  "1811.05868": {
+    "summary": "The paper suggests comparing article‑classifying methods by trying many data splits and tuning each method’s settings the same way; the data is Cora, a collection of about 2,700 scientific articles that cite each other; and it claims the method correctly labels about 82 out of every 100 articles.",
+    "source": "arXiv abstract (1811.05868) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Oleksandr Shchur",
+      "Maximilian Mumme",
+      "Aleksandar Bojchevski",
+      "Stephan Günnemann"
+    ],
+    "year": 2018,
+    "authors_source": "arXiv abstract page (1811.05868)",
+    "institutions": [
+      {
+        "name": "Technical University of Munich",
+        "quote": "Technical University of Munich, Germany"
+      }
+    ],
+    "institutions_source": "arXiv PDF v2, read with Tavily Extract",
+    "paper_ids": [
+      "shchur_pitfalls_2018",
+      "shchur_gat_2018"
+    ],
+    "title": "Pitfalls of Graph Neural Network Evaluation"
+  },
+  "2205.13504": {
+    "summary": "The paper compares simple linear models to complex attention-based models on hourly electricity data, finding the linear model achieves low average squared error.",
+    "source": "arXiv abstract (2205.13504) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Ailing Zeng",
+      "Muxi Chen",
+      "Lei Zhang",
+      "Qiang Xu"
+    ],
+    "year": 2022,
+    "authors_source": "arXiv abstract page (2205.13504)",
+    "institutions": [
+      {
+        "name": "The Chinese University of Hong Kong",
+        "quote": "The Chinese University of Hong Kong"
+      },
+      {
+        "name": "International Digital Economy Academy (IDEA)",
+        "quote": "International Digital Economy Academy (IDEA)"
+      }
+    ],
+    "institutions_source": "arXiv PDF v3, read with Tavily Extract",
+    "paper_ids": [
+      "zeng_dlinear_2023",
+      "zeng_nlinear_2023"
+    ],
+    "title": "Are Transformers Effective for Time Series Forecasting?"
+  },
+  "1907.06902": {
+    "authors": [
+      "Maurizio Ferrari Dacrema",
+      "Paolo Cremonesi",
+      "Dietmar Jannach"
+    ],
+    "year": 2019,
+    "authors_source": "arXiv abstract page (1907.06902)",
+    "institutions": [
+      {
+        "name": "Politecnico di Milano",
+        "quote": "Politecnico di Milano, Italy maurizio.ferrari@polimi.it"
+      },
+      {
+        "name": "University of Klagenfurt",
+        "quote": "University of Klagenfurt, Austria dietmar.jannach@aau.at"
+      }
+    ],
+    "institutions_source": "arXiv PDF v3, read with Tavily Extract",
+    "paper_ids": [
+      "dacrema_progress_2019"
+    ],
+    "title": "Are We Really Making Much Progress? A Worrying Analysis of Recent Neural Recommendation Approaches"
+  },
+  "1902.07153": {
+    "summary": "The paper proposes a simpler version of a citation‑based learning method, evaluates it on the Cora dataset of scientific papers that cite each other, and claims it achieves about 81% accuracy.",
+    "source": "arXiv abstract (1902.07153) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Felix Wu",
+      "Tianyi Zhang",
+      "Amauri Holanda de Souza Jr.",
+      "Christopher Fifty",
+      "Tao Yu",
+      "Kilian Q. Weinberger"
+    ],
+    "year": 2019,
+    "authors_source": "arXiv abstract page (1902.07153)",
+    "institutions": [
+      {
+        "name": "Cornell University",
+        "quote": "1Cornell University"
+      },
+      {
+        "name": "Federal Institute of Ceara (Brazil)",
+        "quote": "2Federal Insti-tute of Ceara (Brazil)"
+      }
+    ],
+    "institutions_source": "arXiv PDF v2, read with Tavily Extract",
+    "paper_ids": [
+      "wu_sgc_2019"
+    ],
+    "title": "Simplifying Graph Convolutional Networks"
+  },
+  "1710.10903": {
+    "summary": "The paper shows how a computer can learn to group scientific articles by noticing which ones refer to others. The data set called Cora contains about 2,700 research papers that cite each other. It claims the method puts about eighty‑three percent of the papers in the right topic.",
+    "source": "arXiv abstract (1710.10903) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Petar Veličković",
+      "Guillem Cucurull",
+      "Arantxa Casanova",
+      "Adriana Romero",
+      "Pietro Liò",
+      "Yoshua Bengio"
+    ],
+    "year": 2017,
+    "authors_source": "arXiv abstract page (1710.10903)",
+    "institutions": [
+      {
+        "name": "University of Cambridge",
+        "quote": "Department of Computer Science and Technology University of Cambridge"
+      },
+      {
+        "name": "Montréal Institute for Learning Algorithms",
+        "quote": "Montr´ eal Institute for Learning Algorithms"
+      }
+    ],
+    "institutions_source": "arXiv PDF v3, read with Tavily Extract",
+    "venue": {
+      "name": "ICLR 2018",
+      "quote": "Published as a conference paper at ICLR 2018"
+    },
+    "paper_ids": [
+      "velickovic_gat_2018"
+    ],
+    "title": "Graph Attention Networks"
+  },
+  "1809.10341": {
+    "summary": "It shows how a computer can learn helpful clues for each article by matching nearby details with whole‑set signals. Cora is a set of about 2,700 scientific papers where each paper lists the papers it cites. An accuracy of 82.3 % means roughly eight out of ten articles end up in the correct category.",
+    "source": "arXiv abstract (1809.10341) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Petar Veličković",
+      "William Fedus",
+      "William L. Hamilton",
+      "Pietro Liò",
+      "Yoshua Bengio",
+      "R Devon Hjelm"
+    ],
+    "year": 2018,
+    "authors_source": "arXiv abstract page (1809.10341)",
+    "institutions": [
+      {
+        "name": "University of Cambridge",
+        "quote": "University of Cambridge"
+      },
+      {
+        "name": "Mila – Québec Artificial Intelligence Institute",
+        "quote": "Mila – Qu´ ebec Artificial Intelligence Institute"
+      },
+      {
+        "name": "Google Brain",
+        "quote": "Google Brain"
+      },
+      {
+        "name": "McGill University",
+        "quote": "McGill University"
+      },
+      {
+        "name": "Université de Montréal",
+        "quote": "Universit´ e de Montr´ eal"
+      },
+      {
+        "name": "Microsoft Research",
+        "quote": "Microsoft Research"
+      }
+    ],
+    "institutions_source": "arXiv PDF, read with Tavily Extract",
+    "venue": {
+      "name": "ICLR 2019",
+      "quote": "Published as a conference paper at ICLR 2019"
+    },
+    "paper_ids": [
+      "velickovic_dgi_2019"
+    ],
+    "title": "Deep Graph Infomax"
+  },
+  "2601.18837": {
+    "summary": "The paper introduces HaKAN, a model that learns from past hourly electricity readings to forecast future values using specially designed mathematical functions. The data used is ETTh1, a set of hourly measurements from an electricity transformer station. It reports that the typical forecast error, measured as average squared difference, is 0.369, indicating fairly accurate predictions.",
+    "source": "arXiv abstract (2601.18837) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Md Zahidul Hasan",
+      "A. Ben Hamza",
+      "Nizar Bouguila"
+    ],
+    "year": 2026,
+    "authors_source": "arXiv abstract page (2601.18837)",
+    "paper_ids": [
+      "disc_2601_18837"
+    ],
+    "title": "Time series forecasting with Hahn Kolmogorov-Arnold networks"
+  },
+  "2609.30894": {
+    "summary": "Acacia learns from web page links to handle various data without extra training; it was tested on Cora, a set of scientific articles that cite each other; it achieved about 58 percent correct classification.",
+    "source": "arXiv abstract (2609.30894) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Ryoma Sato"
+    ],
+    "year": 2026,
+    "authors_source": "arXiv abstract page (2609.30894)",
+    "paper_ids": [
+      "disc_2609_30894"
+    ],
+    "title": "Training Graph Foundation Models on The Web Graph"
   }
 }
