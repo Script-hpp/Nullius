@@ -38,7 +38,7 @@ function Hero() {
     'data-hero-fade': true,
   })
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-56 pt-24 text-center sm:pb-24">
+    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-16 pt-24 text-center">
       <WrittenText onDone={() => setShown(true)} className="w-[min(880px,88vw)] text-fg" />
       {/* collapsed while the lettering is written (it sits in the middle of the screen), then opens and moves it up */}
       <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
@@ -62,7 +62,7 @@ function Hero() {
           </div>
         </div>
       </div>
-      <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-3 px-6" {...fade(400)}>
+      <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14" {...fade(400)}>
         <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
           aria-label="Scroll down" className="cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3">
           <ChevronDown className="h-5 w-5" />
