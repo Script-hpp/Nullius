@@ -3,6 +3,8 @@ import { TONE_VAR, type Tone } from '../labels'
 import { Term } from './Glossed'
 import { Section } from './ui'
 
+const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
+
 // "Claimed vs. measured" in one picture: the claimed value with its tolerance band and every measured seed as a dot.
 // Plain HTML positioning (no SVG text) so labels stay readable on a phone.
 export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSpread }: {
@@ -28,6 +30,16 @@ export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSprea
   const min = Math.min(...all) - pad
   const max = Math.max(...all) + pad
   const pos = (x: number) => `${((x - min) / (max - min)) * 100}%`
+  // Dots that would overlap move to the next free lane above or below the axis (deterministic, by value), so every run stays visible.
+  const lanes: { x: number; lane: number }[] = []
+  const laneEnd: number[] = LANE_PX.map(() => -Infinity)
+  for (const x of [...vals].sort((u, v) => u - v)) {
+    const at = ((x - min) / (max - min)) * 100
+    let lane = laneEnd.findIndex((end) => at - end >= 2.6)
+    if (lane < 0) lane = laneEnd.indexOf(Math.min(...laneEnd))
+    laneEnd[lane] = at
+    lanes.push({ x, lane })
+  }
   const mean = typeof verdict?.measured_mean === 'number' ? verdict.measured_mean : null
   const std = typeof verdict?.measured_std === 'number' ? verdict.measured_std : null
   const color = TONE_VAR[tone]
@@ -48,9 +60,9 @@ export function ResultChart({ dossier, claimId, tone, verdictText, fmt, fmtSprea
             {/* axis */}
             <div className="absolute top-[3.0rem] left-0 right-0 h-px bg-line-strong" />
             {/* one dot per seed */}
-            {vals.map((x, i) => (
+            {lanes.map(({ x, lane }, i) => (
               <div key={i} title={`Run ${i + 1}: ${fmt(x)}`} className="absolute top-[3.0rem] w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-fg-4 bg-fg-4/40"
-                style={{ left: pos(x) }} />
+                style={{ left: pos(x), marginTop: LANE_PX[lane] }} />
             ))}
             {/* mean */}
             {mean !== null && (

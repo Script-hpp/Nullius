@@ -90,14 +90,24 @@ function getCatalogStatement(claimed: string, measured: string, urteil: string, 
   return `No valid measurement with our setup against the reported ${claimed}.`
 }
 
+// Our own verdict words; never "verified": method fidelity is not checked.
+const RESULT_WORDS: Record<string, string> = {
+  'reproduziert': 'reproduced with our setup (target value reached)',
+  'teilweise': 'partially reproduced with our setup',
+  'nicht reproduziert': 'not reproduced with our setup',
+  'Agenten-Fehler vermutet': 'agent error suspected (says nothing about the paper)',
+  'nicht reproduzierbar (Setup)': 'not reproducible with our setup',
+}
+
 // One sentence from the data: what we measured against what was claimed, with the verdict label.
-function resultSentence(claim: Json, v: Json | undefined, label: string, gesamt?: string): string {
+function resultSentence(claim: Json, v: Json | undefined, gesamt?: string): string {
   const target = showValue(claim.metric, claim.target)
   if (!v || v.measured_mean == null || gesamt === NOT_ASSESSABLE) {
     return v ? getCatalogStatement(target, showValue(claim.metric, v.measured_mean), v.urteil, gesamt) : `No verdict yet for the claimed ${target}.`
   }
   const spread = v.measured_std == null ? '' : ` (± ${claim.metric === 'accuracy' ? (v.measured_std * 100).toFixed(1) : Number(v.measured_std).toFixed(3)})`
-  return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${label.toLowerCase()}, with our setup.`
+  const verdict = RESULT_WORDS[String(v.urteil)] ?? 'no valid verdict with our setup'
+  return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${verdict}.`
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -290,7 +300,7 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
       {isCatalog && <CatalogCallout run={run} claimId={claim.id} gesamt={ref_.gesamtaussage} />}
 
       <ResultChart dossier={d} claimId={claim.id} tone={res.tone}
-        verdictText={resultSentence(claim, v, res.label, ref_.gesamtaussage)}
+        verdictText={resultSentence(claim, v, ref_.gesamtaussage)}
         fmt={(x) => showValue(claim.metric, x)}
         fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
 
