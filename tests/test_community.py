@@ -430,3 +430,12 @@ def test_tavily_queries_of_the_new_methods():
     assert a["include_domains"] == ["github.com", "openreview.net", "arxiv.org", "reddit.com"] and "scirp.org" in a["exclude_domains"] and "could not reproduce" in a["query"]
     assert b["query"] == 'GCN Cora reproducibility OR re-evaluation OR pitfalls OR "could not reproduce"' and b["include_domains"] == ["arxiv.org", "openreview.net"] and b["max_results"] == 5
     assert c["query"] == "gcn reproduce results accuracy" and c["include_domains"] == ["github.com/tkipf/gcn"] and c["max_results"] == 5
+
+
+def test_same_page_with_query_string_or_fragment_is_read_once():
+    base = "https://github.com/tkipf/gcn/issues/14"
+    items = [{"url": base, "raw_content": "issue text A"}, {"url": base + "?timeline_page=1", "raw_content": "issue text B"},
+             {"url": base + "#issuecomment-1", "raw_content": "issue text C"}, {"url": base + "/", "raw_content": "issue text D"},
+             {"url": "https://github.com/tkipf/gcn/issues/15", "raw_content": "other issue"}]
+    docs = community.select_docs(items, KIPF, "1609.02907", ("https://github.com/tkipf/gcn/",))
+    assert [d.name for d in docs] == [base, "https://github.com/tkipf/gcn/issues/15"] and docs[0].text == "issue text A"
