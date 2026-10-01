@@ -26,6 +26,9 @@ The SDK default `default_truncate_output_at` is 64 KiB and silently truncates st
 ## 6. No network switch for a sandbox run
 There is no SDK option to run a command without network. We isolate untrusted agent code with `unshare -n` inside the command, and `resolv.conf` set in a snapshot does not persist. A per-run `network=False` would make the isolation cleaner and verifiable.
 
+## 6b. Long benchmark runs: what the workaround from item 1 looks like in practice
+Benchmarks v2 and v3 (2026-10-01) each ran 48 agent runs in three parallel processes over several hours, with up to 9 concurrent sandbox operations. Even with `transport_timeout=60`, v3 logged 6 `ApiTimeoutError` on status polls (`GET /sandboxes/v1/operations/<id>`, `timeout_type='read'`, `response=None`), 5 during `run` and 1 during `put_files` (`logs/bench_v3/*.log`, local). All 6 were recovered by repeating the attempt on a fresh branch; no run was lost. Without the workaround each of them would have ended a process. Item 1 is therefore not a one-off but a steady rate under real load (roughly one per 8 runs).
+
 ## 7. What worked well
 - Real branching from one snapshot is exactly the abstraction the agent needed; 20 parallel branches from one snapshot ran without errors in our test.
 - `apply_files` with several files in one call keeps the operation count low.
@@ -52,3 +55,12 @@ Evaluated from `logs/costs.jsonl` (local, not in Git) with a throwaway script ou
 - **Lightning:** in 3 of 11 calls the whole budget (6,000 tokens) went to reasoning and the answer was empty (`completion_tokens` 6000, `reasoning_tokens` 6000; 2026-09-29 08:10, 08:11 and 2026-09-30 18:43 UTC). The sample is small; the 27 % is not a rate estimate. This is the case already described above.
 - **Super:** 4 calls hit `length` at `max_tokens` 8192 with 2,767 to 6,044 reasoning tokens (all on 2026-09-30 between 22:00 and 22:44 UTC, while the agent wrote experiment code). The answer was cut off inside the code. We now retry such calls with a larger limit and never cache truncated answers (commit `530f748`).
 - **Limit of this evaluation:** one project, one workload (code writing and table extraction), about two days; the shares depend on our prompts and may differ elsewhere.
+
+## Running cost of a full benchmark (measured)
+A benchmark of 48 agent runs (8 paper claims x 2 arms x 3 generations, each with a placebo claim, 5 to 30 seeds each) cost 3.60 $ gross (v2) and 3.10 $ gross (v3) on Token Factory, about 0.07 $ per run (`runs/benchmark_v2.jsonl`, `runs/benchmark_v3.jsonl`, field `cost_usd_run`). Over the whole project the local log counts 3,277 Token Factory calls and about 10 $ gross. Low prices for Super made it affordable to run every agent change through the full benchmark instead of guessing; this is where Token Factory sped up our workflow most.
+
+## Nemotron Super as a code writer (observed in the benchmarks)
+- **Missing code block:** in v2, 7 of 96 runs ended because a repair answer contained reasoning but no code block (the model described the fix instead of returning the script). We now accept other fences and unfenced code that parses, and rewrite from the plan if the answer still has no code (commit `f6f4222`).
+- **Instructions about unavailable libraries are ignored:** in v2 and v3 the model imported `torch_geometric` in all four attempts of a run, also after an explicit repair hint that it is not installed (`benchmark/experiments/failure_patterns_v3.md`, M3). Placing the hint in the first prompt is the next mitigation (v4).
+- **Index bugs that survive repair:** the model mapped predictions to node ids by position instead of by index (`zip(test_ids, pred)` instead of `pred[test_ids]`), giving chance-level accuracy; three repair rounds with the error description did not fix it (M1). A deterministic check on validation data now catches it before the full run.
+
