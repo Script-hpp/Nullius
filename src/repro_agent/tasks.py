@@ -169,7 +169,7 @@ def etth1_task() -> Task:
     return Task(
         image="python:3.11-slim",
         setup_cmds=prep,
-        harness_files=["etth1_data.py", "metrics.py", "verify.py", "diagnostics.py", "etth1_eval.py"],
+        harness_files=["etth1_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "etth1_eval.py"],
         eval_cmd="python {harness_dir}/etth1_eval.py",
         data_description=ETTH1_DATA_DESCRIPTION,
         code_notes=(

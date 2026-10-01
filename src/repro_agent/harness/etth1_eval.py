@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np  # noqa: E402
 
 import diagnostics  # noqa: E402
+import droplast  # noqa: E402
 import etth1_data  # noqa: E402
 import metrics  # noqa: E402
 
@@ -65,6 +66,8 @@ def main() -> None:
         "metrics": {"mse": metrics.mse(p, t), "mae": metrics.mae(p, t)},
         "baselines": base,
         "diagnostics": diagnostics.prediction_diagnostics(pred, truth),
+        # Zusatz, nie Ersatz der Hauptmetrik: dieselbe Metrik ueber die Fenster eines Loaders mit drop_last=True (harness/droplast.py)
+        "metrics_droplast": droplast.metrics_droplast(pred, truth),
     }))
 
 

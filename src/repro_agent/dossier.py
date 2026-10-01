@@ -41,6 +41,8 @@ class Attempt:
     # Kennzahlen der Vorhersagen (pred_std, target_std, corr); nur fuer uns, nie in einem Agenten-Prompt
     diagnostics: dict | None = None
     # Code-Kandidaten (Produktpfad, A1): Index des Kandidaten, Validierungsergebnis (nur Seed 0), ob er gewaehlt wurde
+    # ETTh1: dieselbe Metrik ueber die Fenster eines Loaders mit drop_last=True je Batchgroesse (harness/droplast.py); nur Dossier/Zeugnis, nie Prompt
+    metrics_droplast: dict | None = None
     candidate: int | None = None
     chosen: bool | None = None
     val: dict | None = None
@@ -98,6 +100,7 @@ class Dossier:
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
     fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
+    droplast_notes: dict = field(default_factory=dict)   # claim_id -> Hinweis "Paperzahl passt zur drop_last-Rechnung" (droplast_note.py), nur Bericht
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
@@ -127,6 +130,7 @@ class Dossier:
             graph_repairs=data.get("graph_repairs", {}),
             fault_repairs=data.get("fault_repairs", {}),
             repo_diff=data.get("repo_diff", {}),
+            droplast_notes=data.get("droplast_notes", {}),
         )
 
     def condensed_for_reasoning(self) -> str:
