@@ -8,6 +8,7 @@ Modell"), steht sie zusaetzlich. Keine Zahl ohne "measured"/"claimed". Sprache E
 from __future__ import annotations
 
 import re
+import zlib
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -76,19 +77,22 @@ def badge_lines(dossier: Dossier, timestamp: str, catalog: bool = False) -> dict
 
 def render_badge(lines: dict) -> str:
     pad = 8
-    wl = len(lines["label"]) * CHAR_W + 2 * pad
+    mark = 13 + 5   # Zeichen (13 px) und Abstand; Geometrie wie web/src/components/Mark.tsx, Strichstaerke fuer kleine Groesse 2.6
+    wl = len(lines["label"]) * CHAR_W + 2 * pad + mark
     wv = len(lines["verdict"]) * CHAR_W + 2 * pad
     width = max(wl + wv, len(lines["detail"]) * 6.2 + 4)
     height = 52 if lines["date"] else 40
     date = f'<text x="2" y="50" font-size="9" fill="{MUTED}">{escape(lines["date"])}</text>' if lines["date"] else ""
     title = escape(f'{lines["label"]}: {lines["verdict"]}. {lines["detail"]}.' + (f' Run of {lines["date"]}.' if lines["date"] else ""), {'"': "&quot;"})   # Attributwert: Anfuehrungszeichen escapen
+    cid = f"r{zlib.crc32(title.encode()):08x}"   # eindeutig je Abzeichen, damit mehrere inline eingebettete SVGs nicht denselben Clip teilen
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width:.0f}" height="{height}" viewBox="0 0 {width:.0f} {height}" role="img" aria-label="{title}">'
         f"<title>{title}</title>"
         f'<g font-family="Verdana,DejaVu Sans,sans-serif" font-size="11">'
-        f'<clipPath id="r"><rect width="{wl + wv:.0f}" height="22" rx="4"/></clipPath>'
-        f'<g clip-path="url(#r)"><rect width="{wl:.0f}" height="22" fill="{LEFT}"/><rect x="{wl:.0f}" width="{wv:.0f}" height="22" fill="{COLORS[lines["tone"]]}"/></g>'
-        f'<text x="{pad}" y="15" fill="#fff" font-weight="bold">{escape(lines["label"])}</text>'
+        f'<clipPath id="{cid}"><rect width="{wl + wv:.0f}" height="22" rx="4"/></clipPath>'
+        f'<g clip-path="url(#{cid})"><rect width="{wl:.0f}" height="22" fill="{LEFT}"/><rect x="{wl:.0f}" width="{wv:.0f}" height="22" fill="{COLORS[lines["tone"]]}"/></g>'
+        f'<svg x="{pad}" y="4.5" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5H6v13h3M15 5.5h3v13h-3"/><circle cx="12" cy="12" r="2.3" fill="#fff" stroke="none"/></svg>'
+        f'<text x="{pad + mark}" y="15" fill="#fff" font-weight="bold">{escape(lines["label"])}</text>'
         f'<text x="{wl + pad:.0f}" y="15" fill="#fff">{escape(lines["verdict"])}</text>'
         f'<text x="2" y="36" font-size="10" fill="{MUTED}">{escape(lines["detail"])}</text>'
         f"{date}</g></svg>\n"
