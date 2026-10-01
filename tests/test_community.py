@@ -17,19 +17,20 @@ from repro_agent.loop import Orchestrator
 from repro_agent.report import render_markdown
 
 TITLE, ARXIV = "GraphNet: Better Node Classification", "2501.00001"
-ISSUE = "The reported test accuracy uses drop_last=True in the test loader, so the last batch is dropped."
-REPORT = "We could not reproduce the 83.0 accuracy with the released code."
+ISSUE = "In GraphNet: Better Node Classification the reported test accuracy uses drop_last=True in the test loader, so the last batch is dropped."
+REPORT = "We could not reproduce the 83.0 accuracy of GraphNet: Better Node Classification with the released code."
 PAGE_ISSUE = f"GraphNet: Better Node Classification (arXiv 2501.00001) github issue. {ISSUE} Thanks."
 PAGE_REPORT = f"Review of GraphNet: Better Node Classification. {REPORT}"
-PAGE_OTHER_PAPER = f"Some other paper entirely. {ISSUE}"
+PAGE_OTHER_PAPER = "Some other paper entirely about something else. It mentions drop_last=True once."
 ERRATUM = "Erratum: Table 2 of GraphNet: Better Node Classification was recomputed; the correct value is 81.9."
 
 
 class FakeTools:
-    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None):
+    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None, method_pages=None):
         self.calls = []
         self.search_pages = search_pages if search_pages is not None else [("https://github.com/a/b/issues/1", PAGE_ISSUE), ("https://example.org/r", PAGE_REPORT)]
         self.crawl_pages, self.read, self.explain_pages, self.repo_pages = crawl_pages or [], read_pages or [], explain_pages or [], repo_pages or []
+        self.method_pages = method_pages or []
 
     @staticmethod
     def _res(pages):
@@ -38,6 +39,10 @@ class FakeTools:
     def search_community(self, title, limit=5):
         self.calls.append(("search", title))
         return self._res(self.search_pages)
+
+    def search_method_critique(self, method, dataset, limit=5):
+        self.calls.append(("method_search", method, dataset))
+        return self._res(self.method_pages)
 
     def search_repo_issues(self, slug, limit=5):
         self.calls.append(("repo_search", slug))
@@ -318,3 +323,110 @@ def test_dossier_roundtrip_with_defaults(tmp_path):
     assert Dossier.load(p).community is None and Dossier.load(p).explanations == {}
     import shutil
     shutil.rmtree(p.parent.parent)
+
+
+# ---- zweite Runde (Kipf-Aufruf mit b4518d0): schwache Seiten, zu allgemeine Funde, Methoden-Query ------------------------------------
+KIPF = "Semi-Supervised Classification with Graph Convolutional Networks"
+TOO_GOOD = "results appear too good"
+CRITIQUE = ("Pitfalls of Graph Neural Network Evaluation. We re-evaluate GCN on Cora with random splits and find that GCN reaches 81.5 +- 1.3, "
+            "and that the ranking of models changes with the split. Different splits lead to a completely different ranking of models.")
+
+
+def synthetic_kipf_pages():
+    """Synthetisch nach der Beschreibung des echten Aufrufs: Sammel-Repo (70k), zwei Gists (152k, 276k), Repo-Issues."""
+    filler = lambda n: ("Paper notes. " + KIPF + ". " + TOO_GOOD + ". ") + "x" * n
+    return [("https://github.com/nplan-io/ml_paper_club", filler(70_000)),
+            ("https://gist.github.com/u/aaa", filler(152_000)), ("https://gist.github.com/u/bbb", filler(276_000))]
+
+
+def test_big_pages_and_collections_are_not_read():
+    items = [{"url": u, "raw_content": t} for u, t in synthetic_kipf_pages()]
+    items += [{"url": "https://github.com/awesome-gnn/list", "raw_content": KIPF + " reading list"},
+              {"url": "https://example.org/reading-list", "raw_content": KIPF},
+              {"url": "https://github.com/tkipf/gcn/issues/5", "raw_content": "short issue " + "y" * 100},
+              {"url": "https://openreview.net/forum?id=1", "raw_content": f"Review of {KIPF}: " + TOO_GOOD}]
+    docs = community.select_docs(items, KIPF, "1609.02907", ("https://github.com/tkipf/gcn/",))
+    assert [d.name for d in docs] == ["https://github.com/tkipf/gcn/issues/5", "https://openreview.net/forum?id=1"]
+    assert community.is_collection("https://gist.github.com/u/aaa") and community.is_collection("https://github.com/nplan-io/ml_paper_club")
+    assert not community.is_collection("https://github.com/tkipf/gcn/issues/5")
+
+
+class QuoteLLM:
+    """Liefert fuer jede Seite die vorgegebenen (Aussage, Zitat)-Paare, deren Zitat im Chunk steht."""
+
+    def __init__(self, pairs):
+        self.pairs = pairs
+
+    def complete(self, role, messages, **kw):
+        user = messages[-1]["content"]
+        out = [{"topic": "t", "statement": st, "quote": q} for st, q in self.pairs if q in user]
+        return SimpleNamespace(content=json.dumps(out))
+
+
+def kipf_paper(with_method=True):
+    claims = [{"id": "c", "extract": {"method": "GCN", "dataset": "Cora"}}] if with_method else []
+    return {"title": KIPF, "dataset": "Cora", "arxiv_url": "https://arxiv.org/abs/1609.02907", "claims": claims, "community": []}
+
+
+def test_finding_must_name_method_or_title_but_repo_pages_are_exempt():
+    page = f"Review of {KIPF}. Some say: {TOO_GOOD}. Another review: GCN accuracy on Cora is lower with random splits."
+    issue = "Issue in the repo: the numbers differ on my machine, please explain the preprocessing step."
+    tools = FakeTools(search_pages=[("https://openreview.net/forum?id=1", page), ("https://github.com/tkipf/gcn/issues/9", issue)])
+    llm = QuoteLLM([("Results look too good.", TOO_GOOD), ("GCN is worse with random splits.", "GCN accuracy on Cora is lower with random splits"),
+                    ("Preprocessing differs.", "the numbers differ on my machine")])
+    d = dossier(repo={"url": "https://github.com/tkipf/gcn"})
+    o = orch(tools, llm)
+    o._community_round(kipf_paper(), d)
+    got = {f["quote"] for f in d.community["findings"]}
+    assert got == {"GCN accuracy on Cora is lower with random splits", "the numbers differ on my machine"}   # TOO_GOOD nennt nichts: verworfen
+    assert d.community["dropped"] >= 1
+
+
+def test_method_query_reads_critique_papers_without_the_title():
+    tools = FakeTools(search_pages=[], method_pages=[("https://arxiv.org/abs/1811.05868", CRITIQUE), ("https://arxiv.org/abs/1609.02907", "own page " + KIPF)])
+    llm = QuoteLLM([("Ranking depends on the split.", "GCN reaches 81.5 +- 1.3, and that the ranking of models changes with the split")])
+    d, o = dossier(), orch(tools, llm)
+    o._community_round(kipf_paper(), d)
+    assert ("method_search", "GCN", "Cora") in tools.calls and [c[0] for c in tools.calls][:2] == ["search", "method_search"]
+    assert [f["url"] for f in d.community["findings"]] == ["https://arxiv.org/abs/1811.05868"]      # Kritik-Paper, nicht die eigene Seite
+    f = d.community["findings"][0]
+    assert f["kind"] == "other" and f["label"] == "Note"                                                  # Label-Feld nie leer
+    assert {q["kind"] for q in d.community["queries"]} == {"search", "method_search"}
+
+
+def test_method_query_needs_method_and_dataset_in_the_page():
+    tools = FakeTools(search_pages=[], method_pages=[("https://arxiv.org/abs/9999.00001", "A paper about GCN on Citeseer only, the ranking of models changes.")])
+    d = dossier()
+    orch(tools, QuoteLLM([("x", "the ranking of models changes")]))._community_round(kipf_paper(), d)
+    assert d.community["findings"] == [] and d.community["pages"] == []                                    # Methode da, Datensatz fehlt
+
+
+def test_labels_for_every_kind():
+    for kind, label in community.KIND_LABEL.items():
+        assert label and kind in (community.KIND_PROTOCOL, community.KIND_REPORT, community.KIND_OTHER)
+    d = dossier()
+    orch(FakeTools(), FakeLLM([ISSUE, REPORT]))._community_round(paper(), d)
+    assert all(f["label"] == community.KIND_LABEL[f["kind"]] for f in d.community["findings"]) and d.community["findings"]
+
+
+def test_old_cache_entries_are_ignored(cache_file):
+    cache_file.write_text(json.dumps({ARXIV: {"ts": time.time(), "community": {"findings": [{"x": 1}]}}}))
+    assert community.cache_get(ARXIV) is None
+    community.cache_put(ARXIV, {"ts": time.time(), "v": community.CACHE_VERSION, "community": {"findings": []}})
+    assert community.cache_get(ARXIV) is not None
+
+
+def test_tavily_queries_of_the_new_methods():
+    from repro_agent.tavily_tools import TavilyTools
+
+    seen = []
+    t = TavilyTools.__new__(TavilyTools)
+    t.on_call = None
+    t._client = SimpleNamespace(search=lambda **kw: seen.append(kw) or {"results": []})
+    t.search_community(KIPF, 5)
+    t.search_method_critique("GCN", "Cora", 5)
+    t.search_repo_issues("tkipf/gcn", 5)
+    a, b, c = seen
+    assert a["include_domains"] == ["github.com", "openreview.net", "arxiv.org", "reddit.com"] and "scirp.org" in a["exclude_domains"] and "could not reproduce" in a["query"]
+    assert b["query"] == 'GCN Cora reproducibility OR re-evaluation OR pitfalls OR "could not reproduce"' and b["include_domains"] == ["arxiv.org", "openreview.net"] and b["max_results"] == 5
+    assert c["query"] == "gcn reproduce results accuracy" and c["include_domains"] == ["github.com/tkipf/gcn"] and c["max_results"] == 5
