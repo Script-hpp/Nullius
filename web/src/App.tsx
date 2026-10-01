@@ -9,6 +9,7 @@ import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { Landing } from './components/Landing'
+import { ResultChart } from './components/ResultChart'
 import { DATA_CHANGED } from './live'
 import { CatalogCallout, PreliminaryChip } from './components/CatalogBits'
 import { Badge, Section, toPercent } from './components/ui'
@@ -87,6 +88,16 @@ function getCatalogStatement(claimed: string, measured: string, urteil: string, 
   if (urteil === 'teilweise') return `Partially reproduced with our setup: measured ${measured} against the reported ${claimed}.`
   if (urteil === 'nicht reproduziert') return `Not reproduced with our setup: measured ${measured} against the reported ${claimed}. This is not a finding about the paper.`
   return `No valid measurement with our setup against the reported ${claimed}.`
+}
+
+// One sentence from the data: what we measured against what was claimed, with the verdict label.
+function resultSentence(claim: Json, v: Json | undefined, label: string, gesamt?: string): string {
+  const target = showValue(claim.metric, claim.target)
+  if (!v || v.measured_mean == null || gesamt === NOT_ASSESSABLE) {
+    return v ? getCatalogStatement(target, showValue(claim.metric, v.measured_mean), v.urteil, gesamt) : `No verdict yet for the claimed ${target}.`
+  }
+  const spread = v.measured_std == null ? '' : ` (± ${claim.metric === 'accuracy' ? (v.measured_std * 100).toFixed(1) : Number(v.measured_std).toFixed(3)})`
+  return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${label.toLowerCase()}, with our setup.`
 }
 
 function DashboardHeader({ count }: { count: number }) {
@@ -278,9 +289,14 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
 
       {isCatalog && <CatalogCallout run={run} claimId={claim.id} gesamt={ref_.gesamtaussage} />}
 
+      <ResultChart dossier={d} claimId={claim.id} tone={res.tone}
+        verdictText={resultSentence(claim, v, res.label, ref_.gesamtaussage)}
+        fmt={(x) => showValue(claim.metric, x)}
+        fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
+
       {/* Split Layout: Verdict & Chart */}
       <div className="grid gap-6 lg:grid-cols-3 items-stretch">
-        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2" style={{ borderTopColor: TONE_VAR[res.tone] }}>
+        <Section title="Evaluation Verdict" className="lg:col-span-1 border-t-2 min-w-0" style={{ borderTopColor: TONE_VAR[res.tone] }}>
           <div className="mb-8">
             <h3 className={`text-4xl font-bold tracking-tight mt-2 ${resColorClass}`}>{res.label}</h3>
           </div>
@@ -312,18 +328,18 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
           </div>
         </Section>
         
-        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 flex flex-col">
+        <Section title="Measurements" hint={`${attempts.length} valid runs`} className="lg:col-span-2 flex flex-col min-w-0">
           <AttemptChart dossier={d} claimId={claim.id} />
         </Section>
       </div>
 
       {/* Tabs Layout */}
       <div className="mt-12">
-        <div className="flex gap-2 border-b border-line/50 pb-px mb-6">
+        <div className="flex gap-2 border-b border-line/50 pb-px mb-6 overflow-x-auto">
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} 
               aria-current={activeTab === t.id ? 'page' : undefined}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${activeTab === t.id ? 'border-fg text-fg' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
+              className={`flex shrink-0 items-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${activeTab === t.id ? 'border-fg text-fg' : 'border-transparent text-muted hover:text-fg-3 hover:border-line-strong/50'}`}>
               {t.icon}
               {t.label}
             </button>
