@@ -10,6 +10,7 @@ import { ReplayPlayer } from './run/ReplayPlayer'
 import { StepGraph } from './run/StepGraph'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { Trust } from './Trust'
+import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
@@ -125,6 +126,8 @@ export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: strin
           </div>
         </div>
       </section>
+
+      <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
 
       <Trust fidelityUnchecked={fidelityUnchecked} />
 
