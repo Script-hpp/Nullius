@@ -1,11 +1,11 @@
 """Hinweis "Paperzahl passt zur drop_last-Rechnung" (ETTh1). Deterministisch, kein LLM, nur Bericht: Urteil und Hauptmetrik bleiben auf allen
 Fenstern. Die Zahlen kommen aus harness/droplast.py (Attempt.metrics_droplast), gehen nur ins Dossier und Zeugnis und nie in einen Prompt.
 
-Regel (Reviewer, 2026-10-03): Hinweis, wenn es eine Batchgroesse b gibt mit
+Regel (Reviewer, 2026-10-01): Hinweis, wenn es eine Batchgroesse b gibt mit
     |Behauptung - droplast(b)| <= NEAR_FRACTION * Toleranz   UND   |Behauptung - droplast(b)| < |Behauptung - Vollwert|
     UND   |Behauptung - Vollwert| > NEAR_FRACTION * Toleranz.
 Die Paperzahl trifft die drop_last-Rechnung also fast genau und besser als die volle Auswertung. Der dritte Teil ist Zusatz des Workers
-(2026-10-04, lokale Pruefung): ohne ihn feuert der Hinweis, wenn schon der Vollwert fast genau trifft (SparseTSF: Vollwert 0,3620 gegen
+(2026-10-01, lokale Pruefung): ohne ihn feuert der Hinweis, wenn schon der Vollwert fast genau trifft (SparseTSF: Vollwert 0,3620 gegen
 drop_last(32) 0,3620 bei Behauptung 0,362; NLinear: 0,3746 gegen 0,3735 bei 0,374), obwohl es nichts zu erklaeren gibt. Zwei Texte (Web/Zeugnis):
 (a) Vollwert ausserhalb der Toleranz: "may explain the difference"; (b) Vollwert innerhalb der Toleranz: "matches almost exactly ... still within tolerance".
 """
