@@ -6,7 +6,7 @@
 
 Built for the Nebius x NVIDIA Global AI Hackathon (track: Coding and Agentic Engineering, plus Best Use of Tavily). Licence: MIT. Repository: <https://github.com/Script-hpp/Nullius>
 
-**Status:** feature-complete prototype. Benchmark numbers in this README are marked `TBD` until the production runs on Nebius Token Factory are finished. Every other statement points to a file in this repository.
+**Status:** feature-complete prototype. Benchmark numbers come from production runs on Nebius Token Factory (section "Benchmark"). Every statement points to a file in this repository.
 
 ![Nullius overview](docs/img/overview.jpg)
 
@@ -149,17 +149,25 @@ Not built: objection search and crawl in the loop, error-message search and devi
 
 | Unit (task) | Reference verdict (source) | Majority without Tavily | Majority with Tavily | Placebo detected without / with |
 |---|---|---|---|---|
-| Kipf & Welling 2017, GCN (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Wu et al. 2019, SGC (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Zeng et al. 2023, DLinear (ETTh1) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Zeng et al. 2023, NLinear (ETTh1) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Shchur et al. 2018, GCN, random splits (Cora) | reproduced (R, H) | TBD | TBD | TBD / TBD |
-| Shchur et al. 2018, GAT, random splits (Cora) | reproduced (R, H) | TBD | TBD | TBD / TBD |
-| Veličković et al. 2018, GAT (Cora) | reproduced (R) | TBD | TBD | TBD / TBD |
-| Veličković et al. 2019, DGI (Cora) | partially (R) | TBD | TBD | TBD / TBD |
-| **Units agreeing with the reference verdict** | | **TBD of 8** | **TBD of 8** | **TBD of 8 / TBD of 8** |
+| Kipf & Welling 2017, GCN (Cora) | reproduced (R) | no majority | reproduced | failure / yes |
+| Wu et al. 2019, SGC (Cora) | reproduced (R) | reproduced | partially | yes / yes |
+| Zeng et al. 2023, DLinear (ETTh1) | reproduced (R) | reproduced | reproduced | yes / yes |
+| Zeng et al. 2023, NLinear (ETTh1) | reproduced (R) | no majority | no majority | yes / yes |
+| Shchur et al. 2018, GCN, random splits (Cora) | reproduced (R, H) | partially | no majority | yes / yes |
+| Shchur et al. 2018, GAT, random splits (Cora) | reproduced (R, H) | failure (setup) | no majority | failure / yes |
+| Veličković et al. 2018, GAT (Cora) | reproduced (R) | not reproduced | no majority | yes / yes |
+| Veličković et al. 2019, DGI (Cora) | partially (R) | not reproduced | failure (setup) | yes / failure |
+| **Units agreeing with the reference verdict** | | **2 of 8** | **2 of 8** | **6 of 8 / 7 of 8** |
 
-Target sentence: "With Tavily, TBD of 8 paper-claim units matched the reference verdict, without Tavily TBD. **Method fidelity was not checked.**" An earlier, frozen benchmark run (v1, four papers, product configuration off) is kept as history in [`docs/research_log.md`](docs/research_log.md) and is not repeated here.
+**Result** (all 48 runs, code `d71a8af`, [`benchmark/experiments/results/benchmark_v2.md`](benchmark/experiments/results/benchmark_v2.md)): with Tavily, 2 of 8 paper-claim units matched the reference verdict, without Tavily 2 of 8. **Method fidelity was not checked.**
+
+What the numbers say:
+- **Agreement is low, and Tavily makes no measurable difference** at this sample size. Many misses are near misses rather than wrong numbers: the median distance to the target value over valid generations is 0.017 without and 0.011 with Tavily (post hoc, n = 20 each), against tolerances of 0.01; "partially" (within three times the tolerance) is about as frequent as "reproduced" among single verdicts (14 vs 13 of 48). In 6 of 16 unit-arm pairs the three generations disagree ("no majority"), so stability, not only the value, limits agreement.
+- **Failures of the agent are common:** 5 of 24 real-claim verdicts without and 6 of 24 with Tavily are failures ("not reproducible (setup)": code never ran within the attempt limit; "agent fault suspected": result worse than a trivial baseline). Example: in one Shchur-GAT run the repair answer of the model contained no code, so the loop stopped after one attempt.
+- **No placebo passed.** None of the 48 placebo verdicts (deliberately wrong target value) was "reproduced"; one was "partially". Units where the placebo majority was a failure count as not detected.
+- Cost of the whole benchmark: 1.04 $ gross without, 2.56 $ with Tavily (model cost only).
+
+An earlier, frozen benchmark run (v1, four papers, product configuration off) is kept as history in [`docs/research_log.md`](docs/research_log.md) and is not repeated here.
 
 **Limits, stated up front.**
 - **Method fidelity is not checked.** The LLM checker was calibrated three times and failed its pre-registered thresholds each time (5/10, 7/10, 8/11; [`benchmark/experiments/results/calibration_fidelity_v1.md`](benchmark/experiments/results/calibration_fidelity_v1.md), `_v2.md`, `_v3.md`). Axis 2 therefore stays "not checked", every verdict is provisional, and the benchmark counts **axis 1**: "target value reached according to the harness", not "method reproduced". Only the deterministic graph ablation says something about method use, for graph models.
