@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import { ResultBand } from './ResultChart'
 import { buildSteps, type Step } from './run/StepStrip'
+import { buildRunModel } from './run/phases'
 import { TIMELAPSE_MS, closingLines, countAt, durationText, eventsForClaim, partialDossier } from '../timelapse'
 import { TONE_VAR, type Tone } from '../labels'
 import type { Event, Json } from '../data'
@@ -43,6 +44,9 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, sentence,
   // steps that did not happen in this run at all are not shown (decided on the whole run, so the bar does not change while it plays)
   const hidden = useMemo(() => new Set(buildSteps(claimEvents, dossier, { running: false, hasPlan, metric: claim.metric }).filter((s) => s.status === 'skipped').map((s) => s.id)), [claimEvents, dossier, hasPlan, claim.metric])
   const bar = steps.filter((s) => !hidden.has(s.id))
+  // what the loop is doing at this moment: the newest row of the live view and its waiting line (same texts as the live page)
+  const model = useMemo(() => buildRunModel(seen, { running: !atEnd, metricHint: claim.metric }), [seen, atEnd, claim.metric])
+  const newest = model.phases.flatMap((p) => p.rows).reduce<{ ts: number; title: string } | null>((best, r) => (!best || r.ts >= best.ts ? { ts: r.ts, title: r.title } : best), null)
   const attempts = seen.filter((e) => e.type === 'attempt')
   const verdictShown = (part.verdicts ?? []).length > 0
   const took = durationText(events)
@@ -75,6 +79,14 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, sentence,
         <div className="mt-3 text-[12px] text-muted md:hidden">{doneSteps} of {bar.length} steps done</div>
       </div>
 
+      {!atEnd && count > 0 && (newest || model.waiting) && (
+        <div className="mt-6 min-w-0" aria-live="off">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted">Now</div>
+          <p className="mb-0 mt-1 min-w-0 break-words text-[14px] leading-relaxed text-fg-3">{newest?.title}</p>
+          {model.waiting && <p className="mb-0 mt-0.5 min-w-0 break-words text-[12.5px] leading-relaxed text-muted">{model.waiting}</p>}
+        </div>
+      )}
+
       <div className="mt-6 min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-widest text-muted">Sandbox branches: {attempts.length}</div>
         <div className="mt-2 flex min-h-[1.25rem] flex-wrap gap-1.5" aria-hidden>
@@ -86,7 +98,8 @@ export function Timelapse({ events, dossier, claim, tone, resultLabel, sentence,
       </div>
 
       <div className="mt-6 min-w-0">
-        <ResultBand dossier={part} claimId={claim.id} tone={verdictShown ? tone : 'gray'} fmt={fmt} fmtSpread={fmtSpread} />
+        <ResultBand dossier={part} claimId={claim.id} tone={verdictShown ? tone : 'gray'} fmt={fmt} fmtSpread={fmtSpread}
+          pending={atEnd ? undefined : 'Measurements appear here as the sandbox runs finish.'} />
       </div>
       <div className="mt-4 min-h-[2.5rem]">
         {verdictShown && (() => {

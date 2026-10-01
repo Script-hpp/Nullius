@@ -6,7 +6,7 @@ const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
 
 // "Claimed vs. measured" in one picture (the only chart on top of the page; the per-seed bars sit under Details): the claimed value with its tolerance band and every measured seed as a dot.
 // Plain HTML positioning (no SVG text) so labels stay readable on a phone.
-export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, domain, showKey = true }: {
+export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, domain, showKey = true, pending }: {
   dossier: Json
   claimId: string
   tone: Tone
@@ -15,6 +15,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
   claimed?: number                             // what-if view: draw this claim instead of the real one (the measurements stay)
   domain?: [number, number]                    // fixed axis range, so the band moves against standing dots
   showKey?: boolean
+  pending?: string                             // time-lapse, before the first measurement: draw band and claimed line anyway, with this hint
 }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
   const verdict = (dossier.verdicts ?? []).find((v: Json) => v.claim_id === claimId)
@@ -46,9 +47,9 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
 
   return (
     <div>
-      {vals.length > 0 ? (
+      {vals.length > 0 || pending ? (
         <>
-        {showKey && <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
+        {showKey && vals.length > 0 && <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
           <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4 bg-fg-4/40" /><span>Each dot is one <Term term="seed">run with a different random start</Term>.</span></li>
           <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /><span>The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</span></li>
           <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-4 w-0.5 shrink-0 rounded-full" style={{ background: color }} /><span>The solid line is our mean over all runs; the dashed line is the claim.</span></li>
@@ -79,6 +80,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
             )}
           </div>
         </figure>
+        {vals.length === 0 && pending && <p className="m-0 mt-1 text-center text-[12px] text-muted">{pending}</p>}
         </>
       ) : (
         <p className="m-0 text-sm text-muted italic">No valid measurements to plot.</p>
