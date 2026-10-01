@@ -213,3 +213,19 @@ a, button, .panel { transition: all 0.2s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   [data-hero-fade] { transition: none !important; }
 }
+
+/* Landing page: warm cream (light) / near black (dark), scoped so the rest of the app keeps its palette.
+   Fonts: Inter Tight (headline, wordmark) and Instrument Serif Italic (wordmark accent), both SIL OFL via @fontsource. */
+.landing {
+  --c-bg: #f5f1e8; --c-fg: #161513; --c-fg-max: #000; --c-fg-strong: #161513; --c-fg-2: #2b2926; --c-fg-3: #4a4741; --c-fg-4: #6a665d;
+  --c-muted: #8a857a; --c-subtle: #8a857a; --c-line: #ddd7c9; --c-line-faint: #e6e0d3; --c-line-strong: #c7c0af; --c-raised: #ebe6da;
+  --c-inverse: #161513; --c-on-inverse: #f5f1e8; --c-inverse-hover: #000; --c-surface: #f5f1e8;
+  background: var(--c-bg); color: var(--c-fg);
+}
+:root[data-theme='dark'] .landing {
+  --c-bg: #0b0a09; --c-fg: #f1eee6; --c-fg-max: #fff; --c-fg-strong: #f1eee6; --c-fg-2: #dcd8cf; --c-fg-3: #b9b5aa; --c-fg-4: #8f8b81;
+  --c-muted: #7a766d; --c-subtle: #7a766d; --c-line: #26241f; --c-line-faint: #1d1b17; --c-line-strong: #3a372f; --c-raised: #1a1814;
+  --c-inverse: #f1eee6; --c-on-inverse: #0b0a09; --c-inverse-hover: #fff; --c-surface: #0b0a09;
+}
+.font-grotesk { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-serif; }
+.font-serif-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }

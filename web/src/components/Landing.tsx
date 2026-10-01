@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, ChevronDown } from 'lucide-react'
+import '@fontsource-variable/inter-tight'
+import '@fontsource/instrument-serif/latin-400-italic.css'
 import { ThemeSwitch } from './ThemeSwitch'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
@@ -11,14 +13,26 @@ import { prefersReducedMotion } from './hero/config'
 const REPO = 'https://github.com/Script-hpp/Nullius'
 const EXAMPLE_RUN = '#/run/kipf_gcn_2017--20260929-130133'
 
-function TopBar() {
-  const link = 'text-sm text-fg-4 hover:text-fg transition-colors no-underline'
+function Wordmark() {
   return (
-    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-end gap-5 px-5 sm:gap-7 sm:px-10">
-      <a href="#discover" className={link}>Discover</a>
-      <a href="#catalog" className={link}>Catalog</a>
-      <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
-      <ThemeSwitch />
+    <a href="#/" className="font-grotesk text-[19px] font-semibold tracking-[-0.04em] text-fg no-underline" aria-label="Nullius in verba">
+      nullius <span className="font-serif-italic text-[22px] font-normal tracking-normal">in verba</span>
+    </a>
+  )
+}
+
+function TopBar() {
+  const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
+  return (
+    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-5 px-5 sm:px-10">
+      <Wordmark />
+      <div className="flex items-center gap-5 sm:gap-7">
+        <a href="#discover" className={link}>Discover</a>
+        <a href="#catalog" className={link}>Catalog</a>
+        <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
+        <a href="#discover" className="rounded-full border border-fg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
+        <ThemeSwitch />
+      </div>
     </header>
   )
 }
@@ -36,11 +50,12 @@ function Hero() {
       <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
         <div className="min-h-0 overflow-hidden">
           <div className="mx-auto mt-12 max-w-4xl sm:mt-16" {...fade()}>
-            <h1 className="m-0 text-3xl font-semibold leading-[1.1] tracking-tight text-fg sm:text-5xl lg:text-6xl">
-              We check machine-learning papers by rebuilding their experiments.
+            <h1 className="font-grotesk m-0 text-[2.6rem] font-semibold leading-[0.98] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
+              <span className="block text-muted">papers make claims.</span>
+              <span className="block text-fg">we measure them.</span>
             </h1>
-            <p className="mx-auto mb-0 mt-6 max-w-xl text-base leading-relaxed text-fg-4 sm:text-lg">
-              A paper reports a number. Nullius builds the experiment again, measures it independently and tells you whether the number can be reproduced.
+            <p className="mx-auto mb-0 mt-7 max-w-xl text-base leading-relaxed text-fg-4 sm:text-lg">
+              We check machine-learning papers by rebuilding their experiments. A paper reports a number; Nullius builds the experiment again, measures it independently and tells you whether it can be reproduced.
             </p>
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4" {...fade(150)}>
@@ -53,10 +68,13 @@ function Hero() {
           </div>
         </div>
       </div>
-      <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
-        aria-label="Scroll down" className="absolute bottom-8 cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3" {...fade(400)}>
-        <ChevronDown className="h-6 w-6" />
-      </button>
+      <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-3 px-6" {...fade(400)}>
+        <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
+          aria-label="Scroll down" className="cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3">
+          <ChevronDown className="h-5 w-5" />
+        </button>
+        <p className="m-0 text-center text-[11px] uppercase tracking-[0.18em] text-muted">Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily</p>
+      </div>
     </section>
   )
 }
@@ -101,7 +119,7 @@ function Steps() {
         {STEPS.map((s, i) => (
           <li key={s.n} className={`py-10 md:py-12 ${i > 0 ? 'border-t border-line md:border-l md:border-t-0 md:pl-10' : ''} ${i < 2 ? 'md:pr-10' : ''}`}>
             <div className="font-mono text-4xl font-light text-fg-4">{s.n}</div>
-            <h3 className="m-0 mt-5 text-xl font-semibold text-fg">{s.title}</h3>
+            <h3 className="font-grotesk m-0 mt-5 text-2xl font-semibold tracking-[-0.04em] text-fg">{s.title}</h3>
             <p className="mb-0 mt-3 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
           </li>
         ))}
@@ -142,7 +160,7 @@ function Footer() {
 
 export function Landing() {
   return (
-    <div className="relative min-h-screen bg-bg font-sans text-fg">
+    <div className="landing relative min-h-screen font-sans">
       <TopBar />
       <Hero />
       <ClaimVsMeasurement />
