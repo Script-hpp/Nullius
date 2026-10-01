@@ -33,7 +33,7 @@ const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFi
 const host = (url: string) => { try { const u = new URL(url); return u.host + u.pathname.replace(/\/$/, '') } catch { return url } }
 const clip = (s: string, n = 160) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 const lastLine = (s: unknown) => String(s ?? '').split('\n').map((x) => x.trim()).filter(Boolean).pop() ?? ''
-const SEEDS_PER_ROW = 10
+const GROUP_FROM = 4   // from this many seeds on, the seeds are one node
 
 export function buildStepGraph(events: Event[], model: RunModel, running: boolean): StepGraph {
   const of = (t: string) => events.filter((e) => e.type === t)
@@ -82,6 +82,14 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
   if (check) claimFacts.push({ label: 'Second reading', value: check.agrees === true ? 'agrees with the first' : 'differs from the first' })
   if (model.tolerance != null) claimFacts.push({ label: 'Tolerance', value: `± ${fmtValue(metric, model.tolerance, 2)}, fixed before the run` })
 
+  // --- repairs (loops back to the code) ---
+  const crash = of('repair').length
+  const rewrite = of('rewrite').length
+  const faultSeed = of('fault_repair').filter((e) => e.runde !== 'mittelwert').length
+  const faultMean = of('fault_repair').filter((e) => e.runde === 'mittelwert').length
+  const graphFix = of('graph_repair').length
+  const seedLoop = [crash && `crash ×${crash}`, rewrite && `new code ×${rewrite}`, faultSeed && `baseline fix ×${faultSeed}`, graphFix && `graph fix ×${graphFix}`].filter(Boolean).join(', ')
+
   // --- setup / plan / code ---
   const setup = events.find((e) => e.type === 'setup_details')
   const planEv = events.find((e) => e.type === 'plan')
@@ -92,17 +100,11 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
   const codeMissing = of('code_missing').length
   const codeFacts: Fact[] = []
   if (codeVersions) codeFacts.push({ label: 'Code versions', value: String(codeVersions) })
+  if (seedLoop) codeFacts.push({ label: 'Repairs after seed runs', value: seedLoop })
+  if (faultMean) codeFacts.push({ label: 'Fix after all seeds', value: `${faultMean}x` })
   if (codeMissing) codeFacts.push({ label: 'Answers without code', value: `${codeMissing}; the model was asked again` })
   const planRetries = of('plan_retry').length
   const planFacts: Fact[] = planRetries ? [{ label: 'Asked again', value: `${planRetries}x because the first answer was not a short plan` }] : []
-
-  // --- repairs (loops back to the code) ---
-  const crash = of('repair').length
-  const rewrite = of('rewrite').length
-  const faultSeed = of('fault_repair').filter((e) => e.runde !== 'mittelwert').length
-  const faultMean = of('fault_repair').filter((e) => e.runde === 'mittelwert').length
-  const graphFix = of('graph_repair').length
-  const seedLoop = [crash && `crash ×${crash}`, rewrite && `new code ×${rewrite}`, faultSeed && `baseline fix ×${faultSeed}`, graphFix && `graph fix ×${graphFix}`].filter(Boolean).join(', ')
 
   // --- seeds ---
   const seedAttempts = new Map<number, Event[]>()
@@ -114,7 +116,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
   const seedCount = Math.max(model.seedsTotal ?? 0, maxSeen, 1)
   const validBySeed = new Map(model.attempts.map((a) => [a.seed, a]))
   const seed0Done = validBySeed.has(0)
-  const seedNodes: StepNode[] = []
+  const singles: StepNode[] = []
   for (let s = 0; s < seedCount; s++) {
     const list = seedAttempts.get(s) ?? []
     const valid = validBySeed.get(s)
@@ -126,18 +128,36 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     if (valid?.seconds != null) facts.push({ label: 'Training time', value: fmtSeconds(valid.seconds) })
     if (list.length) facts.push({ label: 'Attempts', value: String(list.length) })
     if (!valid && lastTry?.error) facts.push({ label: 'Last error', value: clip(lastLine(lastTry.error), 200) })
-    seedNodes.push({
+    singles.push({
       id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : failed ? 'no valid run' : list.length ? 'retrying…' : null,
       state: st(!!valid, isNext && has('code_written') && !verdictSeen, failed), tone: valid ? 'gray' : failed ? 'red' : 'gray',
       what: s === 0
         ? 'The code trains in its own sandbox branch. It must write predictions only; it never sees the test labels. This first run catches crashes early.'
         : 'The same code runs again with a different random start, in its own sandbox branch, in parallel with the other seeds.',
       why: 'One run can be lucky or unlucky. Several seeds show how much the result changes by chance. The verdict uses their mean.',
-      facts, row: 5 + Math.floor(s / SEEDS_PER_ROW), col: s % SEEDS_PER_ROW, rowSize: Math.min(SEEDS_PER_ROW, seedCount - Math.floor(s / SEEDS_PER_ROW) * SEEDS_PER_ROW),
+      facts, row: 5, col: s, rowSize: seedCount,
     })
   }
-  const seedRows = Math.ceil(seedCount / SEEDS_PER_ROW)
-  const lastRow = 5 + seedRows
+  let seedNodes = singles
+  if (seedCount >= GROUP_FROM) {
+    const scores = model.attempts.map((a) => a.measured)
+    const mean = scores.length ? scores.reduce((t, x) => t + x, 0) / scores.length : null
+    const anyActive = singles.some((n) => n.state === 'active')
+    const group: StepNode = {
+      id: 'seeds', kind: 'seed', title: `${seedCount} seeds`,
+      sub: mean != null ? `mean ${fmtValue(metric, mean)} · range ${fmtValue(metric, Math.min(...scores))}–${fmtValue(metric, Math.max(...scores))}${scores.length < seedCount ? ` · ${scores.length} of ${seedCount} done` : ''}` : anyActive ? 'training…' : null,
+      state: verdictSeen || scores.length === seedCount ? 'done' : anyActive || (running && scores.length > 0) ? 'active' : 'pending', tone: 'gray',
+      what: 'The code trains once per seed, each run in its own sandbox branch with a different random start. Seed 0 runs first to catch crashes early; the others run in parallel.',
+      why: 'One run can be lucky or unlucky. Several seeds show how much the result changes by chance. The verdict uses their mean.',
+      facts: [
+        ...(mean != null ? [{ label: 'Mean', value: `${fmtValue(metric, mean)} over ${scores.length} seed${scores.length > 1 ? 's' : ''}` }, { label: 'Range', value: `${fmtValue(metric, Math.min(...scores))} to ${fmtValue(metric, Math.max(...scores))}` }] : []),
+        ...singles.map((n, i) => ({ label: `Seed ${i}`, value: n.sub ?? (n.state === 'pending' ? 'not started' : '') })),
+      ],
+      row: 5, col: 0, rowSize: 1,
+    }
+    seedNodes = [group]
+  }
+  const lastRow = 6
 
   // --- harness ---
   const ablation = of('ablation').pop()
@@ -236,7 +256,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
   if (errorSearches.length) e('src_error', 'code', { dashed: true, label: 'hints' })
   for (const s of seedNodes) { e('code', s.id); e(s.id, 'harness') }
   e('harness', 'verdict')
-  if (seedLoop) e('seed_0', 'code', { loop: 'left', dashed: true, label: `repairs: ${seedLoop}` })
+  if (seedLoop) e(seedNodes[0].id, 'code', { loop: 'left', dashed: true, label: `repairs: ${seedLoop}` })
   if (faultMean) e('harness', 'code', { loop: 'right', dashed: true, label: `fix after all seeds ×${faultMean}` })
   return { nodes, edges }
 }
