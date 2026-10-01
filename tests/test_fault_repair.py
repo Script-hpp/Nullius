@@ -232,3 +232,22 @@ def test_prediction_diagnostics_and_harness_file_list():
     assert d["pred_std"] == pytest.approx(2 * truth.std()) and d["target_std"] == pytest.approx(truth.std()) and d["corr"] == pytest.approx(1.0)
     assert prediction_diagnostics(np.ones((2, 2)), truth[:2, :2])["corr"] is None       # konstante Vorhersage: keine Korrelation
     assert "diagnostics.py" in etth1_task().harness_files and (HARNESS_DIR / "diagnostics.py").exists()
+
+
+def test_fault_on_mean_over_seeds_triggers_one_repair_and_rerun(tmp_path):
+    # Seed 0 liegt ueber der Baseline (0.81), die anderen Seeds weit darunter: Mittel 0.32 < no_graph 0.50
+    o, calls, events = setup([0.81], [0.10], repairs=[V2], sandbox_cls=DiagSandbox)
+    sb = o.sandbox
+    sb.acc = lambda seed, abl: 0.10 if abl else (0.81 if seed == 0 or calls["repair"] else 0.08)
+    d = run(o, tmp_path)
+    assert len(calls["repair"]) == 1 and calls["repair"][0].startswith("Your script ran, but its result is worse")
+    assert d.verdicts[0].measured_mean == pytest.approx(0.81) and d.verdicts[0].urteil != "Agenten-Fehler vermutet"
+    assert d.fault_repairs == {"c": 1}
+    assert [e["runde"] for e in types(events, "fault_repair")] == ["mittelwert"]
+
+
+def test_repair_hints_for_forbidden_library_and_one_class():
+    from repro_agent.loop import repair_hint
+    assert "plain PyTorch" in repair_hint("Statische Pruefung: Dataset-Bibliothek: 'torch_geometric' in Zeile 5")
+    assert "copy.deepcopy" in repair_hint("Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig")
+    assert repair_hint("RuntimeError: boom") == ""

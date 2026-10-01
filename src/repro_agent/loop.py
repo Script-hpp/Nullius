@@ -142,6 +142,24 @@ def error_query(summary: str) -> str | None:
     return q.strip()[:200] or None
 
 
+STATIC_LIB_HINT = (
+    "\n\nThis library is not installed in the sandbox and is not allowed. Load the data only as described above "
+    "and implement every layer in plain PyTorch/NumPy."
+)
+ONE_CLASS_HINT = "\n\nAll predictions are the same class, so the model did not learn. Check:\n"
+
+
+def repair_hint(summary: str | None) -> str:
+    """Feste Zusatzhinweise (nur Produktpfad) fuer Fehler, an denen die Reparatur in Benchmark v2 viermal scheiterte."""
+    from .harness.repair_hints import CHECKLIST_CLASSIFICATION
+    text = summary or ""
+    if "Dataset-Bibliothek" in text:
+        return STATIC_LIB_HINT
+    if "einzige Vorhersage-Klasse" in text:
+        return ONE_CLASS_HINT + CHECKLIST_CLASSIFICATION
+    return ""
+
+
 TIMEOUT_REPAIR_MESSAGE = (
     "The script exceeded the training time limit of {limit} s on CPU. Keep the method, architecture and "
     "hyperparameters, but make it faster: vectorize, no Python loops over nodes, edges or samples, "
@@ -629,27 +647,60 @@ class Orchestrator:
         if getattr(self, "graph_repair", False) and v0 is not None:   # Katalog/API: Fehler- und Graph-Check nach Seed 0
             v0, note0, code, graph_ab, graph_notes, discarded = self._seed0_quality_loop(
                 claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
-        measured = [] if v0 is None else [v0]
         notes = ([] if note0 is None else [note0]) + graph_notes
-        if v0 is None:
-            notes.append("Restliche Seeds nicht gestartet: kein lauffaehiger Code")
-        else:
-            rest = seeds[1:]
+
+        def run_rest(code: str, v0: float) -> tuple[list[float], list[str]]:
+            rest, got, rnotes = seeds[1:], [v0], []
             if rest:
                 with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(rest))) as pool:
                     results = list(pool.map(
                         lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd),
                         rest,
                     ))
-                measured += [v for v, _, _ in results if v is not None]
-                notes += [n for _, n, _ in results if n]
-        per_metric: dict[str, list[float]] = {}
-        for a in dossier.attempts:
-            if a.claim_id == claim.id and a.metrics and a.measured is not None and a.code_hash not in discarded:
-                for name, value in a.metrics.items():
-                    per_metric.setdefault(name, []).append(value)
-        all_metrics = {name: statistics.mean(v) for name, v in per_metric.items()}
+                got += [v for v, _, _ in results if v is not None]
+                rnotes += [n for _, n, _ in results if n]
+            return got, rnotes
+
+        def metrics_mean() -> dict[str, float]:
+            per_metric: dict[str, list[float]] = {}
+            for a in dossier.attempts:
+                if a.claim_id == claim.id and a.metrics and a.measured is not None and a.code_hash not in discarded:
+                    for name, value in a.metrics.items():
+                        per_metric.setdefault(name, []).append(value)
+            return {name: statistics.mean(v) for name, v in per_metric.items()}
+
+        measured: list[float] = []
+        if v0 is None:
+            notes.append("Restliche Seeds nicht gestartet: kein lauffaehiger Code")
+        else:
+            measured, rnotes = run_rest(code, v0)
+            notes += rnotes
+        all_metrics = metrics_mean()
         verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
+        if (getattr(self, "graph_repair", False) and verdict.urteil == "Agenten-Fehler vermutet" and v0 is not None
+                and dossier.fault_repairs.get(claim.id, 0) < MAX_FAULT_REPAIRS
+                and not self._fault_check(claim, dossier, hashlib.sha256(code.encode()).hexdigest()[:12], seeds[0], v0)):
+            # Seed 0 lag ueber der Baseline, der Mittelwert ueber alle Seeds nicht (instabiler Code): eine Reparatur, alle Seeds neu
+            from_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+            head = f"Fehler-Reparatur nach allen Seeds: Code {from_hash} im Mittel schlechter als triviale Baseline"
+            self._emit("fault_repair", claim_id=claim.id, runde="mittelwert", from_hash=from_hash, measured=verdict.measured_mean)
+            try:
+                new = self.repair_code(plan, task, code, fault_message(claim.metric, verdict.measured_mean, claim.target, dossier.baselines))
+                nv, nnote, new = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new, seeds[0])
+            except ValueError as exc:
+                nv, nnote = None, f"Reparatur ohne Code-Block ({exc})"
+            new_hash = hashlib.sha256(new.encode()).hexdigest()[:12] if nv is not None else None
+            if nv is not None and not self._fault_check(claim, dossier, new_hash, seeds[0], nv):
+                discarded.add(from_hash)
+                code, v0, graph_ab = new, nv, None   # Ablation gilt fuer den alten Code: neu messen
+                measured, rnotes = run_rest(code, v0)
+                notes += [f"{head}; neuer Code {new_hash}, alle Seeds neu"] + ([nnote] if nnote else []) + rnotes
+                dossier.fault_repairs[claim.id] = dossier.fault_repairs.get(claim.id, 0) + 1
+                all_metrics = metrics_mean()
+                verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
+            else:
+                notes.append(f"{head}; Reparatur ohne Besserung ({nnote or 'weiter schlechter als Baseline'}), Urteil bleibt")
+                verdict.explanation += f" {notes[-1]}."
         if v0 is not None and task.ablation_cmd:
             if graph_ab is None:
                 ab = self.ablation_check(snapshot, code, seeds[0], task, claim.metric, v0)
@@ -802,7 +853,8 @@ class Orchestrator:
                 hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:
                     self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
-                    code = self.repair_code(plan, task, code, (summary or "") + hints)
+                    extra = repair_hint(summary) if product else ""
+                    code = self.repair_code(plan, task, code, (summary or "") + extra + hints)
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     if not product:
                         return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
