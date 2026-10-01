@@ -75,7 +75,7 @@ export function Landing() {
           We check machine-learning papers by rebuilding their experiments.
         </h1>
         <p className="text-fg-4 text-base md:text-lg leading-relaxed mt-5 mb-8">
-          A paper reports a number. Nullius builds the experiment again, measures it independently and tells you whether the number holds.
+          A paper reports a number. Nullius builds the experiment again, measures it independently and tells you whether the number can be reproduced.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <a href="#discover" className="px-5 py-2.5 bg-inverse text-on-inverse text-sm font-medium rounded-lg hover:bg-inverse-hover transition-colors shadow-sm flex items-center gap-2 no-underline">

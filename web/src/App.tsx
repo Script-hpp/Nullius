@@ -75,14 +75,7 @@ function getDelta(measured: any, target: any, metric?: string) {
   return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-tone-red' }
 }
 
-function getJuryStatement(claimed: string, measured: string, tone: Tone) {
-  if (tone === 'green') return `The paper claims ${claimed}, and our independent sandbox measured ${measured}. The claim is fully verified and holds true.`
-  if (tone === 'amber') return `The paper claims ${claimed}, but we measured ${measured}. The target was closely missed, indicating partial reproducibility.`
-  if (tone === 'red') return `The paper claims ${claimed}, but we only measured ${measured}. The claim could not be verified.`
-  return `The paper claims ${claimed}, but the verification is incomplete.`
-}
-
-// Catalog runs: always "with our setup", never a verdict on the paper.
+// All runs: always "with our setup", never a verdict on the paper (method fidelity is not checked).
 function getCatalogStatement(claimed: string, measured: string, urteil: string, gesamt?: string) {
   if (gesamt === NOT_ASSESSABLE) return `The code did not implement the method, so the measurement (${measured}) says nothing about the reported ${claimed}.`
   if (urteil === 'reproduziert') return `Reproduced with our setup: measured ${measured} against the reported ${claimed}.`
@@ -111,7 +104,7 @@ function resultSentence(claim: Json, v: Json | undefined, gesamt?: string): stri
   return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${verdict}.`
 }
 
-function DashboardHeader({ count }: { count: number }) {
+function DashboardHeader({ count, reproduced, partial }: { count: number; reproduced: number; partial: number }) {
   return (
     <div className="mb-10">
       <div className="flex items-center justify-between mb-8">
@@ -140,16 +133,16 @@ function DashboardHeader({ count }: { count: number }) {
         <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
           <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
             <CheckCircle2 className="w-3.5 h-3.5 text-tone-green" />
-            Verified
+            Reproduced
           </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">2</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">{reproduced}</span>
         </div>
         <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
           <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
             <AlertCircle className="w-3.5 h-3.5 text-tone-amber" />
-            Partial
+            Partially
           </div>
-          <span className="font-mono text-3xl font-semibold text-fg mt-1">2</span>
+          <span className="font-mono text-3xl font-semibold text-fg mt-1">{partial}</span>
         </div>
         <div className="p-6 flex flex-col gap-2 rounded-xl border border-line bg-gradient-to-b from-raised to-panel shadow-sm">
           <div className="flex items-center gap-2 text-muted text-[10px] font-semibold uppercase tracking-widest">
@@ -168,7 +161,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   useEffect(() => { runs.forEach((r) => loadRun(r).then((d) => setData((x) => ({ ...x, [r.id]: d })))) }, [runs])
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-16">
-      <DashboardHeader count={runs.length} />
+      <DashboardHeader count={runs.length} reproduced={runs.filter((r) => data[r.id]?.dossier?.verdicts?.[0]?.urteil === 'reproduziert').length} partial={runs.filter((r) => data[r.id]?.dossier?.verdicts?.[0]?.urteil === 'teilweise').length} />
       
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-[11px] font-semibold tracking-widest uppercase text-muted">Recent Evaluations</h2>
@@ -331,9 +324,9 @@ function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: string }) {
             {iconForTone(res.tone)}
             <div>
               <p className="text-[13px] text-fg-3 leading-relaxed font-medium">
-                {isCatalog && v
+                {v
                   ? getCatalogStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v.measured_mean), v.urteil, ref_.gesamtaussage)
-                  : getJuryStatement(showValue(claim.metric, claim.target), showValue(claim.metric, v?.measured_mean), res.tone)}
+                  : `No verdict yet for the claimed ${showValue(claim.metric, claim.target)}.`}
               </p>
               <p className="text-[11px] text-muted mt-2 font-mono">Margin of Error: ±{claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)}</p>
             </div>

@@ -1,12 +1,5 @@
 export type Tone = 'green' | 'amber' | 'red' | 'gray' | 'violet'
 
-export const RESULT: Record<string, { label: string; tone: Tone }> = {
-  'reproduziert': { label: 'VERIFIED', tone: 'green' },
-  'teilweise': { label: 'PARTIAL', tone: 'amber' },
-  'nicht reproduziert': { label: 'FAILED', tone: 'red' },
-  'nicht reproduzierbar (Setup)': { label: 'INVALID SETUP', tone: 'gray' },
-  'Agenten-Fehler vermutet': { label: 'AGENT ERROR', tone: 'violet' },
-}
 // Discovery candidates that ran once through the loop: never a verdict on the paper, always "with our setup".
 export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
   'reproduziert': { label: 'REPRODUCED', tone: 'green' },
@@ -15,6 +8,8 @@ export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
   'nicht reproduzierbar (Setup)': { label: 'SETUP NOT REPRODUCIBLE', tone: 'gray' },
   'Agenten-Fehler vermutet': { label: 'AGENT ERROR SUSPECTED', tone: 'violet' },
 }
+// Same wording for every run: "reproduced" means the target value was reached with our setup; method fidelity is not checked.
+export const RESULT = RESULT_CATALOG
 export const PRELIMINARY = 'Preliminary: method fidelity not checked'
 export const isPreliminary = (gesamt: string | undefined) => gesamt === 'vorlaeufig'
 export const NOT_ASSESSABLE = 'nicht bewertbar (Methode nicht umgesetzt)'
@@ -55,10 +50,10 @@ export const METHOD: Record<string, { label: string; tone: Tone }> = {
 }
 export const OVERALL: Record<string, string> = {
   'vorlaeufig': 'Preliminary',
-  'Paper reproduziert': 'Fully Verified',
+  'Paper reproduziert': 'Paper reproduced (target value and method)',
   'Zielwert erreicht mit anderem Modell': 'Target reached with different model',
-  'nicht reproduziert': 'Failed Verification',
-  'teilweise reproduziert': 'Partially Verified',
+  'nicht reproduziert': 'Not reproduced with our setup',
+  'teilweise reproduziert': 'Partially reproduced',
   'nicht bewertbar (Methode nicht umgesetzt)': 'Not Assessable',
   'Agenten-Fehler vermutet': 'Agent Fault Suspected',
   'nicht reproduzierbar (Setup)': 'Setup Not Reproducible',
