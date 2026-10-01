@@ -5,7 +5,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <a href="#/" className={`font-grotesk inline-flex items-center gap-[9px] text-[19px] font-semibold tracking-[-0.04em] text-fg no-underline ${className}`} aria-label="Nullius in verba, start page">
       <Mark size={16} className="shrink-0" />
-      <span>nullius <span className="font-serif-italic text-[22px] font-normal tracking-normal">in verba</span></span>
+      <span className="whitespace-nowrap">nullius <span className="font-serif-italic text-[22px] font-normal tracking-normal">in verba</span></span>
     </a>
   )
 }
