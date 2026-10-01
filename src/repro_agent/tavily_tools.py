@@ -7,6 +7,7 @@ from tavily import TavilyClient
 from .config import Settings, load_settings
 
 RESEARCH_DOMAINS = ["github.com", "arxiv.org", "openreview.net"]
+ERROR_DOMAINS = ["stackoverflow.com", "github.com", "discuss.pytorch.org", "pytorch.org", "numpy.org"]
 
 
 class TavilyTools:
@@ -67,9 +68,11 @@ class TavilyTools:
         """Rolle 4: Hyperparameter, Datenaufteilung aus README/Configs/Anhang."""
         return self._note(4, "extract", url, self._client.extract(urls=[url], extract_depth="advanced"))
 
-    def resolve_error(self, error_text: str) -> dict:
-        """Rolle 5: Loesungshinweis fuer `code` bei Fehler."""
-        return self._client.search(query=error_text)
+    def resolve_error(self, error_text: str, max_results: int = 3) -> dict:
+        """Rolle 5: Loesungshinweis fuer `code` bei Fehler (Suche mit der Fehlerzeile)."""
+        return self._note(5, "search", error_text, self._client.search(
+            query=error_text, max_results=max_results, include_domains=ERROR_DOMAINS,
+        ))
 
     def clarify_discrepancy(self, paper_title: str) -> dict:
         """Rolle 6: neuere arXiv-Version, Errata, Issues bei Abweichung."""

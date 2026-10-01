@@ -127,6 +127,21 @@ def _is_python(src: str) -> bool:
         return False
 
 
+MAX_ERROR_SEARCHES = 4   # Rolle 5: Tavily-Suchen pro Lauf (Kontingent), gleiche Fehlerzeile wird nur einmal gesucht
+ERROR_HINT_CHARS = 400   # Auszug je Treffer im Reparatur-Prompt
+_ERROR_LINE = re.compile(r"^\s*([A-Za-z_][\w.]*(?:Error|Exception|Warning)\b.*)$", re.M)
+
+
+def error_query(summary: str) -> str | None:
+    """Letzte Ausnahmezeile des Tracebacks als Suchanfrage; Pfade und lange Zahlen entfernt."""
+    lines = _ERROR_LINE.findall(summary or "")
+    if not lines:
+        return None
+    q = re.sub(r"(/[\w.-]+)+", "", lines[-1])
+    q = re.sub(r"\d{3,}", "N", q)
+    return q.strip()[:200] or None
+
+
 TIMEOUT_REPAIR_MESSAGE = (
     "The script exceeded the training time limit of {limit} s on CPU. Keep the method, architecture and "
     "hyperparameters, but make it faster: vectorize, no Python loops over nodes, edges or samples, "
@@ -317,6 +332,36 @@ class Orchestrator:
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script."
             f"{self._fidelity_note()}",
         )
+
+    def _error_hints(self, claim: Claim, summary: str | None) -> str:
+        """Rolle 5 (nur Produktpfad, Tavily live): Websuche mit der Fehlerzeile, Treffer als Hinweis an `code`.
+        Kein LLM, keine Teststatistik (nur der Fehlertext des Agenten-Codes geht hinaus)."""
+        if not (getattr(self, "use_tavily", False) and getattr(self, "tavily_mode", None) == "live"):
+            return ""
+        q = error_query(summary or "")
+        with self._lock:
+            done = self.__dict__.setdefault("_error_searches", {})
+            if q is None or (q not in done and len(done) >= MAX_ERROR_SEARCHES):
+                return ""
+            cached = q in done
+            if not cached:
+                done[q] = None   # reservieren, parallele Seeds suchen nicht doppelt
+        if cached:
+            results = done[q] or []
+        else:
+            try:
+                res = self._tavily_getter()().resolve_error(q)
+                results = [r for r in (res or {}).get("results", []) if r.get("content")][:3]
+            except Exception as exc:   # Websuche ist Hilfe, kein Muss
+                self._warn(f"Rolle 5 (Fehlersuche) fehlgeschlagen: {exc}")
+                results = []
+            done[q] = results
+            self._emit("error_search", claim_id=claim.id, query=q, urls=[r.get("url") for r in results])
+        if not results:
+            return ""
+        parts = [f"- {r.get('title', '')} ({r.get('url', '')}): {r['content'][:ERROR_HINT_CHARS]}" for r in results]
+        return ("\n\nWeb search results for this error (Tavily; may be irrelevant, use only what fits):\n"
+                + "\n".join(parts))
 
     def triage(self, text: str) -> str:
         """Fehlertext fuer die Reparatur: Ende von stderr/stdout (dort steht der Traceback).
@@ -751,9 +796,10 @@ class Orchestrator:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
                 summary = TIMEOUT_REPAIR_MESSAGE.format(limit=TRAIN_TIMEOUT_S)   # Produktpfad: schneller machen
             if n < self.settings.max_attempts_per_claim:
+                hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:
                     self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
-                    code = self.repair_code(plan, task, code, summary or "")
+                    code = self.repair_code(plan, task, code, (summary or "") + hints)
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     if not product:
                         return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
