@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code } from 'lucide-react'
+import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles } from 'lucide-react'
 import { Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
@@ -10,6 +10,8 @@ import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
 } from '../discovery'
+import { Glossed } from './Glossed'
+import { useSummary } from '../summaries'
 
 type Mode = 'idle' | 'live' | 'replay' | 'done'
 
@@ -142,6 +144,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   const t = useTween()
   const reduce = useReducedMotion()
   const c = p.claim
+  const summary = useSummary(p.id)
   const rejected = p.state === 'rejected'
   const checked = p.state === 'candidate' && entry?.status === 'geprueft' && !!entry.verdict   // ran once through the loop
   const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
@@ -152,6 +155,17 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
         <h3 className="text-[14px] font-semibold leading-snug text-fg">{p.title}</h3>
         <span className="font-mono text-[10px] text-muted shrink-0">{p.id}</span>
       </div>
+
+      {summary && (p.state === 'candidate' || p.state === 'searching' || p.state === 'claim') && (
+        <div className="mt-3 rounded-lg border border-line/60 bg-surface/60 p-3">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+            <Sparkles className="w-3.5 h-3.5" /> AI summary
+            {summary.example && <span className="rounded border border-line-strong px-1.5 py-px text-[9px] text-fg-4">Example</span>}
+          </div>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-fg-3"><Glossed text={summary.summary} /></p>
+          <p className="mt-1.5 text-[10px] leading-relaxed text-subtle">Source: {summary.source}</p>
+        </div>
+      )}
 
       {(p.state === 'reading' || p.state === 'claim' || p.state === 'searching') && (
         <div className="mt-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-4">
