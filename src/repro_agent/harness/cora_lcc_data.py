@@ -67,6 +67,18 @@ def test_labels(raw_dir: Path, k: int) -> dict[str, str]:
     return {str(i): str(int(labels[i])) for i in make_split(labels, k)[2]}
 
 
+def val_labels(raw_dir: Path, k: int) -> dict[str, str]:
+    _, labels, _ = load_lcc(raw_dir)
+    return {str(i): str(int(labels[i])) for i in make_split(labels, k)[1]}
+
+
+def val_majority_baseline(raw_dir: Path, k: int) -> float:
+    _, labels, _ = load_lcc(raw_dir)
+    train, val, _ = make_split(labels, k)
+    known = np.concatenate([train, val])
+    return float((labels[val] == np.bincount(labels[known]).argmax()).mean())
+
+
 def majority_baseline(raw_dir: Path, k: int) -> float:
     """Test-Accuracy, wenn immer die haeufigste Klasse der bekannten Labels (Training + Validierung) kommt."""
     _, labels, _ = load_lcc(raw_dir)

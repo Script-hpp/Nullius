@@ -45,6 +45,21 @@ def n_windows(pred_len: int = PRED_LEN) -> int:
     return (TEST_END - VAL_END) - pred_len + 1
 
 
+VAL_STRIDE = 24            # Val-Fenster w prognostiziert Zeilen [TRAIN_END + 24 w, + 96): komplett in Val, nie im Test
+
+
+def n_val_windows(pred_len: int = PRED_LEN) -> int:
+    return ((VAL_END - TRAIN_END) - pred_len) // VAL_STRIDE + 1
+
+
+def val_targets(csv_path: Path, pred_len: int = PRED_LEN) -> np.ndarray:
+    """[Wv, pred_len, 7] Val-Zielwerte. Zeilen immer < VAL_END, nie Testzeilen."""
+    z = load_standardized(csv_path)
+    idx = TRAIN_END + VAL_STRIDE * np.arange(n_val_windows(pred_len))[:, None] + np.arange(pred_len)[None, :]
+    assert idx.max() < VAL_END
+    return z[idx]
+
+
 def targets(csv_path: Path, pred_len: int = PRED_LEN) -> np.ndarray:
     """[W, pred_len, 7] Ground Truth. Nur der Harness ruft das auf."""
     z = load_standardized(csv_path)

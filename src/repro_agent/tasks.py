@@ -32,6 +32,13 @@ class Task:
     prepare_files: tuple[str, ...] = ()
     prepare_cmd: str = ""           # Template mit {dir} und {split}; laeuft MIT Netz (Rohdaten holen), vor dem Agenten-Code
     seeds_per_split: int = 0        # > 0: Lauf `seed` = Split seed // n, Initialisierung seed % n (SPLIT= und SEED=)
+    # Validierungsvorhersagen (nur Produktpfad, A1): Auswahl unter Code-Kandidaten. Harness rechnet mit eigenen Val-Labels.
+    val_notes: str = ""             # an code_notes angehaengt (nur Produktpfad)
+    val_harness_files: tuple[str, ...] = ()
+    val_eval_cmd: str = ""          # Template mit {harness_dir}, {split}; eine JSON-Zeile {status, metric, value, baselines}
+    val_smoke_ids: tuple[str, ...] = ()
+    val_smoke_ids_cmd: str = ""
+    val_smoke_dims: tuple[int, ...] | None = None
 
     def env_for(self, seed: int) -> str:
         if self.seeds_per_split:
@@ -70,6 +77,15 @@ CORA_SMOKE = (
 )
 
 
+CORA_VAL_NOTES = (
+    "Also write /output/val_predictions.csv (header `id,prediction`) with one row per node in val_idx "
+    "(id = node index, prediction = integer class), predicted by the same trained model, in the same run. "
+    "Index the full-graph output with the ids: pred[val_ids]. "
+    f"In smoke mode (SMOKE=1) write only the first {CORA_SMOKE_N} ids of sorted val_idx to it. "
+    "Selection among candidate scripts uses only this file; it is never scored as the result."
+)
+
+
 def cora_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
@@ -96,6 +112,13 @@ def cora_task() -> Task:
             "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "
             f"print(*sorted(int(i) for i in d['test_idx'])[:{CORA_SMOKE_N}])\""
         ),
+        val_notes=CORA_VAL_NOTES,
+        val_harness_files=("cora_val_eval.py",),
+        val_eval_cmd="python {harness_dir}/cora_val_eval.py",
+        val_smoke_ids_cmd=(
+            "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "
+            f"print(*sorted(int(i) for i in d['val_idx'])[:{CORA_SMOKE_N}])\""
+        ),
     )
 
 
@@ -118,6 +141,15 @@ Environment: Python 3.11, CPU only, numpy and torch preinstalled. Read the rando
 env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
 
 
+ETTH1_VAL_WINDOWS = 117   # = etth1_data.n_val_windows(96): Schrittweite 24 in den 2880 Val-Zeilen
+ETTH1_VAL_NOTES = (
+    "Also write /output/val_predictions.csv (header `id,prediction`) for validation windows, same id format "
+    "'{window}_{step}_{channel}', window 0..116, step 0..95, channel 0..6 (117*96*7 rows): validation window w "
+    "forecasts the 96 hours starting at row 8640 + 24*w of the series train followed by val (i.e. val rows 24*w .. 24*w+95). "
+    "Its input is only the history before that start, taken from train followed by val (never later rows). "
+    "In smoke mode (SMOKE=1) write only validation windows 0..7. "
+    "Selection among candidate scripts uses only this file; it is never scored as the result."
+)
 ETTH1_SMOKE_WINDOWS = 8
 ETTH1_SMOKE = (
     "Smoke mode: if env var SMOKE=1, use at most 1 training batch of 32 samples for 1 epoch, predict only "
@@ -149,6 +181,11 @@ def etth1_task() -> Task:
         smoke_ids=tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7)),
         smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
         smoke_dim_names=("windows", "steps", "channels"),
+        val_notes=ETTH1_VAL_NOTES,
+        val_harness_files=("etth1_val_eval.py",),
+        val_eval_cmd="python {harness_dir}/etth1_val_eval.py",
+        val_smoke_ids=tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7)),
+        val_smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
     )
 
 
@@ -180,6 +217,10 @@ def cora_lcc_task() -> Task:
         code_notes=base.code_notes.replace("/data/cora_public.npz", "/data/cora_lcc_public.npz"),
         smoke_ids_cmd=base.smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
         ablation_cmd=base.ablation_cmd.replace("cora_public", "cora_lcc_public"),
+        val_notes=base.val_notes,
+        val_harness_files=("cora_lcc_val_eval.py",),
+        val_eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_val_eval.py",
+        val_smoke_ids_cmd=base.val_smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
         prepare_files=("cora_data.py", "cora_lcc_data.py"),
         prepare_cmd="mkdir -p /data && python {dir}/cora_lcc_data.py public {split} /data/cora_lcc_public.npz",
         seeds_per_split=CORA_LCC_SEEDS_PER_SPLIT,

@@ -144,7 +144,7 @@ class LLMClient:
     def _book(self, response: LLMResponse) -> None:
         with self._cost_lock:
             self.total_cost_usd += response.cost_usd
-        self._log_cost(response)
+        self._log_cost(response)   # eigener Lock-Block: _cost_lock ist nicht reentrant
 
     def gross(self, net_usd: float) -> float:
         return gross(net_usd, self.settings.vat_rate)
@@ -250,7 +250,7 @@ class LLMClient:
             "reasoning_tokens": response.reasoning_tokens,
             "status": "cached" if response.cached else response.status,
         }
-        with COST_LOG_PATH.open("a") as f:
+        with self._cost_lock, COST_LOG_PATH.open("a") as f:   # parallele Kandidaten: Zeilen nie verschraenkt
             f.write(json.dumps(entry) + "\n")
 
     def _append_cache(self, key: str, response: LLMResponse) -> None:
@@ -266,7 +266,7 @@ class LLMClient:
             },
         }
         self._cache[key] = entry["response"]
-        with CACHE_PATH.open("a") as f:
+        with self._cost_lock, CACHE_PATH.open("a") as f:
             f.write(json.dumps(entry) + "\n")
 
     def close(self) -> None:

@@ -71,6 +71,9 @@ GRAPH_REPAIR_MESSAGE = (
     "Your code does not use the graph: accuracy with edges {full:.4f} equals accuracy without edges {ablated:.4f} "
     "(the code ignores the adjacency). Implement the propagation over the adjacency described in the plan."
 )
+CANDIDATES = 3          # Code-Kandidaten pro Claim im Produktpfad (A1); Temperatur 0.2, 0.5, 0.8, Auswahl nur ueber Validierung
+CANDIDATE_TEMP_STEP = 0.3
+LOWER_IS_BETTER_VAL = ("mse", "mae")
 TRAIN_TIMEOUT_S = 600
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
@@ -104,6 +107,18 @@ ISOLATION = [
 
 class CostLimitExceeded(RuntimeError):
     pass
+
+
+def select_candidate(vals: list[dict | None]) -> tuple[int, str]:
+    """Waehlt den Kandidaten mit der besten VALIDIERUNGS-Metrik (Accuracy max, MSE/MAE min). Eingabe sind nur Val-Ergebnisse
+    ({"metric", "value"}) lauffaehiger Kandidaten oder None; Testwerte und Zielwert des Papers gehen nie hinein.
+    Gleichstand: kleinerer Index. Ohne jeden Val-Wert: erster Kandidat mit Eintrag, Grund "fallback"."""
+    scored = [(i, v) for i, v in enumerate(vals) if isinstance(v, dict) and v.get("value") is not None]
+    if not scored:
+        return 0, "fallback"
+    lower = scored[0][1].get("metric") in LOWER_IS_BETTER_VAL
+    best = min(scored, key=lambda iv: (iv[1]["value"] if lower else -iv[1]["value"], iv[0]))
+    return best[0], "val"
 
 
 def extract_code(text: str, lenient: bool = False) -> str:
@@ -191,11 +206,12 @@ class Orchestrator:
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
-        error_search_live: bool = False,
+        error_search_live: bool = False, n_candidates: int | None = None,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
+        self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
         self.tavily_mode = tavily_mode or os.getenv("TAVILY_MODE", "live")
@@ -313,7 +329,7 @@ class Orchestrator:
         """Nur Katalog/API (Flag): Kernmechanismus des Plans umsetzen, Kommentarblock Plan step -> function. Anleitung, kein Pruefer."""
         return FIDELITY_NOTE if getattr(self, "graph_repair", False) else ""
 
-    def _code_from_llm(self, system: str, user: str) -> str:
+    def _code_from_llm(self, system: str, user: str, temperature: float = 0.2) -> str:
         """Code-Block aus der Antwort; bis zu 3 Versuche. Fehlt der Block oder ist die Antwort abgeschnitten
         (finish_reason "length": bei langem Code zehrt das Denken des Modells das Token-Limit auf), folgen
         hoehere Temperatur (gleicher Prompt + gleiche Temperatur gaebe aus dem Cache dieselbe Antwort),
@@ -322,7 +338,7 @@ class Orchestrator:
         for i in range(3):
             resp = self._ask(
                 "code", system, user + (CODE_ONLY_NOTE if i else ""),
-                max_tokens=CODE_RETRY_MAX_TOKENS if i else None, temperature=0.2 + 0.3 * i,
+                max_tokens=CODE_RETRY_MAX_TOKENS if i else None, temperature=temperature + 0.3 * i,
             )
             if getattr(resp, "finish_reason", None) == "length":
                 last = ValueError("Antwort abgeschnitten (finish_reason length)")
@@ -334,14 +350,22 @@ class Orchestrator:
                 self._emit("code_missing", try_n=i + 1, content_tail=(resp.content or "")[-1500:])   # Diagnose
         raise last  # type: ignore[misc]
 
-    def write_code(self, plan: str, task: Task) -> str:
+    def _product_notes(self, task: Task) -> str:
+        """Nur Produktpfad: Validierungsvorhersagen fuer die Kandidatenauswahl (A1)."""
+        if not getattr(self, "graph_repair", False):
+            return ""
+        val_notes = getattr(task, "val_notes", "")
+        return f" {val_notes}" if val_notes else ""
+
+    def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
         return self._code_from_llm(
             CODE_SYSTEM,
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
             f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan."
-            f"{self._fidelity_note()}",
+            f"{self._product_notes(task)}{self._fidelity_note()}",
+            **({"temperature": temperature} if temperature != 0.2 else {}),
         )
 
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
@@ -350,7 +374,7 @@ class Orchestrator:
             f"{task.data_description}\n\n{format_for_prompt(self.details)}\n\n"
             f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script."
-            f"{self._fidelity_note()}",
+            f"{self._product_notes(task)}{self._fidelity_note()}",
         )
 
     def _error_hints(self, claim: Claim, summary: str | None) -> str:
@@ -432,6 +456,18 @@ class Orchestrator:
         error = check_smoke_output(out, expected, task.smoke_dims, task.smoke_dim_names)
         if error:
             return "Smoke run (SMOKE=1) output has the wrong form: " + error
+        if getattr(self, "graph_repair", False) and getattr(task, "val_eval_cmd", ""):   # Produktpfad: auch val_predictions.csv pruefen
+            val_expected = task.val_smoke_ids
+            if task.val_smoke_ids_cmd:
+                val_expected = tuple(sb.run(branch, task.val_smoke_ids_cmd, 60).stdout.split())
+            try:
+                val_out = sb.get_file(branch, "/output/val_predictions.csv")
+            except Exception as exc:
+                return f"Smoke run wrote no /output/val_predictions.csv ({exc}); the task requires it"
+            error = check_smoke_output(val_out, val_expected, task.val_smoke_dims, task.smoke_dim_names)
+            if error:
+                return "Smoke run (SMOKE=1) val_predictions.csv has the wrong form: " + error
+            sb.run(branch, "rm -f /output/val_predictions.csv", 30)
         sb.run(branch, "rm -f /output/predictions.csv", 30)
         self._smoke_ok.add(code_hash)
         return None
@@ -476,7 +512,7 @@ class Orchestrator:
 
     def _run_and_eval(
         self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False,
-        ablate: bool = False,
+        ablate: bool = False, with_val: bool = False,
     ) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
@@ -529,12 +565,27 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": out.get("reason", "")}
         if metric not in out.get("metrics", {}):
             return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
+        val = self._val_eval(branch, harness_dir, task, seed) if with_val else None
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
-            "baselines": out.get("baselines"), "coverage": coverage,
+            "baselines": out.get("baselines"), "coverage": coverage, "val": val,
             "diagnostics": out.get("diagnostics"),             # nur Dossier/Events; pred_std geht in die Fehler-Rueckmeldung, nie Teststatistik
             "stdout_tail": (r.stdout or "")[-300:],            # Ende der Trainingsausgabe (z. B. Val-Loss) als Evidenz
         }
+
+    def _val_eval(self, branch: Branch, harness_dir: str, task: Task, seed: int) -> dict | None:
+        """Validierungs-Metrik des Seed-0-Laufs durch unseren Harness (eigene Val-Labels). Fehler machen den Versuch nie ungueltig:
+        ohne Val-Wert nimmt die Auswahl den Kandidaten nur als Rueckfall."""
+        sb = self.sandbox
+        sb.put_files(branch, {f"{harness_dir}/{n}": (HARNESS_DIR / n).read_bytes() for n in task.val_harness_files})
+        e = sb.run(branch, task.val_eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
+        try:
+            out = json.loads(e.stdout.strip().splitlines()[-1])
+        except (IndexError, json.JSONDecodeError):
+            return {"error": f"Val-Harness-Ausgabe unlesbar: {(e.stderr or e.stdout)[-200:]}"}
+        if out.get("status") != "ok":
+            return {"error": str(out.get("reason", ""))[:300]}
+        return {"metric": out["metric"], "value": float(out["value"]), "baselines": out.get("baselines") or {}}
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
     def resolve_targets(self, paper: dict, claims: list[Claim]) -> None:
@@ -643,25 +694,32 @@ class Orchestrator:
         (run_dir / f"{claim.id}_plan.md").write_text(plan)
         self._emit("plan", claim_id=claim.id, text=plan[:1500])
         self._emit_live("plan_text", claim_id=claim.id, text=plan)   # voller Plan nur fuer den Live-Stream (plan.md im Export)
-        code = self.write_code(plan, task)
-        self._announce_code(claim, code)
-        self._emit("code_written", claim_id=claim.id, code_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
         seeds = list(range(self.seeds or paper.get("seeds", DEFAULT_SEEDS)))
-        # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
-        # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
-        v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
-        graph_ab, graph_notes, discarded = None, [], set()
-        if getattr(self, "graph_repair", False) and v0 is not None:   # Katalog/API: Fehler- und Graph-Check nach Seed 0
-            v0, note0, code, graph_ab, graph_notes, discarded = self._seed0_quality_loop(
-                claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
-        notes = ([] if note0 is None else [note0]) + graph_notes
+        n_cand = getattr(self, "n_candidates", 1) if getattr(self, "graph_repair", False) else 1
+        cand: int | None = None
+        cand_notes: list[str] = []
+        if n_cand > 1:   # A1 (nur Produktpfad): mehrere Kandidaten, Seed 0 je Kandidat, Auswahl ueber Validierung
+            v0, note0, code, graph_ab, graph_notes, discarded, cand, cand_notes = self._run_candidates(
+                claim, task, snapshot, dossier, run_dir, plan, seeds[0], n_cand)
+        else:
+            code = self.write_code(plan, task)
+            self._announce_code(claim, code)
+            self._emit("code_written", claim_id=claim.id, code_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
+            # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
+            # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
+            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
+            graph_ab, graph_notes, discarded = None, [], set()
+            if getattr(self, "graph_repair", False) and v0 is not None:   # Katalog/API: Fehler- und Graph-Check nach Seed 0
+                v0, note0, code, graph_ab, graph_notes, discarded, _ = self._seed0_quality_loop(
+                    claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
+        notes = ([] if note0 is None else [note0]) + graph_notes + cand_notes
 
         def run_rest(code: str, v0: float) -> tuple[list[float], list[str]]:
             rest, got, rnotes = seeds[1:], [v0], []
             if rest:
                 with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(rest))) as pool:
                     results = list(pool.map(
-                        lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd),
+                        lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd, cand),
                         rest,
                     ))
                 got += [v for v, _, _ in results if v is not None]
@@ -693,7 +751,7 @@ class Orchestrator:
             self._emit("fault_repair", claim_id=claim.id, runde="mittelwert", from_hash=from_hash, measured=verdict.measured_mean)
             try:
                 new = self.repair_code(plan, task, code, fault_message(claim.metric, verdict.measured_mean, claim.target, dossier.baselines))
-                nv, nnote, new = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new, seeds[0])
+                nv, nnote, new = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new, seeds[0], cand)
             except ValueError as exc:
                 nv, nnote = None, f"Reparatur ohne Code-Block ({exc})"
             new_hash = hashlib.sha256(new.encode()).hexdigest()[:12] if nv is not None else None
@@ -718,10 +776,67 @@ class Orchestrator:
             print(f"[{claim.id}] Graph-Ablation: {ab['verdict']} (mit Graph {v0:.4f}, ohne Kanten {ab['accuracy_ablated']})", flush=True)
             if ab["verdict"] == "Graph nicht genutzt":   # deterministischer Beleg, nur herabstufend
                 verdict.methode = "nein"
+        if cand is not None:   # alle Kandidaten-Versuche bleiben im Dossier, gewaehlter Kandidat markiert
+            for a in dossier.attempts:
+                if a.claim_id == claim.id and a.candidate is not None:
+                    a.chosen = a.candidate == cand
         dossier.verdicts.append(verdict)
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
                    explanation=verdict.explanation)
+
+    def _run_candidates(
+        self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, seed: int, k: int,
+    ):
+        """A1: k Code-Kandidaten (Temperatur 0.2 + 0.3 i, gleicher Prompt), je Seed 0 mit Reparatur- und Qualitaetsschleife
+        parallel. Auswahl allein ueber die Validierungs-Metrik, die unser Harness rechnet (select_candidate); Testwerte und
+        Zielwert gehen nie in die Auswahl. Rueckgabe wie die Seed-0-Phase plus Index des Siegers und Hinweise fuer das Urteil."""
+        def h(c: str) -> str:
+            return hashlib.sha256(c.encode()).hexdigest()[:12]
+
+        codes: list[str] = []
+        for i in range(k):
+            c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
+            codes.append(c)
+            self._announce_code(claim, c)
+            self._emit("code_written", claim_id=claim.id, code_hash=h(c), candidate=i)
+
+        def one(i: int) -> dict:
+            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, codes[i], seed, i)
+            res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": set(), "faults": 0}
+            if v0 is not None:   # Kandidatenphase: nur Fehler-Check; Graph-Ablation nur fuer den Sieger
+                v0, note0, code, ab, notes, disc, faults = self._seed0_quality_loop(
+                    claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seed, i, graph=False)
+                res.update(v0=v0, note0=note0, code=code, ab=ab, notes=notes, discarded=disc, faults=faults)
+            val = self.__dict__.get("_val", {}).get((h(res["code"]), seed)) if res["v0"] is not None else None
+            res["val"] = val if isinstance(val, dict) and "value" in val else None
+            return res
+
+        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, k)) as pool:
+            results = list(pool.map(one, range(k)))
+        runnable = [r for r in results if r["v0"] is not None]
+        if runnable:
+            pick, reason = select_candidate([r["val"] for r in runnable])
+            win = runnable[pick]
+        else:
+            win, reason = results[0], "fallback"
+        self._emit("candidates", claim_id=claim.id, k=k, chosen=win["i"], chosen_hash=h(win["code"]), reason=reason,
+                   candidates=[{"index": r["i"], "code_hash": h(r["code"]), "runnable": r["v0"] is not None,
+                                "val": ({"metric": r["val"]["metric"], "value": r["val"]["value"]} if r["val"] else None)}
+                               for r in results])
+        loser_hashes = {a.code_hash for a in dossier.attempts
+                        if a.claim_id == claim.id and a.candidate is not None and a.candidate != win["i"]}
+        v0, note0, code, ab, notes, discarded = win["v0"], win["note0"], win["code"], win["ab"], list(win["notes"]), set(win["discarded"])
+        if v0 is not None and getattr(task, "ablation_cmd", ""):   # Graph-Check mit Reparatur nur fuer den Sieger (Seed 0 wird wiederverwendet)
+            v0, note0, code, ab, notes2, disc2, _ = self._seed0_quality_loop(
+                claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seed, win["i"], graph=True, fault_rounds0=win["faults"])
+            notes += notes2
+            discarded |= disc2
+        discarded = (discarded | loser_hashes) - {h(code)}
+        parts = ", ".join(f"{r['i']}: " + (f"{r['val']['metric']} {r['val']['value']:.4f}" if r["val"] else "no val value") for r in results)
+        note = (f"Code-Kandidaten: {k}, gewaehlt Kandidat {win['i']} (Code {h(win['code'])}) nach Validierungs-Metrik "
+                f"({parts})" + ("" if reason == "val" else "; Rueckfall ohne Val-Wert"))
+        return v0, note0, code, ab, notes, discarded, win["i"], [note]
 
     def _fault_check(self, claim: Claim, dossier: Dossier, code_hash: str, seed: int, v0: float) -> str | None:
         """Schlechter als eine triviale Baseline? (harness/verify.agent_fault_suspected, deterministisch, kein LLM)"""
@@ -732,14 +847,16 @@ class Orchestrator:
 
     def _seed0_quality_loop(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, code: str,
-        v0: float, note0: str | None, seed: int,
-    ) -> tuple[float, str | None, str, dict | None, list[str], set[str]]:
+        v0: float, note0: str | None, seed: int, candidate: int | None = None,
+        graph: bool = True, fault_rounds0: int = 0,
+    ) -> tuple[float, str | None, str, dict | None, list[str], set[str], int]:
         """Nach Seed 0 (nur Katalog/API): Fehler-Check (schlechter als triviale Baseline) und Graph-Check mit Reparaturrunden.
 
         Fehler: bis MAX_FAULT_REPAIRS Runden mit fester Rueckmeldung (harness/repair_hints.fault_message). Graph: bis
         MAX_GRAPH_REPAIRS Runden. Zusammen hoechstens MAX_SEED0_REPAIRS (jede Runde kostet einen Seed-0-Sandboxlauf, Minuten).
         Reihenfolge je Runde: erst Fehler-Check, dann Graph-Check des Codes, der den Fehler-Check bestanden hat.
-        Rueckgabe: (v0, Hinweis, Code, Ablation des Codes oder None, Hinweise fuer das Urteil, verworfene Code-Hashes).
+        Rueckgabe: (v0, Hinweis, Code, Ablation des Codes oder None, Hinweise fuer das Urteil, verworfene Code-Hashes,
+        Fehler-Runden gesamt). graph=False: nur Fehler-Check (Kandidatenphase, A1); fault_rounds0: schon verbrauchte Fehler-Runden.
         Liefert ein reparierter Code keinen gueltigen Seed 0, gilt der letzte lauffaehige Code. CostLimitExceeded laeuft durch."""
         def h(c: str) -> str:
             return hashlib.sha256(c.encode()).hexdigest()[:12]
@@ -747,7 +864,7 @@ class Orchestrator:
         notes: list[str] = []
         discarded: set[str] = set()
         ab: dict | None = None
-        fault_rounds = graph_rounds = 0
+        fault_rounds, graph_rounds = fault_rounds0, 0
 
         def budget(kind_rounds: int, kind_max: int) -> bool:
             return kind_rounds < kind_max and fault_rounds + graph_rounds < MAX_SEED0_REPAIRS
@@ -761,7 +878,7 @@ class Orchestrator:
                 self._emit(f"{kind}_repair", result="no_code", fallback_hash=from_hash, **ev)
                 notes.append(f"{head}; Reparatur ohne Code-Block ({exc}), Rueckfall auf Code {from_hash}")
                 return False, code, v0, note0
-            nv, nnote, new_code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new_code, seed)
+            nv, nnote, new_code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new_code, seed, candidate)
             if nv is None:
                 self._emit(f"{kind}_repair", result="crash", fallback_hash=from_hash, to_hash=h(new_code), **ev)
                 notes.append(f"{head}; neuer Code lief nicht ({nnote}), Rueckfall auf Code {from_hash}")
@@ -786,7 +903,7 @@ class Orchestrator:
                 self._emit("fault_repair", result="repariert", to_hash=h(code), **ev)
                 notes.append(f"{head}; neuer Code {h(code)}")
                 continue
-            if not task.ablation_cmd:
+            if not task.ablation_cmd or not graph:
                 break
             ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
             self._emit("ablation", claim_id=claim.id, runde=fault_rounds + graph_rounds, code_hash=h(code), **ab)
@@ -806,15 +923,16 @@ class Orchestrator:
                 continue
             break
         discarded.discard(h(code))   # Reparatur kann denselben Code liefern; der finale Code zaehlt nie als verworfen
-        if fault_rounds:
-            dossier.fault_repairs[claim.id] = fault_rounds
-        if graph_rounds:
-            dossier.graph_repairs[claim.id] = graph_rounds
-        return v0, note0, code, ab, notes, discarded
+        with self._lock:   # Kandidaten laufen parallel; Zaehler ueber alle Kandidaten summiert
+            if fault_rounds - fault_rounds0:
+                dossier.fault_repairs[claim.id] = dossier.fault_repairs.get(claim.id, 0) + fault_rounds - fault_rounds0
+            if graph_rounds:
+                dossier.graph_repairs[claim.id] = dossier.graph_repairs.get(claim.id, 0) + graph_rounds
+        return v0, note0, code, ab, notes, discarded, fault_rounds
 
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
-        plan: str, code: str, seed: int,
+        plan: str, code: str, seed: int, candidate: int | None = None,
     ) -> tuple[float | None, str | None, str]:
         """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis, letzter Code)."""
         summary = None
@@ -823,7 +941,9 @@ class Orchestrator:
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
             self._announce_code(claim, code)
             t0 = time.time()
-            branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0)
+            product = getattr(self, "graph_repair", False)
+            extra_kw = {"with_val": True} if product and seed == 0 and getattr(task, "val_eval_cmd", "") else {}   # Val nur Seed 0, nur Produktpfad
+            branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0, **extra_kw)
             status, value = res["status"], res.get("measured")
             summary = None
             if status == "ok":
@@ -838,20 +958,23 @@ class Orchestrator:
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
                     cost_usd=self.spent_usd, metrics=res.get("metrics"), coverage=res.get("coverage"),
-                    diagnostics=res.get("diagnostics"),
+                    diagnostics=res.get("diagnostics"), candidate=candidate, val=res.get("val"),
                 ))
                 self.__dict__.setdefault("_diag", {})[(code_hash, seed)] = res.get("diagnostics")
+                if res.get("val"):
+                    self.__dict__.setdefault("_val", {})[(code_hash, seed)] = res["val"]
             print(f"[{claim.id}] seed={seed} versuch={n} {status} measured={value} ({time.time()-t0:.0f}s)",
                   flush=True)
             self._emit("attempt", claim_id=claim.id, seed=seed, n=n, branch_id=branch, parent_snapshot=snapshot,
                        code_hash=code_hash, status=status, measured=value, seconds=round(time.time() - t0, 1),
                        error=(summary or "")[-400:] or None, stdout_tail=res.get("stdout_tail"),
-                       diagnostics=res.get("diagnostics"))
+                       diagnostics=res.get("diagnostics"),
+                       **({"candidate": candidate} if candidate is not None else {}),
+                       **({"val": res["val"]} if res.get("val") else {}))
             if res.get("baselines"):
                 dossier.baselines = res["baselines"]
             if value is not None:
                 return value, None, code
-            product = getattr(self, "graph_repair", False)
             if status == "timeout":
                 if not product:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code

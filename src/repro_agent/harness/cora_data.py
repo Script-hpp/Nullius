@@ -92,6 +92,21 @@ def no_graph_baseline(raw_dir: Path, steps: int = 300, lr: float = 0.5, l2: floa
     return float(((x[test_idx] @ w).argmax(1) == labels[test_idx]).mean())
 
 
+def val_labels(raw_dir: Path) -> dict[str, str]:
+    """Validierungslabels (dem Agenten bekannt); der Harness laedt sie selbst neu, nie aus Dateien des Agenten."""
+    _, labels_onehot, _, _ = load_raw(raw_dir)
+    labels = labels_onehot.argmax(1)
+    return {str(i): str(int(labels[i])) for i in range(N_TRAIN, N_TRAIN + N_VAL)}
+
+
+def val_majority_baseline(raw_dir: Path) -> float:
+    """Val-Accuracy, wenn immer die haeufigste Klasse der bekannten Labels (Training + Validierung) kommt."""
+    _, labels_onehot, _, _ = load_raw(raw_dir)
+    labels = labels_onehot.argmax(1)
+    majority = int(np.bincount(labels[:N_TRAIN + N_VAL]).argmax())
+    return float((labels[N_TRAIN:N_TRAIN + N_VAL] == majority).mean())
+
+
 def test_labels(raw_dir: Path) -> dict[str, str]:
     _, labels_onehot, _, test_idx = load_raw(raw_dir)
     labels = labels_onehot.argmax(1)
