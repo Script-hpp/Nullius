@@ -40,6 +40,7 @@ from .harness.verify import agent_fault_suspected, judge
 from .llm import LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
+from .repo_diff import find_deviations, repair_message, as_dicts
 from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
 from .setup_details import Doc, SetupDetail, extract_setup_details, format_conflicts, format_for_prompt
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
@@ -680,6 +681,7 @@ class Orchestrator:
             docs.append(Doc("repo-readme", readme))
             self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
+        self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
         return docs, {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
@@ -748,6 +750,12 @@ class Orchestrator:
                         per_metric.setdefault(name, []).append(value)
             return {name: statistics.mean(v) for name, v in per_metric.items()}
 
+        if v0 is not None and getattr(self, "graph_repair", False) and getattr(self, "_repo_files", None):
+            v0, code, graph_ab, rd_notes, discarded = self._repo_diff_round(
+                claim, task, snapshot, dossier, run_dir, plan, code, v0, seeds[0], cand, graph_ab, discarded,
+                paper.get("dataset", ""))
+            notes += rd_notes
+
         measured: list[float] = []
         if v0 is None:
             notes.append("Restliche Seeds nicht gestartet: kein lauffaehiger Code")
@@ -793,7 +801,7 @@ class Orchestrator:
         if cand is not None:   # alle Kandidaten-Versuche bleiben im Dossier, gewaehlter Kandidat markiert
             for a in dossier.attempts:
                 if a.claim_id == claim.id and a.candidate is not None:
-                    a.chosen = a.candidate == cand
+                    a.chosen = a.candidate == cand and a.code_hash not in discarded
         dossier.verdicts.append(verdict)
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
@@ -851,6 +859,71 @@ class Orchestrator:
         note = (f"Code-Kandidaten: {k}, gewaehlt Kandidat {win['i']} (Code {h(win['code'])}) nach Validierungs-Metrik "
                 f"({parts})" + ("" if reason == "val" else "; Rueckfall ohne Val-Wert"))
         return v0, note0, code, ab, notes, discarded, win["i"], [note]
+
+    def _repo_diff_round(
+        self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, code: str, v0: float,
+        seed: int, cand: int | None, graph_ab: dict | None, discarded: set[str], dataset: str = "",
+    ) -> tuple[float, str, dict | None, list[str], set[str]]:
+        """A2 (nur Produktpfad mit Repo-Dateien): unseren Code mit den Repo-Dateien abgleichen, geprueften Abweichungen folgt EINE
+        Reparaturrunde. Der neue Code ersetzt den alten nur, wenn er den Fehler-Check, die Graph-Ablation und die Validierung
+        (gleich oder besser, Val-Fehlen = alter Code) besteht. Weder Val-/Testzahl noch Zielwert gehen in einen Prompt."""
+        def h(c: str) -> str:
+            return hashlib.sha256(c.encode()).hexdigest()[:12]
+
+        discarded = set(discarded)
+        files = self._repo_files
+        devs, dropped, cuts = find_deviations(
+            lambda system, user: self._ask("extract", system, user, max_tokens=6000, temperature=0.0), code, files,
+            dataset or "the dataset")
+        info = {"deviations": as_dicts(devs), "dropped": len(dropped), "truncation": cuts, "from_hash": h(code)}
+        if not devs:
+            self._emit("repo_diff", claim_id=claim.id, result="no_deviation", **info)
+            dossier.repo_diff[claim.id] = {**info, "result": "no_deviation"}
+            return v0, code, graph_ab, ["Repo-Abgleich: keine geprueften Abweichungen"], discarded
+
+        def finish(result: str, reason: str, **extra):
+            self._emit("repo_diff", claim_id=claim.id, result=result, reason=reason, **info, **extra)
+            dossier.repo_diff[claim.id] = {**info, "result": result, "reason": reason, **extra}
+
+        try:
+            new_code = self.repair_code(plan, task, code, repair_message(devs))
+        except ValueError as exc:
+            finish("kept", f"Reparatur ohne Code-Block ({exc})")
+            return v0, code, graph_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Reparatur ohne Code-Block, alter Code bleibt"], discarded
+        nv, nnote, new_code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new_code, seed, cand)
+        old_h, new_h = h(code), h(new_code)
+        reason = None
+        new_ab = None
+        old_val = self.__dict__.get("_val", {}).get((old_h, seed))
+        new_val = self.__dict__.get("_val", {}).get((new_h, seed))
+        if nv is None:
+            reason = f"neuer Code lief nicht ({nnote})"
+        elif new_h == old_h:
+            reason = "Reparatur lieferte denselben Code"
+        elif self._fault_check(claim, dossier, new_h, seed, nv) or self._val_fault_check(claim, new_h, seed):
+            reason = "neuer Code faellt beim Fehler-Check durch"
+        elif not (isinstance(old_val, dict) and isinstance(new_val, dict) and "value" in old_val and "value" in new_val):
+            reason = "Validierungswert fehlt, alter Code bleibt"
+        else:
+            lower = new_val.get("metric") in LOWER_IS_BETTER_VAL
+            if (new_val["value"] > old_val["value"]) if lower else (new_val["value"] < old_val["value"]):
+                reason = "Validierung schlechter als beim alten Code"
+            elif getattr(task, "ablation_cmd", ""):
+                new_ab = self.ablation_check(snapshot, new_code, seed, task, claim.metric, nv)
+                self._emit("ablation", claim_id=claim.id, code_hash=new_h, runde="repo_diff", **new_ab)
+                if new_ab["verdict"] == "Graph nicht genutzt":
+                    reason = "neuer Code nutzt den Graph nicht (Ablation)"
+        val_info = {"val_old": old_val.get("value") if isinstance(old_val, dict) else None,
+                    "val_new": new_val.get("value") if isinstance(new_val, dict) else None, "to_hash": new_h}
+        if reason is not None:
+            if new_h != old_h:
+                discarded.add(new_h)
+            finish("kept", reason, **val_info)
+            return v0, code, graph_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Reparatur nicht uebernommen ({reason})"], discarded
+        discarded.add(old_h)
+        discarded.discard(new_h)
+        finish("adopted", "Fehler-Check, Ablation und Validierung bestanden", **val_info)
+        return nv, new_code, new_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Code {old_h} durch {new_h} ersetzt"], discarded
 
     def _val_fault_check(self, claim: Claim, code_hash: str, seed: int) -> str | None:
         """Klassifikation: Validierungs-Genauigkeit (vom Harness mit eigenen Val-Labels) unter der Mehrheitsklasse-Baseline = Zufallsniveau,
@@ -1081,6 +1154,7 @@ class Orchestrator:
         self.paper_text = None    # pro Lauf neu holen (live) statt den Text des vorigen Laufs weiterzuverwenden
         self._sources = []
         self._code_sent = set()
+        self._repo_files = {}
         self.events = EventLog(run_dir / "events.jsonl")
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,

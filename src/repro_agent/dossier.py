@@ -98,6 +98,7 @@ class Dossier:
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
     fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
+    repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
     def save(self, timestamp: str) -> Path:
@@ -125,6 +126,7 @@ class Dossier:
             warnings=data.get("warnings", []),
             graph_repairs=data.get("graph_repairs", {}),
             fault_repairs=data.get("fault_repairs", {}),
+            repo_diff=data.get("repo_diff", {}),
         )
 
     def condensed_for_reasoning(self) -> str:
