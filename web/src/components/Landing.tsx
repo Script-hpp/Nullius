@@ -38,7 +38,7 @@ function Hero() {
     'data-hero-fade': true,
   })
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-24 pt-24 text-center">
+    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-56 pt-24 text-center sm:pb-24">
       <WrittenText onDone={() => setShown(true)} className="w-[min(880px,88vw)] text-fg" />
       {/* collapsed while the lettering is written (it sits in the middle of the screen), then opens and moves it up */}
       <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
@@ -67,9 +67,47 @@ function Hero() {
           aria-label="Scroll down" className="cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3">
           <ChevronDown className="h-5 w-5" />
         </button>
-        <p className="m-0 text-center text-[11px] uppercase tracking-[0.18em] text-muted">Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily</p>
+        <BuiltWith />
       </div>
     </section>
+  )
+}
+
+// "Built with" strip. Logos come only from the companies' own brand kits, unmodified, light and dark variant as the kit ships them:
+// - Nebius: https://nebius.com/media-kit (NEBIUS-logos 07.25.zip, SVGs/NEBIUS-outline-black.svg and -white.svg). The page states no usage terms; used
+//   unaltered and with clear space, to name the services we use.
+// - Tavily: https://tavily.com/brand (/logos/tavily-full.svg and tavily-full-offwhite.svg). Terms: unaltered proportions, clear space at least the icon
+//   height, black on light and off-white on dark, no effects; referential identification of Tavily products is allowed without suggesting endorsement.
+// - NVIDIA: no downloadable kit, and https://www.nvidia.com/en-us/about-nvidia/legal-info/logo-brand-usage/ requires written approval for any use
+//   outside its listed cases, so NVIDIA stays text until approved.
+const BUILT_WITH: { name: string; product: string; logo?: { light: string; dark: string; h: string } }[] = [
+  { name: 'NVIDIA', product: 'Nemotron' },
+  { name: 'Nebius', product: 'Token Factory, Sandboxes', logo: { light: 'logos/nebius-black.svg', dark: 'logos/nebius-white.svg', h: 'h-6 sm:h-7' } },
+  { name: 'Tavily', product: 'Search and extraction', logo: { light: 'logos/tavily-full.svg', dark: 'logos/tavily-full-offwhite.svg', h: 'h-7 sm:h-8' } },
+]
+
+function BuiltWith() {
+  return (
+    <div className="flex flex-col items-center gap-4" aria-label="Built with">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Built with</div>
+      <ul className="m-0 flex list-none flex-wrap items-start justify-center gap-x-7 gap-y-4 sm:gap-x-12 p-0">
+        {BUILT_WITH.map((b) => (
+          <li key={b.name} className="flex flex-col items-center gap-2">
+            <div className="flex h-8 items-center">
+              {b.logo ? (
+                <>
+                  <img src={b.logo.light} alt={b.name} className={`logo-light w-auto ${b.logo.h}`} />
+                  <img src={b.logo.dark} alt={b.name} className={`logo-dark w-auto ${b.logo.h}`} />
+                </>
+              ) : (
+                <span className="font-grotesk text-xl font-semibold tracking-[0.04em] text-fg-3">{b.name}</span>
+              )}
+            </div>
+            <span className="text-[10.5px] tracking-wide text-muted">{b.product}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

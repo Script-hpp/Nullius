@@ -220,3 +220,8 @@ a, button, .panel { transition: all 0.2s ease-out; }
 .font-serif-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }
 
 h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-serif; letter-spacing: -0.04em; }
+
+/* "Built with" logos: the dark-mode variant is the default, the light variant replaces it under data-theme='light'. */
+.logo-light { display: none; }
+:root[data-theme='light'] .logo-light { display: block; }
+:root[data-theme='light'] .logo-dark { display: none; }
