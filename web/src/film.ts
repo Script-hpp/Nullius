@@ -54,10 +54,47 @@ export function codeLines(code: string, n = 14, width = 78): string[] {
   return code.split('\n').filter((l) => l.trim() && !l.trim().startsWith('#')).slice(0, n).map((l) => (l.length > width ? l.slice(0, width - 1) + '…' : l))
 }
 
-// First bullets of the plan, markdown stripped.
-export function planBullets(plan: string, n = 3, width = 84): string[] {
-  const clean = (l: string) => l.replace(/\*\*|__|`/g, '').replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').replace(/^#+\s*/, '').trim()
-  return plan.split('\n').map(clean).filter((l) => l.length > 12).slice(0, n).map((l) => (l.length > width ? l.slice(0, width - 1) + '…' : l))
+// Markdown markers out of a plan line: bold, code ticks, heading hashes, list markers. Nothing else is changed.
+export const stripMarkdown = (l: string) => l.replace(/\*\*|__|`/g, '').replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '').replace(/^#+\s*/, '').trim()
+
+const isTitle = (l: string) => /^\s*#+\s/.test(l) || /^\s*(\*\*|__)[^*_]+(\*\*|__):?\s*$/.test(l)
+const isItem = (l: string) => /^\s*(?:[-*+]|\d+[.)])\s+\S/.test(l)
+
+// Cut at the last space before the limit, never inside a word or a formula.
+function cut(l: string, width: number) {
+  if (l.length <= width) return l
+  const at = l.lastIndexOf(' ', width - 1)
+  return l.slice(0, at > width / 2 ? at : width - 1).trimEnd() + '…'
+}
+
+// The plan for the film: a title (small label) and the first steps. A heading or an all-bold first line is the title, not a step; steps are the
+// list items (or, in a plan without a list, the first longer lines).
+export function planItems(plan: string, n = 3, width = 110): { title: string | null; steps: string[] } {
+  const lines = plan.split('\n').filter((l) => l.trim())
+  const t = lines.find(isTitle)
+  const rest = lines.filter((l) => l !== t)
+  const items = rest.filter(isItem)
+  const steps = (items.length ? items : rest.filter((l) => stripMarkdown(l).length > 12)).map(stripMarkdown).filter(Boolean).slice(0, n).map((l) => cut(l, width))
+  return { title: t ? cut(stripMarkdown(t), 70) : null, steps }
+}
+
+// Text for display: "^(-1/2)" and "^2" become superscripts, nothing else is interpreted. A word that holds a formula stays in one piece (no line break
+// inside it); spaces between words, such as around arrows, can break.
+export type MathPart = { kind: 'text' | 'sup'; text: string }
+export type MathWord = { formula: boolean; parts: MathPart[] }
+export function mathWords(text: string): MathWord[] {
+  return text.split(/(\s+)/).filter((w) => w !== '').map((w) => {
+    if (/^\s+$/.test(w)) return { formula: false, parts: [{ kind: 'text' as const, text: w }] }
+    const parts: MathPart[] = []
+    let last = 0
+    for (const m of w.matchAll(/\^\(([^)]*)\)|\^(-?[A-Za-z0-9.]+)/g)) {
+      if (m.index! > last) parts.push({ kind: 'text', text: w.slice(last, m.index) })
+      parts.push({ kind: 'sup', text: m[1] ?? m[2] })
+      last = m.index! + m[0].length
+    }
+    if (last < w.length) parts.push({ kind: 'text', text: w.slice(last) })
+    return { formula: parts.some((p) => p.kind === 'sup'), parts }
+  })
 }
 
 // How much of a text is typed at progress p (characters), for typing animations; p is clamped.
