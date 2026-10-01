@@ -1,0 +1,3 @@
+rlinear: 5/5 gueltig; mse Mittel 0.3704, Std 0.0008; Ziel 0.366 +- 0.01, Abstand 0.0044 -> Referenzurteil reproduziert
+Laufzeit je Seed (s): Mittel 7, max 7; Einzelwerte [0.3699, 0.3697, 0.3713, 0.3712, 0.3699]
+Nachbildung drop_last (Batch 128, 97 von 2785 Fenstern verworfen): MSE Mittel 0.3665 (statt 0.3704), Urteil dazu reproduziert

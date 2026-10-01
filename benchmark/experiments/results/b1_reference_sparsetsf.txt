@@ -1,0 +1,3 @@
+sparsetsf: 5/5 gueltig; mse Mittel 0.3607, Std 0.0011; Ziel 0.362 +- 0.01, Abstand 0.0013 -> Referenzurteil reproduziert
+Laufzeit je Seed (s): Mittel 6, max 7; Einzelwerte [0.359, 0.3616, 0.3605, 0.3606, 0.3618]
+Nachbildung drop_last (Batch 128, 97 von 2785 Fenstern verworfen): MSE Mittel 0.3587 (statt 0.3607), Urteil dazu reproduziert
