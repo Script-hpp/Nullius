@@ -1,0 +1,390 @@
+[
+{
+"ts": 1790888658.6558685,
+"type": "code_written",
+"claim_id": "nlinear_etth1_96_mse",
+"code_hash": "614354c70832",
+"candidate": 0
+},
+{
+"ts": 1790888679.7523372,
+"type": "code_written",
+"claim_id": "nlinear_etth1_96_mse",
+"code_hash": "46a26ac1502a",
+"candidate": 1
+},
+{
+"ts": 1790888701.6413863,
+"type": "code_written",
+"claim_id": "nlinear_etth1_96_mse",
+"code_hash": "e33c912af040",
+"candidate": 2
+},
+{
+"ts": 1790888712.9884017,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "e33c912af040",
+"status": "fehler",
+"measured": null,
+"seconds": 11.3,
+"error": "nput, self.weight, self.bias)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: mat1 and mat2 shapes cannot be multiplied (1x790272 and 2352x672)",
+"candidate": 2
+},
+{
+"ts": 1790888715.0211067,
+"type": "error_search",
+"claim_id": "nlinear_etth1_96_mse",
+"query": "RuntimeError: mat1 and mat2 shapes cannot be multiplied (1xN and NxN)",
+"urls": [
+"https://discuss.pytorch.org/t/runtimeerror-mat1-and-mat2-shapes-cannot-be-multiplied/200006",
+"https://stackoverflow.com/questions/70386696/pytorch-runtimeerror-mat1-and-mat2-shapes-cannot-be-multiplied-32x246016-and-3",
+"https://stackoverflow.com/questions/75998650/dqn-runtimeerror-mat1-and-mat2-shapes-cannot-be-multiplied-18x7-and-126x64"
+]
+},
+{
+"ts": 1790888715.0212362,
+"type": "repair",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"from_hash": "e33c912af040",
+"error": "nput, self.weight, self.bias)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: mat1 and mat2 shapes cannot be multiplied (1x790272 and 2352x672)"
+},
+{
+"ts": 1790888732.4764094,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "46a26ac1502a",
+"status": "fehler",
+"measured": null,
+"seconds": 30.8,
+"error": "^^^\n  File \"/work/train.py\", line 69, in forward\n    out = out.view(b, horizon, channels)\n                      ^^^^^^^\nNameError: name 'horizon' is not defined",
+"candidate": 1
+},
+{
+"ts": 1790888733.9367373,
+"type": "error_search",
+"claim_id": "nlinear_etth1_96_mse",
+"query": "NameError: name 'horizon' is not defined",
+"urls": [
+"https://stackoverflow.com/questions/57736680/how-to-solve-nameerror-name-model-is-not-defined-error",
+"https://stackoverflow.com/questions/73587868/php-artisan-horizon-error-when-build-container",
+"https://stackoverflow.com/questions/6799983/nameerror-name-process-is-not-defined-python"
+]
+},
+{
+"ts": 1790888733.9368792,
+"type": "repair",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"from_hash": "46a26ac1502a",
+"error": "^^^\n  File \"/work/train.py\", line 69, in forward\n    out = out.view(b, horizon, channels)\n                      ^^^^^^^\nNameError: name 'horizon' is not defined"
+},
+{
+"ts": 1790888747.122978,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 2,
+"code_hash": "7f1cece332d0",
+"status": "fehler",
+"measured": null,
+"seconds": 14.6,
+"error": "lue\n    return y_norm + last\n           ~~~~~~~^~~~~~\nRuntimeError: The size of tensor a (96) must match the size of tensor b (336) at non-singleton dimension 1",
+"candidate": 2
+},
+{
+"ts": 1790888750.0204601,
+"type": "error_search",
+"claim_id": "nlinear_etth1_96_mse",
+"query": "RuntimeError: The size of tensor a (96) must match the size of tensor b (N) at non-singleton dimension 1",
+"urls": [
+"https://github.com/nunchux-ai/nunchaku/issues/858"
+]
+},
+{
+"ts": 1790888750.020565,
+"type": "repair",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"from_hash": "7f1cece332d0",
+"error": "lue\n    return y_norm + last\n           ~~~~~~~^~~~~~\nRuntimeError: The size of tensor a (96) must match the size of tensor b (336) at non-singleton dimension 1"
+},
+{
+"ts": 1790888771.2661202,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 2,
+"code_hash": "4696c7a0bc01",
+"status": "fehler",
+"measured": null,
+"seconds": 24.9,
+"error": "20, in savetxt\n    raise TypeError(\"Mismatch between array dtype ('%s') and \"\nTypeError: Mismatch between array dtype ('<U32') and format specifier ('%s,%.10f')",
+"candidate": 1
+},
+{
+"ts": 1790888775.31636,
+"type": "error_search",
+"claim_id": "nlinear_etth1_96_mse",
+"query": "TypeError: Mismatch between array dtype ('<U32') and format specifier ('%s,%.10f')",
+"urls": [
+"https://stackoverflow.com/questions/45580330/typeerror-mismatch-between-array-dtype-float64-and-format-specifier",
+"https://stackoverflow.com/questions/61913327/typeerror-cannot-cast-array-data-from-dtypefloat64-to-dtypeu32-accordin",
+"https://stackoverflow.com/questions/34173101/numpy-dot-typeerror-cannot-cast-array-data-from-dtypefloat64-to-dtypes32"
+]
+},
+{
+"ts": 1790888775.3164911,
+"type": "repair",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"from_hash": "4696c7a0bc01",
+"error": "20, in savetxt\n    raise TypeError(\"Mismatch between array dtype ('%s') and \"\nTypeError: Mismatch between array dtype ('<U32') and format specifier ('%s,%.10f')"
+},
+{
+"ts": 1790888812.504885,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 3,
+"code_hash": "1db723ca1231",
+"status": "fehler",
+"measured": null,
+"seconds": 15.7,
+"error": "main\n    inp = torch.from_numpy(window_norm).float().unsqueeze(0).to(device)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected np.ndarray (got Tensor)",
+"candidate": 1
+},
+{
+"ts": 1790888812.5051873,
+"type": "repair",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"from_hash": "1db723ca1231",
+"error": "main\n    inp = torch.from_numpy(window_norm).float().unsqueeze(0).to(device)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: expected np.ndarray (got Tensor)"
+},
+{
+"ts": 1790888829.7057226,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "614354c70832",
+"status": "abweichung",
+"measured": 1.3003109898745078,
+"seconds": 128.1,
+"error": null,
+"candidate": 0,
+"val": {
+"metric": "mse",
+"value": 2.18587963930961,
+"baselines": {}
+}
+},
+{
+"ts": 1790888880.4435096,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 3,
+"code_hash": "0ed5e001fe19",
+"status": "abweichung",
+"measured": 1.3003109898745078,
+"seconds": 109.2,
+"error": null,
+"candidate": 2,
+"val": {
+"metric": "mse",
+"value": 2.18587963930961,
+"baselines": {}
+}
+},
+{
+"ts": 1790888917.5303984,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "0f6dc69f2f85",
+"status": "abweichung",
+"measured": 0.5257368034319537,
+"seconds": 71.7,
+"error": null,
+"candidate": 0,
+"val": {
+"metric": "mse",
+"value": 0.9996107115395368,
+"baselines": {}
+}
+},
+{
+"ts": 1790888917.5307193,
+"type": "fault_repair",
+"result": "repariert",
+"to_hash": "0f6dc69f2f85",
+"claim_id": "nlinear_etth1_96_mse",
+"runde": 1,
+"from_hash": "614354c70832",
+"measured": 1.3003109898745078,
+"baselines": {
+"repeat": 1.2943705947845083,
+"zero": 1.1099284100805409
+}
+},
+{
+"ts": 1790888924.037555,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 4,
+"code_hash": "eb9c0760c5f5",
+"status": "abweichung",
+"measured": 1.028772985679494,
+"seconds": 94.3,
+"error": null,
+"candidate": 1,
+"val": {
+"metric": "mse",
+"value": 1.782091008454759,
+"baselines": {}
+}
+},
+{
+"ts": 1790888973.945365,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "c36aec522001",
+"status": "abweichung",
+"measured": 0.48843635135867275,
+"seconds": 64.4,
+"error": null,
+"candidate": 2,
+"val": {
+"metric": "mse",
+"value": 0.9274681102254692,
+"baselines": {}
+}
+},
+{
+"ts": 1790888973.9456825,
+"type": "fault_repair",
+"result": "repariert",
+"to_hash": "c36aec522001",
+"claim_id": "nlinear_etth1_96_mse",
+"runde": 1,
+"from_hash": "0ed5e001fe19",
+"measured": 1.3003109898745078,
+"baselines": {
+"repeat": 1.2943705947845083,
+"zero": 1.1099284100805409
+}
+},
+{
+"ts": 1790888991.895843,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 0,
+"n": 1,
+"code_hash": "ab98b875dc43",
+"status": "abweichung",
+"measured": 0.3897824498332698,
+"seconds": 43.3,
+"error": null,
+"candidate": 1,
+"val": {
+"metric": "mse",
+"value": 0.6640058282558339,
+"baselines": {}
+}
+},
+{
+"ts": 1790888991.8961906,
+"type": "fault_repair",
+"result": "repariert",
+"to_hash": "ab98b875dc43",
+"claim_id": "nlinear_etth1_96_mse",
+"runde": 1,
+"from_hash": "eb9c0760c5f5",
+"measured": 1.028772985679494,
+"baselines": {
+"repeat": 1.2943705947845083,
+"zero": 1.1099284100805409
+}
+},
+{
+"ts": 1790888991.8974123,
+"type": "candidates",
+"claim_id": "nlinear_etth1_96_mse",
+"k": 3,
+"chosen": 1,
+"chosen_hash": "ab98b875dc43",
+"reason": "val"
+},
+{
+"ts": 1790889026.8457954,
+"type": "repo_diff",
+"claim_id": "nlinear_etth1_96_mse",
+"result": "no_deviation",
+"deviations": [],
+"dropped": 1,
+"from_hash": "ab98b875dc43"
+},
+{
+"ts": 1790889048.863288,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 3,
+"n": 1,
+"code_hash": "ab98b875dc43",
+"status": "abweichung",
+"measured": 0.3861875021676907,
+"seconds": 22.0,
+"error": null,
+"candidate": 1
+},
+{
+"ts": 1790889049.6516883,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 1,
+"n": 1,
+"code_hash": "ab98b875dc43",
+"status": "stabil",
+"measured": 0.37987728104553775,
+"seconds": 22.8,
+"error": null,
+"candidate": 1
+},
+{
+"ts": 1790889050.9384484,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 2,
+"n": 1,
+"code_hash": "ab98b875dc43",
+"status": "stabil",
+"measured": 0.38305254579066794,
+"seconds": 24.0,
+"error": null,
+"candidate": 1
+},
+{
+"ts": 1790889070.460401,
+"type": "attempt",
+"claim_id": "nlinear_etth1_96_mse",
+"seed": 4,
+"n": 1,
+"code_hash": "ab98b875dc43",
+"status": "abweichung",
+"measured": 0.3883334565269203,
+"seconds": 21.6,
+"error": null,
+"candidate": 1
+}
+]

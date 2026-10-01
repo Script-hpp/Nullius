@@ -5,6 +5,7 @@ import { BranchTree } from './BranchTree'
 import { CatalogCallout } from './CatalogBits'
 import { EvidenceSplit } from './Evidence'
 import { NextStep, PageIntro } from './page'
+import { RepairStory } from './RepairStory'
 import { ResultBand } from './ResultChart'
 import { ReplayPlayer } from './run/ReplayPlayer'
 import { StepGraph } from './run/StepGraph'
@@ -132,6 +133,8 @@ export function RunView({ ref_, initialTab }: { ref_: RunRef; initialTab?: strin
       <Trust fidelityUnchecked={fidelityUnchecked} />
 
       <StepStrip steps={steps} onStep={onStep} />
+
+      <RepairStory events={run.events} claimId={claim.id} codeLoader={codeLoader} />
 
       <section id="sec-details" className="scroll-mt-4 min-w-0" aria-label="Details">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Details</div>
