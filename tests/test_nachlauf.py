@@ -268,6 +268,7 @@ class FakeSandbox:
         self.pub, self.adapter, self.git_status, self.own, self.eval_out = pub, adapter, git_status, own, eval_out
         self.raw_in_predict = raw_in_predict
         self.ops, self.snaps, self.branches, self.kind, self.n = [], {}, {}, {}, 0
+        self._lock = __import__("threading").Lock()   # P2 laeuft parallel
 
     def base_snapshot(self, image, setup_cmds, label=None):
         self.ops.append(("snapshot", label, list(setup_cmds)))
@@ -281,11 +282,12 @@ class FakeSandbox:
 
     def branch(self, snap):
         kind, files = self.snaps[snap]
-        self.n += 1
-        b = f"b{self.n}"
-        self.branches[b] = dict(files)
-        self.kind[b] = kind
-        self.ops.append(("branch", b, kind))
+        with self._lock:
+            self.n += 1
+            b = f"b{self.n}"
+            self.branches[b] = dict(files)
+            self.kind[b] = kind
+            self.ops.append(("branch", b, kind))
         return b
 
     def put_files(self, b, files):

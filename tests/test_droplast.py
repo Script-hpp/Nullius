@@ -188,7 +188,7 @@ def test_no_prompt_path_reads_droplast_fields():
     """Testwerte bleiben beim Harness: die Felder kommen nur in Harness, Dossier, Hinweisregel, Bericht und in loop.py an genau vier Stellen vor."""
     src = Path(__file__).resolve().parents[1] / "src" / "repro_agent"
     fields = ("metrics_droplast", "droplast_note", "_droplast_round")
-    owners = {"droplast_note.py", "dossier.py", "report.py", "loop.py", "nachlauf.py"}   # nachlauf.py: Modus Nachlauf (M1, kein LLM); Pruefung unten in tests/test_nachlauf.py
+    owners = {"droplast_note.py", "dossier.py", "report.py", "loop.py", "nachlauf.py", "nachlauf_agent.py"}   # Modus Nachlauf: nachlauf.py (M1, kein LLM), nachlauf_agent.py (M3, Prompts ohne Testwerte: tests/test_nachlauf_agent.py)
     for f in src.glob("*.py"):
         if any(x in f.read_text() for x in fields):
             assert f.name in owners, f.name

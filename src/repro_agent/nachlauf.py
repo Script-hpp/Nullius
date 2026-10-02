@@ -14,12 +14,15 @@ from __future__ import annotations
 import difflib
 import hashlib
 import json
+import os
 import re
 import secrets
 import shlex
 import statistics
+import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -43,6 +46,7 @@ SMOKE_TIMEOUT_S = 120
 PROBE_TIMEOUT_S = 300
 EVAL_TIMEOUT_S = 600
 ETTH1_SHA256 = "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))   # gleichzeitige Branches (P2-Versaetze), wie im Loop
 SELF_CHECK_TOLERANCE = 0.001   # P3
 
 NACHLAUF_ISOLATION = [
@@ -80,6 +84,7 @@ class UnitSpec:
     data_dir: str = "dataset"          # Ordner, in dem das Repo ETTh1.csv erwartet
     claim_id: str = ""
     seed_note: str = ""
+    claim_source: str = "Tabelle 2 (Hand-Spec)"
 
     @property
     def repo_seed(self) -> int | None:
@@ -134,6 +139,43 @@ def _shell_vars(text: str) -> dict[str, str]:
         if m and " " not in m.group(2).strip("'\""):
             vars_[m.group(1)] = m.group(2).strip("'\"")
     return vars_
+
+
+_FOR_RE = re.compile(r"^\s*for\s+(\w+)\s+in\s+(.+?)\s*(?:;\s*do\s*|;\s*|\s+do\s*)?$")
+MAX_LOOP_COMBOS = 12
+
+
+def _loop_values(raw: str, vars_: dict[str, str]) -> list[str]:
+    raw = _VAR_USE.sub(lambda m: vars_.get(m.group(1) or m.group(2), m.group(0)), raw)
+    try:
+        vals = shlex.split(raw)
+    except ValueError:
+        vals = raw.split()
+    return [v for v in vals if "$" not in v and v != "do"][:MAX_LOOP_COMBOS]
+
+
+def _lines_with_vars(text: str):
+    """Logische Zeilen mit den Variablen, die fuer sie gelten: im Skript gesetzte Variablen und die Werte der umgebenden Schleifen
+    (`for v in a b; do ... done`); eine Zeile in einer Schleife kommt je Wertekombination einmal (hoechstens MAX_LOOP_COMBOS).
+    Liefert (Startzeile, Text, Variablen, Schleifenwerte)."""
+    import itertools
+    file_vars = _shell_vars(text)
+    loops: list[tuple[str, list[str]]] = []
+    for line_no, line in _logical_lines(text):
+        m = _FOR_RE.match(line)
+        if m:
+            loops.append((m.group(1), _loop_values(m.group(2), file_vars)))
+            continue
+        if re.match(r"^\s*done\b", line):
+            loops = loops[:-1]
+            continue
+        used = [(v, vals) for v, vals in loops if re.search(rf"\$\{{?{re.escape(v)}\b", line)]
+        combos = [{}]
+        if used:
+            names = [v for v, _ in used]
+            combos = [dict(zip(names, c)) for c in itertools.islice(itertools.product(*[vals or [""] for _, vals in used]), MAX_LOOP_COMBOS)]
+        for combo in combos:
+            yield line_no, line, {**file_vars, **combo}, combo
 
 
 def _tokens(line: str, vars_: dict[str, str] | None = None) -> list[str]:
@@ -206,9 +248,8 @@ def check_command(command: str, repo_files: dict[str, str], source: dict) -> dic
     text = repo_files.get(source["file"], "")
     cmd_prefix, cmd_flags = _parse(_tokens(command))
     keys = [t for t in cmd_prefix if t.endswith(".py")] or cmd_prefix[-1:]
-    vars_ = _shell_vars(text)
     best: tuple[int, int, str, list[dict]] | None = None
-    for line_no, line in _logical_lines(text):
+    for line_no, line, vars_, _combo in _lines_with_vars(text):
         toks = _tokens(line, vars_)
         prefix, flags = _parse(toks)
         if not any(k in prefix for k in keys):
@@ -336,7 +377,7 @@ def _bracket(text: str, name: str) -> str | None:
 
 
 def predict_cmd(smoke: bool = False) -> str:
-    env = f"NACHLAUF_CKPT={CKPT_PATH}" + (" SMOKE=1" if smoke else "")
+    env = f"PYTHONPATH={REPO_DIR} NACHLAUF_CKPT={CKPT_PATH}" + (" SMOKE=1" if smoke else "")      # Repo importierbar, auch wenn das Skript es nicht selbst einrichtet
     return f"mkdir -p {OUTPUT} && cd {REPO_DIR} && " + _timed(f"{env} unshare -n python {ADAPTER_PATH}")
 
 
@@ -377,6 +418,8 @@ class _Run:
         self.train_snap = self.pred_snap = ""
         self.repo_files: dict[str, str] = {}
         self.script_text = ""
+        self.parallel: int | None = None    # P2-Versaetze gleichzeitig (None = PARALLEL)
+        self._pub: dict | None = None
 
     def emit(self, type: str, **data) -> None:
         self.events.write(type, unit=self.spec.unit, **data)
@@ -487,50 +530,96 @@ class _Run:
         res["status"] = "ok"
         return res
 
+    def _public(self) -> dict:
+        if self._pub is None:       # einmal je Lauf laden (nicht je Seed, nicht je Thread)
+            self._pub = self.public_loader()
+        return self._pub
+
     def independence(self, ckpt: bytes, full_pred, offsets: list[int], seed: int) -> dict:
-        """P2: je Versatz ein frischer Branch, Probe ersetzt /data/etth1_public.npz."""
+        """P2: je Versatz ein frischer Branch, Probe ersetzt /data/etth1_public.npz. Die Versaetze laufen parallel (Thread-Pool, je Branch eine
+        eigene Sandbox-Sitzung wie bei den Seeds im Loop); Proben werden vorher nacheinander gebaut (gemeinsamer Zufallsgenerator),
+        Ergebnisse stehen in der Reihenfolge der Versaetze, unabhaengig von der Parallelitaet."""
         sb = self.sb
-        public = self.public_loader()
-        results = []
+        public = self._public()
+        jobs = []
         for r in offsets:
             arrays, mapping = independence.make(public, r, self.np_rng)
+            jobs.append((r, independence.to_npz_bytes(arrays), mapping))
+
+        def one(job) -> dict:
+            r, npz, mapping = job
             m = len(mapping)
-            b = self._predict_branch(ckpt, {"/data/etth1_public.npz": independence.to_npz_bytes(arrays)})
+            b = self._predict_branch(ckpt, {"/data/etth1_public.npz": npz})
             chk = sb.run(b, "python -c \"import numpy as np; print(np.load('/data/etth1_public.npz')['test_inputs'].shape[0])\"; "
                             "find / -xdev -name 'etth1_public*' 2>/dev/null | wc -l", 120)
             parts = chk.stdout.split()
             if parts[:2] != [str(m), "1"]:
-                results.append({"offset": r, "ok": False, "max_abs_diff": None, "n_compared": 0, "reason": f"probe file not in place in the branch: {chk.stdout.strip()[:80]}"})
-                continue
+                return {"offset": r, "ok": False, "max_abs_diff": None, "n_compared": 0, "reason": f"probe file not in place in the branch: {chk.stdout.strip()[:80]}"}
             run = sb.run(b, predict_cmd(), PREDICT_TIMEOUT_S)
             if run.timed_out or run.exit_code != 0:
-                results.append({"offset": r, "ok": False, "max_abs_diff": None, "n_compared": 0, "reason": "adapter failed on probe: " + (run.stderr or run.stdout).strip()[-300:]})
-                continue
+                return {"offset": r, "ok": False, "max_abs_diff": None, "n_compared": 0, "reason": "adapter failed on probe: " + (run.stderr or run.stdout).strip()[-300:]}
             probe_pred = independence.parse_predictions(sb.get_file(b, f"{OUTPUT}/predictions.csv"), m)
             cmp = independence.compare(full_pred, probe_pred, mapping)
-            results.append({"offset": r, **cmp})
             self.log(f"P2 offset {r}: windows in probe {m} (mapping stays in the orchestrator), max diff {cmp['max_abs_diff']}")
+            return {"offset": r, **cmp}
+
+        workers = max(1, min(self.parallel or PARALLEL, len(jobs)))
+        if workers == 1:
+            results = [one(j) for j in jobs]
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                results = list(pool.map(one, jobs))
         summary = independence.summarize(results)
         self.emit("nachlauf_independence", seed=seed, ok=summary["ok"], offsets=summary["offsets"], max_abs_diff=summary["max_abs_diff"], reason=summary["reason"])
         return summary
 
 
-def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[int] = independence.N_OFFSETS, out_dir: Path | None = None,
-             public_loader=None, rng=None, np_rng=None, log=print) -> Dossier:
-    """Fuehrt eine Einheit aus (Hand-Spec) und liefert das Dossier (mode="nachlauf"). out_dir: Ordner fuer events.jsonl (und dossier.json bei save)."""
-    if out_dir is not None:
-        Path(out_dir).mkdir(parents=True, exist_ok=True)
+PIP_IMPORT_ALIASES = {"scikit-learn": "sklearn", "pillow": "PIL", "opencv-python": "cv2", "opencv-python-headless": "cv2", "pyyaml": "yaml",
+                      "beautifulsoup4": "bs4", "protobuf": "google", "attrs": "attr", "python-dateutil": "dateutil", "msgpack-python": "msgpack"}
+MAX_ENV_SHOWN = 10
+
+
+def env_warning(diffs: list[dict], repo_imports: set[str] | None = None) -> str:
+    """Zeugnis-Warnung zur Umgebung: Anzahl der Abweichungen von den Abhaengigkeitsdateien plus die Pakete, die das Repo wirklich importiert (und deren
+    Version abweicht oder die fehlen). Die volle Liste bleibt im Dossier (`env_diff`). Ohne Importliste: die ersten Pakete."""
+    def imported(pkg: str) -> bool:
+        n = _norm(pkg)
+        return bool({n.replace("-", "_"), PIP_IMPORT_ALIASES.get(n, "")} & (repo_imports or set()))
+    rel = [d for d in diffs if imported(d["package"])] if repo_imports is not None else list(diffs)
+    shown = rel[:MAX_ENV_SHOWN]
+    parts = "; ".join(f"{d['package']} {d['installed'] or 'fehlt'} statt {d['required']}" for d in shown)
+    more = f" und {len(rel) - len(shown)} weitere" if len(rel) > len(shown) else ""
+    head = f"Umgebung weicht von den Abhaengigkeitsdateien des Repos ab: {len(diffs)} Pakete (volle Liste im Dossier)"
+    if repo_imports is None:
+        return f"{head}; erste: {parts}{more}"
+    return f"{head}; davon vom Repo importiert: {parts + more if rel else 'keines'}"
+
+
+def new_dossier(spec: UnitSpec) -> tuple[Claim, Dossier, dict]:
+    """Leeres Dossier (mode="nachlauf") mit Claim und Nachlauf-Feldern der Einheit."""
     claim = Claim(id=spec.claim_id or f"{spec.unit}_etth1_96_{spec.metric}", text=spec.claim_text, metric=spec.metric, target=spec.target,
-                  tolerance=spec.tolerance, source="Tabelle 2 (Hand-Spec)", origin="paper")
+                  tolerance=spec.tolerance, source=spec.claim_source, origin="paper")
     dossier = Dossier(paper_id=spec.paper_id, claims=[claim], mode="nachlauf", isolation=list(NACHLAUF_ISOLATION),
                       repo={"url": spec.repo_url, "commit": spec.commit})
     info: dict = {"repo": spec.repo_url, "commit": spec.commit, "command": spec.command, "command_source": spec.command_source,
                   "command_documented": None, "command_diff": [], "env_diff": [], "seed_method": spec.seed_note or spec.seed.get("kind"),
                   "own_metric": {}, "self_check": {}, "independence": {}, "rejected_by": {}, "test_loader": spec.test_loader, "predict_snapshot_raw_files": None}
     dossier.nachlauf[claim.id] = info
+    return claim, dossier, info
+
+
+def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[int] = independence.N_OFFSETS, out_dir: Path | None = None,
+             public_loader=None, rng=None, np_rng=None, log=print, parallel: int | None = None,
+             snapshots: tuple[str, str] | None = None, event_log: EventLog | None = None,
+             repo_imports: set[str] | None = None) -> Dossier:
+    """Fuehrt eine Einheit aus (Hand-Spec) und liefert das Dossier (mode="nachlauf"). out_dir: Ordner fuer events.jsonl (und dossier.json bei save)."""
+    if out_dir is not None:
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+    claim, dossier, info = new_dossier(spec)
     notes: list[str] = []
-    events = EventLog(Path(out_dir) / "events.jsonl" if out_dir else None)
+    events = event_log or EventLog(Path(out_dir) / "events.jsonl" if out_dir else None)
     run = _Run(sandbox, spec, events, log, public_loader or _load_public_local, rng, np_rng)
+    run.parallel = parallel
     measured: list[float] = []
     all_metrics: dict[str, list[float]] = {}
 
@@ -550,8 +639,11 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
         return finish()
     code_hash = hashlib.sha256(spec.adapter_source.encode()).hexdigest()[:12]
 
-    run.train_snap = sandbox.base_snapshot(etth1_task().image, training_setup_cmds(spec), label=f"nachlauf-{spec.unit}-train")
-    run.pred_snap = sandbox.base_snapshot(etth1_task().image, predict_setup_cmds(spec), label=f"nachlauf-{spec.unit}-predict")
+    if snapshots:     # Agentenlauf: Snapshots der Erkundung wiederverwenden
+        run.train_snap, run.pred_snap = snapshots
+    else:
+        run.train_snap = sandbox.base_snapshot(etth1_task().image, training_setup_cmds(spec), label=f"nachlauf-{spec.unit}-train")
+        run.pred_snap = sandbox.base_snapshot(etth1_task().image, predict_setup_cmds(spec), label=f"nachlauf-{spec.unit}-predict")
     raw = run.probe_predict_snapshot()
     info["predict_snapshot_raw_files"] = raw
     if raw:
@@ -576,16 +668,15 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
         dossier.attempts.append(Attempt(claim.id, "", run.train_snap, code_hash, spec.repo_seed or 0, "ungueltig", None, "; ".join(p1["forbidden"])))
         return finish()
     if probe["env_diff"]:
-        dossier.warnings.append("Umgebung weicht von den Abhaengigkeitsdateien des Repos ab: " + "; ".join(
-            f"{d['package']} {d['installed'] or 'fehlt'} statt {d['required']}" for d in probe["env_diff"]))
+        dossier.warnings.append(env_warning(probe["env_diff"], repo_imports))
     usable = [s for s in seeds if s == spec.repo_seed or spec.seed["kind"] in ("copy", "flag")]
     if len(usable) < len(seeds):
         notes.append(f"{len(seeds) - len(usable)} Seeds uebersprungen (kein Seed-Weg ausser dem Repo-Seed)")
     if len(usable) <= 1:
         dossier.warnings.append("eine Messung, keine Streuung")
-    offs = offsets if isinstance(offsets, list) else independence.random_offsets(offsets, rng)
-
     for seed in usable:
+        # Versaetze je Seed neu ziehen (Zufall aus `secrets`); eine feste Liste (Tests) gilt fuer alle Seeds
+        offs = offsets if isinstance(offsets, list) else independence.random_offsets(offsets, rng)
         def attempt(status, measured_=None, reason=None, metrics=None, droplast=None, diag=None, branch=""):
             dossier.attempts.append(Attempt(claim.id, branch, run.train_snap, code_hash, seed, status, measured_, reason,
                                             metrics=metrics, metrics_droplast=droplast, diagnostics=diag))
