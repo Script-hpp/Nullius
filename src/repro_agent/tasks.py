@@ -28,6 +28,12 @@ class Task:
     smoke_dim_names: tuple[str, ...] = ()
     # Nutzungspruefung: Kommando, das im Branch die Daten veraendert (Cora: Kanten entfernen), siehe ablation_gcn.md
     ablation_cmd: str = ""
+    # B1 (v5): Kommando, das im Branch die Labels der Validierungsknoten unter den Validierungsknoten vertauscht (feste Permutation, keine -1:
+    # mit -1 stuerzen auch Referenzen mit Early Stopping auf Validierung ab, `y[val_idx]` im Loss); "" = nicht maskierbar (ETTh1:
+    # Validierung ist ein Serienstueck ohne getrennte Ziele, Training darauf ist kein Label-Leck)
+    mask_val_cmd: str = ""
+    # B2 (v5): Kantenrichtungs-Probe auf einem synthetischen Graphen im Format des Datensatzes: (Pfad der npz im Branch, Knoten, Val, Test)
+    edge_probe: tuple[str, int, int, int] | None = None
     # Daten pro Lauf vorbereiten (z. B. Split k): Dateien aus harness/ kommen temporaer in den Branch, danach geloescht
     prepare_files: tuple[str, ...] = ()
     prepare_cmd: str = ""           # Template mit {dir} und {split}; laeuft MIT Netz (Rohdaten holen), vor dem Agenten-Code
@@ -112,6 +118,12 @@ def cora_task() -> Task:
         ablation_cmd=(
             "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
             "d['edges'] = np.zeros((0, 2), dtype=np.int64); "
+            "np.savez_compressed('/data/cora_public.npz', **d)\""
+        ),
+        edge_probe=("/data/cora_public.npz", 2708, 500, 1000),
+        mask_val_cmd=(
+            "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
+            "v = d['val_idx']; l = d['labels'].copy(); l[v] = np.random.RandomState(0).permutation(l[v]); d['labels'] = l; "
             "np.savez_compressed('/data/cora_public.npz', **d)\""
         ),
         smoke_ids_cmd=(   # erwartete ids = die ersten N (aufsteigend) von test_idx, aus dem Datensatz selbst
@@ -224,6 +236,8 @@ def cora_lcc_task() -> Task:
         code_notes=base.code_notes.replace("/data/cora_public.npz", "/data/cora_lcc_public.npz"),
         smoke_ids_cmd=base.smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
         ablation_cmd=base.ablation_cmd.replace("cora_public", "cora_lcc_public"),
+        mask_val_cmd=base.mask_val_cmd.replace("cora_public", "cora_lcc_public"),
+        edge_probe=("/data/cora_lcc_public.npz", 2485, 210, 2135),
         val_notes=base.val_notes,
         val_harness_files=("cora_lcc_val_eval.py",),
         val_eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_val_eval.py",
