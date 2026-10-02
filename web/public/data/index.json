@@ -52,5 +52,11 @@
   "timestamp": "20260930-204237",
   "catalog_id": "disc_2601_21866",
   "gesamtaussage": "Agenten-Fehler vermutet"
+ },
+ {
+  "id": "kipf_gcn_2017--20261002-110746",
+  "paper_id": "kipf_gcn_2017",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20261002-110746"
  }
 ]
