@@ -456,14 +456,14 @@ def apply_scope(details: list[SetupDetailV2], claim_text: str, dataset: str, pap
 
 
 VALUE_TOPICS = {"feature normalisation"}   # fuer diese Pflichtthemen zaehlt auch der Wert der Angabe, nicht nur ihr Thema
-FEATURE_NORM_RE = re.compile(r"normali|row|scal|preprocess|standardi|l2", re.I)
+FEATURE_NORM_RE = re.compile(r"normali|row|scal|standardi|\bl2[-_ ]?norm", re.I)
 FEATURE_NORM_EXCLUDE = re.compile(r"graph|training procedure|adjacen|laplacian|propagat|label", re.I)
 
 
 def missing_topics(details: list[SetupDetailV2], family: str) -> list[str]:
     """Pflichtthemen ohne gueltige (nicht ausgeschlossene) Angabe. Meist zaehlt nur das Thema der Angabe, nie ihr Wert; fuer "feature
     normalisation" gilt Thema ODER Wert (normali|row|scal) und weder Graph-Standardisierung noch Trainingsprotokoll."""
-    live = [d for d in details if not d.excluded]
+    live = [d for d in details if not d.excluded and not d.optional]   # nur optionale Angabe (README-Tipp) deckt kein Pflichtthema ab
     out = []
     for name, inc, exc in MANDATORY[family]:
         if name in VALUE_TOPICS:
@@ -670,12 +670,12 @@ def _rank_index(d: SetupDetailV2) -> int:
 
 
 def plan_details_v2(details: list[SetupDetail]) -> list[SetupDetailV2]:
-    return [d for d in details if isinstance(d, SetupDetailV2) and not d.excluded and not d.optional]
+    return [d for d in details if isinstance(d, SetupDetailV2) and not d.excluded]
 
 
 def find_conflicts_v2(details: list[SetupDetailV2]) -> list[list[SetupDetailV2]]:
     """Gruppen (nach Rang sortiert) von Angaben zum selben Thema mit verschiedenem Wert (nur Angaben, die in den Plan gehen)."""
-    live = sorted(plan_details_v2(details), key=_rank_index)
+    live = sorted((d for d in plan_details_v2(details) if not d.optional), key=_rank_index)   # optionale Angaben: im Plan markiert, nie gleichwertiger Wert
     groups: list[list[SetupDetailV2]] = []
     for d in live:
         for g in groups:

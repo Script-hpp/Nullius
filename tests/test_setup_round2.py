@@ -290,27 +290,24 @@ def test_optional_re_binding_value_with_unrelated_modal_verb():
 
 # ---- optionale Angaben: Plan und Abdeckung ---------------------------------------------------------------------------------
 
-def test_optional_detail_is_not_in_plan_and_not_in_conflicts():
+def test_optional_detail_is_in_plan_marked_and_not_in_conflicts():
     opt = v2("dropout", "0.9", "repo-readme", "readme text", optional=True)
     bind = v2("dropout", "0.5", "paper", "paper")
-    assert sd.plan_details_v2([opt, bind]) == [bind]
+    assert sd.plan_details_v2([opt, bind]) == [opt, bind]
+    assert "[optional advice, not part of the experiment]" in sd.format_for_prompt_v2([opt, bind])
     assert sd.format_conflicts_v2([opt, bind]) == ""
 
 
-@pytest.mark.xfail(strict=True, reason="Regression (Pruefung in test_setup_v2 entfernt): optionale Angaben kommen nicht mehr in den Plan, "
-                                       "die Markierung 'optional advice' erreicht den Plan-Text nie (toter Zweig in format_for_prompt_v2)")
 def test_optional_advice_mark_reaches_plan_text():
     opt = v2("feature normalisation", "zero mean, unit std", "repo-readme", "readme text", optional=True, quote=SGC_SENTENCE)
     assert "optional advice" in sd.format_for_prompt_v2([opt])
 
 
-@pytest.mark.xfail(strict=True, reason="Regression: optionale README-Angabe zaehlt als Abdeckung des Pflichtthemas (kein zweiter Durchgang, "
-                                       "kein 'fehlt' im Dossier), steht aber nicht im Plan; die Angabe geht still verloren")
 def test_optional_only_feature_normalisation_is_not_silently_covered():
     opt = v2("feature normalisation", "zero mean, unit std", "repo-readme", "readme text", optional=True, quote=SGC_SENTENCE)
-    covered = "feature normalisation" not in sd.missing_topics([opt], "graph")
-    in_plan = "feature normalisation" in sd.format_for_prompt_v2([opt])
-    assert covered == in_plan                                           # entweder fehlt sie (zweiter Durchgang) oder sie steht im Plan
+    assert "feature normalisation" in sd.missing_topics([opt], "graph")  # nur optional: Thema fehlt, zweiter Durchgang sucht
+    text = sd.format_for_prompt_v2([opt])                               # und der Tipp bleibt, markiert, im Plan
+    assert "feature normalisation" in text and "optional advice" in text
 
 
 # ---- Abdeckung Merkmals-Normalisierung (abgeschwaechte Pruefungen) ----------------------------------------------------------
@@ -329,13 +326,33 @@ def test_feature_normalisation_not_covered_by_graph_standardisation():
     assert "feature normalisation" in sd.missing_topics([v2("standardization", "dataset_graph.standardize()")], "graph")
 
 
-@pytest.mark.xfail(strict=True, reason="Regression (Pruefung in test_setup_v2 umgekehrt): 'preprocess' in FEATURE_NORM_RE laesst "
-                                       "'removing self-loops' als Merkmals-Normalisierung gelten")
 def test_self_loop_removal_does_not_cover_feature_normalisation():
     assert "feature normalisation" in sd.missing_topics([v2("data preprocessing", "removing self-loops")], "graph")
 
 
-@pytest.mark.xfail(strict=True, reason="Regression: Muster 'l2' in FEATURE_NORM_RE trifft jede L2-Weight-Decay-Angabe; "
-                                       "fast jedes Dossier gilt damit als normalisierungsabgedeckt (Hauptursache laut failure_analysis_v4)")
 def test_l2_weight_decay_does_not_cover_feature_normalisation():
     assert "feature normalisation" in sd.missing_topics([v2("weight decay", "L2 5e-4")], "graph")
+
+
+def test_l2_row_normalisation_of_features_covers_feature_normalisation():
+    assert "feature normalisation" not in sd.missing_topics([v2("data preprocessing", "features are L2-normalised per row")], "graph")
+    assert "feature normalisation" not in sd.missing_topics([v2("preprocessing", "L2 norm of the feature vectors is one")], "graph")
+
+
+def test_optional_tip_plus_binding_normalisation_counts_as_covered():
+    opt = v2("feature normalisation", "zero mean, unit std", "repo-readme", "readme text", optional=True, quote=SGC_SENTENCE)
+    bind = v2("feature normalisation", "row-normalised", "paper", "paper")
+    assert "feature normalisation" not in sd.missing_topics([opt, bind], "graph")
+
+
+def test_second_pass_runs_when_only_optional_normalisation_tip_exists():
+    readme = Doc("repo-readme", f"Setup.\n\n{SGC_SENTENCE}.\n")
+    paper = Doc("paper", "Node features are row-normalized before training.")
+    def answer(user):
+        if "Earlier passes" in user:
+            return [item("feature normalisation", "row-normalized", "Node features are row-normalized before training", model="SGC", dataset="Cora")] if "row-normalized" in user else []
+        return [item("feature normalisation", "zero mean, unit std", SGC_SENTENCE, model="SGC", dataset="Cora")] if "Practical advice" in user else []
+    llm = FakeLLM(answer)
+    details, _, missing, info = sd.extract_setup_details_v2(llm, [paper, readme], "SGC erreicht Accuracy auf Cora", "Cora")
+    assert info["missing_first"][0] == "feature normalisation" and "feature normalisation" not in missing
+    assert any(d.optional for d in details) and any(not d.optional and d.source == "paper" for d in details)

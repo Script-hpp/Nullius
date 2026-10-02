@@ -66,3 +66,14 @@ Die Prüfungen in `tests/test_setup_v2.py` habe ich nicht zurückgedreht; Vorsch
 - Normalisierungsabdeckung: drei grüne Tests (Preprocess-Aufruf/Zeilenwert, unverwandte Themen, Graph-Standardisierung), xfail `test_self_loop_removal_…`, `test_l2_weight_decay_…`.
 
 Suite: `uv run pytest --deselect tests/test_harness_baselines.py --deselect tests/test_nebius_sandbox.py` → `593 passed, 2 skipped, 10 deselected, 9 xfailed`.
+
+## Behebung R1 und R2 (Auftrag 34), 2026-10-02
+
+Branch `round2-fix`. Nur `src/repro_agent/setup_details.py` (alle Stellen im Pfad `setup_v2`) und Tests.
+
+- **R1** `setup_details.py:459`: `FEATURE_NORM_RE` ohne `preprocess` und ohne nacktes `l2`; neu `\bl2[-_ ]?norm` (L2-Norm der Merkmale). "L2-normalised per row" trifft weiter über `normali`. "L2 5e-4" (Weight Decay) und "removing self-loops" decken nicht mehr ab.
+- **R2** `setup_details.py:466` (`missing_topics`): optionale Angaben zählen nicht als Abdeckung, Thema fehlt, zweiter Durchgang sucht. `plan_details_v2` (Zeile ~673) filtert `optional` nicht mehr, der Tipp steht markiert `[optional advice, not part of the experiment]` im Plan. `find_conflicts_v2` (Zeile ~678) nimmt optionale Angaben aus den Konflikten.
+- Tests grün: `test_l2_weight_decay_…`, `test_self_loop_removal_…`, `test_optional_advice_mark_reaches_plan_text`, `test_optional_only_feature_normalisation_is_not_silently_covered` (Maßstab angepasst: Thema fehlt und Tipp steht markiert im Plan), `test_optional_detail_is_in_plan_marked_and_not_in_conflicts` (umbenannt). Neu: `test_l2_row_normalisation_of_features_covers_feature_normalisation`, `test_optional_tip_plus_binding_normalisation_counts_as_covered`, `test_second_pass_runs_when_only_optional_normalisation_tip_exists`. In `tests/test_setup_v2.py` zurückgesetzt: `assert not cover(... "removing self-loops")`, `"optional advice" in text`.
+- Alter Pfad unverändert (`test_old_path_unchanged_without_switch` grün). Suite: `600 passed, 2 skipped, 10 deselected, 5 xfailed`.
+- Offen: R3 bis R6 (5 `xfail` strict).
+- Die Behebung wurde nicht in Schritt A gemessen; Schritt A bleibt "nicht bestanden".
