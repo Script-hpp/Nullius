@@ -102,6 +102,7 @@ FORBIDDEN_HELP_PATTERNS = [
     r"including\s+(the\s+)?(test|validation)",
     r"(use|using)\s+(all|the\s+entire|the\s+whole)\s+(the\s+)?data",
     r"train[_\s-]*only",
+    r"(on|with)\s+(the\s+)?full\s+(input\s+)?data",      # LTSF-Linear: 'perform training on full input dataset without validation and testing'
 ]
 
 _LOG_RE = re.compile(r"\d*>&\d+|\d*>>?\s*[^\s&|;]+|\bnohup\b|&\s*$")
@@ -525,7 +526,7 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
                       repo={"url": spec.repo_url, "commit": spec.commit})
     info: dict = {"repo": spec.repo_url, "commit": spec.commit, "command": spec.command, "command_source": spec.command_source,
                   "command_documented": None, "command_diff": [], "env_diff": [], "seed_method": spec.seed_note or spec.seed.get("kind"),
-                  "own_metric": {}, "self_check": {}, "independence": {}, "test_loader": spec.test_loader, "predict_snapshot_raw_files": None}
+                  "own_metric": {}, "self_check": {}, "independence": {}, "rejected_by": {}, "test_loader": spec.test_loader, "predict_snapshot_raw_files": None}
     dossier.nachlauf[claim.id] = info
     notes: list[str] = []
     events = EventLog(Path(out_dir) / "events.jsonl" if out_dir else None)
@@ -544,6 +545,7 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
     violations = find_violations(spec.adapter_source)
     if violations:
         notes.append("Adapter abgelehnt (statische Codepruefung): " + "; ".join(violations))
+        info["rejected_by"][str(seeds[0] if seeds else 0)] = ["static"]
         dossier.attempts.append(Attempt(claim.id, "", "", "", seeds[0] if seeds else 0, "ungueltig", None, "; ".join(violations)))
         return finish()
     code_hash = hashlib.sha256(spec.adapter_source.encode()).hexdigest()[:12]
@@ -570,6 +572,7 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
             f"{d['flag']}: {d['doc']!r} -> {d['command']!r}" for d in p1["diff"]))
     if not p1["valid"]:
         notes.append("P1: Startbefehl abgelehnt (" + "; ".join(p1["forbidden"]) + ")")
+        info["rejected_by"][str(spec.repo_seed or 0)] = ["P1"]
         dossier.attempts.append(Attempt(claim.id, "", run.train_snap, code_hash, spec.repo_seed or 0, "ungueltig", None, "; ".join(p1["forbidden"])))
         return finish()
     if probe["env_diff"]:
@@ -607,15 +610,20 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
             sc = self_check(t.get("own_metric"), p["metrics"], p.get("metrics_droplast"), spec.test_loader, spec.metric)
             info["self_check"][str(seed)] = sc
             run.emit("nachlauf_self_check", seed=seed, status=sc["status"], distance=sc["distance"], compared_with=sc["compared_with"])
-            if sc["status"] == "ungueltig":
-                notes.append(f"Seed {seed}: P3 ungueltig (Abstand {sc['distance']:.4f})")
-                attempt("ungueltig", reason=sc["reason"], metrics=p["metrics"], droplast=p.get("metrics_droplast"), branch=p["branch"])
-                continue
+            # P2 laeuft auch bei P3-Verstoss: jede Pruefung meldet ihr eigenes Ergebnis (Negativkontrolle: Abschreiber faellt bei P2 UND P3 auf)
             ind = run.independence(ckpt, p["full_pred"], offs, seed)
             info["independence"][str(seed)] = ind
+            failed, reasons = [], []
+            if sc["status"] == "ungueltig":
+                failed.append("P3")
+                reasons.append(f"P3: {sc['reason']} (distance {sc['distance']:.4f})")
             if not ind["ok"]:
-                notes.append(f"Seed {seed}: P2 ungueltig ({ind['reason']})")
-                attempt("ungueltig", reason=f"P2: {ind['reason']}", metrics=p["metrics"], droplast=p.get("metrics_droplast"), branch=p["branch"])
+                failed.append("P2")
+                reasons.append(f"P2: {ind['reason']}")
+            if failed:
+                info["rejected_by"][str(seed)] = failed
+                notes.append(f"Seed {seed}: ungueltig ({', '.join(failed)})")
+                attempt("ungueltig", reason="; ".join(reasons), metrics=p["metrics"], droplast=p.get("metrics_droplast"), branch=p["branch"])
                 continue
             value = p["metrics"][spec.metric]
             measured.append(value)

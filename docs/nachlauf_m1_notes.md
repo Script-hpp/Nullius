@@ -46,3 +46,38 @@ cd ../research-prestudy && uv run python scripts/run_nachlauf_manual.py --unit r
 ```
 Danach `--unit dlinear`. Erwartung aus dem Vorversuch (nur zum Vergleich, nicht als Kriterium): RLinear Harness alle Fenster ca. 0,3698 (Repo-Seed), Eigenausgabe 0,3660 gegen `drop_last` 128; DLinear 0,3841 gegen 0,3841.
 Ausgabe: `runs/nachlauf_manual/<unit>/<zeitstempel>/{dossier.json,events.jsonl}`.
+
+## M2: Negativkontrollen (Auftrag 36, Branch `nachlauf-m2` von `nachlauf-m1` `ead80a3`)
+
+Nichts in einer echten Sandbox gelaufen. Fixtures liegen unter `scripts/nachlauf_manual_adapters/negative/` (jeweils der Hand-Adapter RTSF plus ein markierter Block `# --- negative control X: begin/end`; der Test prüft, dass sie sich nur dort vom ehrlichen Adapter unterscheiden und die statische Prüfung bestehen, damit P2/P3 getestet werden und nicht `code_check`).
+
+| Kontrolle | Einheit | Fixture / Spec | erwartet | Ergebnis Fake-Test |
+|---|---|---|---|---|
+| (a) Abschreiber | RLinear | `a_copy_neighbors_rtsf.py`: `pred[:n-96] = x[96:, -96:, :]` (Fenster i+96 enthält das Ziel von i), sonst ehrliches Modell; in der Probe fehlt der Nachbar, Rückfall aufs Modell | P2 | P2 **und** P3 lehnen ab; Grund „prediction depends on other windows" |
+| (b) Befehl | DLinear | Spec mit `--train_only True` | P1 | P1 lehnt vor jedem Training ab, kein Befehl mit `unshare`, der Trainings-Snapshot-Branch liest nur Dateien |
+| (c) vertauscht | RLinear | `c_shifted_rtsf.py` (`np.roll(pred, 1, axis=0)`), `c_permuted_rtsf.py` (feste Permutation) | P3 oder P2 | Verschiebung: P2 immer; P3 nur mit Eigenausgabe und MSE-Änderung > 0,001. Permutation: P3 und P2 |
+
+Skript: `scripts/run_nachlauf_manual.py --negative a|b|c [--variant shift|permute] [--dry-run]` (Repo-Seed, 8 Versätze). Ausgabe eine Zeile `negative X (…): abgelehnt: ja/nein | Pruefung: … (erwartet: …) | Grund: …`. Exit 0 nur, wenn abgelehnt **und** durch eine erwartete Prüfung (a: P2, b: P1, c: P3 oder P2).
+
+**Änderung an M1 (`nachlauf.py`):** P2 läuft jetzt auch, wenn P3 schon ungültig meldet; alle ablehnenden Prüfungen stehen im Grund und in `nachlauf[claim]["rejected_by"][seed]` (auch `["P1"]`, `["static"]`). Vorher hätte (a) wegen MSE ≈ 0 schon an P3 geendet und P2 wäre nie gelaufen; die Vorab-Festlegung verlangt aber, dass der Abschreiber an P2 scheitert.
+
+**Befund zu (c), welche Prüfung greift.**
+- **P2 greift strukturell** bei jeder Reihenfolgeänderung: P2 vergleicht je Position der Probe mit dem vollen Lauf; die Vorhersage unter der ID von Fenster i stammt nach der Verschiebung von Fenster i-1, und in der Probe liegt dort ein anderes Fenster oder Rauschen.
+- **P3 greift hier ebenfalls**, aber nur wenn der Autorencode eine eigene Metrik ausgibt. Echte Zahlen, lokal aus den Vorhersagen von Schritt 1 gerechnet (RLinear, Seeds 1024, 0, 1, 2, 3; kein neuer Lauf, kein Sandbox-Aufruf; Rechenweg: `parse_predictions`, `np.roll`, `etth1_data.targets`): Verschiebung um 1 Fenster hebt den MSE von 0,370 auf 0,428 (alle Fenster) bzw. von 0,3660 auf 0,4238 (`drop_last` 128, Seed 1024); Abstand zur Eigenausgabe 0,055 bis 0,058 gegen die Grenze 0,001. Zufällige Permutation: 1,21, Abstand 0,85. Der ehrliche Wert stimmt auf 0,0000.
+- Also **kein Befund gegen die Vorab-Festlegung**: Verschiebung um 1 wird von P2 immer und von P3 (bei RLinear) mit großem Abstand abgelehnt. Grenze: Bei einem Repo ohne Eigenausgabe („nicht geprüft") oder einem Modell mit sehr glatten Vorhersagen (Verschiebung ändert den MSE um < 0,001) bleibt P2 allein. Im Fake-Test mit synthetischem Signal ist das als Fall „ohne Eigenausgabe: nur P2" abgedeckt.
+- Dieselbe Rechnung für (a) mit dem Idealfall „Vorhersage = Ziel für Fenster 0 bis 2688": MSE 0,0164 (alle Fenster), 0,0000 (`drop_last` 128), Abstand zur Eigenausgabe 0,366; P3 würde ebenfalls ablehnen.
+
+**Weitere Änderungen:**
+- `FORBIDDEN_HELP_PATTERNS` um `(on|with) (the )?full (input )?data` ergänzt: der echte LTSF-Hilfetext von `--train_only` („perform training on full input dataset without validation and testing") passte auf kein altes Muster (nur der Name fing ihn ab). Test mit anderem Flag-Namen und dem echten Hilfetext.
+- Beide Skripte (`run_nachlauf_manual.py`, `prestudy_nachlauf/sandbox_run.py`) haben `default_factory()` mit der Importzeile der echten Fabrik; `tests/test_nachlauf_m2.py::test_scripts_import_the_real_sandbox_factory_path` führt sie ohne Client aus. Gegenprobe: mit der alten Zeile `from repro_agent.sandbox import get_sandbox` ist der Test für `run_nachlauf_manual.py` rot (`ImportError`).
+- Zu (b): Das Trainings-Snapshot wird vor P1 noch gebaut und ein Branch liest Repo-Dateien (Hilfetexte für P1). „Kein Trainings-Branch" heißt: kein Branch führt den Startbefehl aus.
+
+**Startbefehle für den Reviewer** (je eine Zeile Ausgabe, Exit 0 nur wenn abgelehnt):
+```
+cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative a --dry-run
+cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative a
+cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative b
+cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative c
+cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative c --variant permute
+```
+(b) bricht vor dem Training ab und braucht nur die beiden Snapshots und einen Lese-Branch; (a) und (c) laufen einmal Training (ca. 25 s) plus Vorhersage, Harness und 8 P2-Versätze.

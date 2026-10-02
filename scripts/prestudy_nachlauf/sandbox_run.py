@@ -287,6 +287,12 @@ def dry_run(name: str, seeds: list[int]) -> None:
         print("  $", eval_cmd(f"{SANDBOX_HARNESS_DIR}-<zufall>"))
 
 
+def default_factory():
+    """Echte Sandbox-Fabrik, derselbe Importpfad wie im Betrieb (tests/test_nachlauf_m2.py importiert ihn ohne Client)."""
+    from repro_agent.sandbox.base import get_sandbox
+    return lambda: get_sandbox("nebius")
+
+
 def main(argv: list[str] | None = None, sandbox_factory=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--unit", choices=sorted(UNITS), required=True)
@@ -300,8 +306,7 @@ def main(argv: list[str] | None = None, sandbox_factory=None) -> int:
         dry_run(a.unit, seeds)
         return 0
     if sandbox_factory is None:
-        from repro_agent.sandbox.base import get_sandbox
-        sandbox_factory = lambda: get_sandbox("nebius")  # noqa: E731
+        sandbox_factory = default_factory()
     sb = sandbox_factory()
     snapshot = a.snapshot or sb.base_snapshot(etth1_task().image, setup_cmds(), label=SNAPSHOT_LABEL)
     print("snapshot:", snapshot, flush=True)
