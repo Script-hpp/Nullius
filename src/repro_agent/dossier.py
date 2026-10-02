@@ -106,6 +106,7 @@ class Dossier:
     # Kurzbeschreibung und Kopf des Papers (paper_head.build_head): {text, source, authors, year, institutions, ...}; nur Bericht, nie in einem Prompt des Agenten
     summary: dict | None = None
     explanations: dict = field(default_factory=dict)   # claim_id -> {"items": [...], "dropped": n}; nur bei teilweise/nicht reproduziert
+    setup_missing: list = field(default_factory=list)   # v5 (setup_v2): Pflichtthemen der Task-Familie ohne belegte Angabe ("nicht gefunden")
     val_label_check: dict = field(default_factory=dict)   # claim_id -> {Kandidat: B1-Pruefung (Maske der Val-Labels + statische Nutzung)}
     edge_direction: dict = field(default_factory=dict)   # claim_id -> Liste B2-Proben (Kantenrichtung, synthetischer Graph)
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
@@ -138,6 +139,7 @@ class Dossier:
             fault_repairs=data.get("fault_repairs", {}),
             repo_diff=data.get("repo_diff", {}),
             val_label_check=data.get("val_label_check", {}),
+            setup_missing=data.get("setup_missing", []),
             edge_direction=data.get("edge_direction", {}),
             droplast_notes=data.get("droplast_notes", {}),
             community=data.get("community"),

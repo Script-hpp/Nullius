@@ -77,8 +77,11 @@ def render_markdown(dossier: Dossier) -> str:
         lines.append("## Setup-Details aus dem Paper (Tavily-Rolle 4, wörtlich belegt)")
         lines.extend(
             f"- [{d.get('source', 'paper')}] {d['topic']}: {d['value']} — \"{d['quote']}\""
+            + (f" (not in the plan: {d['excluded']})" if d.get("excluded") else "")
             for d in dossier.setup_details
         )
+        if getattr(dossier, "setup_missing", None):
+            lines.append("- Not found in the sources: " + "; ".join(dossier.setup_missing))
         lines.append("")
     if dossier.isolation:
         lines.append("## Isolation (aktive Schutzschichten)")
