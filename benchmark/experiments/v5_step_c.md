@@ -28,3 +28,15 @@ Ist die Bedingung nicht erfüllt: kein v5. Der Benchmark bleibt bei v4, das Erge
 - Die Läufe des Probelaufs zählen nicht in v5. v5 erzeugt alle Generierungen neu.
 - Die acht bisherigen Einheiten sind Entwicklungs-Einheiten; RLinear und SparseTSF werden in Schritt A bis C nicht angefasst und in v5 getrennt berichtet.
 - v5 bekommt eine eigene Vorab-Festlegung (`benchmark_v5.md`) vor dem Start.
+
+## Nachtrag 2026-10-02 (Abweichung von der Startbedingung, vor dem Probelauf festgehalten)
+
+Schritt A hat nach den zwei erlaubten Runden **Ziel 3 verfehlt** (Ergebnis `results/v5_step_a.md`: 86,7 % korrekt, Normalisierung 6 von 7, aber der SGC-README-Tipp bleibt als gültige Angabe im Plan). Nach der Regel oben ist Bedingung 1 nicht erfüllt.
+
+**Entscheidung des Nutzers:** Der Probelauf wird trotzdem gefahren, als **offen deklarierte Abweichung**. Begründung: Ziel 1 und 2 sind erreicht, die verbleibende Ursache ist benannt, und nur der Probelauf zeigt, ob der Abstand zum Paperwert schrumpft.
+
+Dafür gilt, vor dem Lauf festgelegt:
+- Code-Stand des Probelaufs: Runde 2 **plus** die Korrektur des Musters für "optional advice" (README-Sätze mit "advice", "often", "helpful", "recommended"), mit Test. Diese Korrektur wurde in Schritt A **nicht** gemessen; es gibt keine dritte Messrunde von Schritt A, und Schritt A gilt weiter als nicht bestanden.
+- Einheiten, Arm, Generierungen, Store, Kostenstopp: unverändert wie oben.
+- Bedingung 2 bleibt unverändert: echter Claim bei mindestens 2 der 3 Einheiten "reproduziert", kein Placebo "reproduziert". Höchstens zwei Probeläufe insgesamt, wie oben.
+- Erfüllt der Probelauf Bedingung 2, **darf** v5 mit eigener Vorab-Festlegung starten; das README nennt dann, dass Schritt A Ziel 3 verfehlt hat und v5 auf Entscheidung des Nutzers lief. Erfüllt er sie nicht: kein v5.
