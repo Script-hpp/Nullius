@@ -127,10 +127,12 @@ def load_rows(store: Path) -> list[dict]:
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    v4 = "--v4" in sys.argv
+    v5c = "--v5c" in sys.argv
+    v4 = "--v4" in sys.argv or v5c
     v3 = "--v3" in sys.argv or v4   # v4 = v3-Konfiguration mit neuem Code-Stand (Block A), eigener Store
     v2, dry = "--v2" in sys.argv or v3, "--dry-run" in sys.argv
-    claims_map, store = (CLAIMS_V2, STORE_V4 if v4 else STORE_V3 if v3 else STORE_V2) if v2 else (CLAIMS, STORE)
+    store = REPO_ROOT / "runs" / "v5_step_c.jsonl" if v5c else (STORE_V4 if v4 else STORE_V3 if v3 else STORE_V2) if v2 else STORE
+    claims_map = CLAIMS_V2 if v2 else CLAIMS
     papers = args or list(claims_map)
     all_papers = yaml.safe_load((REPO_ROOT / "benchmark" / "papers.yaml").read_text())["papers"]
     yaml_targets = {c["id"]: c["target"] for p in all_papers for c in p.get("claims", [])}
@@ -141,11 +143,20 @@ def main() -> None:
     for paper in papers:
         claim_ids = list(claims_map[paper])
         kw = {"graph_repair": True} if v2 else {}
-        arms = {
-            "A_ohne_tavily": Orchestrator(use_tavily=False, fresh=True, setup_details=False, claim_ids=claim_ids, tavily_mode="fixture", **kw),
-            "B_mit_tavily": Orchestrator(use_tavily=True, fresh=True, setup_details=True, claim_ids=claim_ids, tavily_mode="fixture",
-                                         error_search_live=v3, **kw),   # v3: Rolle 5 live, Rollen 2/4 aus Fixtures
-        }
+        if v5c:
+            kw["setup_v2"] = True
+            kw["llm_cache"] = False
+        if v5c:
+            arms = {
+                "B_mit_tavily": Orchestrator(use_tavily=True, fresh=True, setup_details=True, claim_ids=claim_ids, tavily_mode="fixture",
+                                             error_search_live=v3, **kw),
+            }
+        else:
+            arms = {
+                "A_ohne_tavily": Orchestrator(use_tavily=False, fresh=True, setup_details=False, claim_ids=claim_ids, tavily_mode="fixture", **kw),
+                "B_mit_tavily": Orchestrator(use_tavily=True, fresh=True, setup_details=True, claim_ids=claim_ids, tavily_mode="fixture",
+                                             error_search_live=v3, **kw),
+            }
         snapshots: dict = {}
         for orch in arms.values():
             orch._snapshots = snapshots
