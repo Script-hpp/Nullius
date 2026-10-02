@@ -300,7 +300,7 @@ def main(argv: list[str] | None = None, sandbox_factory=None) -> int:
         dry_run(a.unit, seeds)
         return 0
     if sandbox_factory is None:
-        from repro_agent.sandbox import get_sandbox
+        from repro_agent.sandbox.base import get_sandbox
         sandbox_factory = lambda: get_sandbox("nebius")  # noqa: E731
     sb = sandbox_factory()
     snapshot = a.snapshot or sb.base_snapshot(etth1_task().image, setup_cmds(), label=SNAPSHOT_LABEL)
