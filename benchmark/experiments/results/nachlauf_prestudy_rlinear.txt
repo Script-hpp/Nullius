@@ -1,0 +1,429 @@
+# Rohausgaben Vorversuch Nachlauf, rlinear (Handarbeit, lokal, kein Agent)
+## Klon: https://github.com/plumprc/RTSF.git @ 0fec00104f754f4fbf795b9b4da5fa2459b32e76
+## git status --short (Klon): []  git diff --stat: []
+## ETTh1.csv sha256: f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066  rtsf/dataset/ETTh1.csv
+## Pakete (venv, uv pip freeze):
+matplotlib==3.11.2
+numpy==1.26.4
+pandas==3.0.6
+scikit-learn==1.9.1
+torch==2.14.1+cpu
+
+########## Seed 1024: Ausgabe des Autorencodes (ohne iters/speed-Zeilen)
+Args in experiment:
+Namespace(is_training=1, model='RLinear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, drop=0.1, num_workers=10, itr=1, train_epochs=15, batch_size=128, patience=10, learning_rate=0.005, l
+Use CPU
+Number of parameters: 0.03M
+>>>>>>>start training : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0>>>>>>>>>>>>>>>>>>>>>>>>>>
+train 8209
+val 2785
+test 2785
+Epoch: 1 cost time: 1.3295538425445557
+Epoch: 1, Steps: 64 | Train Loss: 0.3998531 Vali Loss: 0.6905769 Test Loss: 0.3863159
+Validation loss decreased (inf --> 0.690577).  Saving model ...
+Updating learning rate to 0.005
+Epoch: 2 cost time: 1.3259522914886475
+Epoch: 2, Steps: 64 | Train Loss: 0.3549892 Vali Loss: 0.7105696 Test Loss: 0.3771290
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0025
+Epoch: 3 cost time: 1.1131243705749512
+Epoch: 3, Steps: 64 | Train Loss: 0.3472267 Vali Loss: 0.6983859 Test Loss: 0.3732685
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 0.00125
+Epoch: 4 cost time: 3.5427236557006836
+Epoch: 4, Steps: 64 | Train Loss: 0.3431285 Vali Loss: 0.6788922 Test Loss: 0.3688122
+Validation loss decreased (0.690577 --> 0.678892).  Saving model ...
+Updating learning rate to 0.000625
+Epoch: 5 cost time: 1.4643115997314453
+Epoch: 5, Steps: 64 | Train Loss: 0.3408599 Vali Loss: 0.6790074 Test Loss: 0.3664255
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0003125
+Epoch: 6 cost time: 1.624596118927002
+Epoch: 6, Steps: 64 | Train Loss: 0.3395128 Vali Loss: 0.6874936 Test Loss: 0.3672322
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 0.00015625
+Epoch: 7 cost time: 1.3995535373687744
+Epoch: 7, Steps: 64 | Train Loss: 0.3388487 Vali Loss: 0.6816951 Test Loss: 0.3662999
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 7.8125e-05
+Epoch: 8 cost time: 1.2551729679107666
+Epoch: 8, Steps: 64 | Train Loss: 0.3385364 Vali Loss: 0.6799623 Test Loss: 0.3660355
+EarlyStopping counter: 4 out of 10
+Updating learning rate to 3.90625e-05
+Epoch: 9 cost time: 1.202944278717041
+Epoch: 9, Steps: 64 | Train Loss: 0.3386447 Vali Loss: 0.6765864 Test Loss: 0.3659846
+Validation loss decreased (0.678892 --> 0.676586).  Saving model ...
+Updating learning rate to 1.953125e-05
+Epoch: 10 cost time: 1.821519374847412
+Epoch: 10, Steps: 64 | Train Loss: 0.3384184 Vali Loss: 0.6761829 Test Loss: 0.3659371
+Validation loss decreased (0.676586 --> 0.676183).  Saving model ...
+Updating learning rate to 9.765625e-06
+Epoch: 11 cost time: 1.5325136184692383
+Epoch: 11, Steps: 64 | Train Loss: 0.3379224 Vali Loss: 0.6787587 Test Loss: 0.3659639
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 4.8828125e-06
+Epoch: 12 cost time: 1.6217913627624512
+Epoch: 12, Steps: 64 | Train Loss: 0.3383104 Vali Loss: 0.6757147 Test Loss: 0.3659567
+Validation loss decreased (0.676183 --> 0.675715).  Saving model ...
+Updating learning rate to 2.44140625e-06
+Epoch: 13 cost time: 1.1173667907714844
+Epoch: 13, Steps: 64 | Train Loss: 0.3382157 Vali Loss: 0.6773793 Test Loss: 0.3659565
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 1.220703125e-06
+Epoch: 14 cost time: 2.9967668056488037
+Epoch: 14, Steps: 64 | Train Loss: 0.3382652 Vali Loss: 0.6811404 Test Loss: 0.3659554
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 6.103515625e-07
+Epoch: 15 cost time: 2.06416392326355
+Epoch: 15, Steps: 64 | Train Loss: 0.3381041 Vali Loss: 0.6758416 Test Loss: 0.3659546
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 3.0517578125e-07
+>>>>>>>testing : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+test 2785
+mse:0.3660, mae:0.3909, R2:0.6710
+Inference time:  0.798184871673584
+python -u run.py --is_training 1 --data_path ETTh1.csv --data ETTh1 --feature  512,49s user 20,82s system 1219% cpu 43,745 total
+---- Zuordnungspruefung seed 1024:
+{"repo_shape": [2785, 96, 7], "harness_shape": [2785, 96, 7], "max_abs_diff": 1.532107773982716e-14, "ok": true}
+---- Harness seed 1024:
+{"status": "ok", "metrics": {"mse": 0.369785293172564, "mae": 0.3917706992351982}, "baselines": {"repeat": {"mse": 1.294370594784508, "mae": 0.7131813544413361}, "zero": {"mse": 1.1099284100805413, "mae": 0.795963380354695}}, "diagnostics": {"pred_std": 0.9011323013970546, "target_std": 1.0527909706034841, "corr": 0.8172509238360576}, "metrics_droplast": {"32": {"mse": 0.36974611314098804, "mae": 0.39176332730184943, "windows": 2784, "dropped": 1}, "64": {"mse": 0.36864760850131734, "mae": 0.39148018248565447, "windows": 2752, "dropped": 33}, "128": {"mse": 0.365956700452719, "mae": 0.39090479301302544, "windows": 2688, "dropped": 97}, "256": {"mse": 0.36240082197901985, "mae": 0.38866935574057143, "windows": 2560, "dropped": 225}}}
+
+########## Seed 0: Ausgabe des Autorencodes (ohne iters/speed-Zeilen)
+Args in experiment:
+Namespace(is_training=1, model='RLinear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, drop=0.1, num_workers=10, itr=1, train_epochs=15, batch_size=128, patience=10, learning_rate=0.005, l
+Use CPU
+Number of parameters: 0.03M
+>>>>>>>start training : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0>>>>>>>>>>>>>>>>>>>>>>>>>>
+train 8209
+val 2785
+test 2785
+Epoch: 1 cost time: 0.6785376071929932
+Epoch: 1, Steps: 64 | Train Loss: 0.3992701 Vali Loss: 0.7028270 Test Loss: 0.3854066
+Validation loss decreased (inf --> 0.702827).  Saving model ...
+Updating learning rate to 0.005
+Epoch: 2 cost time: 0.8188037872314453
+Epoch: 2, Steps: 64 | Train Loss: 0.3546308 Vali Loss: 0.7119210 Test Loss: 0.3793594
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0025
+Epoch: 3 cost time: 0.9771673679351807
+Epoch: 3, Steps: 64 | Train Loss: 0.3465083 Vali Loss: 0.6957484 Test Loss: 0.3720488
+Validation loss decreased (0.702827 --> 0.695748).  Saving model ...
+Updating learning rate to 0.00125
+Epoch: 4 cost time: 0.5958201885223389
+Epoch: 4, Steps: 64 | Train Loss: 0.3427744 Vali Loss: 0.6738581 Test Loss: 0.3690560
+Validation loss decreased (0.695748 --> 0.673858).  Saving model ...
+Updating learning rate to 0.000625
+Epoch: 5 cost time: 0.6231653690338135
+Epoch: 5, Steps: 64 | Train Loss: 0.3409283 Vali Loss: 0.6844969 Test Loss: 0.3679999
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0003125
+Epoch: 6 cost time: 1.2761099338531494
+Epoch: 6, Steps: 64 | Train Loss: 0.3392300 Vali Loss: 0.6777701 Test Loss: 0.3662159
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 0.00015625
+Epoch: 7 cost time: 0.9923882484436035
+Epoch: 7, Steps: 64 | Train Loss: 0.3389604 Vali Loss: 0.6809945 Test Loss: 0.3662386
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 7.8125e-05
+Epoch: 8 cost time: 1.0176148414611816
+Epoch: 8, Steps: 64 | Train Loss: 0.3383168 Vali Loss: 0.6753440 Test Loss: 0.3659036
+EarlyStopping counter: 4 out of 10
+Updating learning rate to 3.90625e-05
+Epoch: 9 cost time: 0.9846656322479248
+Epoch: 9, Steps: 64 | Train Loss: 0.3383073 Vali Loss: 0.6789197 Test Loss: 0.3658131
+EarlyStopping counter: 5 out of 10
+Updating learning rate to 1.953125e-05
+Epoch: 10 cost time: 1.07496976852417
+Epoch: 10, Steps: 64 | Train Loss: 0.3386272 Vali Loss: 0.6749815 Test Loss: 0.3658741
+EarlyStopping counter: 6 out of 10
+Updating learning rate to 9.765625e-06
+Epoch: 11 cost time: 0.941821813583374
+Epoch: 11, Steps: 64 | Train Loss: 0.3383896 Vali Loss: 0.6805975 Test Loss: 0.3658720
+EarlyStopping counter: 7 out of 10
+Updating learning rate to 4.8828125e-06
+Epoch: 12 cost time: 1.8407838344573975
+Epoch: 12, Steps: 64 | Train Loss: 0.3382325 Vali Loss: 0.6782165 Test Loss: 0.3658679
+EarlyStopping counter: 8 out of 10
+Updating learning rate to 2.44140625e-06
+Epoch: 13 cost time: 1.0545344352722168
+Epoch: 13, Steps: 64 | Train Loss: 0.3382596 Vali Loss: 0.6803063 Test Loss: 0.3658659
+EarlyStopping counter: 9 out of 10
+Updating learning rate to 1.220703125e-06
+Epoch: 14 cost time: 0.6416683197021484
+Epoch: 14, Steps: 64 | Train Loss: 0.3383915 Vali Loss: 0.6798381 Test Loss: 0.3658662
+EarlyStopping counter: 10 out of 10
+Early stopping
+>>>>>>>testing : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+test 2785
+mse:0.3691, mae:0.3937, R2:0.6682
+Inference time:  0.6127254962921143
+
+real	0m22,748s
+user	4m20,545s
+sys	0m18,001s
+---- Zuordnungspruefung seed 0:
+{"repo_shape": [2785, 96, 7], "harness_shape": [2785, 96, 7], "max_abs_diff": 1.532107773982716e-14, "ok": true}
+---- Harness seed 0:
+{"status": "ok", "metrics": {"mse": 0.3728735632554512, "mae": 0.39445704676563326}, "baselines": {"repeat": {"mse": 1.294370594784508, "mae": 0.7131813544413361}, "zero": {"mse": 1.1099284100805413, "mae": 0.795963380354695}}, "diagnostics": {"pred_std": 0.9046349540982198, "target_std": 1.0527909706034841, "corr": 0.8158063892194667}, "metrics_droplast": {"32": {"mse": 0.37283855492356716, "mae": 0.3944550701805505, "windows": 2784, "dropped": 1}, "64": {"mse": 0.3718379039482203, "mae": 0.394241950489953, "windows": 2752, "dropped": 33}, "128": {"mse": 0.3690560045041818, "mae": 0.39374802988850516, "windows": 2688, "dropped": 97}, "256": {"mse": 0.3658673516328491, "mae": 0.3918150028055854, "windows": 2560, "dropped": 225}}}
+
+########## Seed 1: Ausgabe des Autorencodes (ohne iters/speed-Zeilen)
+Args in experiment:
+Namespace(is_training=1, model='RLinear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, drop=0.1, num_workers=10, itr=1, train_epochs=15, batch_size=128, patience=10, learning_rate=0.005, l
+Use CPU
+Number of parameters: 0.03M
+>>>>>>>start training : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0>>>>>>>>>>>>>>>>>>>>>>>>>>
+train 8209
+val 2785
+test 2785
+Epoch: 1 cost time: 0.6637098789215088
+Epoch: 1, Steps: 64 | Train Loss: 0.3978866 Vali Loss: 0.6986911 Test Loss: 0.3802677
+Validation loss decreased (inf --> 0.698691).  Saving model ...
+Updating learning rate to 0.005
+Epoch: 2 cost time: 0.9120361804962158
+Epoch: 2, Steps: 64 | Train Loss: 0.3554171 Vali Loss: 0.7118545 Test Loss: 0.3787007
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0025
+Epoch: 3 cost time: 1.0127661228179932
+Epoch: 3, Steps: 64 | Train Loss: 0.3471053 Vali Loss: 0.7009547 Test Loss: 0.3754167
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 0.00125
+Epoch: 4 cost time: 0.838144063949585
+Epoch: 4, Steps: 64 | Train Loss: 0.3431140 Vali Loss: 0.6815364 Test Loss: 0.3680677
+Validation loss decreased (0.698691 --> 0.681536).  Saving model ...
+Updating learning rate to 0.000625
+Epoch: 5 cost time: 0.8052685260772705
+Epoch: 5, Steps: 64 | Train Loss: 0.3403583 Vali Loss: 0.6768941 Test Loss: 0.3675953
+Validation loss decreased (0.681536 --> 0.676894).  Saving model ...
+Updating learning rate to 0.0003125
+Epoch: 6 cost time: 0.9092576503753662
+Epoch: 6, Steps: 64 | Train Loss: 0.3396226 Vali Loss: 0.6775662 Test Loss: 0.3670623
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.00015625
+Epoch: 7 cost time: 0.7440845966339111
+Epoch: 7, Steps: 64 | Train Loss: 0.3387230 Vali Loss: 0.6745784 Test Loss: 0.3664735
+Validation loss decreased (0.676894 --> 0.674578).  Saving model ...
+Updating learning rate to 7.8125e-05
+Epoch: 8 cost time: 1.111746072769165
+Epoch: 8, Steps: 64 | Train Loss: 0.3383703 Vali Loss: 0.6764535 Test Loss: 0.3659577
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 3.90625e-05
+Epoch: 9 cost time: 1.3168482780456543
+Epoch: 9, Steps: 64 | Train Loss: 0.3385475 Vali Loss: 0.6777754 Test Loss: 0.3659991
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 1.953125e-05
+Epoch: 10 cost time: 0.805556058883667
+Epoch: 10, Steps: 64 | Train Loss: 0.3380687 Vali Loss: 0.6763776 Test Loss: 0.3659952
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 9.765625e-06
+Epoch: 11 cost time: 1.1198036670684814
+Epoch: 11, Steps: 64 | Train Loss: 0.3381668 Vali Loss: 0.6795386 Test Loss: 0.3659919
+EarlyStopping counter: 4 out of 10
+Updating learning rate to 4.8828125e-06
+Epoch: 12 cost time: 0.6887528896331787
+Epoch: 12, Steps: 64 | Train Loss: 0.3380796 Vali Loss: 0.6823033 Test Loss: 0.3659891
+EarlyStopping counter: 5 out of 10
+Updating learning rate to 2.44140625e-06
+Epoch: 13 cost time: 0.6237797737121582
+Epoch: 13, Steps: 64 | Train Loss: 0.3383070 Vali Loss: 0.6800941 Test Loss: 0.3659923
+EarlyStopping counter: 6 out of 10
+Updating learning rate to 1.220703125e-06
+Epoch: 14 cost time: 0.867713451385498
+Epoch: 14, Steps: 64 | Train Loss: 0.3383807 Vali Loss: 0.6778305 Test Loss: 0.3659894
+EarlyStopping counter: 7 out of 10
+Updating learning rate to 6.103515625e-07
+Epoch: 15 cost time: 0.8835320472717285
+Epoch: 15, Steps: 64 | Train Loss: 0.3383316 Vali Loss: 0.6794482 Test Loss: 0.3659905
+EarlyStopping counter: 8 out of 10
+Updating learning rate to 3.0517578125e-07
+>>>>>>>testing : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+test 2785
+mse:0.3665, mae:0.3911, R2:0.6705
+Inference time:  0.6157875061035156
+
+real	0m23,754s
+user	4m31,503s
+sys	0m19,824s
+---- Zuordnungspruefung seed 1:
+{"repo_shape": [2785, 96, 7], "harness_shape": [2785, 96, 7], "max_abs_diff": 1.532107773982716e-14, "ok": true}
+---- Harness seed 1:
+{"status": "ok", "metrics": {"mse": 0.3704336407733066, "mae": 0.3920297378835866}, "baselines": {"repeat": {"mse": 1.294370594784508, "mae": 0.7131813544413361}, "zero": {"mse": 1.1099284100805413, "mae": 0.795963380354695}}, "diagnostics": {"pred_std": 0.9036720410238264, "target_std": 1.0527909706034841, "corr": 0.8170212836326459}, "metrics_droplast": {"32": {"mse": 0.37039320123783687, "mae": 0.3920229088335795, "windows": 2784, "dropped": 1}, "64": {"mse": 0.36923021339502693, "mae": 0.3917102065188816, "windows": 2752, "dropped": 33}, "128": {"mse": 0.36647348188919493, "mae": 0.3910969492137094, "windows": 2688, "dropped": 97}, "256": {"mse": 0.3629227090803786, "mae": 0.3888231520889469, "windows": 2560, "dropped": 225}}}
+
+########## Seed 2: Ausgabe des Autorencodes (ohne iters/speed-Zeilen)
+Args in experiment:
+Namespace(is_training=1, model='RLinear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, drop=0.1, num_workers=10, itr=1, train_epochs=15, batch_size=128, patience=10, learning_rate=0.005, l
+Use CPU
+Number of parameters: 0.03M
+>>>>>>>start training : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0>>>>>>>>>>>>>>>>>>>>>>>>>>
+train 8209
+val 2785
+test 2785
+Epoch: 1 cost time: 2.522160530090332
+Epoch: 1, Steps: 64 | Train Loss: 0.3955766 Vali Loss: 0.7080325 Test Loss: 0.3915171
+Validation loss decreased (inf --> 0.708033).  Saving model ...
+Updating learning rate to 0.005
+Epoch: 2 cost time: 0.8856844902038574
+Epoch: 2, Steps: 64 | Train Loss: 0.3545240 Vali Loss: 0.6903750 Test Loss: 0.3806547
+Validation loss decreased (0.708033 --> 0.690375).  Saving model ...
+Updating learning rate to 0.0025
+Epoch: 3 cost time: 1.1019399166107178
+Epoch: 3, Steps: 64 | Train Loss: 0.3472079 Vali Loss: 0.6826388 Test Loss: 0.3752207
+Validation loss decreased (0.690375 --> 0.682639).  Saving model ...
+Updating learning rate to 0.00125
+Epoch: 4 cost time: 2.11687970161438
+Epoch: 4, Steps: 64 | Train Loss: 0.3421471 Vali Loss: 0.6884504 Test Loss: 0.3688134
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.000625
+Epoch: 5 cost time: 1.5373849868774414
+Epoch: 5, Steps: 64 | Train Loss: 0.3407552 Vali Loss: 0.6799712 Test Loss: 0.3669650
+Validation loss decreased (0.682639 --> 0.679971).  Saving model ...
+Updating learning rate to 0.0003125
+Epoch: 6 cost time: 0.9039261341094971
+Epoch: 6, Steps: 64 | Train Loss: 0.3397661 Vali Loss: 0.6824015 Test Loss: 0.3664330
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.00015625
+Epoch: 7 cost time: 3.072085380554199
+Epoch: 7, Steps: 64 | Train Loss: 0.3390115 Vali Loss: 0.6787895 Test Loss: 0.3663147
+Validation loss decreased (0.679971 --> 0.678789).  Saving model ...
+Updating learning rate to 7.8125e-05
+Epoch: 8 cost time: 1.1842894554138184
+Epoch: 8, Steps: 64 | Train Loss: 0.3382397 Vali Loss: 0.6774487 Test Loss: 0.3660038
+Validation loss decreased (0.678789 --> 0.677449).  Saving model ...
+Updating learning rate to 3.90625e-05
+Epoch: 9 cost time: 0.622471809387207
+Epoch: 9, Steps: 64 | Train Loss: 0.3385215 Vali Loss: 0.6739622 Test Loss: 0.3659438
+Validation loss decreased (0.677449 --> 0.673962).  Saving model ...
+Updating learning rate to 1.953125e-05
+Epoch: 10 cost time: 2.6272225379943848
+Epoch: 10, Steps: 64 | Train Loss: 0.3381161 Vali Loss: 0.6768705 Test Loss: 0.3659076
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 9.765625e-06
+Epoch: 11 cost time: 2.705249786376953
+Epoch: 11, Steps: 64 | Train Loss: 0.3384055 Vali Loss: 0.6785737 Test Loss: 0.3658933
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 4.8828125e-06
+Epoch: 12 cost time: 0.7281627655029297
+Epoch: 12, Steps: 64 | Train Loss: 0.3382391 Vali Loss: 0.6775303 Test Loss: 0.3659020
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 2.44140625e-06
+Epoch: 13 cost time: 1.1762347221374512
+Epoch: 13, Steps: 64 | Train Loss: 0.3384642 Vali Loss: 0.6788387 Test Loss: 0.3659039
+EarlyStopping counter: 4 out of 10
+Updating learning rate to 1.220703125e-06
+Epoch: 14 cost time: 0.7246427536010742
+Epoch: 14, Steps: 64 | Train Loss: 0.3385167 Vali Loss: 0.6801392 Test Loss: 0.3658973
+EarlyStopping counter: 5 out of 10
+Updating learning rate to 6.103515625e-07
+Epoch: 15 cost time: 1.135206699371338
+Epoch: 15, Steps: 64 | Train Loss: 0.3382438 Vali Loss: 0.6759784 Test Loss: 0.3658980
+EarlyStopping counter: 6 out of 10
+Updating learning rate to 3.0517578125e-07
+>>>>>>>testing : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+test 2785
+mse:0.3659, mae:0.3909, R2:0.6710
+Inference time:  0.7449374198913574
+
+real	0m35,758s
+user	7m20,753s
+sys	0m19,956s
+---- Zuordnungspruefung seed 2:
+{"repo_shape": [2785, 96, 7], "harness_shape": [2785, 96, 7], "max_abs_diff": 1.532107773982716e-14, "ok": true}
+---- Harness seed 2:
+{"status": "ok", "metrics": {"mse": 0.36976070865423744, "mae": 0.39174157437462814}, "baselines": {"repeat": {"mse": 1.294370594784508, "mae": 0.7131813544413361}, "zero": {"mse": 1.1099284100805413, "mae": 0.795963380354695}}, "diagnostics": {"pred_std": 0.9012880973080585, "target_std": 1.0527909706034841, "corr": 0.817273683983704}, "metrics_droplast": {"32": {"mse": 0.36972239614931335, "mae": 0.3917348858872189, "windows": 2784, "dropped": 1}, "64": {"mse": 0.3686306294314108, "mae": 0.3914525755713998, "windows": 2752, "dropped": 33}, "128": {"mse": 0.365943781953583, "mae": 0.39088270502050054, "windows": 2688, "dropped": 97}, "256": {"mse": 0.36242060465505577, "mae": 0.3886695504101152, "windows": 2560, "dropped": 225}}}
+
+########## Seed 3: Ausgabe des Autorencodes (ohne iters/speed-Zeilen)
+Args in experiment:
+Namespace(is_training=1, model='RLinear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, drop=0.1, num_workers=10, itr=1, train_epochs=15, batch_size=128, patience=10, learning_rate=0.005, l
+Use CPU
+Number of parameters: 0.03M
+>>>>>>>start training : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0>>>>>>>>>>>>>>>>>>>>>>>>>>
+train 8209
+val 2785
+test 2785
+Epoch: 1 cost time: 1.0582985877990723
+Epoch: 1, Steps: 64 | Train Loss: 0.3988540 Vali Loss: 0.7043414 Test Loss: 0.3836458
+Validation loss decreased (inf --> 0.704341).  Saving model ...
+Updating learning rate to 0.005
+Epoch: 2 cost time: 0.8405637741088867
+Epoch: 2, Steps: 64 | Train Loss: 0.3544688 Vali Loss: 0.7168139 Test Loss: 0.3845916
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.0025
+Epoch: 3 cost time: 0.737628698348999
+Epoch: 3, Steps: 64 | Train Loss: 0.3472352 Vali Loss: 0.6811253 Test Loss: 0.3720166
+Validation loss decreased (0.704341 --> 0.681125).  Saving model ...
+Updating learning rate to 0.00125
+Epoch: 4 cost time: 1.1031115055084229
+Epoch: 4, Steps: 64 | Train Loss: 0.3429444 Vali Loss: 0.6856736 Test Loss: 0.3689964
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.000625
+Epoch: 5 cost time: 0.7585461139678955
+Epoch: 5, Steps: 64 | Train Loss: 0.3408138 Vali Loss: 0.6728078 Test Loss: 0.3671314
+Validation loss decreased (0.681125 --> 0.672808).  Saving model ...
+Updating learning rate to 0.0003125
+Epoch: 6 cost time: 0.9773993492126465
+Epoch: 6, Steps: 64 | Train Loss: 0.3399880 Vali Loss: 0.6752264 Test Loss: 0.3665704
+EarlyStopping counter: 1 out of 10
+Updating learning rate to 0.00015625
+Epoch: 7 cost time: 0.8018758296966553
+Epoch: 7, Steps: 64 | Train Loss: 0.3388238 Vali Loss: 0.6782336 Test Loss: 0.3659894
+EarlyStopping counter: 2 out of 10
+Updating learning rate to 7.8125e-05
+Epoch: 8 cost time: 0.7277014255523682
+Epoch: 8, Steps: 64 | Train Loss: 0.3383855 Vali Loss: 0.6765956 Test Loss: 0.3659805
+EarlyStopping counter: 3 out of 10
+Updating learning rate to 3.90625e-05
+Epoch: 9 cost time: 0.6436324119567871
+Epoch: 9, Steps: 64 | Train Loss: 0.3382107 Vali Loss: 0.6785059 Test Loss: 0.3659503
+EarlyStopping counter: 4 out of 10
+Updating learning rate to 1.953125e-05
+Epoch: 10 cost time: 1.0985965728759766
+Epoch: 10, Steps: 64 | Train Loss: 0.3385847 Vali Loss: 0.6759599 Test Loss: 0.3659869
+EarlyStopping counter: 5 out of 10
+Updating learning rate to 9.765625e-06
+Epoch: 11 cost time: 0.8958945274353027
+Epoch: 11, Steps: 64 | Train Loss: 0.3385604 Vali Loss: 0.6758157 Test Loss: 0.3659683
+EarlyStopping counter: 6 out of 10
+Updating learning rate to 4.8828125e-06
+Epoch: 12 cost time: 1.164621114730835
+Epoch: 12, Steps: 64 | Train Loss: 0.3382811 Vali Loss: 0.6730751 Test Loss: 0.3659766
+EarlyStopping counter: 7 out of 10
+Updating learning rate to 2.44140625e-06
+Epoch: 13 cost time: 1.0217807292938232
+Epoch: 13, Steps: 64 | Train Loss: 0.3383421 Vali Loss: 0.6777751 Test Loss: 0.3659726
+EarlyStopping counter: 8 out of 10
+Updating learning rate to 1.220703125e-06
+Epoch: 14 cost time: 1.264347791671753
+Epoch: 14, Steps: 64 | Train Loss: 0.3383060 Vali Loss: 0.6777337 Test Loss: 0.3659708
+EarlyStopping counter: 9 out of 10
+Updating learning rate to 6.103515625e-07
+Epoch: 15 cost time: 0.8721117973327637
+Epoch: 15, Steps: 64 | Train Loss: 0.3381551 Vali Loss: 0.6783758 Test Loss: 0.3659695
+EarlyStopping counter: 10 out of 10
+Early stopping
+>>>>>>>testing : RLinear_ETTh1_ftM_sl336_pl96_dm512_ebtimeF_0<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+test 2785
+mse:0.3671, mae:0.3919, R2:0.6699
+Inference time:  0.8750007152557373
+
+real	0m24,276s
+user	4m37,828s
+sys	0m20,425s
+---- Zuordnungspruefung seed 3:
+{"repo_shape": [2785, 96, 7], "harness_shape": [2785, 96, 7], "max_abs_diff": 1.532107773982716e-14, "ok": true}
+---- Harness seed 3:
+{"status": "ok", "metrics": {"mse": 0.3709553533177183, "mae": 0.39280217927079925}, "baselines": {"repeat": {"mse": 1.294370594784508, "mae": 0.7131813544413361}, "zero": {"mse": 1.1099284100805413, "mae": 0.795963380354695}}, "diagnostics": {"pred_std": 0.9014939975537297, "target_std": 1.0527909706034841, "corr": 0.8166532009086998}, "metrics_droplast": {"32": {"mse": 0.3709086660572188, "mae": 0.39279168100539275, "windows": 2784, "dropped": 1}, "64": {"mse": 0.36976932413236185, "mae": 0.39249557539902047, "windows": 2752, "dropped": 33}, "128": {"mse": 0.3671313987785798, "mae": 0.39193728347900925, "windows": 2688, "dropped": 97}, "256": {"mse": 0.3635090321511775, "mae": 0.3897129271625402, "windows": 2560, "dropped": 225}}}
+
+########## Zusammenfassung (scripts/prestudy_nachlauf/summarize.py)
+== RLinear (Ziel 0.366, Toleranz 0.01, droplast-Batch 128)
+seed  1024: repo 0.3660 | harness alle 0.3698 | harness droplast128 0.3660 | |droplast-repo| 0.00004 | |alle-repo| 0.00379 | Zeit 43,745
+seed     0: repo 0.3691 | harness alle 0.3729 | harness droplast128 0.3691 | |droplast-repo| 0.00004 | |alle-repo| 0.00377 | Zeit 0m22,748s
+seed     1: repo 0.3665 | harness alle 0.3704 | harness droplast128 0.3665 | |droplast-repo| 0.00003 | |alle-repo| 0.00393 | Zeit 0m23,754s
+seed     2: repo 0.3659 | harness alle 0.3698 | harness droplast128 0.3659 | |droplast-repo| 0.00004 | |alle-repo| 0.00386 | Zeit 0m35,758s
+seed     3: repo 0.3671 | harness alle 0.3710 | harness droplast128 0.3671 | |droplast-repo| 0.00003 | |alle-repo| 0.00386 | Zeit 0m24,276s
+Mittel 0.3708 std(ddof=1) 0.0013 | Abstand zum Ziel 0.0048
+== DLinear (Ziel 0.375, Toleranz 0.01, droplast-Batch 32)
+seed  2021: repo 0.3841 | harness alle 0.3841 | harness droplast32 0.3841 | |droplast-repo| 0.00005 | |alle-repo| 0.00000 | Zeit 32,807
+seed     0: repo 0.3895 | harness alle 0.3895 | harness droplast32 0.3895 | |droplast-repo| 0.00007 | |alle-repo| 0.00000 | Zeit 0m21,360s
+seed     1: repo 0.3739 | harness alle 0.3739 | harness droplast32 0.3739 | |droplast-repo| 0.00003 | |alle-repo| 0.00000 | Zeit 0m26,385s
+seed     2: repo 0.3717 | harness alle 0.3717 | harness droplast32 0.3717 | |droplast-repo| 0.00004 | |alle-repo| 0.00000 | Zeit 0m31,058s
+seed     3: repo 0.3713 | harness alle 0.3713 | harness droplast32 0.3713 | |droplast-repo| 0.00004 | |alle-repo| 0.00000 | Zeit 0m27,762s
+Mittel 0.3781 std(ddof=1) 0.0082 | Abstand zum Ziel 0.0031
