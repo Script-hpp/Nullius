@@ -33,3 +33,13 @@ export function firstSentence(text: string): string {
   const m = text.match(/^.+?[.!?](?=\s|$)/)
   return (m ? m[0] : text).trim()
 }
+
+// The head a run wrote itself (dossier.summary, or the paper_summary event while it is live): same shape as an entry of summaries.json.
+// It wins over summaries.json: it is what this run read from this paper.
+export function headFromSummary(s: Record<string, any> | null | undefined, arxivId = ''): (PaperSummary & { arxiv_id: string }) | undefined {
+  if (!s || (!s.text && !s.authors?.length && !s.institutions?.length)) return undefined
+  return {
+    summary: s.text ?? '', source: s.source ?? '', generated_by: s.generated_by, authors: s.authors, authors_source: s.authors_source, year: s.year,
+    venue: s.venue, institutions: s.institutions, institutions_source: s.institutions_source, arxiv_id: arxivId,
+  }
+}

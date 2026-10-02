@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { authorLine, findHead, firstSentence, monogram, whenLine } from './paperhead.ts'
+import { authorLine, findHead, headFromSummary, firstSentence, monogram, whenLine } from './paperhead.ts'
 
 test('monogram: initials without linking words, at most four letters', () => {
   assert.equal(monogram('University of Amsterdam'), 'UA')
@@ -40,4 +40,15 @@ test('findHead finds a paper by its arXiv id or by any run/catalog id of it', ()
 test('firstSentence cuts at the first full stop', () => {
   assert.equal(firstSentence('The paper proposes X. The data is Y.'), 'The paper proposes X.')
   assert.equal(firstSentence('No full stop'), 'No full stop')
+})
+
+test('headFromSummary maps the dossier summary to the head shape and is empty without content', () => {
+  const h = headFromSummary({ text: 'A sentence.', source: 'arXiv abstract (1.2)', authors: ['A B'], year: 2025, institutions: [{ name: 'U X', quote: 'U X, Y' }], institutions_source: 'arXiv PDF v1, read with Tavily Extract' }, '1.2')!
+  assert.equal(h.summary, 'A sentence.')
+  assert.deepEqual(h.authors, ['A B'])
+  assert.equal(h.institutions?.[0].name, 'U X')
+  assert.equal(h.arxiv_id, '1.2')
+  assert.equal(headFromSummary(null), undefined)
+  assert.equal(headFromSummary({}), undefined)
+  assert.equal(headFromSummary({ institutions: [], authors: [] }), undefined)
 })

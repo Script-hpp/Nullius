@@ -22,6 +22,8 @@ export function catalogLabel(urteil: string, gesamt: string | undefined): { labe
 
 // Warnings in the dossier are written in German by the loop; the UI shows English.
 const WARNING_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^Kurzbeschreibung nicht erstellt/, () => 'The plain-language summary of the paper could not be written. The check itself is not affected.'],
+  [/^Autoren und Jahr nicht gelesen/, () => 'Authors and year could not be read from the arXiv page. The summary was written without them.'],
   [/^Info: Das Paper nennt Streuung \+-([\d.]+)/, (m) => `The paper reports a spread of ±${m[1]} across splits or runs. That is not the tolerance of the mean; the tolerance stays fixed.`],
   [/^Protokoll im Paper nicht belegt/, () => 'Protocol not stated in the paper: the task was assumed, not confirmed. The overall statement stays preliminary.'],
   [/^Tabellenspalte nicht gepr/, () => 'Table column not verified: the number could belong to a comparison method.'],
