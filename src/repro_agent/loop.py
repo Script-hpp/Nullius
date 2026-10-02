@@ -37,6 +37,7 @@ from .droplast_note import droplast_note
 from .events import EventLog
 from .paper_head import abstract as fetch_abstract, arxiv_meta as fetch_arxiv_meta, build_head, claim_for_prompt
 from .harness.ablation import classify_ablation
+from .harness.edge_direction import ONE as EDGE_ONE, classify_edge_direction, make_probe, probe_bytes, score_probe
 from .harness.val_use_check import classify_val_mask, static_val_use
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
@@ -73,6 +74,12 @@ def plan_needs_retry(text: str) -> bool:
 
 MAX_FAULT_REPAIRS = 2   # Reparaturrunden pro Claim, wenn das Ergebnis schlechter als eine triviale Baseline ist (Agenten-Fehler)
 MAX_SEED0_REPAIRS = 3   # Gesamtgrenze beider Arten: jede Runde kostet einen Seed-0-Sandboxlauf (Minuten), Live-Demo bleibt kurz
+EDGE_DIRECTION_MESSAGE = (   # B2: fester Hinweis ohne Zahlen
+    "Your script ran, but it uses the graph edges in one direction only: information flows along each edge from one node to the other "
+    "but not back. The graph must be used in both directions of every edge (messages from j to i and from i to j). "
+    "Do not reduce the edge list to pairs with u < v without adding the reverse edges again.\n"
+    "Keep the method described in the plan: fix the implementation, do not replace the method by a simpler one. Return the corrected full script."
+)
 GRAPH_REPAIR_MESSAGE = (
     "Your code does not use the graph: accuracy with edges {full:.4f} equals accuracy without edges {ablated:.4f} "
     "(the code ignores the adjacency). Implement the propagation over the adjacency described in the plan."
@@ -528,6 +535,14 @@ class Orchestrator:
             "detail": None if acc_ablated is not None else str(res.get("detail", ""))[-300:],
         }
 
+    def edge_direction_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str) -> dict:
+        """B2 (v5): Lauf des Codes auf dem synthetischen Matching-Graphen (harness/edge_direction.py), Test-Accuracy je Seite.
+        Deterministisch, kein LLM. Verdict "Kante nur in einer Richtung" = die Seiten unterscheiden sich um >= 0,30."""
+        _, res = self._attempt(snapshot, code, seed, task, metric, edge_probe=True)
+        acc_a, acc_b = (res.get("acc_a"), res.get("acc_b")) if res["status"] == "ok" else (None, None)
+        return {"verdict": classify_edge_direction(acc_a, acc_b), "acc_side_a": acc_a, "acc_side_b": acc_b,
+                "detail": None if acc_a is not None else str(res.get("detail", ""))[-300:]}
+
     def val_label_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str, val: dict) -> dict:
         """B1 (v5): zweiter Seed-0-Lauf mit maskierten Validierungslabels, Vergleich der Validierungs-Metrik des Harness (eigene Labels),
         dazu statische Nutzung (harness/val_use_check). Ausgeschlossen wird nur bei Abfall >= 0,10 UND statischem Treffer `training`
@@ -559,7 +574,7 @@ class Orchestrator:
 
     def _run_and_eval(
         self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False,
-        ablate: bool = False, with_val: bool = False, mask_val: bool = False,
+        ablate: bool = False, with_val: bool = False, mask_val: bool = False, edge_probe: bool = False,
     ) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
@@ -568,6 +583,18 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
+        if edge_probe:   # B2: synthetischer Graph statt Datensatz, eigene Auswertung (kein Harness, kein Smoke, keine Abdeckung)
+            path, n_nodes, n_val, n_test = task.edge_probe
+            npz, truth = make_probe(n_nodes, n_val, n_test, seed=0)
+            sb.put_file(branch, path, probe_bytes(npz))
+            r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", TRAIN_TIMEOUT_S)
+            if r.timed_out or r.exit_code != 0:
+                return {"status": "fehler", "detail": "timeout" if r.timed_out else (r.stderr or r.stdout)}
+            try:
+                acc_a, acc_b = score_probe(sb.get_file(branch, "/output/predictions.csv"), truth)
+            except FileNotFoundError:
+                acc_a = acc_b = None
+            return {"status": "ok", "acc_a": acc_a, "acc_b": acc_b}
         if task.prepare_cmd:
             prep_error = self._prepare_data(branch, seed, task)
             if prep_error:
@@ -1188,6 +1215,23 @@ class Orchestrator:
                 break
             ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
             self._emit("ablation", claim_id=claim.id, runde=fault_rounds + graph_rounds, code_hash=h(code), **ab)
+            edge = None
+            if ab["verdict"] == "Graph genutzt" and getattr(task, "edge_probe", None):   # B2: Kanten in beiden Richtungen?
+                edge = self.edge_direction_check(snapshot, code, seed, task, claim.metric)
+                self._emit("edge_direction_check", claim_id=claim.id, runde=fault_rounds + graph_rounds, code_hash=h(code), **edge)
+                with self._lock:
+                    dossier.edge_direction.setdefault(claim.id, []).append({"code_hash": h(code), **edge})
+            if edge is not None and edge["verdict"] == EDGE_ONE and budget(graph_rounds, MAX_GRAPH_REPAIRS):
+                graph_rounds += 1
+                from_hash = h(code)
+                ev = {"claim_id": claim.id, "runde": graph_rounds, "from_hash": from_hash, "kind": "edge_direction"}
+                head = f"Graph-Reparatur Runde {graph_rounds}: Code {from_hash} nutzt Kanten nur in einer Richtung (Probe)"
+                ok, code, v0, note0 = repair("graph", graph_rounds, EDGE_DIRECTION_MESSAGE, head, ev)
+                if not ok:
+                    break
+                self._emit("graph_repair", result="repariert", to_hash=h(code), **ev)
+                notes.append(f"{head}; neuer Code {h(code)}")
+                continue
             if ab["verdict"] == "Graph nicht genutzt" and budget(graph_rounds, MAX_GRAPH_REPAIRS):
                 graph_rounds += 1
                 from_hash = h(code)

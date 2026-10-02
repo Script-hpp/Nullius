@@ -107,6 +107,7 @@ class Dossier:
     summary: dict | None = None
     explanations: dict = field(default_factory=dict)   # claim_id -> {"items": [...], "dropped": n}; nur bei teilweise/nicht reproduziert
     val_label_check: dict = field(default_factory=dict)   # claim_id -> {Kandidat: B1-Pruefung (Maske der Val-Labels + statische Nutzung)}
+    edge_direction: dict = field(default_factory=dict)   # claim_id -> Liste B2-Proben (Kantenrichtung, synthetischer Graph)
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
@@ -137,6 +138,7 @@ class Dossier:
             fault_repairs=data.get("fault_repairs", {}),
             repo_diff=data.get("repo_diff", {}),
             val_label_check=data.get("val_label_check", {}),
+            edge_direction=data.get("edge_direction", {}),
             droplast_notes=data.get("droplast_notes", {}),
             community=data.get("community"),
             explanations=data.get("explanations", {}),

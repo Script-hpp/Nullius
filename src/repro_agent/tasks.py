@@ -31,6 +31,8 @@ class Task:
     # B1 (v5): Kommando, das im Branch die Labels der Validierungsknoten maskiert (labels[val_idx] = -1); "" = nicht maskierbar (ETTh1:
     # Validierung ist ein Serienstueck ohne getrennte Ziele, Training darauf ist kein Label-Leck)
     mask_val_cmd: str = ""
+    # B2 (v5): Kantenrichtungs-Probe auf einem synthetischen Graphen im Format des Datensatzes: (Pfad der npz im Branch, Knoten, Val, Test)
+    edge_probe: tuple[str, int, int, int] | None = None
     # Daten pro Lauf vorbereiten (z. B. Split k): Dateien aus harness/ kommen temporaer in den Branch, danach geloescht
     prepare_files: tuple[str, ...] = ()
     prepare_cmd: str = ""           # Template mit {dir} und {split}; laeuft MIT Netz (Rohdaten holen), vor dem Agenten-Code
@@ -117,6 +119,7 @@ def cora_task() -> Task:
             "d['edges'] = np.zeros((0, 2), dtype=np.int64); "
             "np.savez_compressed('/data/cora_public.npz', **d)\""
         ),
+        edge_probe=("/data/cora_public.npz", 2708, 500, 1000),
         mask_val_cmd=(
             "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
             "d['labels'] = d['labels'].copy(); d['labels'][d['val_idx']] = -1; "
@@ -233,6 +236,7 @@ def cora_lcc_task() -> Task:
         smoke_ids_cmd=base.smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
         ablation_cmd=base.ablation_cmd.replace("cora_public", "cora_lcc_public"),
         mask_val_cmd=base.mask_val_cmd.replace("cora_public", "cora_lcc_public"),
+        edge_probe=("/data/cora_lcc_public.npz", 2485, 210, 2135),
         val_notes=base.val_notes,
         val_harness_files=("cora_lcc_val_eval.py",),
         val_eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_val_eval.py",
