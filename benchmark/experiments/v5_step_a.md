@@ -1,6 +1,6 @@
-# v5 Schritt A: Dossier-Treue von Rolle 4 (Vorab-Festlegung, Entwurf)
+# v5 Schritt A: Dossier-Treue von Rolle 4 (Vorab-Festlegung, final)
 
-Status: **Entwurf, wartet auf Freigabe des Nutzers.** Nach der Freigabe "final" committen, dann erst bauen und messen.
+Status: **final** (vom Nutzer freigegeben am 2026-10-02). Ziele und Soll-Liste werden nach dem ersten Messlauf nicht mehr geändert; gestrichene Soll-Punkte (nicht belegbar) werden vor dem ersten Lauf vermerkt.
 
 Grundlage: `failure_analysis_v4.md`. Befund: 84 % der Setup-Angaben, die im Dossier stehen, kommen im Code an; die Lücke liegt im Dossier (Angabe fehlt, vor allem Merkmals-Normalisierung in 14 von 21 Läufen, oder sie ist richtig zitiert, gilt aber nicht für den Claim). Schritt A misst deshalb **nur das Dossier**, ohne Training: billig, schnell, und kein Urteil des Benchmarks wird dabei angesehen.
 
