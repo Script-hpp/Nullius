@@ -114,6 +114,55 @@ def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2
     return _parse_list(resp.content)
 
 
+
+def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, paper_title: str = "") -> list[dict]:
+    family = family_for(dataset)
+    mandatory = MANDATORY[family]
+    
+    # Also add a generic "other settings" topic to capture anything else
+    topics = list(mandatory) + [("other settings", r"initiali|optimi|momentum|clip", "")]
+    
+    jobs = []
+    claim_method = _norm(claim_text.split(" erreicht ")[0]) if " erreicht " in claim_text else ""
+    
+    for topic_name, inc_re, exc_re in topics:
+        # Find windows for this topic across all docs
+        for doc in docs:
+            # For code files, we can just use the whole file if it's small, or regex windows
+            if len(doc.text) < 15000:
+                chunk = doc.text
+            else:
+                chunk = _regex_windows(doc.text, inc_re)
+                if not chunk.strip():
+                    continue
+            jobs.append((doc, chunk, topic_name))
+            
+    # Now ask the LLM
+    def _ask(job):
+        doc, chunk, topic_name = job
+        prompt = [
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": (
+                f"Paper Title: {paper_title}\n"
+                f"Goal: reproduce this result: {claim_text} (dataset: {dataset}).\n"
+                f"Target Model/Method: {claim_method}\n\n"
+                f"Topic to extract: {topic_name}\n\n"
+                "From the excerpt below, list only statements or settings that belong to this topic "
+                "for the target model and dataset. If a table is shown, ensure you trace the values to the "
+                "column/row headers to verify they belong to the target model and dataset.\n"
+                "If it's for the transductive setting (e.g., Cora), ignore inductive batch sizes.\n"
+                "If the excerpt has no relevant information for this topic, answer [].\n\n"
+                + ANSWER_FORMAT_V2 + f"EXCERPT from {excerpt_label(doc.name)}:\n{chunk}"
+            )}
+        ]
+        resp = llm.complete("extract", prompt, temperature=0.0, max_tokens=2000, timeout_s=120)
+        return _parse_list(resp.content)
+        
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        raw_lists = list(pool.map(_ask, jobs))
+        
+    return [{"doc": doc.name, "item": item} for (doc, _, _), lst in zip(jobs, raw_lists) for item in lst]
 def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, v2: bool = False) -> list[dict]:
     """Rohangaben des Modells je Dokument, noch ungeprueft: [{"doc": Name, "item": Objekt}]."""
     jobs = [(doc, chunk) for doc in docs for chunk in _chunks(doc.text[:MAX_TEXT_CHARS])]
@@ -242,7 +291,7 @@ def format_conflicts(details: list[SetupDetail]) -> str:
 
 # ---- v5 Schritt A (Schalter setup_v2): Pflichtliste je Task-Familie (V1), Quellenrang (V2), Feld "gilt fuer" (V3) -----------------
 # Die Pflichtliste nennt nur Themen, nie Werte oder Methodenwissen.
-RANKS = ("start script", "config", "argparse default", "code", "readme text", "paper")   # hoechster Rang zuerst
+RANKS = ("start script", "config", "paper", "code", "readme text", "argparse default")   # hoechster Rang zuerst
 OPTIONAL_RE = re.compile(r"\b(optional(ly)?|for example|for instance|e\.g\.|can|may|could|you might)\b", re.I)
 DEFAULT_RE = re.compile(r"default\s*=|DEFINE_\w+\(", re.I)
 START_RE = re.compile(r"\.sh$|(^|/)(execute|run|train|main|exp)[\w.-]*\.py$", re.I)
@@ -361,7 +410,17 @@ def path_model_exclusion(d: SetupDetailV2, claim_text: str, paper_text: str) -> 
     name = d.source.split(":", 1)[-1].split("@")[0].rsplit("/", 1)[-1]
     tokens = [t for t in re.split(r"[^a-z0-9]+", name.lower()) if len(t) >= 3 and not t.isdigit() and t not in PATH_STOP]
     claim_n = _norm(claim_text)
-    other = [t for t in tokens if t not in claim_n and t in paper_model_words(paper_text, tokens)]
+    claim_method = _norm(claim_text.split(" erreicht ")[0]) if " erreicht " in claim_text else ""
+    acronym = "".join(t[0] for t in tokens) if tokens else ""
+    
+    other = []
+    for t in tokens:
+        if t in claim_n:
+            continue
+        if claim_method and (claim_method == acronym or claim_method in t or t in claim_method):
+            continue
+        if t in paper_model_words(paper_text, [t]):
+            other.append(t)
     return f"other model (file name {name})" if other else ""
 
 
@@ -377,7 +436,10 @@ def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str, paper_text:
     model = _norm(ap.get("model", ""))
     tokens = [t for t in re.split(r"[^a-z0-9]+", model) if len(t) >= 3 and t not in GENERIC_MODEL_WORDS]
     if tokens and not any(t in claim_n for t in tokens):
-        return f"other model ({ap['model']})"
+        claim_method = _norm(claim_text.split(" erreicht ")[0]) if " erreicht " in claim_text else ""
+        acronym = "".join(t[0] for t in tokens)
+        if not claim_method or (claim_method != acronym and claim_method not in model and model not in claim_method):
+            return f"other model ({ap['model']})"
     ds = _norm(ap.get("dataset", ""))
     # Obermengen ("citation networks") nennen keinen anderen Datensatz: ausgeschlossen wird nur, wenn ein konkreter ANDERER Datensatz genannt ist
     ds_tokens = [t for t in re.split(r"[^a-z0-9]+", ds) if len(t) >= 3 and t not in GENERIC_DATASET_WORDS]
@@ -394,7 +456,7 @@ def apply_scope(details: list[SetupDetailV2], claim_text: str, dataset: str, pap
 
 
 VALUE_TOPICS = {"feature normalisation"}   # fuer diese Pflichtthemen zaehlt auch der Wert der Angabe, nicht nur ihr Thema
-FEATURE_NORM_RE = re.compile(r"normali|row|scal", re.I)
+FEATURE_NORM_RE = re.compile(r"normali|row|scal|preprocess|standardi|l2", re.I)
 FEATURE_NORM_EXCLUDE = re.compile(r"graph|training procedure|adjacen|laplacian|propagat|label", re.I)
 
 
@@ -417,8 +479,9 @@ def target_docs(docs: list[Doc]) -> list[Doc]:
     """Dateien, die Daten laden, und Startskripte/Argumentdefinitionen des Experiments, plus README (deterministisch nach Pfad)."""
     def path(d: Doc) -> str:
         return d.name.split(":", 1)[-1].split("@")[0]
+    picked = [d for d in docs if d.name == "paper"]
     repo = [d for d in docs if d.name.startswith("repo:")]
-    picked = [d for d in repo if START_RE.search(path(d)) or ARGS_RE.search(path(d)) or CONFIG_RE.search(path(d))]
+    picked += [d for d in repo if START_RE.search(path(d)) or ARGS_RE.search(path(d)) or CONFIG_RE.search(path(d))]
     picked += [d for d in repo if LOADER_RE.search(path(d)) and d not in picked]
     picked += [d for d in docs if d.name == "repo-readme"]
     return picked[:MAX_TARGET_DOCS]
@@ -533,8 +596,26 @@ def literal_details(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: s
     return out
 
 
+
+def _regex_windows(text: str, pattern: str, width: int = 1500, max_chars: int = 15000) -> str:
+    spans = []
+    for m in re.finditer(pattern, text, flags=re.I):
+        lo, hi = max(0, m.start() - width), min(len(text), m.end() + width)
+        if spans and lo <= spans[-1][1]:
+            spans[-1] = (spans[-1][0], hi)
+        else:
+            spans.append((lo, hi))
+    chosen, used = [], 0
+    # Try to keep start of text if possible, but prioritize where the pattern actually matches
+    for span in spans:
+        if used + (span[1] - span[0]) > max_chars:
+            continue
+        chosen.append(span)
+        used += span[1] - span[0]
+    return "\n...\n".join(text[a:b] for a, b in chosen)
+
 def extract_setup_details_v2(
-    llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str
+    llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, paper_title: str = ""
 ) -> tuple[list[SetupDetailV2], int, list[str], dict]:
     """V1 bis V3. Rueckgabe: (Angaben inkl. ausgeschlossener, Zahl verworfener, nicht gefundene Pflichtthemen, Info).
     Ablauf: erste Extraktion, Geltungsbereich pruefen, fehlende Pflichtthemen gezielt in Datenlade- und Startdateien suchen,
@@ -542,7 +623,7 @@ def extract_setup_details_v2(
     family = family_for(dataset)
     paper_text = next((d.text for d in docs if d.name == "paper"), "")
     scope = lambda ds: apply_scope(ds, claim_text, dataset, paper_text)
-    details, dropped = verify_raw_v2(collect_raw(llm, docs, claim_text, dataset, v2=True), docs)
+    details, dropped = verify_raw_v2(collect_middle_ground(llm, docs, claim_text, dataset, paper_title), docs)
     details = scope(details)
     info = {"family": family, "targeted_docs": [], "added": 0, "bodies": [], "literals": 0}
     n_dropped = len(dropped)
@@ -589,7 +670,7 @@ def _rank_index(d: SetupDetailV2) -> int:
 
 
 def plan_details_v2(details: list[SetupDetail]) -> list[SetupDetailV2]:
-    return [d for d in details if isinstance(d, SetupDetailV2) and not d.excluded]
+    return [d for d in details if isinstance(d, SetupDetailV2) and not d.excluded and not d.optional]
 
 
 def find_conflicts_v2(details: list[SetupDetailV2]) -> list[list[SetupDetailV2]]:

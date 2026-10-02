@@ -1407,7 +1407,7 @@ class Orchestrator:
             docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])
             if getattr(self, "setup_v2", False):
                 self.details, dropped, setup_missing, v2_info = extract_setup_details_v2(
-                    self.llm, docs, claims[0].text, paper["dataset"])
+                    self.llm, docs, claims[0].text, paper["dataset"], self._paper_title)
                 self._setup_missing = setup_missing
             else:
                 self.details, dropped = extract_setup_details(
