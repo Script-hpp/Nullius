@@ -1,0 +1,41 @@
+
+
+
+
+
+
+
+
+
+gcn_ref: n=10 Mittel 0.8136 Std 0.0051 min 0.8040 max 0.8200 | 130s | Werte [0.804, 0.817, 0.817, 0.813, 0.808, 0.811, 0.818, 0.817, 0.82, 0.811] | letzte Ausgabe Seed 0: epochs 200 val acc 0.7860
+gcn_es_valacc10: n=10 Mittel 0.6999 Std 0.1833 min 0.2700 max 0.8210 | 50s | Werte [0.27, 0.816, 0.776, 0.81, 0.601, 0.517, 0.821, 0.809, 0.804, 0.775] | letzte Ausgabe Seed 0: epochs 13 val acc 0.2560
+gcn_nonorm: n=10 Mittel 0.7920 Std 0.0136 min 0.7640 max 0.8080 | 37s | Werte [0.764, 0.788, 0.797, 0.792, 0.792, 0.805, 0.804, 0.794, 0.808, 0.776] | letzte Ausgabe Seed 0: epochs 48 val acc 0.7540
+sgc_ref: n=10 Mittel 0.8081 Std 0.0009 min 0.8070 max 0.8100 | 21s | Werte [0.81, 0.808, 0.809, 0.807, 0.807, 0.808, 0.808, 0.808, 0.808, 0.808] | letzte Ausgabe Seed 0: weight decay 1e-05 val acc 0.7920
+sgc_wd5e-6: n=10 Mittel 0.8054 Std 0.0021 min 0.8000 max 0.8070 | 19s | Werte [0.806, 0.805, 0.806, 0.8, 0.805, 0.807, 0.806, 0.805, 0.807, 0.807] | letzte Ausgabe Seed 0: weight decay 5e-06 val acc 0.7920
+sgc_nonorm_wd5e-6: n=10 Mittel 0.7850 Std 0.0075 min 0.7750 max 0.7960 | 18s | Werte [0.794, 0.796, 0.792, 0.782, 0.777, 0.775, 0.779, 0.789, 0.78, 0.786] | letzte Ausgabe Seed 0: weight decay 5e-06 val acc 0.7740
+sgc_std_wd5e-6: n=10 Mittel 0.7300 Std 0.0035 min 0.7250 max 0.7350 | 19s | Werte [0.734, 0.735, 0.728, 0.731, 0.725, 0.728, 0.73, 0.731, 0.725, 0.733] | letzte Ausgabe Seed 0: weight decay 5e-06 val acc 0.7080
+sgc_l2norm_wd5e-6: n=10 Mittel 0.7932 Std 0.0011 min 0.7910 max 0.7950 | 18s | Werte [0.794, 0.793, 0.792, 0.794, 0.793, 0.791, 0.793, 0.794, 0.795, 0.793] | letzte Ausgabe Seed 0: weight decay 5e-06 val acc 0.7780
+sgc_nonorm_grid: n=10 Mittel 0.8164 Std 0.0016 min 0.8120 max 0.8170 | 20s | Werte [0.817, 0.817, 0.817, 0.817, 0.812, 0.817, 0.817, 0.817, 0.817, 0.816] | letzte Ausgabe Seed 0: weight decay 0.005 val acc 0.7880
+nlinear_ref: n=5 Mittel 0.3739 Std 0.0013 min 0.3728 max 0.3761 | 46s | Werte [0.3761, 0.3744, 0.3735, 0.3728, 0.3729] | letzte Ausgabe Seed 0: val_mse 0.6677353382110596
+dlinear_ref: n=5 Mittel 0.4278 Std 0.0078 min 0.4193 max 0.4389 | 54s | Werte [0.4193, 0.4246, 0.424, 0.4389, 0.4324] | letzte Ausgabe Seed 0: val_mse 0.6886359453201294
+nlinear_flat_nolast_lr1e-3: n=5 Mittel 0.8678 Std 0.0574 min 0.8025 max 0.9303 | 142s | Werte [0.9264, 0.8432, 0.8365, 0.9303, 0.8025] | letzte Ausgabe Seed 0: val_mse 0.9528782963752747
+dlinear_ref: n=5 Mittel 0.3809 Std 0.0139 min 0.3710 max 0.4054 | 78s | Werte [0.371, 0.3751, 0.3782, 0.4054, 0.3748] | letzte Ausgabe Seed 0: val_mse 0.6493948698043823
+nlinear_lr5e-4: n=5 Mittel 0.3859 Std 0.0030 min 0.3826 max 0.3902 | 74s | Werte [0.3867, 0.3902, 0.3834, 0.3826, 0.3865] | letzte Ausgabe Seed 0: val_mse 0.6749159693717957
+dlinear_L96_lr1e-4: n=5 Mittel 0.3944 Std 0.0020 min 0.3924 max 0.3970 | 62s | Werte [0.3925, 0.3955, 0.3943, 0.397, 0.3924] | letzte Ausgabe Seed 0: val_mse 0.6719828248023987
+gat_nonorm: n=10 Mittel 0.8069 Std 0.0082 min 0.7950 max 0.8180 | 359s | Werte [0.802, 0.815, 0.815, 0.799, 0.811, 0.812, 0.818, 0.795, 0.803, 0.799] | letzte Ausgabe Seed 0: epochs 251 best val acc 0.7980 seconds 27
+dlinear_lr1e-3_20ep: n=5 Mittel 0.3864 Std 0.0069 min 0.3780 max 0.3956 | 84s | Werte [0.3956, 0.3905, 0.3819, 0.3858, 0.378] | letzte Ausgabe Seed 0: val_mse 0.6393691301345825
+dgi_nonorm_200ep: n=10 Mittel 0.7800 Std 0.0142 min 0.7490 max 0.7950 | 470s | Werte [0.795, 0.765, 0.79, 0.794, 0.786, 0.786, 0.775, 0.749, 0.783, 0.777] | letzte Ausgabe Seed 0: epochs 200 loss 0.0096 seconds 34
+dlinear_lr5e-3_nohalve: n=5 Mittel 0.4266 Std 0.0089 min 0.4182 max 0.4389 | 79s | Werte [0.4193, 0.4182, 0.424, 0.4389, 0.4324] | letzte Ausgabe Seed 0: val_mse 0.6886359453201294
+nlinear_lr5e-3_nohalve: n=5 Mittel 0.4136 Std 0.0122 min 0.4007 max 0.4259 | 51s | Werte [0.424, 0.4163, 0.401, 0.4259, 0.4007] | letzte Ausgabe Seed 0: val_mse 0.6995618343353271
+gatlcc_hid64perhead: n=10 Mittel 0.8052 Std 0.0148 min 0.7705 max 0.8234 | 532s | Werte [0.8187, 0.8066, 0.8094, 0.8141, 0.808, 0.7972, 0.8234, 0.7705, 0.8075, 0.7963] | letzte Ausgabe Seed 0: epochs 180 best val loss 1.6493 seconds 74
+dgi_h64_200ep: n=10 Mittel 0.7179 Std 0.0150 min 0.6930 max 0.7330 | 109s | Werte [0.696, 0.726, 0.729, 0.728, 0.693, 0.733, 0.73, 0.718, 0.723, 0.703] | letzte Ausgabe Seed 0: epochs 200 loss 0.2336 seconds 9
+gatlcc_l2x2_allparams: n=30 Mittel 0.8128 Std 0.0106 min 0.7958 max 0.8351 | 652s | Werte [0.8019, 0.7958, 0.8136, 0.7967, 0.8075, 0.7967, 0.8239, 0.8112, 0.8206, 0.8267, 0.8267, 0.83, 0.808, 0.8122, 0.8131, 0.8239, 0.8164, 0.8014, 0.8033, 0.8351, 0.8145, 0.8192, 0.8089, 0.8169, 0.8023, 0.8061, 0.815, 0.8009, 0.8267, 0.8098] | letzte Ausgabe Seed 0: epochs 171 best val loss 1.5467 seconds 16
+dgi_ref: n=10 Mittel 0.8053 Std 0.0073 min 0.7950 max 0.8150 | 716s | Werte [0.809, 0.815, 0.806, 0.815, 0.805, 0.802, 0.795, 0.811, 0.795, 0.8] | letzte Ausgabe Seed 0: epochs 437 loss 0.0036 seconds 83
+gat_4x4_noloops_nonorm: n=10 Mittel 0.7963 Std 0.0086 min 0.7790 max 0.8130 | 393s | Werte [0.779, 0.797, 0.796, 0.796, 0.813, 0.799, 0.8, 0.792, 0.8, 0.791] | letzte Ausgabe Seed 0: epochs 299 best val acc 0.7840 seconds 37
+dgi_200ep: n=10 Mittel 0.8025 Std 0.0080 min 0.7890 max 0.8140 | 311s | Werte [0.812, 0.814, 0.805, 0.802, 0.804, 0.789, 0.798, 0.806, 0.791, 0.804] | letzte Ausgabe Seed 0: epochs 200 loss 0.0147 seconds 34
+gatlcc_onedir: n=10 Mittel 0.7257 Std 0.0189 min 0.6857 max 0.7508 | 202s | Werte [0.7152, 0.718, 0.7237, 0.7377, 0.6857, 0.7321, 0.7508, 0.7124, 0.7405, 0.7405] | letzte Ausgabe Seed 0: epochs 197 best val loss 1.6925 seconds 22
+gatlcc_ref: n=10 Mittel 0.8127 Std 0.0084 min 0.8014 max 0.8290 | 219s | Werte [0.8014, 0.8187, 0.8192, 0.8014, 0.8075, 0.8108, 0.8131, 0.8131, 0.8131, 0.829] | letzte Ausgabe Seed 0: epochs 230 best val loss 1.2400 seconds 26
+dgi_nonorm: n=10 Mittel 0.7784 Std 0.0123 min 0.7520 max 0.7960 | 520s | Werte [0.796, 0.771, 0.789, 0.784, 0.779, 0.778, 0.771, 0.752, 0.788, 0.776] | letzte Ausgabe Seed 0: epochs 284 loss 0.0046 seconds 39
+sgc_nonorm_trainval: n=10 Mittel 0.8384 Std 0.0010 min 0.8370 max 0.8400 | 48s | Werte [0.839, 0.838, 0.838, 0.838, 0.84, 0.837, 0.837, 0.839, 0.839, 
+gcnlcc_ref: n=30 Mittel 0.8117 Std 0.0133 min 0.7864 max 0.8328 | 1770s | Werte [0.8042, 0.815, 0.8061, 0.8023, 0.7948, 0.8009, 0.8103, 0.8108, 0.8304, 0.8328, 0.8239, 0.8323, 0.7864, 0.8056, 0.8052, 0.8028, 0.8122, 0.7939, 0.8061, 0.83, 0.823, 0.823, 0.8248, 0.8314, 0.7986, 0.8197, 0.8094, 0.823, 0.7991, 0.7925] | letzte Ausgabe Seed 0: val loss 0.8189 val acc 0.8667
+gatlcc_velickovic_hp: n=30 Mittel 0.8000 Std 0.0170 min 0.7461 max 0.8304 | 2013s | Werte [0.7892, 0.7972, 0.8061, 0.7986, 0.77, 0.7963, 0.8192, 0.7864, 0.7855, 0.8239, 0.8169, 0.8211, 0.7766, 0.7986, 0.7953, 0.8056, 0.8005, 0.7869, 0.8089, 0.8304, 0.8197, 0.8028, 0.8005, 0.8126, 0.7461, 0.7991, 0.8052, 0.8005, 0.8028, 0.7986] | letzte Ausgabe Seed 0: epochs 735 best val loss 0.6705 seconds 86
