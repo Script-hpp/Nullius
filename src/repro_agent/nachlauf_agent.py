@@ -89,6 +89,7 @@ COMMAND_USER = (
     "Lines that set drop_last, found by a program in the files that build data loaders:\n{loader}\n\n"
     "Answer with one JSON object of this shape:\n{format}\n\n"
     "Rules:\n"
+    "- All numbers are the numbers in square brackets at the start of a listed line, never line numbers of files.\n"
     "- command_candidate: the number of the documented command that trains the model of this result on this dataset for this forecast horizon. "
     "Use null if none of them matches; never guess and never write a command yourself.\n"
     "- test_loader.drop_last.candidate: the number of the line (second list) that sets drop_last for the loader used when testing; value is true or false as "
@@ -111,7 +112,7 @@ COMMAND_REASK = (
 SEED_USER = (
     "Task: choose_seed\n"
     "The documented command for this result is: {command}\nIt runs the entry script {script}. Lines of that script that set a random seed, found by a program:\n{seeds}\n\n"
-    "Answer with one JSON object {{\"seed_candidate\": N}} where N is the number of the line that sets the random seed of the training run "
+    "Answer with one JSON object {{\"seed_candidate\": N}} where N is the number in square brackets (not a line number of the file) of the line that sets the random seed of the training run "
     "(a fixed number in the script, or a command-line switch for the seed), or null if none of these lines is the seed of the training.\n"
     "Invented example: {{\"seed_candidate\": 1}}."
 )
@@ -132,13 +133,15 @@ ADAPTER_SYSTEM = (
     "Reply with exactly one ```python code block and no other prose."
 )
 ADAPTER_CONTRACT = """\
-Contract of predict.py (run without network access, CPU only, from the repository root; the repository is importable, put its root on sys.path):
+Contract of predict.py (run without network access, CPU only). The working directory is the repository root, but the script itself is stored somewhere else:
+import os and sys and put os.getcwd() on sys.path (sys.path.insert(0, os.getcwd())) before importing anything from the repository. Never make assumptions about
+__file__ or the directory of the script.
 - Read /data/etth1_public.npz with numpy.load. Keys: train [8640, 7], val [2880, 7] (not needed) and test_inputs, shape [n, 720, 7], float32, already z-score
   standardised with the mean and standard deviation of the training rows. Take n from the file; predict ALL windows in it. Window i is independent of every
   other window.
 - Use only the last L steps of each window as model input, where L is the input length of the model (the input length of the start command).
 - For every window predict the next 96 hourly steps of all 7 channels, in the same standardised units.
-- Load the model class from the repository and the weights from the file named by the environment variable NACHLAUF_CKPT. The weights were written by the
+- Load the model class from the repository (imports relative to the repository root) and the weights from the file named by the environment variable NACHLAUF_CKPT. The weights were written by the
   repository's own training code; check in the training file whether it saved a state dict or a whole model. Build the model configuration with an
   argparse.Namespace (or a small class) that has every attribute the model reads, set to the values of the start command or the entry script defaults.
 - Put the model in evaluation mode and run it under torch.no_grad(). If the model's forward function needs extra inputs that do not change the prediction, pass dummy tensors.
@@ -265,19 +268,20 @@ class Asker:
 
     def _once(self, purpose: str, role: str, system: str, user: str, max_tokens, temperature: float, n: int) -> LLMResponse:
         self.guard.check()
+        c = self._counts[purpose] = self._counts.get(purpose, 0) + 1
+        self._write(f"llm_{purpose}_{c}_prompt.txt", f"### system\n{system}\n\n### user\n{user}\n")     # Prompt vor dem Aufruf (nur Laufordner)
         resp = self.llm.complete(role, [{"role": "system", "content": system}, {"role": "user", "content": user}],
                                  temperature=temperature, max_tokens=max_tokens, timeout_s=400)
-        self._dump(purpose, resp)      # Rohantwort sofort, noch vor dem Parsen (nur Laufordner, nie in einen Prompt)
+        self._write(f"llm_{purpose}_{c}.txt", getattr(resp, "content", "") or "")      # Rohantwort sofort, noch vor dem Parsen
         self.prompts.append({"purpose": purpose, "system": system, "user": user})
         self.calls.append({"purpose": purpose, "role": role, "try": n, "cost_usd": round(getattr(resp, "cost_usd", 0.0), 5),
                            "finish_reason": getattr(resp, "finish_reason", None), "cached": bool(getattr(resp, "cached", False))})
         return resp
 
-    def _dump(self, purpose: str, resp) -> None:
-        n = self._counts[purpose] = self._counts.get(purpose, 0) + 1
+    def _write(self, name: str, text: str) -> None:
         if self.out_dir:
             try:
-                (self.out_dir / f"llm_{purpose}_{n}.txt").write_text(getattr(resp, "content", "") or "")
+                (self.out_dir / name).write_text(text)
             except OSError:
                 pass
 
@@ -323,6 +327,7 @@ class RepoReading:
     full: dict[str, str] = field(default_factory=dict)       # Dateien mit Python-Aufruf eines Skripts (git grep), ungekuerzt (Kandidatensuche)
     loader_files: dict[str, str] = field(default_factory=dict)   # Dateien mit DataLoader/drop_last (git grep), immer mitgegeben
     fetch: object = None                                     # Pfad -> Text oder None (spaetes Lesen, z. B. des Einstiegsskripts)
+    imports: set = field(default_factory=set)                # Namen der Module, die Python-Dateien des Repos importieren (git grep)
 
 
 def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text: str, dataset: str) -> RepoReading:
@@ -381,7 +386,9 @@ def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text
         if text is not None:
             loaders[p] = text
             files.setdefault(p, text[:MAX_FILE_CHARS])         # Loader-Dateien gehoeren immer zu den gelesenen Dateien
-    return RepoReading(url=url, commit=commit, listing=listing, files=files, chosen=chosen, full=full, loader_files=loaders, fetch=fetch)
+    raw_imports = sandbox.run(b, cand.IMPORT_GREP_CMD, 120).stdout
+    imports = {m.group(1) for m in re.finditer(r"^\s*(?:import|from)\s+([A-Za-z_]\w*)", raw_imports, re.M)}
+    return RepoReading(url=url, commit=commit, listing=listing, files=files, chosen=chosen, full=full, loader_files=loaders, fetch=fetch, imports=imports)
 
 
 FALLBACK_RE = re.compile(r"(^|/)(readme[\w.-]*|[\w.-]*\.sh|(run|train|main|exp)[\w.-]*\.py|[\w/.-]*model[\w.-]*\.py|[\w/.-]*(loader|data_factory|dataset)[\w.-]*\.py)$", re.I)
@@ -661,16 +668,19 @@ class NachlaufAgent:
         none = {"kind": "none", "repo_seed": None}
         if not sc:
             return none
-        ans = _obj(self.asker.json("choose_seed", COMMAND_SYSTEM, SEED_USER.format(
-            command=chosen.command, script=script, seeds="\n".join(c.line_text() for c in sc))))
-        k = _num(ans.get("seed_candidate"))
-        pick = next((c for c in sc if c.k == k), None) if k is not None else None
+        if len(sc) == 1:      # genau eine nutzbare Zeile: ohne LLM-Aufruf
+            pick, how, k = sc[0], "only_candidate", 1
+        else:
+            ans = _obj(self.asker.json("choose_seed", COMMAND_SYSTEM, SEED_USER.format(
+                command=chosen.command, script=script, seeds="\n".join(c.line_text() for c in sc))))
+            k = _num(ans.get("seed_candidate"))
+            pick, how = cand.resolve_seed_choice(k, sc, text)
         spec_seed = cand.seed_spec(pick, text) if pick else None
         if spec_seed is None:
-            self.rec.discarded.append({"item": "seed", "first": {"reason": "no usable seed line chosen" if pick is None else "chosen line is not unique or has not exactly one number",
+            self.rec.discarded.append({"item": "seed", "first": {"reason": "no usable seed line chosen" if pick is None else "chosen line is not unique or has not exactly one number", "how": how,
                                                                  "k": k}, "second": None})
             return none
-        self.rec.seed_choice = {"k": pick.k, "file": pick.file, "line": pick.line, "text": pick.text, "kind": pick.kind}
+        self.rec.seed_choice = {"k": pick.k, "file": pick.file, "line": pick.line, "text": pick.text, "kind": pick.kind, "how": how, "answered": k}
         return spec_seed
 
     def _spec(self, claim: Claim, paper_id: str, url: str, commit: str, ans: dict, ver: dict, reading: RepoReading,
@@ -815,6 +825,7 @@ class NachlaufAgent:
             spec = dataclasses.replace(spec, adapter_source=code)
             run.spec = spec
             problems: list[tuple[str, str]] = []
+            detail: dict = {}
             viol = find_violations(code)
             stage = "static"
             if viol:
@@ -834,12 +845,15 @@ class NachlaufAgent:
                         sc = nl.self_check(own, p["metrics"], p.get("metrics_droplast"), spec.test_loader, spec.metric)
                         offs = self.explore_offsets if isinstance(self.explore_offsets, list) else independence.random_offsets(self.explore_offsets, self.rng)
                         ind = run.independence(ckpt, p["full_pred"], offs, spec.repo_seed)
+                        detail = {"p3_distance": sc.get("distance"), "p3_compared_with": sc.get("compared_with"), "p2_max_abs_diff": ind.get("max_abs_diff")}
                         if sc["status"] == "ungueltig":
                             problems.append(("P3", P3_SENTENCE))
                         if not ind["ok"]:
                             problems.append(("P2", P2_SENTENCE))
-            self.rec.adapters.append({"n": v, "hash": h, "stage": stage, "status": "ok" if not problems else "ungueltig", "problems": [k for k, _ in problems]})
-            self.emit("nachlauf_adapter", n=v, hash=h, stage=stage, ok=not problems, problems=[k for k, _ in problems])
+            problem_text = " ".join(t for _, t in problems)[-1500:]       # genau der Text, der in den Reparatur-Prompt geht (keine Zahl aus P2/P3)
+            self.rec.adapters.append({"n": v, "hash": h, "stage": stage, "status": "ok" if not problems else "ungueltig", "problems": [k for k, _ in problems],
+                                      "problem_text": problem_text, "detail": detail})     # detail: Zahlen von P2/P3, nur Dossier, nie ein Prompt
+            self.emit("nachlauf_adapter", n=v, hash=h, stage=stage, ok=not problems, problems=[k for k, _ in problems], problem_text=problem_text)
             if not problems:
                 return code, ""
             reason = "; ".join(f"{k}: {t[:200]}" for k, t in problems)
@@ -909,6 +923,7 @@ class NachlaufAgent:
             for a in self.rec.attempts:
                 dossier.attempts.append(Attempt(claim.id, "", "", a.get("hash", ""), spec.repo_seed or 0, a.get("status") if a.get("status") in ("fehler", "ungueltig", "timeout") else "fehler",
                                                 None, (a.get("reason") or "")[:300]))
+            dossier.attempts.extend(self._adapter_attempts(claim, spec))
             from .loop import Orchestrator   # Urteilsregel des Nachbaus (Methode nutzt self nicht), wie nachlauf.run_unit
             dossier.verdicts.append(Orchestrator._verdict(None, claim_, [], len(seeds or [1]), [reason], None, {}))
             info["agent"] = self._agent_info()
@@ -965,7 +980,8 @@ class NachlaufAgent:
 
         seed_list = [spec.repo_seed if (isinstance(s, str) and s == "repo") else int(s) for s in (seeds if seeds is not None else ["repo", 0, 1, 2, 3])]
         dossier = nl.run_unit(self.sb, spec, seed_list, offsets=offsets, out_dir=self.out_dir, public_loader=run.public_loader, rng=self.rng,
-                              np_rng=self.np_rng, log=self.log, parallel=self.parallel, snapshots=(run.train_snap, run.pred_snap), event_log=self.events)
+                              np_rng=self.np_rng, log=self.log, parallel=self.parallel, snapshots=(run.train_snap, run.pred_snap), event_log=self.events,
+                              repo_imports=reading.imports or None)
         info = next(iter(dossier.nachlauf.values()))
         self._attach(dossier, info, warnings)
         self.rec.outcome = "ok"
@@ -974,13 +990,22 @@ class NachlaufAgent:
         # fehlgeschlagene Erkundungsversuche vor den Seeds im Dossier
         dossier.attempts[:0] = [Attempt(claim.id, "", run.train_snap, a.get("hash", ""), spec.repo_seed or 0,
                                         a["status"] if a.get("status") in ("fehler", "ungueltig", "timeout") else "fehler", None, (a.get("reason") or "")[:300])
-                                for a in self.rec.attempts if a.get("status") != "ok"]
+                                for a in self.rec.attempts if a.get("status") != "ok"] + self._adapter_attempts(claim, spec)
         return dossier
 
     def _attach(self, dossier: Dossier, info: dict, warnings: list[str]) -> None:
         for w in warnings:
             if w not in dossier.warnings:
                 dossier.warnings.append(w)
+
+    def _adapter_attempts(self, claim: Claim, spec: nl.UnitSpec) -> list[Attempt]:
+        """Fehlgeschlagene Adapter-Versionen der Erkundung als Versuche; error_summary = Problemtext, der in den Reparatur-Prompt ging."""
+        out = []
+        for a in self.rec.adapters:
+            if a.get("status") != "ok":
+                status = "fehler" if set(a.get("problems", [])) & {"static", "smoke", "run"} else "ungueltig"
+                out.append(Attempt(claim.id, "", "", a.get("hash", ""), spec.repo_seed or 0, status, None, (a.get("problem_text") or "")[:1500]))
+        return out
 
     def _minimal_spec(self, claim: Claim, paper_id: str, url: str, commit: str) -> nl.UnitSpec:
         return nl.UnitSpec(

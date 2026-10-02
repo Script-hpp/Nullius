@@ -377,7 +377,7 @@ def _bracket(text: str, name: str) -> str | None:
 
 
 def predict_cmd(smoke: bool = False) -> str:
-    env = f"NACHLAUF_CKPT={CKPT_PATH}" + (" SMOKE=1" if smoke else "")
+    env = f"PYTHONPATH={REPO_DIR} NACHLAUF_CKPT={CKPT_PATH}" + (" SMOKE=1" if smoke else "")      # Repo importierbar, auch wenn das Skript es nicht selbst einrichtet
     return f"mkdir -p {OUTPUT} && cd {REPO_DIR} && " + _timed(f"{env} unshare -n python {ADAPTER_PATH}")
 
 
@@ -574,6 +574,27 @@ class _Run:
         return summary
 
 
+PIP_IMPORT_ALIASES = {"scikit-learn": "sklearn", "pillow": "PIL", "opencv-python": "cv2", "opencv-python-headless": "cv2", "pyyaml": "yaml",
+                      "beautifulsoup4": "bs4", "protobuf": "google", "attrs": "attr", "python-dateutil": "dateutil", "msgpack-python": "msgpack"}
+MAX_ENV_SHOWN = 10
+
+
+def env_warning(diffs: list[dict], repo_imports: set[str] | None = None) -> str:
+    """Zeugnis-Warnung zur Umgebung: Anzahl der Abweichungen von den Abhaengigkeitsdateien plus die Pakete, die das Repo wirklich importiert (und deren
+    Version abweicht oder die fehlen). Die volle Liste bleibt im Dossier (`env_diff`). Ohne Importliste: die ersten Pakete."""
+    def imported(pkg: str) -> bool:
+        n = _norm(pkg)
+        return bool({n.replace("-", "_"), PIP_IMPORT_ALIASES.get(n, "")} & (repo_imports or set()))
+    rel = [d for d in diffs if imported(d["package"])] if repo_imports is not None else list(diffs)
+    shown = rel[:MAX_ENV_SHOWN]
+    parts = "; ".join(f"{d['package']} {d['installed'] or 'fehlt'} statt {d['required']}" for d in shown)
+    more = f" und {len(rel) - len(shown)} weitere" if len(rel) > len(shown) else ""
+    head = f"Umgebung weicht von den Abhaengigkeitsdateien des Repos ab: {len(diffs)} Pakete (volle Liste im Dossier)"
+    if repo_imports is None:
+        return f"{head}; erste: {parts}{more}"
+    return f"{head}; davon vom Repo importiert: {parts + more if rel else 'keines'}"
+
+
 def new_dossier(spec: UnitSpec) -> tuple[Claim, Dossier, dict]:
     """Leeres Dossier (mode="nachlauf") mit Claim und Nachlauf-Feldern der Einheit."""
     claim = Claim(id=spec.claim_id or f"{spec.unit}_etth1_96_{spec.metric}", text=spec.claim_text, metric=spec.metric, target=spec.target,
@@ -589,7 +610,8 @@ def new_dossier(spec: UnitSpec) -> tuple[Claim, Dossier, dict]:
 
 def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[int] = independence.N_OFFSETS, out_dir: Path | None = None,
              public_loader=None, rng=None, np_rng=None, log=print, parallel: int | None = None,
-             snapshots: tuple[str, str] | None = None, event_log: EventLog | None = None) -> Dossier:
+             snapshots: tuple[str, str] | None = None, event_log: EventLog | None = None,
+             repo_imports: set[str] | None = None) -> Dossier:
     """Fuehrt eine Einheit aus (Hand-Spec) und liefert das Dossier (mode="nachlauf"). out_dir: Ordner fuer events.jsonl (und dossier.json bei save)."""
     if out_dir is not None:
         Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -646,8 +668,7 @@ def run_unit(sandbox, spec: UnitSpec, seeds: list[int], *, offsets: int | list[i
         dossier.attempts.append(Attempt(claim.id, "", run.train_snap, code_hash, spec.repo_seed or 0, "ungueltig", None, "; ".join(p1["forbidden"])))
         return finish()
     if probe["env_diff"]:
-        dossier.warnings.append("Umgebung weicht von den Abhaengigkeitsdateien des Repos ab: " + "; ".join(
-            f"{d['package']} {d['installed'] or 'fehlt'} statt {d['required']}" for d in probe["env_diff"]))
+        dossier.warnings.append(env_warning(probe["env_diff"], repo_imports))
     usable = [s for s in seeds if s == spec.repo_seed or spec.seed["kind"] in ("copy", "flag")]
     if len(usable) < len(seeds):
         notes.append(f"{len(seeds) - len(usable)} Seeds uebersprungen (kein Seed-Weg ausser dem Repo-Seed)")

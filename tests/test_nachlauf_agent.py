@@ -127,6 +127,10 @@ class AgentSandbox(SeriesFake):
             rx = re.compile(ere.replace("[[:space:]]", r"\s"))
             hits = sorted(p for p, t in self.repo.items() if rx.search(t) and not p.endswith((".csv", ".json", ".ipynb")))
             return RunResult(0, "".join(h + "\n" for h in hits), "", False)
+        if cmd.startswith("cd /repo && git grep -hE"):
+            self.ops.append(("run", b, cmd, timeout_s))
+            out = "".join(l + "\n" for t in self.repo.values() for l in t.splitlines() if re.match(r"^\s*(import|from)\s+[A-Za-z_]", l))
+            return RunResult(0, out, "", False)
         if cmd.startswith("cd /repo && git ls-files"):
             self.ops.append(("run", b, cmd, timeout_s))
             return RunResult(0, "\n".join(sorted(self.repo) + ["LICENSE", "assets/logo.png"]) + "\n", "", False)
@@ -234,7 +238,7 @@ def test_good_case_from_start_to_verdict(tmp_path):
     ag = info["agent"]
     assert ag["outcome"] == "ok" and ag["n_llm_calls"] == 4 and ag["verification"]["command_candidate"]["belegt"] and ag["discarded"] == []
     assert ag["candidates"]["n_total"] == 3 and ag["candidates"]["n_shown"] == 3 and ag["candidates"]["n_dropped"] == 0
-    assert ag["seed_choice"]["text"] == "seed = 4242" and any("train_gizmo.py:2" in x for x in ag["seed_candidates"])
+    assert ag["seed_choice"]["text"] == "seed = 4242" and any("line 2 of train_gizmo.py" in x for x in ag["seed_candidates"])
     assert [a.status for a in d.attempts] == ["stabil", "stabil"]
     trains = [o[2] for o in sb.ops if o[0] == "run" and "unshare -n" in o[2] and "train_gizmo" in o[2]]
     assert len(trains) == 3 and " train_gizmo.py " in trains[0] and "/opt/seed/train_gizmo.py" in trains[-1]      # Erkundung, Repo-Seed, Seed 0
@@ -392,7 +396,8 @@ def test_seed_candidates_assignment_switch_and_none():
     call = cand.seed_candidates("x.py", "np.random.seed(11)\n")
     assert [(c.kind, c.value) for c in call] == [("copy", 11)]
     dup = "seed = 5\nseed = 5\n"
-    assert cand.seed_spec(cand.seed_candidates("x.py", dup)[0], dup) is None                              # Zeile nicht eindeutig
+    assert cand.seed_candidates("x.py", dup) == []                                                        # nicht eindeutig: gar nicht angeboten
+    assert cand.seed_spec(cand.SeedCandidate(1, "copy", "x.py", 1, "seed = 5", value=5), dup) is None    # und seed_spec lehnt sie ab
 
 
 def test_seed_choice_switch_runs_seeds_through_the_flag(tmp_path):
@@ -928,3 +933,119 @@ def test_script_writes_store_row_with_costs_after_an_unexpected_error(tmp_path, 
     row = json.loads(store.read_text().splitlines()[0])
     assert rc == 1 and row["urteil"] == "nicht reproduzierbar (Setup)" and row["valid"] is False
     assert row["cost_usd_run"] == pytest.approx(0.02) and row["n_llm_calls"] == 2 and (tmp_path / row["run_dir"] / "dossier.json").exists()
+
+
+# ---- 38d: Seed nur aus nutzbaren Zeilen, Adapter-Vertrag, Nachvollziehbarkeit, Umgebungs-Warnung --------------------------------------------------
+
+READS_ONLY = ("import argparse\nimport random, torch\nfix_seed = 1024\nrandom.seed(fix_seed)\ntorch.manual_seed(fix_seed)\nnp.random.seed(args.seed_value)\n"
+              "parser = argparse.ArgumentParser()\nparser.add_argument('--horizon', type=int, default=24)\n")
+TWO_USABLE = READS_ONLY + "parser.add_argument('--seed', type=int, default=3)\n"
+
+
+def test_only_usable_seed_lines_are_offered():
+    sc = cand.seed_candidates("run.py", READS_ONLY)
+    assert [(c.kind, c.line, c.value) for c in sc] == [("copy", 3, 1024)]                        # Zeilen, die den Seed nur benutzen, fehlen
+    assert "[1] (line 3 of run.py) fix_seed = 1024" in sc[0].line_text()
+    assert [(c.kind, c.line) for c in cand.seed_candidates("run.py", TWO_USABLE)] == [("copy", 3), ("flag", 9)]
+    assert cand.seed_candidates("x.py", "seed = 5\nseed = 5\n") == []                             # nicht eindeutig: nicht nutzbar
+
+
+def test_exactly_one_usable_seed_line_is_taken_without_an_llm_call(tmp_path):
+    repo = {**REPO, "train_gizmo.py": READS_ONLY}
+    llm = FakeLLM(base_script(choose_seed=[]))
+    d, _ = go(AgentSandbox(repo=repo), llm, tmp_path)
+    assert "choose_seed" not in llm.purposes()
+    ag = info_of(d)["agent"]
+    assert ag["seed_choice"]["how"] == "only_candidate" and ag["seed_choice"]["text"] == "fix_seed = 1024" and ag["discarded"] == []
+    assert [a.seed for a in d.attempts if a.status in ("stabil", "abweichung")] == [1024, 0]      # fuenf Seeds waeren moeglich: kein "eine Messung"
+    assert "eine Messung, keine Streuung" not in d.warnings
+
+
+def test_seed_choice_resolution_by_line_number_and_by_variable():
+    sc = cand.seed_candidates("run.py", TWO_USABLE)
+    assert cand.resolve_seed_choice(1, sc, TWO_USABLE) == (sc[0], "number")
+    assert cand.resolve_seed_choice(9, sc, TWO_USABLE) == (sc[1], "line_number")                   # Zeilennummer der Schalterdefinition
+    assert cand.resolve_seed_choice(4, sc, TWO_USABLE) == (sc[0], "resolved_variable")             # `random.seed(fix_seed)` liest nur: Zuweisung der Variablen
+    assert cand.resolve_seed_choice(5, sc, TWO_USABLE) == (sc[0], "resolved_variable")             # torch.manual_seed(fix_seed)
+    assert cand.resolve_seed_choice(6, sc, TWO_USABLE)[0] is None                                  # liest eine andere Variable (args.seed_value): keine Aufloesung
+    assert cand.resolve_seed_choice(None, sc, TWO_USABLE) == (None, "none") and cand.resolve_seed_choice(500, sc, TWO_USABLE)[0] is None
+
+
+def test_model_choosing_a_reading_line_is_resolved_in_the_flow(tmp_path):
+    repo = {**REPO, "train_gizmo.py": TWO_USABLE}
+    pick_reader = lambda user: jx({"seed_candidate": 4})      # noqa: E731   (Zeilennummer von random.seed(fix_seed))
+    d, _ = go(AgentSandbox(repo=repo), FakeLLM(base_script(choose_seed=[pick_reader])), tmp_path)
+    ag = info_of(d)["agent"]
+    assert ag["seed_choice"]["how"] == "resolved_variable" and ag["seed_choice"]["text"] == "fix_seed = 1024" and "eine Messung, keine Streuung" not in d.warnings
+
+
+def test_seed_and_command_prompts_say_the_numbers_are_the_bracket_numbers(tmp_path):
+    llm = FakeLLM(base_script(choose_seed=[seed_answer()]))
+    go(AgentSandbox(), llm, tmp_path)
+    seed_prompt = next(c[2] for c in llm.calls if c[0] == "choose_seed")
+    assert "square brackets (not a line number" in seed_prompt and "(line 2 of train_gizmo.py)" in seed_prompt
+    assert "never line numbers of files" in next(c[2] for c in llm.calls if c[0] == "start_command")
+
+
+def test_adapter_contract_names_the_working_directory_and_forbids_file_assumptions():
+    assert "working directory is the repository root" in na.ADAPTER_CONTRACT and "os.getcwd()" in na.ADAPTER_CONTRACT and "__file__" in na.ADAPTER_CONTRACT
+    assert "stored somewhere else" in na.ADAPTER_CONTRACT
+    assert f"PYTHONPATH={nl.REPO_DIR}" in nl.predict_cmd() and f"cd {nl.REPO_DIR}" in nl.predict_cmd()      # Repo auch ohne Hilfe des Skripts importierbar
+
+
+def test_failed_adapter_versions_keep_the_problem_text_in_event_dossier_and_attempt(tmp_path):
+    sb = AgentSandbox()
+    llm = FakeLLM(base_script(write_adapter=[code("crash")], repair_adapter=[code("p3bad"), code("honest")]))
+    d, agent = go(sb, llm, tmp_path)
+    ad = info_of(d)["agent"]["adapters"]
+    assert [a["problems"] for a in ad] == [["smoke"], ["P3"], []]
+    assert "KeyError: 'depth'" in ad[0]["problem_text"] and ad[1]["problem_text"] == na.P3_SENTENCE and ad[2]["problem_text"] == ""
+    repair_prompts = [c[2] for c in llm.calls if c[0] == "repair_adapter"]
+    assert ad[0]["problem_text"] in repair_prompts[0] and ad[1]["problem_text"] in repair_prompts[1]      # exakt der Text, der in den Prompt ging
+    assert ad[1]["detail"]["p3_distance"] is not None and ad[1]["detail"]["p3_compared_with"]           # Zahlen nur im Dossier-Detail
+    ev = [json.loads(l) for l in (tmp_path / "events.jsonl").read_text().splitlines() if '"nachlauf_adapter"' in l]
+    assert [e["problem_text"] for e in ev][0].endswith("KeyError: 'depth'\n") or "KeyError: 'depth'" in ev[0]["problem_text"]
+    errs = [(a.status, a.error_summary) for a in d.attempts if a.code_hash in {x["hash"] for x in ad[:2]}]
+    assert [e[0] for e in errs] == ["fehler", "ungueltig"] and "KeyError: 'depth'" in errs[0][1] and errs[1][1] == na.P3_SENTENCE
+
+
+def test_smoke_problem_text_is_recorded(tmp_path):
+    llm = FakeLLM(base_script(write_adapter=[code("shape")], repair_adapter=[code("honest")]))
+    d, _ = go(AgentSandbox(), llm, tmp_path)
+    first = info_of(d)["agent"]["adapters"][0]
+    assert first["problems"] == ["smoke"] and "expected" in first["problem_text"] and first["problem_text"] in next(c[2] for c in llm.calls if c[0] == "repair_adapter")
+
+
+def test_every_prompt_is_stored_next_to_the_raw_answer(tmp_path):
+    llm = FakeLLM(base_script())
+    d, agent = go(AgentSandbox(), llm, tmp_path)
+    for p, n in (("select_files", 1), ("start_command", 1), ("choose_seed", 1), ("write_adapter", 1)):
+        text = (tmp_path / f"llm_{p}_{n}_prompt.txt").read_text()
+        rec = next(x for x in agent.asker.prompts if x["purpose"] == p)
+        assert text == f"### system\n{rec['system']}\n\n### user\n{rec['user']}\n" and (tmp_path / f"llm_{p}_{n}.txt").exists()
+
+
+def test_prompt_is_written_before_the_call_even_if_the_call_crashes(tmp_path):
+    class Crash(FakeLLM):
+        def complete(self, *a, **k):
+            raise RuntimeError("network down")
+    d, _ = go(AgentSandbox(), Crash(base_script()), tmp_path)
+    assert (tmp_path / "llm_select_files_1_prompt.txt").exists() and d.verdicts[0].urteil == "nicht reproduzierbar (Setup)"
+
+
+def test_environment_warning_is_compact_and_lists_only_imported_packages(tmp_path):
+    reqs = "\n".join(f"pkg{i}==1.{i}" for i in range(40)) + "\nnumpy\nfoo-lib==1.0\ntorch==1.9.0\n"
+    repo = {**REPO, "requirements.txt": reqs, "gizmo/model.py": "import torch\nimport foo_lib\n" + REPO["gizmo/model.py"]}
+    d, _ = go(AgentSandbox(repo=repo), FakeLLM(base_script()), tmp_path)
+    warn = next(w for w in d.warnings if w.startswith("Umgebung weicht"))
+    assert len(warn) < 400 and "42 Pakete" in warn and "foo-lib fehlt statt ==1.0" in warn and "torch" in warn and "pkg7" not in warn
+    assert len(info_of(d)["env_diff"]) == 42                                                  # volle Liste bleibt im Dossier
+
+
+def test_env_warning_without_import_information_shows_the_first_packages_only():
+    diffs = [{"package": f"p{i}", "required": "==1", "installed": None} for i in range(30)]
+    w = nl.env_warning(diffs, None)
+    assert "30 Pakete" in w and "p0 fehlt" in w and "und 20 weitere" in w and "p29" not in w
+    assert nl.env_warning(diffs, {"p3"}).endswith("p3 fehlt statt ==1")
+    assert nl.env_warning(diffs, set()).endswith("keines")
+    assert nl.env_warning([{"package": "scikit-learn", "required": "==1.0", "installed": "1.5"}], {"sklearn"}).endswith("scikit-learn 1.5 statt ==1.0")

@@ -16,6 +16,7 @@ from . import nachlauf as nl
 # git grep -E (POSIX): Dateien mit einem Python-Aufruf eines Skripts bzw. mit Test-Loader-Zeilen. Datendateien und Binaeres ausgeschlossen.
 CMD_GREP_ERE = r"python[0-9.]*[[:space:]].*\.py"
 LOADER_GREP_ERE = r"DataLoader\(|drop_last"
+IMPORT_GREP_CMD = "cd /repo && git grep -hE '^[[:space:]]*(import|from)[[:space:]]+[A-Za-z_]' -- '*.py' | head -20000"
 EXCLUDE_PATHSPECS = (":!*.csv", ":!*.json", ":!*.ipynb", ":!*.npy", ":!*.npz", ":!*.pkl", ":!*.pdf", ":!*.svg", ":!*.png", ":!*.jpg", ":!*.log")
 MAX_FILE_BYTES = 200_000
 MAX_GREP_FILES = 120
@@ -145,11 +146,13 @@ class SeedCandidate:
     value: int | None = None
 
     def line_text(self) -> str:
-        return f"[{self.k}] {self.file}:{self.line}: {self.text[:240]}  ({'fixed number in the script' if self.kind == 'copy' else 'command-line switch ' + self.flag})"
+        return (f"[{self.k}] (line {self.line} of {self.file}) {self.text[:240]}  "
+                f"({'fixed number in the script' if self.kind == 'copy' else 'command-line switch ' + self.flag})")
 
 
 def seed_candidates(path: str, text: str) -> list[SeedCandidate]:
-    """Zeilen im Einstiegsskript, die einen Seed setzen: Zuweisung einer Zahl an einen Namen mit 'seed', Aufruf mit Zahl, Schalterdefinition mit 'seed'."""
+    """Nur NUTZBARE Zeilen im Einstiegsskript: Zuweisung einer Zahl an einen Namen mit 'seed', Aufruf mit Zahl, Schalterdefinition mit 'seed'.
+    Zeilen, die einen Seed nur benutzen (`random.seed(fix_seed)`), und Zeilen, die nicht genau einmal vorkommen, werden nicht angeboten."""
     out: list[SeedCandidate] = []
     for n, raw in enumerate(text.splitlines(), 1):
         line = raw.rstrip()
@@ -164,11 +167,34 @@ def seed_candidates(path: str, text: str) -> list[SeedCandidate]:
         d = re.search(r"default\s*=\s*(-?\d+)", m.group(0))
         n = text.count("\n", 0, m.start()) + 1
         out.append(SeedCandidate(0, "flag", path, n, re.sub(r"\s+", " ", m.group(0)).strip(), flag=m.group(1), value=int(d.group(1)) if d else None))
+    lines = [l.strip() for l in text.splitlines()]
+    out = [c for c in out if c.kind == "flag" or lines.count(c.text.strip()) == 1]      # copy: Zeile eindeutig (seed_spec braucht genau eine)
     out.sort(key=lambda c: c.line)
     out = out[:MAX_SEED_LINES]
     for i, c in enumerate(out, 1):
         c.k = i
     return out
+
+
+def resolve_seed_choice(k: int | None, sc: list[SeedCandidate], text: str) -> tuple[SeedCandidate | None, str]:
+    """Wahl des Modells -> Kandidat. Nummer der Liste; sonst als Zeilennummer des Skripts gelesen (Verwechslung); zeigt diese Zeile nur auf eine Variable
+    (`random.seed(fix_seed)`), wird deterministisch auf die Zuweisung dieser Variablen aufgeloest. Rueckgabe (Kandidat oder None, Weg)."""
+    if k is None:
+        return None, "none"
+    hit = next((c for c in sc if c.k == k), None)
+    if hit:
+        return hit, "number"
+    hit = next((c for c in sc if c.line == k), None)
+    if hit:
+        return hit, "line_number"
+    lines = text.splitlines()
+    if 1 <= k <= len(lines):
+        names = set(re.findall(r"[A-Za-z_]\w*", lines[k - 1]))
+        for c in sc:
+            m = SEED_ASSIGN_RE.match(c.text) if c.kind == "copy" else None
+            if m and m.group(1) in names:
+                return c, "resolved_variable"
+    return None, "unusable"
 
 
 def seed_spec(c: SeedCandidate, text: str) -> dict | None:
