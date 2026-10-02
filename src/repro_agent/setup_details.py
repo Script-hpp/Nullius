@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+import dataclasses
 from dataclasses import dataclass
 
 from .claims_source import _norm
@@ -64,7 +65,23 @@ def _parse_list(content: str) -> list:
     return []
 
 
-def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str) -> list:
+ANSWER_FORMAT = (
+    'Answer with a JSON list of {"topic": short label, "value": the setting, "quote": a '
+    "VERBATIM excerpt (max 300 chars) copied from the excerpt}. Keep your reasoning "
+    "short and end with the JSON list.\n\n"
+)
+ANSWER_FORMAT_V2 = (   # v5 V3: jede Angabe nennt, fuer welches Modell/welchen Datensatz/welche Einstellung sie gilt, mit Zitat
+    'Answer with a JSON list of {"topic": short label, "value": the setting, "quote": a '
+    'VERBATIM excerpt (max 300 chars) copied from the excerpt, "applies_to": {"model": the model or method this '
+    'value belongs to ("all" if the excerpt states it for every model), "dataset": the dataset(s) it belongs to '
+    '("all" if general), "setting": "transductive", "inductive" or "not stated"}, "scope_quote": a VERBATIM excerpt '
+    "(max 300 chars) that shows for which model and dataset the value holds (it may equal quote)}. If a table, script or "
+    "text gives different values for several models or datasets, report each with its own applies_to. "
+    "Keep your reasoning short and end with the JSON list.\n\n"
+)
+
+
+def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2: bool = False) -> list:
     resp = llm.complete("extract", [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": (
@@ -81,20 +98,18 @@ def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str) ->
             "protocols (for example the original paper's and a re-evaluation's), say in the topic which "
             "one each value belongs to. Only what this excerpt says; in code, report values exactly as "
             "written. If there is none, answer [].\n"
-            'Answer with a JSON list of {"topic": short label, "value": the setting, "quote": a '
-            "VERBATIM excerpt (max 300 chars) copied from the excerpt}. Keep your reasoning "
-            "short and end with the JSON list.\n\n"
+            + (ANSWER_FORMAT_V2 if v2 else ANSWER_FORMAT) +
             f"EXCERPT:\n{chunk}"
         )},
     ], temperature=0.0, max_tokens=6000, timeout_s=600)
     return _parse_list(resp.content)
 
 
-def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str) -> list[dict]:
+def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, v2: bool = False) -> list[dict]:
     """Rohangaben des Modells je Dokument, noch ungeprueft: [{"doc": Name, "item": Objekt}]."""
     jobs = [(doc, chunk) for doc in docs for chunk in _chunks(doc.text[:MAX_TEXT_CHARS])]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset), jobs))
+        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2), jobs))
     return [{"doc": doc.name, "item": item} for (doc, _), lst in zip(jobs, raw_lists) for item in lst]
 
 
@@ -214,3 +229,238 @@ def format_conflicts(details: list[SetupDetail]) -> str:
              for p, r in pairs]
     return ("Paper and repository give different values for the same setting. In your plan name both with their source, "
             "and say which one you use and why:\n" + "\n".join(lines))
+
+
+# ---- v5 Schritt A (Schalter setup_v2): Pflichtliste je Task-Familie (V1), Quellenrang (V2), Feld "gilt fuer" (V3) -----------------
+# Die Pflichtliste nennt nur Themen, nie Werte oder Methodenwissen.
+RANKS = ("start script", "config", "argparse default", "code", "readme text", "paper")   # hoechster Rang zuerst
+OPTIONAL_RE = re.compile(r"\b(optional(ly)?|for example|for instance|e\.g\.|can|may|could|you might)\b", re.I)
+DEFAULT_RE = re.compile(r"default\s*=|DEFINE_\w+\(", re.I)
+START_RE = re.compile(r"\.sh$|(^|/)(execute|run|train|main|exp)[\w.-]*\.py$", re.I)
+CONFIG_RE = re.compile(r"\.(ya?ml|json|conf|cfg|ini|toml)$", re.I)
+LOADER_RE = re.compile(r"(^|/)(utils|data|dataset|datasets|load\w*|process\w*|preprocess\w*|prepare\w*|loader\w*)[\w.-]*\.py$|data_loader|data_provider", re.I)
+ARGS_RE = re.compile(r"(^|/)(args|config|parser|options)\w*\.py$", re.I)
+MAX_TARGET_DOCS = 8
+
+# (Thema, Muster auf das Thema der Angabe, Ausschluss-Muster). Reihenfolge = Reihenfolge im Dossier.
+MANDATORY: dict[str, list[tuple[str, str, str]]] = {
+    "graph": [
+        ("feature normalisation", r"(feature|attribute|input|row|preprocess|standardi)", r"adjacen|laplacian|propagat|graph normali"),
+        ("adjacency normalisation", r"adjacen|laplacian|propagat|renormali|symmetric|graph normali", ""),
+        ("learning rate", r"learning.?rate|\blr\b", "schedule|decay"),
+        ("weight decay", r"weight.?decay|\bl2\b|regulari[sz]", ""),
+        ("dropout", r"dropout", ""),
+        ("hidden size / heads", r"hidden|head|units|width|channels", ""),
+        ("epochs", r"epoch|iteration", ""),
+        ("early stopping rule", r"early|patience|stopping", ""),
+    ],
+    "forecast": [
+        ("input length", r"input|seq.?len|look.?back|window|history", "label|pred|horizon"),
+        ("learning rate", r"learning.?rate|\blr\b", "schedule|decay|adjust"),
+        ("learning-rate schedule", r"schedule|lradj|decay|halv|adjust|anneal", ""),
+        ("batch size", r"batch", ""),
+        ("epochs", r"epoch|iteration", ""),
+        ("patience", r"patience|early|stopping", ""),
+    ],
+}
+GRAPH_DATASETS = ("cora", "citeseer", "pubmed")
+GENERIC_MODEL_WORDS = {"model", "models", "all", "our", "ours", "proposed", "baseline", "baselines", "gnn", "gnns", "network", "networks",
+                       "neural", "method", "methods", "we", "the", "and", "not", "stated", "any", "every", "general", "default"}
+GENERIC_SCOPE = {"", "all", "any", "every", "general", "not stated", "unknown", "n/a", "none", "all datasets", "all models"}
+
+
+@dataclass(frozen=True)
+class SetupDetailV2(SetupDetail):
+    applies_to: dict | None = None   # {"model", "dataset", "setting", "quote"}; None = Geltungsbereich nicht belegt
+    source_rank: str = ""
+    optional: bool = False           # README-Satz mit "optional", "for example", "can" ...
+    excluded: str = ""               # Grund, warum die Angabe nicht in den Plan geht (anderes Modell/Datensatz/Einstellung)
+
+
+def family_for(dataset: str) -> str:
+    return "graph" if any(g in dataset.lower() for g in GRAPH_DATASETS) else "forecast"
+
+
+def source_rank(doc_name: str, quote: str) -> str:
+    if doc_name == "paper":
+        return "paper"
+    if doc_name == "repo-readme":
+        return "readme text"
+    path = doc_name.split(":", 1)[-1].split("@")[0]
+    if DEFAULT_RE.search(quote):
+        return "argparse default"
+    if START_RE.search(path):
+        return "start script"
+    if CONFIG_RE.search(path):
+        return "config"
+    return "code"
+
+
+def _scope(item: dict, doc_norm: str, norm=_norm) -> dict | None:
+    ap, sq = item.get("applies_to"), str(item.get("scope_quote", "")).strip()
+    if not isinstance(ap, dict) or not sq or not quote_in_text(sq, doc_norm, norm):
+        return None   # Geltungsbereich ohne woertliches Zitat = nicht belegt
+    return {"model": str(ap.get("model", "")).strip(), "dataset": str(ap.get("dataset", "")).strip(),
+            "setting": str(ap.get("setting", "")).strip().lower(), "quote": sq}
+
+
+def verify_raw_v2(raw: list[dict], docs: list[Doc], norm=_norm) -> tuple[list[SetupDetailV2], list[dict]]:
+    """Wie verify_raw (Zitat und Zahlen), dazu Quellenrang, Markierung optional und Geltungsbereich mit eigenem Zitat."""
+    kept, dropped = verify_raw(raw, docs, norm)
+    keep_keys = {(d.source, norm(d.quote)) for d in kept}
+    hay = {d.name: norm(d.text) for d in docs}
+    by_key = {}
+    for r in raw:
+        item = r["item"]
+        if isinstance(item, dict):
+            by_key.setdefault((r["doc"], norm(str(item.get("quote", "")).strip())), item)
+    out = []
+    for d in kept:
+        item = by_key.get((d.source, norm(d.quote)), {})
+        rank = source_rank(d.source, d.quote)
+        out.append(SetupDetailV2(d.topic, d.value, d.quote, d.source, _scope(item, hay[d.source], norm), rank,
+                                 rank == "readme text" and bool(OPTIONAL_RE.search(d.quote))))
+    return out, dropped
+
+
+def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str) -> str:
+    """Grund, warum die Angabe nicht fuer diesen Claim gilt ("" = gilt oder Geltungsbereich unbekannt). Nur belegte Bereiche zaehlen."""
+    ap = d.applies_to
+    if not ap:
+        return ""
+    claim_n, data_n = _norm(claim_text), _norm(dataset)
+    model = _norm(ap.get("model", ""))
+    tokens = [t for t in re.split(r"[^a-z0-9]+", model) if len(t) >= 3 and t not in GENERIC_MODEL_WORDS]
+    if tokens and not any(t in claim_n for t in tokens):
+        return f"other model ({ap['model']})"
+    ds = _norm(ap.get("dataset", ""))
+    ds_tokens = [t for t in re.split(r"[^a-z0-9]+", ds) if len(t) >= 3 and t not in GENERIC_MODEL_WORDS]
+    if ds not in GENERIC_SCOPE and ds_tokens and not any(t in data_n or any(w in t for w in data_n.split() if len(w) >= 3) for t in ds_tokens):
+        return f"other dataset ({ap['dataset']})"
+    setting = ap.get("setting", "")
+    if family_for(dataset) == "graph" and "inductive" in setting and "transductive" not in setting:
+        return "inductive setting"
+    return ""
+
+
+def apply_scope(details: list[SetupDetailV2], claim_text: str, dataset: str) -> list[SetupDetailV2]:
+    return [dataclasses.replace(d, excluded=scope_exclusion(d, claim_text, dataset)) if not d.excluded else d for d in details]
+
+
+def missing_topics(details: list[SetupDetailV2], family: str) -> list[str]:
+    """Pflichtthemen ohne gueltige (nicht ausgeschlossene) Angabe; nur das Thema der Angabe zaehlt, nie ihr Wert."""
+    live = [d.topic for d in details if not d.excluded]
+    out = []
+    for name, inc, exc in MANDATORY[family]:
+        if not any(re.search(inc, t, re.I) and not (exc and re.search(exc, t, re.I)) for t in live):
+            out.append(name)
+    return out
+
+
+def target_docs(docs: list[Doc]) -> list[Doc]:
+    """Dateien, die Daten laden, und Startskripte/Argumentdefinitionen des Experiments, plus README (deterministisch nach Pfad)."""
+    def path(d: Doc) -> str:
+        return d.name.split(":", 1)[-1].split("@")[0]
+    repo = [d for d in docs if d.name.startswith("repo:")]
+    picked = [d for d in repo if START_RE.search(path(d)) or ARGS_RE.search(path(d)) or CONFIG_RE.search(path(d))]
+    picked += [d for d in repo if LOADER_RE.search(path(d)) and d not in picked]
+    picked += [d for d in docs if d.name == "repo-readme"]
+    return picked[:MAX_TARGET_DOCS]
+
+
+def _targeted_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, topics: list[str]) -> list:
+    resp = llm.complete("extract", [
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": (
+            f"Goal: reproduce this result: {claim_text} (dataset: {dataset}).\n"
+            "Earlier passes found no statement for these settings: " + "; ".join(topics) + ".\n"
+            "From the excerpt below (code, script, config or README), list only statements that set or describe exactly these "
+            "settings for the experiment of the goal, with the value exactly as written. If the excerpt has none, answer [].\n"
+            + ANSWER_FORMAT_V2 + f"EXCERPT:\n{chunk}"
+        )},
+    ], temperature=0.0, max_tokens=6000, timeout_s=600)
+    return _parse_list(resp.content)
+
+
+def extract_setup_details_v2(
+    llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str
+) -> tuple[list[SetupDetailV2], int, list[str], dict]:
+    """V1 bis V3. Rueckgabe: (Angaben inkl. ausgeschlossener, Zahl verworfener, nicht gefundene Pflichtthemen, Info).
+    Ablauf: erste Extraktion, Geltungsbereich pruefen, fehlende Pflichtthemen gezielt in Datenlade- und Startdateien suchen,
+    erneut pruefen. Jede Angabe braucht ein woertliches Zitat (verify_raw), "nicht gefunden" ist ein gueltiges Ergebnis."""
+    family = family_for(dataset)
+    details, dropped = verify_raw_v2(collect_raw(llm, docs, claim_text, dataset, v2=True), docs)
+    details = apply_scope(details, claim_text, dataset)
+    missing = missing_topics(details, family)
+    info = {"family": family, "missing_first": list(missing), "targeted_docs": [], "added": 0}
+    n_dropped = len(dropped)
+    if missing:
+        targets = target_docs(docs)
+        info["targeted_docs"] = [d.name for d in targets]
+        jobs = [(d, c) for d in targets for c in _chunks(d.text[:MAX_TEXT_CHARS])]
+        if jobs:
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                lists = list(pool.map(lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing), jobs))
+            raw2 = [{"doc": d.name, "item": it} for (d, _), lst in zip(jobs, lists) for it in lst]
+            extra, dropped2 = verify_raw_v2(raw2, targets)
+            seen = {(d.source, _norm(d.quote)) for d in details}
+            new = [d for d in apply_scope(extra, claim_text, dataset) if (d.source, _norm(d.quote)) not in seen]
+            details += new
+            info["added"] = len(new)
+            n_dropped += len(dropped2)
+        missing = missing_topics(details, family)
+    return details, n_dropped, missing, info
+
+
+def _rank_index(d: SetupDetailV2) -> int:
+    return RANKS.index(d.source_rank) if d.source_rank in RANKS else len(RANKS)
+
+
+def plan_details_v2(details: list[SetupDetail]) -> list[SetupDetailV2]:
+    return [d for d in details if isinstance(d, SetupDetailV2) and not d.excluded]
+
+
+def find_conflicts_v2(details: list[SetupDetailV2]) -> list[list[SetupDetailV2]]:
+    """Gruppen (nach Rang sortiert) von Angaben zum selben Thema mit verschiedenem Wert (nur Angaben, die in den Plan gehen)."""
+    live = sorted(plan_details_v2(details), key=_rank_index)
+    groups: list[list[SetupDetailV2]] = []
+    for d in live:
+        for g in groups:
+            if _same_topic(g[0].topic, d.topic):
+                g.append(d)
+                break
+        else:
+            groups.append([d])
+    out = []
+    for g in groups:
+        first = g[0]
+        diff = [x for x in g[1:] if (_numbers(first.value) != _numbers(x.value) if (_numbers(first.value) and _numbers(x.value))
+                                      else _key(first.value) != _key(x.value))]
+        if diff:
+            out.append([first] + diff)
+    return out
+
+
+def format_for_prompt_v2(details: list[SetupDetail]) -> str:
+    live = plan_details_v2(details)
+    if not live:
+        return ""
+    lines = []
+    for d in live:
+        marks = (f"  [optional advice, not part of the experiment]" if d.optional else "") + \
+                (f"  [{REPO_DEFAULT_MARK}]" if d.source_rank == "argparse default" else "")
+        lines.append(f"- {d.topic}: {d.value}  ({d.source} [{d.source_rank}]: \"{d.quote}\"){marks}")
+    return ("Setup details from the paper and its code repository (verified quotes). Source rank, highest first: "
+            + ", ".join(RANKS) + ".\n" + "\n".join(lines))
+
+
+def format_conflicts_v2(details: list[SetupDetail]) -> str:
+    groups = find_conflicts_v2(details)
+    if not groups:
+        return ""
+    lines = []
+    for g in groups:
+        lines.append(f"- {g[0].topic}: " + "; ".join(f"{x.value} ({x.source} [{x.source_rank}])" for x in g)
+                     + f" -> use the value of the highest-ranked source ({g[0].source_rank})")
+    return ("Sources give different values for the same setting. In your plan name both values with their source and use the value of "
+            "the highest-ranked source:\n" + "\n".join(lines))

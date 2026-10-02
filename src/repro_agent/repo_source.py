@@ -121,7 +121,7 @@ def _last_string_list(content: str) -> list[str]:
     return []
 
 
-def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: str) -> list[str]:
+def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: str, focus_model: bool = False) -> list[str]:
     resp = llm.complete("extract", [
         {"role": "system", "content": "You pick files from a code repository. Keep reasoning brief."},
         {"role": "user", "content": (
@@ -129,7 +129,10 @@ def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: s
             f"From the file list below, pick up to {MAX_FILES} files that most likely state how the "
             "experiment is set up: run scripts/configs for this dataset, argument definitions with "
             "defaults, the training loop, the data loader/splits, learning-rate or scheduler "
-            "utilities, README. Answer with a JSON list of exact paths from the list and end with it.\n\n"
+            "utilities, README. "
+            + ("Name the model of the goal in your choice: prefer files of that model and skip files that only concern other models "
+               "of the repository. " if focus_model else "")
+            + "Answer with a JSON list of exact paths from the list and end with it.\n\n"
             + "\n".join(listing[:MAX_LISTING])
         )},
     ], temperature=0.0, max_tokens=6000, timeout_s=400)
@@ -139,7 +142,7 @@ def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: s
 
 def read_repo(
     sandbox: Sandbox, llm: LLMClient, url: str, claim_text: str, dataset: str,
-    fixture_dir: Path = FIXTURE_DIR,
+    fixture_dir: Path = FIXTURE_DIR, focus_model: bool = False,
 ) -> RepoDump:
     """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern."""
     fixture = fixture_dir / f"{_repo_key(url)}.json"
@@ -158,7 +161,7 @@ def read_repo(
     branch = sandbox.branch(snap)
     commit = sandbox.get_file(branch, "/repo/.head_commit").decode().strip()
     listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
-    chosen = select_files(llm, listing, claim_text, dataset)
+    chosen = select_files(llm, listing, claim_text, dataset, focus_model)
     files = {}
 
     def read(paths):

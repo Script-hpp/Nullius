@@ -280,12 +280,19 @@ def collect(label: str, units: list[str], reps: int, setup_v2: bool, max_gross: 
             orch._paper_title, orch._sources, orch._repo_files, orch.details = paper.get("title"), [], {}, []
             before, before_gross = orch.llm.total_cost_usd, orch.spent_gross_usd
             docs, repo = orch._gather_docs(claim["text"], paper["dataset"])
-            details, dropped = extract_setup_details(orch.llm, docs, claim["text"], paper["dataset"])
+            info = None
+            if setup_v2:
+                from repro_agent.setup_details import extract_setup_details_v2
+
+                details, dropped, missing, info = extract_setup_details_v2(orch.llm, docs, claim["text"], paper["dataset"])
+                info = {**info, "missing": missing}
+            else:
+                details, dropped = extract_setup_details(orch.llm, docs, claim["text"], paper["dataset"])
             orch.details = details
             plan_text = (orch._details_prompt() + "\n\n" + orch._conflicts_prompt()).strip()
             f.write_text(json.dumps({
                 "unit": u, "rep": rep, "label": label, "claim_id": claim["id"], "setup_v2": setup_v2, "repo": repo,
-                "n_docs": len(docs), "dropped": dropped, "details": [dataclasses.asdict(d) for d in details],
+                "n_docs": len(docs), "dropped": dropped, "v2_info": info, "details": [dataclasses.asdict(d) for d in details],
                 "plan_text": plan_text, "cost_net_usd": orch.llm.total_cost_usd - before,
                 "cost_gross_usd": orch.spent_gross_usd - before_gross,
             }, ensure_ascii=False, indent=1))

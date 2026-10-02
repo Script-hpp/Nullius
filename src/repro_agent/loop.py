@@ -48,7 +48,9 @@ from .report import render_markdown
 from .sandbox.base import Branch, SandboxSetupError, SandboxUnavailable, get_sandbox
 from .repo_diff import find_deviations, repair_message, as_dicts
 from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
-from .setup_details import Doc, SetupDetail, extract_setup_details, format_conflicts, format_for_prompt
+from .setup_details import (
+    Doc, SetupDetail, extract_setup_details, extract_setup_details_v2, format_conflicts, format_conflicts_v2, format_for_prompt,
+    format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 
 DEFAULT_SEEDS = 5
@@ -224,11 +226,13 @@ class Orchestrator:
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
-        error_search_live: bool = False, n_candidates: int | None = None,
+        error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
+        # v5 Schritt A: Pflichtliste, Quellenrang und Geltungsbereich in Rolle 4 (setup_details.py); Default aus, damit v2 bis v4 reproduzierbar bleiben
+        self.setup_v2 = setup_v2
         self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
@@ -355,11 +359,16 @@ class Orchestrator:
 
     def _details_prompt(self) -> str:
         """Setup-Angaben im Prompt; im Produktpfad sind Repo-Defaults (argparse) gekennzeichnet (M7)."""
+        if getattr(self, "setup_v2", False):
+            return format_for_prompt_v2(self.details)
         return format_for_prompt(self.details, mark_defaults=getattr(self, "graph_repair", False))
 
     def _conflicts_prompt(self) -> str:
         """Nur Produktpfad: Paper-Wert und Repo-Wert fuer dasselbe Thema im Plan-Prompt, beide mit Quelle (M7)."""
-        text = format_conflicts(self.details) if getattr(self, "graph_repair", False) else ""
+        if getattr(self, "setup_v2", False):
+            text = format_conflicts_v2(self.details)
+        else:
+            text = format_conflicts(self.details) if getattr(self, "graph_repair", False) else ""
         return text + "\n\n" if text else ""
 
     def _fidelity_note(self) -> str:
@@ -833,7 +842,7 @@ class Orchestrator:
             docs.append(Doc("repo-readme", readme))
             self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         try:
-            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
+            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False))
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None
@@ -1378,6 +1387,7 @@ class Orchestrator:
         self._sources = []
         self._code_sent = set()
         self._repo_files = {}
+        self._setup_missing: list[str] = []
         self.events = EventLog(run_dir / "events.jsonl")
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
@@ -1395,9 +1405,15 @@ class Orchestrator:
         if self.use_setup_details and self.paper_text is not None:
             self._paper_title = paper.get("title")
             docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])
-            self.details, dropped = extract_setup_details(
-                self.llm, docs, claims[0].text, paper["dataset"]
-            )
+            if getattr(self, "setup_v2", False):
+                self.details, dropped, setup_missing, v2_info = extract_setup_details_v2(
+                    self.llm, docs, claims[0].text, paper["dataset"])
+                self._setup_missing = setup_missing
+            else:
+                self.details, dropped = extract_setup_details(
+                    self.llm, docs, claims[0].text, paper["dataset"]
+                )
+                v2_info = None
             self.details = self.details + extra_details
             by_src: dict[str, int] = {}
             for d in self.details:
@@ -1406,11 +1422,17 @@ class Orchestrator:
                   f"nach Quelle {by_src}", flush=True)
             self._emit("setup_details", n=len(self.details), dropped=dropped, by_source=by_src,
                        repo=repo_info, details=[dataclasses.asdict(d) for d in self.details])
+            if v2_info is not None:
+                excluded = [d for d in self.details if getattr(d, "excluded", "")]
+                self._emit("setup_v2", family=v2_info["family"], missing_first=v2_info["missing_first"], missing=setup_missing,
+                           targeted_docs=v2_info["targeted_docs"], added=v2_info["added"],
+                           excluded=[{"topic": d.topic, "value": d.value, "reason": d.excluded} for d in excluded])
         elif extra_details:
             self.details = extra_details
         dossier = Dossier(
             paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
             setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings), summary=paper_head,
+            setup_missing=list(self._setup_missing) if getattr(self, "setup_v2", False) else [],
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
