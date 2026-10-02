@@ -147,6 +147,14 @@ Not built: objection search and crawl in the loop, error-message search and devi
 - **Counting:** per unit the *majority* of the three generations (at least two equal classes); a unit agrees if the majority equals the reference verdict. "No majority", failures and incomplete units never count as agreement. Raw counts of single verdicts are reported as a secondary number. Placebos are counted separately.
 - Tolerance and seeds per paper are fixed in `benchmark/papers.yaml` and the pre-registration; evaluation script: `scripts/eval_benchmark_v2.py`.
 
+**The latest evaluation (v4) in three numbers** (computed by `scripts/export_benchmark_json.py` from the run store, shown on the Benchmark page of the web app):
+- **0 of 48 wrong claims certified** (pre-registered negative control): every run also checks a deliberately wrong target value, and none was ever reported as reproduced (also 0 of 48 in v2 and v3).
+- **7 of 7 "reproduced" verdicts agreed with the reference** (post hoc, small sample): whenever Nullius reported a real claim as reproduced in v4, our reference solution agreed. In v2 and v3 it was 12 of 13 each.
+- **2 of 8 papers rebuilt from the text alone, 1 of 8 without Tavily** (pre-registered primary metric): majority of three fresh generations per paper against the reference verdict. Rebuilding a paper from its description is hard; each miss is traced to its cause ([`failure_analysis_v4.md`](benchmark/experiments/failure_analysis_v4.md)). With Tavily the median distance to the paper's value is 0.017 against 0.029 without (post hoc). Method fidelity was not checked.
+
+**How to read this.** The errors are one-sided: Nullius often misses the rebuild, but it has not confirmed a wrong number. A "not reproduced" means "not reached with our setup" and usually points at the agent, not at the paper.
+
+
 | Unit (task) | Reference verdict (source) | Majority without Tavily | Majority with Tavily | Placebo detected without / with |
 |---|---|---|---|---|
 | Kipf & Welling 2017, GCN (Cora) | reproduced (R) | no majority | reproduced | failure / yes |

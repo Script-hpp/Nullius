@@ -1,4 +1,4 @@
-import { CheckCircle2, MinusCircle } from 'lucide-react'
+import { CheckCircle2, MinusCircle, ShieldCheck, BadgeCheck, Target } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { NextStep, PageIntro } from './page'
@@ -41,6 +41,61 @@ function UnitRow({ u }: { u: BenchUnit }) {
         <div>With Tavily: {u.placebo.B.filter((v) => v === 'reproduziert').length} of {u.placebo.B.length} accepted</div>
       </td>
     </tr>
+  )
+}
+
+const REPO = 'https://github.com/Script-hpp/Nullius'
+const num = (n: number | undefined) => (n === undefined ? '–' : String(n))
+const of = (n: number | undefined, total: number | undefined) => (n === undefined || total === undefined ? '–' : `${n} of ${total}`)
+
+// Three tiles, same size. Every number comes from benchmark.json; numbers that were not pre-registered say "post hoc".
+function Tiles({ v, older }: { v: BenchVersion; older: BenchVersion[] }) {
+  const s = v.summary
+  const earlier = older.filter((o) => o.summary.reproduced_real !== undefined && o.summary.reproduced_real_agree !== undefined)
+  const tiles = [
+    {
+      Icon: ShieldCheck, value: of(s.placebo_reproduced, s.placebo_total), label: 'wrong claims certified', tag: 'Pre-registered negative control',
+      small: 'Every run also checks a deliberately wrong target value. None was ever reported as reproduced.',
+    },
+    {
+      Icon: BadgeCheck, value: of(s.reproduced_real_agree, s.reproduced_real), label: "'reproduced' verdicts agreed with the reference", tag: 'Post hoc, small sample',
+      small: `Whenever Nullius reported a real claim as reproduced, our reference solution agreed.${earlier.length ? ` Earlier evaluations: ${earlier.map((o) => `${o.id} ${o.summary.reproduced_real_agree} of ${o.summary.reproduced_real}`).join(', ')}.` : ''}`,
+    },
+    {
+      Icon: Target, value: of(s.agree_B, s.n_units), label: `papers rebuilt from the text alone (${num(s.agree_A)} of ${s.n_units} without Tavily)`, tag: 'Pre-registered primary metric',
+      small: 'Majority of three fresh generations per paper, compared with the reference verdict. Rebuilding a paper from its description is hard; each miss is traced to its cause.',
+      link: { href: `${REPO}/blob/main/benchmark/experiments/failure_analysis_v4.md`, text: 'Failure analysis' },
+    },
+  ]
+  const d = (x: number | undefined) => (x === undefined ? '–' : x.toFixed(3))
+  return (
+    <div>
+      <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-3" aria-label="Benchmark in three numbers">
+        {tiles.map(({ Icon, value, label, tag, small, link }) => (
+          <li key={tag} className="flex flex-col rounded-xl border border-line bg-surface p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <Icon className="h-5 w-5 text-fg-4" aria-hidden />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{tag}</span>
+            </div>
+            <div className="mt-6 font-mono text-5xl font-light tracking-tight text-fg">{value}</div>
+            <div className="mt-2 text-[15px] font-medium leading-snug text-fg">{label}</div>
+            <p className="mb-0 mt-4 text-[13px] leading-relaxed text-fg-4">{small}</p>
+            {link && <a href={link.href} target="_blank" rel="noreferrer" className="mt-3 text-[13px] text-fg-3 underline underline-offset-4 hover:text-fg">{link.text}</a>}
+          </li>
+        ))}
+      </ul>
+      <p className="mb-0 mt-8 max-w-3xl text-[16px] leading-relaxed text-fg-3">
+        With Tavily the median distance to the paper&rsquo;s value is {d(s.median_distance_B)} against {d(s.median_distance_A)} without (post hoc).
+        {' '}Method fidelity was not checked.
+      </p>
+      <div className="mt-6 max-w-3xl border-l-2 border-line pl-5">
+        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How to read this</h3>
+        <p className="mb-0 mt-2 text-[14px] leading-relaxed text-fg-4">
+          The errors are one-sided. Nullius often misses the rebuild, but it has not confirmed a wrong number. A &ldquo;not reproduced&rdquo; means
+          {' '}&ldquo;not reached with our setup&rdquo; and usually points at the agent, not at the paper.
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -118,13 +173,17 @@ export function Benchmark() {
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
         what="We ran the whole procedure on papers whose results are known and counted how often Nullius agrees with the known result, with and without Tavily."
-        look={latest ? 'Read the sentence at the top, then the table: a check mark means that arm matched the reference verdict.' : 'Results are published here once the evaluation has run. Until then, read how the benchmark works.'} />
+        look={latest ? 'Read the three numbers first. The table per paper and claim sits below them; a check mark there means that arm matched the reference verdict.' : 'Results are published here once the evaluation has run. Until then, read how the benchmark works.'} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>
         : latest ? (
           <>
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Latest evaluation · {latest.id}</div>
-              <VersionBlock v={latest} />
+              <Tiles v={latest} older={older} />
+              <details className="group mt-12 border-t border-line pt-6">
+                <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Table per paper and claim</summary>
+                <div className="mt-8"><VersionBlock v={latest} /></div>
+              </details>
             </section>
             {older.length > 0 && (
               <section className="mt-16 border-t border-line pt-10" aria-label="Earlier evaluations">

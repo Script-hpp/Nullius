@@ -9,7 +9,12 @@ export type BenchUnit = {
 }
 export type BenchVersion = {
   id: string; date: string; code_commit: string; n_runs: number; units: BenchUnit[]
-  summary: { agree_A: number; agree_B: number; placebo_passed: number; n_units: number }
+  // Optional fields are missing in older exports: the tiles show "–" instead of a number.
+  summary: {
+    agree_A: number; agree_B: number; placebo_passed: number; n_units: number
+    placebo_reproduced?: number; placebo_total?: number; reproduced_real?: number; reproduced_real_agree?: number
+    median_distance_A?: number; median_distance_B?: number; median_distance_n_A?: number; median_distance_n_B?: number
+  }
 }
 export type Benchmark = { versions: BenchVersion[] }
 
