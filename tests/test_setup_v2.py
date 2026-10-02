@@ -162,7 +162,7 @@ def test_prompt_format_rank_marks_and_conflicts():
     d_other = v2("dropout", "0.8", "paper", "paper", excluded="other model (GCN)")
     details = [d_default, d_other, d_script, d_readme]
     text = sd.format_for_prompt_v2(details)
-    assert "[start script]" in text and "[argparse default]" in text and "repository default" in text
+    assert "[start script]" in text and "[argparse default]" in text and "optional advice" in text and "repository default" in text
     assert "dropout" not in text                                                            # ausgeschlossen: nicht im Plan
     conf = sd.format_conflicts_v2(details)
     assert "0.005" in conf and "0.0001" in conf and conf.index("0.005") < conf.index("0.0001") and "highest-ranked source (start script)" in conf
@@ -276,7 +276,7 @@ def test_feature_normalisation_coverage_needs_normalisation_not_graph_standardis
     assert not cover(v2("standardization", "If standardize=True, apply dataset_graph.standardize()"))
     assert not cover(v2("training procedure standardization", "standardized training and hyperparameter selection procedure"))
     assert not cover(v2("adjacency normalisation", "symmetric normalisation"))
-    assert cover(v2("data preprocessing", "removing self-loops"))
+    assert not cover(v2("data preprocessing", "removing self-loops"))
     assert cover(v2("feature normalisation", "process.preprocess_features(features)"))
     assert cover(v2("data preprocessing", "features are row-normalised"))                                    # Wert genuegt
     assert cover(v2("preprocessing", "features scaled to unit norm"))
