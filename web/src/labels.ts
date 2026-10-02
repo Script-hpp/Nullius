@@ -22,6 +22,8 @@ export function catalogLabel(urteil: string, gesamt: string | undefined): { labe
 
 // Warnings in the dossier are written in German by the loop; the UI shows English.
 const WARNING_PATTERNS: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^Repo nicht gelesen/, () => 'The code repository could not be cloned in the sandbox. The check went on with the paper and the README only.'],
+  [/^Sandbox-Setup fehlgeschlagen/, () => 'The sandbox setup failed (infrastructure, for example a data download). This is not a verdict about the paper; the run was stopped before any check.'],
   [/^Kurzbeschreibung nicht erstellt/, () => 'The plain-language summary of the paper could not be written. The check itself is not affected.'],
   [/^Autoren und Jahr nicht gelesen/, () => 'Authors and year could not be read from the arXiv page. The summary was written without them.'],
   [/^Info: Das Paper nennt Streuung \+-([\d.]+)/, (m) => `The paper reports a spread of ±${m[1]} across splits or runs. That is not the tolerance of the mean; the tolerance stays fixed.`],

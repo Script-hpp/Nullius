@@ -22,6 +22,20 @@ class SandboxUnavailable(RuntimeError):
     (die SDK-Session steht auf FAILED); der Aufrufer wiederholt den Versuch auf einem NEUEN Branch."""
 
 
+class SandboxSetupError(RuntimeError):
+    """Ein Setup-Befehl des Basis-Snapshots scheitert auch nach einer Wiederholung (z. B. Daten-Download). Ein Snapshot ohne Daten waere
+    still unbrauchbar: der Lauf endet als Infrastrukturfehler, nie als Urteil ueber den Agenten."""
+
+
+def setup_tail(stderr: str, stdout: str = "", n: int = 1500) -> str:
+    """Ende der Fehlerausgabe fuer die Meldung (stderr, sonst stdout)."""
+    return ((stderr or "").strip() or (stdout or "").strip())[-n:]
+
+
+def setup_failure(cmd: str, exit_code: int, stderr: str, stdout: str = "") -> SandboxSetupError:
+    return SandboxSetupError(f"Setup-Befehl fehlgeschlagen (Exit-Code {exit_code}): {cmd[:200]}\n{setup_tail(stderr, stdout)}")
+
+
 class Sandbox(Protocol):
     def base_snapshot(
         self, image: str, setup_cmds: list[str], label: str | None = None
