@@ -81,3 +81,64 @@ cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative c
 cd ../research-m2 && uv run python scripts/run_nachlauf_manual.py --negative c --variant permute
 ```
 (b) bricht vor dem Training ab und braucht nur die beiden Snapshots und einen Lese-Branch; (a) und (c) laufen einmal Training (ca. 25 s) plus Vorhersage, Harness und 8 P2-Versätze.
+
+## M3: Agenten-Teil (Auftrag 38, Branch `nachlauf-m3` von `main` `9b52d5e`, Worktree `../research-m3`)
+
+Entwickelt nur mit Fake-LLM und Fake-Sandbox an einem **erfundenen Repo** („gizmo"); kein echter LLM-, Tavily- oder Sandbox-Aufruf; die vier neuen Einheiten wurden nicht angefasst (kein Klon, keine Fixture, kein Name in Tests).
+
+### Neu
+
+| Datei | Inhalt |
+|---|---|
+| `src/repro_agent/nachlauf_agent.py` | Prompts (Konstanten), `NachlaufAgent.run`, `read_repo_at_commit`, `verify_answer` (Zitatprüfung), `CostGuard`/`BudgetStop`, `Asker` (alle LLM-Aufrufe), Erkundung von Training und Adapter |
+| `scripts/run_nachlauf.py` | Einstieg `--paper --repo --commit [--claim --seeds --offsets --store --budget-stop --dry-run]`, Store-Zeile je Lauf |
+| `src/repro_agent/nachlauf.py` (Ergänzungen) | P2 parallel (Thread-Pool, `MAX_PARALLEL_SEEDS`, Standard 4), Versätze je Seed neu gezogen, öffentliche Datei einmal geladen, `new_dossier`, `run_unit(..., snapshots=, event_log=, parallel=)`, `UnitSpec.claim_source` |
+| `tests/test_nachlauf_agent.py` | 24 Tests (Fake-LLM, Fake-Sandbox) |
+
+`loop.py`, `tasks.py` und der Nachbau-Pfad sind unverändert (`git diff main -- src/repro_agent/loop.py` leer).
+
+### Ablauf und Prompts
+
+`NachlaufAgent.run`: (1) Lese-Snapshot: Klon auf dem festen Commit, `git ls-files`, das Modell wählt bis zu 14 Dateien (`FILE_SELECT_*`, Rolle `extract` = Modell von `code`), dazu Abhängigkeitsdateien und lokal importierte Module, je Datei höchstens 16 000, insgesamt 120 000 Zeichen im Prompt. (2) `start_command` (Rolle `code`, JSON, Konstanten `COMMAND_SYSTEM`, `COMMAND_USER`, `COMMAND_FORMAT`): Befehl mit Quelle, `seed`, `checkpoint_glob`, `test_loader.drop_last` und `.batch_size` mit Datei und Zitat, `input_len`, `output_len`, `needs_time_features` mit Zitat, `model_file`, `training_file`. Jedes Zitat wird gegen die genannte Datei geprüft (`setup_details.quote_in_text`, normalisiert); unbelegte Angaben werden **einmal** mit `COMMAND_REASK` nachgefragt, danach verworfen (`agent.discarded` im Dossier). (3) Erkundung am Repo-Seed: Training mit Reparatur (P1 vor jedem Lauf), dann Adapter schreiben und prüfen (statisch, `SMOKE=1`, voller Lauf, P3, P2, je mit Reparaturrunde). (4) Der feste Stand läuft über alle Seeds mit `nachlauf.run_unit` (8 Versätze je Seed) und liefert das Dossier.
+
+Feste Rückmeldungen (Wortlaut in `P3_SENTENCE`, `P2_SENTENCE`, `P1_SENTENCE`, `COMMAND_SHAPE_SENTENCE`, `PACKAGE_SENTENCE`): P3 und P2 wie im Auftrag, **ohne jede Zahl**. Reparatur nach Trainingsfehler: Ende von stderr (1500 Zeichen), nie stdout, nie eine Zusammenfassung. Reparatur nach Formfehler: Meldung der Formprüfung (Form, keine Testwerte) oder Ende von stderr. Prompts enthalten keinen Repo-, Modell- oder Dateinamen und keinen Schalter der Entwicklungs-Repos; Beispiele sind als erfunden gekennzeichnet. Wortlisten-Test über alle Prompt-Konstanten und alle Prompts eines vollen Ablaufs mit erfundenem Repo.
+
+Ereignisse: `nachlauf_command` (Befehl, Zitat-Ergebnisse, Seed-Art, Test-Loader), `nachlauf_adapter` (Hash, Stufe, Probleme), `nachlauf_repair` (Art, Runde, Grund), dazu die M1-Ereignisse. Adapter-Quelltexte als `adapter_<hash>.py` und die Befehlsantwort mit Prüfung als `command_answer.json` im Laufordner.
+
+### Abweichungen vom Auftrag (mit Grund)
+
+1. **JSON-Felder `input_len` und `output_len` statt `seq_len` und `pred_len`:** beides sind Schalternamen der Entwicklungs-Repos und dürfen in keinem Prompt stehen. Zusätzlich `model_file` und `training_file` (Eingabe des Adapter-Aufrufs).
+2. **Zwei Läufe am Repo-Seed:** Die Erkundung (mit 2 P2-Versätzen) trainiert und prüft am Repo-Seed, der Endlauf rechnet dann alle Seeds inklusive Repo-Seed noch einmal mit 8 Versätzen. Das kostet etwa 25 s Training und die Prüfungen doppelt, hält aber `run_unit` (M1, abgenommen) unverändert die einzige Stelle für Messung und Urteil. Fehlgeschlagene Erkundungsversuche stehen vor den Seeds im Dossier.
+3. **Versuchsgrenze:** `MAX_ATTEMPTS_PER_CLAIM` (4) gilt getrennt für Trainingsversuche (Befehle, einschließlich abgelehnter) und Adapter-Versionen. „Gesamtgrenze wie oben" habe ich so gelesen; ein gemeinsamer Zähler wäre eine Zeile.
+4. **Standardpakete:** Beide Snapshots bekommen `pandas`, `scikit-learn`, `matplotlib` (`BASE_PIP`). Ein Repo ohne Abhängigkeitsdatei (RTSF hat keine) könnte sonst nicht laufen, und die Reparatur darf nur Pakete aus Abhängigkeitsdateien nachinstallieren. Das ist eine Umgebungsentscheidung für diese Task-Familie; bitte bestätigen.
+5. **`read_repo` nicht wiederverwendet:** Es klont flach den Hauptzweig und cacht eine Fixture je Repo. Für den Nachlauf zählt der feste Commit, daher `read_repo_at_commit` (nutzt `repo_source._last_string_list` und `imported_files`).
+6. **P2 läuft auch nach P3-Fehler** (Änderung aus M2, hier unverändert); bei Reparatur gilt „eine Runde je Prüfung": Wird dieselbe Prüfung nach der Runde erneut ungültig, endet die Adaptersuche.
+7. **Seed `flag`:** Der Repo-Seed ist der `default=` des Schalters, falls er in der Argumentdefinition steht, sonst `None` (der Lauf ohne Schalter). Nur mit `copy` und `none` im Fake getestet (`flag` über die Prüfung der Argumentdefinition).
+8. **Befehle mit Shell-Operatoren** (`;`, `|`, `&&`, Umleitung ausser der Log-Umleitung, Variablenpräfix) werden mit festem Satz zurückgewiesen und zählen als Versuch.
+
+### Kosten, Parallelität
+
+- **LLM-Aufrufe je Lauf:** Normalfall 3 (Dateiauswahl, Startbefehl, Adapter); mit nachgefragten Zitaten 4; höchstens etwa 11 (1 + 2 + 3 Befehls-Reparaturen + 1 + 3 Adapter-Reparaturen, dazu Wiederholungen bei abgeschnittenen Antworten). Prompts bis rund 30 000 Token Eingabe; bei den Preisen von Super (0,30 / 0,90 $ je Million Token) grob 0,01 bis 0,03 $ je Aufruf, **Schätzung, nicht gemessen**. `MAX_COST_PER_RUN_USD` (0,50 brutto) gilt je Lauf zusätzlich.
+- **Budgetstopp** (`CostGuard.check`, vor **jedem** LLM-Aufruf): Kosten dieses Prozesses (soweit nicht schon im Store) plus Store (Zeilen mit `cost_usd_run` netto, brutto × 1,19) ≥ `--budget-stop` (Standard 3 $) → `BudgetStop`, Store-Zeile mit Urteil „abgebrochen". Kosten eines fertigen Laufs gehen erst nach dem Schreiben der Zeile in den Store-Anteil (`note_stored`), kein Doppelzählen. Tests: Prozesskosten, Store, Doppelzählung. LLM-Cache ist im Skript aus.
+- **Parallele Sandbox-Sitzungen:** Der Loop fährt Seeds schon parallel (`ThreadPoolExecutor`, `MAX_PARALLEL_SEEDS`, Standard 4) auf einer gemeinsamen `NebiusSandbox`; jeder Branch gehört einem Thread, `_sessions[branch]` wird nur von diesem Thread geschrieben (verschiedene Schlüssel, CPython-Wörterbuch). P2 nutzt dasselbe Muster. Proben werden vorher nacheinander gebaut (gemeinsamer Zufallsgenerator), die Ergebnisse stehen in Versatz-Reihenfolge. Test: Ergebnis mit 1 und 4 Threads gleich.
+
+### Offene Fragen und Risiken (nicht in der echten Sandbox geprüft)
+
+- **P3 ohne belegten Test-Loader** vergleicht mit allen Fenstern. Hat das Repo `drop_last=True`, liegt die Eigenausgabe um den `drop_last`-Effekt daneben (Vorversuch RLinear: 0,0038 > 0,001): P3 wäre dann ungültig, obwohl nichts falsch ist, und die feste P3-Rückmeldung hilft dem Modell nicht. Das folgt der Vorab-Festlegung; ich habe es nicht verändert. Ein belegter Loader vermeidet es.
+- **stderr in der Reparatur:** Druckt ein Repo Testmetriken nach stderr (z. B. über `logging`) und scheitert danach, stehen sie im Prompt. Der Auftrag verlangt das Ende von stderr unverändert; ein Filter wäre eine Ergänzung.
+- **Zitatprüfung beweist Vorkommen, nicht Bedeutung:** `drop_last = True` kommt in Ladern oft mehrfach vor (Test, Vorhersage, Training); das Zitat belegt die Zeile, nicht den Zweig. P3 fängt Fehlzuordnungen.
+- **Wortlisten-Wache** ist nur so gut wie die Liste (`NAMES` im Test); neue Repos brauchen neue Einträge, bevor sie in einen Test kommen.
+- **Ladezeit der öffentlichen Datei:** `_load_public_local` lädt die CSV auf dem Rechner des Reviewers (einmal je Lauf).
+- Fake-Tests ersetzen nicht den ersten echten Lauf (Fehlerquelle M1: Importzeile der Fabrik; `default_factory` in `run_nachlauf.py` ist über den Import-Test abgedeckt).
+
+### Startbefehle für den Reviewer
+
+```
+# erst Plan ansehen (kein LLM, keine Sandbox)
+cd ../research-m3 && uv run python scripts/run_nachlauf.py --paper rlinear_2023 --repo https://github.com/plumprc/RTSF --commit 0fec00104f754f4fbf795b9b4da5fa2459b32e76 --store runs/nachlauf_dev.jsonl --dry-run
+cd ../research-m3 && uv run python scripts/run_nachlauf.py --paper zeng_dlinear_2023 --repo https://github.com/cure-lab/LTSF-Linear --commit 0c113668a3b88c4c4ee586b8c5ec3e539c4de5a6 --store runs/nachlauf_dev.jsonl --dry-run
+# echter Lauf (Token Factory, Sandbox); klein beginnen
+cd ../research-m3 && LLM_PROVIDER=tokenfactory uv run python scripts/run_nachlauf.py --paper rlinear_2023 --repo https://github.com/plumprc/RTSF --commit 0fec00104f754f4fbf795b9b4da5fa2459b32e76 --store runs/nachlauf_dev.jsonl --seeds repo --offsets 2 --budget-stop 1.0
+cd ../research-m3 && LLM_PROVIDER=tokenfactory uv run python scripts/run_nachlauf.py --paper zeng_dlinear_2023 --repo https://github.com/cure-lab/LTSF-Linear --commit 0c113668a3b88c4c4ee586b8c5ec3e539c4de5a6 --store runs/nachlauf_dev.jsonl --seeds repo --offsets 2 --budget-stop 1.0
+```
+(Entwicklungsläufe in `runs/nachlauf_dev.jsonl`, nicht im Store der Prüfung `runs/nachlauf_v1.jsonl`.)
