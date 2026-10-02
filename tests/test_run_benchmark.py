@@ -101,3 +101,59 @@ def test_v1_main_builds_arms_without_graph_repair(monkeypatch, tmp_path):
     monkeypatch.setattr(rb.sys, "argv", ["run_benchmark.py", "kipf_gcn_2017"])
     rb.main()
     assert len(made) == 2 and all("graph_repair" not in k for k in made)
+
+
+def test_load_rows_skips_broken_lines(tmp_path):
+    f = tmp_path / "s.jsonl"
+    f.write_text('{"a": 1}\n\n{"b": 2}\n{"half": ')
+    assert rb.load_rows(f) == [{"a": 1}, {"b": 2}] and rb.load_rows(tmp_path / "missing.jsonl") == []
+
+
+class ParallelOrch:
+    """Attrappe: Aufruf n schreibt, als haette ein paralleler Prozess gearbeitet, Zeilen in den Store (Hook `foreign`)."""
+    calls, foreign = [], None
+
+    def __init__(self, **kw):
+        self.kw, self._snapshots = kw, None
+
+    def run(self, paper):
+        ParallelOrch.calls.append((paper, self.kw["use_tavily"]))
+        if ParallelOrch.foreign:
+            ParallelOrch.foreign(len(ParallelOrch.calls))
+        return type("D", (), {"verdicts": [], "claims": [], "ablations": {}})()
+
+
+def run_main(monkeypatch, tmp_path, foreign):
+    import sys
+
+    store = tmp_path / "v2.jsonl"
+    monkeypatch.setattr(rb, "STORE_V2", store)
+    monkeypatch.setattr(rb, "Orchestrator", ParallelOrch)
+    monkeypatch.setattr(sys, "argv", ["run_benchmark.py", "--v2", "kipf_gcn_2017"])
+    ParallelOrch.calls, ParallelOrch.foreign = [], lambda n: foreign(store, n)
+    rb.main()
+    return store
+
+
+def row(arm, gen, cost=0.1):
+    return {"paper": "kipf_gcn_2017", "arm": arm, "generation": gen, "run_dir": f"runs/x/{arm}{gen}", "cost_usd_run": cost}
+
+
+def test_main_skips_runs_finished_by_a_parallel_process(monkeypatch, tmp_path):
+    def foreign(store, n):
+        if n == 1:   # waehrend Lauf 1 (A, Gen 0) beendet ein anderer Prozess B Gen 0 und A Gen 1
+            with store.open("a") as f:
+                f.write(json.dumps(row("B_mit_tavily", 0)) + "\n" + json.dumps(row("A_ohne_tavily", 1)) + "\n")
+
+    run_main(monkeypatch, tmp_path, foreign)
+    # Reihenfolge je Generierung: A, B. Gen 0: A laeuft, B uebersprungen; Gen 1: A uebersprungen, B laeuft; Gen 2: A, B laufen
+    assert [use for _, use in ParallelOrch.calls] == [False, True, False, True]
+
+
+def test_main_stops_when_parallel_costs_reach_the_budget(monkeypatch, tmp_path, capsys):
+    def foreign(store, n):
+        with store.open("a") as f:   # ein anderer Prozess hat das Budget aufgebraucht
+            f.write(json.dumps(row("B_mit_tavily", 0, cost=100.0)) + "\n")
+
+    run_main(monkeypatch, tmp_path, foreign)
+    assert len(ParallelOrch.calls) == 1 and "Budget-Grenze v2 erreicht" in capsys.readouterr().out

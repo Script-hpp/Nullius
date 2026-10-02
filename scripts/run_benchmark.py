@@ -113,6 +113,18 @@ def dry_run(v2: bool, papers: list[str], rows: list[dict], paper_specs: dict[str
     return "\n".join(lines)
 
 
+def load_rows(store: Path) -> list[dict]:
+    """Store neu lesen (parallele Prozesse schreiben in dieselbe Datei). Eine halb geschriebene oder leere Zeile wird uebersprungen."""
+    rows: list[dict] = []
+    if store.exists():
+        for line in store.read_text().splitlines():
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return rows
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     v4 = "--v4" in sys.argv
@@ -122,7 +134,7 @@ def main() -> None:
     papers = args or list(claims_map)
     all_papers = yaml.safe_load((REPO_ROOT / "benchmark" / "papers.yaml").read_text())["papers"]
     yaml_targets = {c["id"]: c["target"] for p in all_papers for c in p.get("claims", [])}
-    rows = [json.loads(x) for x in store.read_text().splitlines()] if store.exists() else []
+    rows = load_rows(store)
     if dry:
         print(dry_run(v2, papers, rows, {p["id"]: p for p in all_papers}, claims_map))
         return
@@ -139,6 +151,7 @@ def main() -> None:
             orch._snapshots = snapshots
         for g in range(N_GEN):
             for arm, orch in arms.items():
+                rows[:] = load_rows(store)   # vor jedem Lauf neu lesen: Kosten und fertige Laeufe paralleler Prozesse zaehlen (Budgetstopp, Skip)
                 if any(r["paper"] == paper and r["arm"] == arm and r["generation"] == g for r in rows):
                     continue
                 if v2 and gross_spent(rows) >= (limit := V4_BUDGET_GROSS_USD if v4 else V2_BUDGET_GROSS_USD):   # Abbruchkriterium benchmark_v2.md
