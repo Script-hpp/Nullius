@@ -7,7 +7,7 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from .base import Branch, RunResult, SnapshotId
+from .base import Branch, RunResult, SnapshotId, setup_failure
 
 
 class LocalSandbox:
@@ -20,8 +20,13 @@ class LocalSandbox:
             check=True,
         )
         try:
-            for cmd in setup_cmds:
-                subprocess.run(["docker", "exec", container_name, "sh", "-c", cmd], check=True)
+            for cmd in setup_cmds:   # Exit-Code pruefen, einmal wiederholen, dann SandboxSetupError (wie NebiusSandbox)
+                for attempt in (1, 2):
+                    r = subprocess.run(["docker", "exec", container_name, "sh", "-c", cmd], capture_output=True, text=True)
+                    if r.returncode == 0:
+                        break
+                    if attempt == 2:
+                        raise setup_failure(cmd, r.returncode, r.stderr, r.stdout)
             snapshot_tag = f"repro-snapshot:{label or uuid.uuid4().hex[:12]}"
             subprocess.run(["docker", "commit", container_name, snapshot_tag], check=True)
             return snapshot_tag

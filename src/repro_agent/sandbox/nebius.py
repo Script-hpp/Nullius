@@ -29,7 +29,7 @@ from contree_sdk.config import ContreeConfig
 from contree_sdk.sdk.exceptions import OperationTimedOutError
 from contree_sdk.sdk.exceptions.api import ApiTimeoutError
 
-from .base import Branch, RunResult, SandboxUnavailable, SnapshotId
+from .base import Branch, RunResult, SandboxSetupError, SandboxUnavailable, SnapshotId, setup_failure
 
 # SDK-Default `transport_timeout` = 10 s (HTTP-Lesetimeout je Anfrage, auch fuers Abfragen des Operationsstatus). Unter
 # paralleler Last antwortete die Beta-API teils nicht in 10 s: ApiTimeoutError beendete ganze Benchmark-Laeufe (3 Abbrueche).
@@ -60,11 +60,30 @@ class NebiusSandbox:
     ) -> SnapshotId:
         img = self._client.images.oci(image)
         for cmd in setup_cmds:
-            img = img.run(shell=cmd, disposable=False).wait()
+            img = self._run_setup(img, cmd)
         # label = Lauf-ID/Claim, damit cleanup_snapshots.py gezielt aufraeumen kann.
         tag = f"{SNAPSHOT_PREFIX}{label or uuid_lib.uuid4().hex[:12]}"
         img = img.tag_as(tag)
         return tag
+
+    def _run_setup(self, img, cmd: str):
+        """Ein Setup-Befehl auf dem Image. Der Exit-Code zaehlt: `.wait()` wirft bei Exit-Code != 0 nicht, ein gescheiterter Download haette sonst still
+        einen Snapshot ohne Daten ergeben. Einmal wiederholen (Netzfehler), dann SandboxSetupError mit dem Ende von stderr. Ein Image-Run hat sein
+        Ergebnis wie ein Session-Run unter `.result` (exit_code, stdout, stderr)."""
+        failure: SandboxSetupError | None = None
+        for _ in range(2):
+            try:
+                new = self._guard("setup", lambda: img.run(shell=cmd, disposable=False).wait())
+                result = new.result
+            except SandboxUnavailable:
+                raise
+            except Exception as exc:   # z. B. Image im Zustand FAILED
+                failure = SandboxSetupError(f"Setup-Befehl fehlgeschlagen ({type(exc).__name__}): {cmd[:200]}\n{str(exc)[-1500:]}")
+                continue
+            if result.exit_code == 0:
+                return new
+            failure = setup_failure(cmd, result.exit_code, result.stderr or "", result.stdout or "")
+        raise failure
 
     def branch(self, snapshot: SnapshotId) -> Branch:
         img = self._client.images.use(snapshot)

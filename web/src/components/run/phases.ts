@@ -201,6 +201,10 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         })
         break
       }
+      case 'infrastructure_error': {
+        push('sandbox', { actor: 'system', tone: 'red', title: 'The sandbox setup failed (infrastructure, not a verdict)', detail: short(String(e.message ?? '').split('\n')[0], 160) })
+        break
+      }
       case 'paper_summary': {
         const t = typeof e.text === 'string' ? e.text : ''
         const n = Array.isArray(e.institutions) ? e.institutions.length : 0

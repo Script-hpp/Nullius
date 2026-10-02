@@ -86,11 +86,17 @@ CORA_VAL_NOTES = (
 )
 
 
+def data_check_cmd(path: str) -> str:
+    """Letzter Setup-Befehl: die Datendatei muss im Snapshot liegen, sonst scheitert das Setup sofort statt erst in jedem Versuch."""
+    return f"test -s {path} || {{ echo 'Setup-Check: {path} fehlt oder ist leer' >&2; exit 1; }}"
+
+
 def cora_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
         "pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         "python /opt/prep/cora_data.py && rm -rf /opt/prep",
+        data_check_cmd("/data/cora_public.npz"),
     ]
     return Task(
         image="python:3.11-slim",
@@ -165,6 +171,7 @@ def etth1_task() -> Task:
         _file_cmd(HARNESS_DIR / "etth1_data.py", "/opt/prep/etth1_data.py"),
         "pip install -q numpy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         "python /opt/prep/etth1_data.py && rm -rf /opt/prep",
+        data_check_cmd("/data/etth1_public.npz"),
     ]
     return Task(
         image="python:3.11-slim",

@@ -43,7 +43,7 @@ from .harness.repair_hints import fault_message, val_fault_message
 from .harness.verify import agent_fault_suspected, judge
 from .llm import BillingBlocked, LLMClient, LLMResponse
 from .report import render_markdown
-from .sandbox.base import Branch, SandboxUnavailable, get_sandbox
+from .sandbox.base import Branch, SandboxSetupError, SandboxUnavailable, get_sandbox
 from .repo_diff import find_deviations, repair_message, as_dicts
 from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
 from .setup_details import Doc, SetupDetail, extract_setup_details, format_conflicts, format_for_prompt
@@ -255,6 +255,15 @@ class Orchestrator:
     @property
     def spent_usd(self) -> float:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
+
+    def _infrastructure_failure(self, dossier: Dossier, ts: str, run_dir: Path, exc: SandboxSetupError) -> None:
+        """Sandbox-Setup gescheitert (z. B. Daten-Download): Warnung und Ereignis, Dossier und Zeugnis ohne Urteile speichern. Kein "nicht reproduzierbar (Setup)"."""
+        self._warn(f"Sandbox-Setup fehlgeschlagen (Infrastruktur, kein Urteil ueber das Paper): {str(exc).splitlines()[0]}")
+        dossier.warnings = list(self._warnings)
+        self._emit("infrastructure_error", stage="sandbox_setup", message=str(exc)[-600:])
+        dossier.save(ts)
+        (run_dir / "zeugnis.md").write_text(render_markdown(dossier))
+        self._emit("run_end", cost_net_usd=round(self.spent_usd, 4), cost_gross_usd=round(self.spent_gross_usd, 4), error="sandbox_setup")
 
     def _warn(self, text: str) -> None:
         if not hasattr(self, "_warnings"):
@@ -775,7 +784,11 @@ class Orchestrator:
         if readme:
             docs.append(Doc("repo-readme", readme))
             self._record_source("readme", url, readme, self._tavily_calls > calls_before)
-        dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
+        try:
+            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset)
+        except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
+            self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
+            return docs, None
         self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
@@ -1322,7 +1335,11 @@ class Orchestrator:
         print(f"Basis-Snapshot bauen ({label}) ...")
         key = paper["dataset"]
         if key not in self._snapshots:
-            self._snapshots[key] = self.sandbox.base_snapshot(task.image, task.setup_cmds, label=label)
+            try:
+                self._snapshots[key] = self.sandbox.base_snapshot(task.image, task.setup_cmds, label=label)
+            except SandboxSetupError as exc:
+                self._infrastructure_failure(dossier, ts, run_dir, exc)   # Infrastrukturfehler, kein Urteil: Dossier und Zeugnis ohne Urteile, dann weiter nach oben
+                raise
         snapshot = self._snapshots[key]
         try:
             for claim in claims:
@@ -1353,6 +1370,8 @@ def main() -> None:
         ).run(paper_id, source="catalog" if "--catalog" in sys.argv else "benchmark")
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")
+    except SandboxSetupError as exc:
+        sys.exit(f"ABBRUCH: Sandbox-Setup fehlgeschlagen (Infrastruktur): {exc}")
 
 
 if __name__ == "__main__":
