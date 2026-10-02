@@ -81,7 +81,7 @@ zeng_nlinear_2023:
   patience: 3
 ```
 
-48 Soll-Punkte. Jeder Punkt wird vor dem ersten Lauf vom Reviewer gegen Paper/Repo-Fixture geprüft; ein Punkt, der in den gespeicherten Quellen nicht wörtlich belegbar ist, wird gestrichen (mit Vermerk), weil Rolle 4 ihn dann nicht liefern kann.
+50 Soll-Punkte (redaktionell korrigiert am 2026-10-02 vor dem ersten Lauf: Zählfehler, die Liste selbst ist unverändert; `velickovic_dgi_2019.applies_to` wird über Ziel 3 geprüft). Jeder Punkt wird vor dem ersten Lauf vom Reviewer gegen Paper/Repo-Fixture geprüft; ein Punkt, der in den gespeicherten Quellen nicht wörtlich belegbar ist, wird gestrichen (mit Vermerk), weil Rolle 4 ihn dann nicht liefern kann.
 
 ## Ziele (vorab)
 
