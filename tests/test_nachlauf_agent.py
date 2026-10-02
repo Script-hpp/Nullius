@@ -1049,3 +1049,89 @@ def test_env_warning_without_import_information_shows_the_first_packages_only():
     assert nl.env_warning(diffs, {"p3"}).endswith("p3 fehlt statt ==1")
     assert nl.env_warning(diffs, set()).endswith("keines")
     assert nl.env_warning([{"package": "scikit-learn", "required": "==1.0", "installed": "1.5"}], {"sklearn"}).endswith("scikit-learn 1.5 statt ==1.0")
+
+
+# ---- 38e: vorgegebene Schreibfunktion im Adapter-Vertrag ----------------------------------------------------------------------------------------
+
+def load_writer():
+    ns: dict = {}
+    exec(na.WRITE_PREDICTIONS_CODE, ns)      # noqa: S102  (eigene Konstante)
+    return ns["write_predictions"]
+
+
+def test_writer_small_array_roundtrip_header_ids_and_directory(tmp_path):
+    write = load_writer()
+    pred = np.random.default_rng(1).normal(size=(3, 96, 7)).astype(np.float32)
+    path = tmp_path / "new" / "dir" / "predictions.csv"                      # legt das Verzeichnis an
+    write(pred, str(path))
+    raw = path.read_bytes()
+    lines = raw.decode().splitlines()
+    assert lines[0] == "id,prediction" and len(lines) == 1 + 3 * 96 * 7 and lines[1].startswith("0_0_0,") and lines[-1].startswith("2_95_6,")
+    assert all(re.fullmatch(r"\d+_\d+_\d+,-?[\d.e+-]+", l) for l in lines[1:])
+    assert [l.split(",")[0] for l in lines[1:8]] == [f"0_0_{c}" for c in range(7)]          # Kanal laeuft am schnellsten
+    back = ind.parse_predictions(raw)
+    assert back.shape == (3, 96, 7) and np.allclose(back, pred, rtol=1e-6, atol=1e-7)
+
+
+def test_writer_output_passes_the_form_check_for_the_smoke_windows(tmp_path):
+    from repro_agent.harness.smoke import check_smoke_output
+    write = load_writer()
+    task = nl.etth1_task()
+    write(np.random.default_rng(2).normal(size=(8, 96, 7)), str(tmp_path / "p.csv"))
+    assert check_smoke_output((tmp_path / "p.csv").read_bytes(), task.smoke_ids, task.smoke_dims, task.smoke_dim_names) is None
+
+
+def test_writer_accepts_float32_lists_and_rejects_wrong_rank(tmp_path):
+    write = load_writer()
+    write(np.zeros((1, 96, 7), dtype=np.float32) + 0.5, str(tmp_path / "a.csv"))
+    assert (tmp_path / "a.csv").read_text().splitlines()[1] == "0_0_0,0.5"
+    with pytest.raises(ValueError):
+        write(np.zeros((96, 7)), str(tmp_path / "b.csv"))
+    write(np.zeros((0, 96, 7)), str(tmp_path / "c.csv"))
+    assert (tmp_path / "c.csv").read_text() == "id,prediction\n"
+
+
+def test_writer_full_array_roundtrip_and_runtime(tmp_path, capsys):
+    import time
+    write = load_writer()
+    pred = np.random.default_rng(3).normal(size=(2785, 96, 7)).astype(np.float32)        # 1 871 520 Zeilen
+    path = tmp_path / "full.csv"
+    t0 = time.perf_counter()
+    write(pred, str(path))
+    secs = time.perf_counter() - t0
+    with capsys.disabled():
+        print(f"\n[write_predictions] full array 2785x96x7 ({pred.size} rows): {secs:.2f} s, {path.stat().st_size / 1e6:.1f} MB")
+    assert secs < 30
+    back = ind.parse_predictions(path.read_bytes())
+    assert back.shape == (2785, 96, 7) and np.allclose(back, pred, rtol=1e-6, atol=1e-7) and not np.isnan(back).any()
+
+
+def test_writer_passes_the_static_check_and_has_no_numpy_string_arithmetic():
+    assert na.find_violations(na.WRITE_PREDICTIONS_CODE) == []
+    code_ = na.WRITE_PREDICTIONS_CODE
+    assert "astype(str)" not in code_ and "np.char" not in code_ and "def write_predictions(pred, path=" in code_
+
+
+def test_contract_gives_the_writer_verbatim_and_forbids_own_writing_logic():
+    c = na.ADAPTER_CONTRACT
+    assert na.WRITE_PREDICTIONS_CODE.strip() in c                                    # woertlich im Vertrag
+    assert "UNCHANGED" in c and "Do NOT write your own code for the file" in c and "no `+` on string arrays" in c
+    assert "Write it efficiently" not in c and "numpy to text" not in c               # der alte, missverstaendliche Satz ist weg
+
+
+def test_adapter_prompts_contain_the_writer(tmp_path):
+    llm = FakeLLM(base_script(write_adapter=[code("crash")], repair_adapter=[code("honest")]))
+    go(AgentSandbox(), llm, tmp_path)
+    for purpose in ("write_adapter", "repair_adapter"):
+        assert na.WRITE_PREDICTIONS_CODE.strip() in next(c[2] for c in llm.calls if c[0] == purpose)
+
+
+def test_hand_written_adapters_use_an_equivalent_format():
+    """Die Hand-Adapter (M1) schreiben dasselbe Format; die Schreibfunktion des Vertrags erzeugt dieselben Zeilen wie der Task-Rueckleser erwartet."""
+    pred = np.arange(2 * 96 * 7, dtype=np.float64).reshape(2, 96, 7) / 7.0
+    ns: dict = {}
+    exec(na.WRITE_PREDICTIONS_CODE, ns)
+    import tempfile
+    p = Path(tempfile.mkdtemp()) / "p.csv"
+    ns["write_predictions"](pred, str(p))
+    assert np.allclose(ind.parse_predictions(p.read_bytes()), pred, rtol=1e-7)

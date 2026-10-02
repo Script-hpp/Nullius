@@ -132,6 +132,29 @@ ADAPTER_SYSTEM = (
     "You write a single self-contained Python script that loads a trained model of a code repository and writes its predictions. "
     "Reply with exactly one ```python code block and no other prose."
 )
+# Fertige, getestete Schreibfunktion (tests/test_nachlauf_agent.py fuehrt sie aus: kleines und volles Array, Rueckleser, Laufzeit). Das Modell
+# uebernimmt sie woertlich; zwei echte Adapter scheiterten an eigener numpy-Stringverkettung beim Schreiben der CSV (UFuncTypeError).
+WRITE_PREDICTIONS_CODE = """\
+import os
+
+import numpy as np
+
+
+def write_predictions(pred, path="/output/predictions.csv"):
+    pred = np.asarray(pred, dtype=np.float64)
+    if pred.ndim != 3:
+        raise ValueError("pred must have shape [windows, steps, channels]")
+    n, steps, channels = pred.shape
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    values = pred.reshape(-1).tolist()
+    ids = (f"{w}_{s}_{c}" for w in range(n) for s in range(steps) for c in range(channels))
+    with open(path, "w") as f:
+        f.write("id,prediction\\n")
+        if values:
+            f.write("\\n".join(f"{i},{v:.8g}" for i, v in zip(ids, values)))
+            f.write("\\n")
+"""
+
 ADAPTER_CONTRACT = """\
 Contract of predict.py (run without network access, CPU only). The working directory is the repository root, but the script itself is stored somewhere else:
 import os and sys and put os.getcwd() on sys.path (sys.path.insert(0, os.getcwd())) before importing anything from the repository. Never make assumptions about
@@ -145,12 +168,16 @@ __file__ or the directory of the script.
   repository's own training code; check in the training file whether it saved a state dict or a whole model. Build the model configuration with an
   argparse.Namespace (or a small class) that has every attribute the model reads, set to the values of the start command or the entry script defaults.
 - Put the model in evaluation mode and run it under torch.no_grad(). If the model's forward function needs extra inputs that do not change the prediction, pass dummy tensors.
-- Write /output/predictions.csv: header `id,prediction`, one row per value, id = "{window}_{step}_{channel}" (window 0..n-1, step 0..95, channel 0..6),
-  prediction = float. Write it efficiently (numpy to text), not with per-row Python objects.
+- Write /output/predictions.csv (header `id,prediction`, one row per value, id = "{window}_{step}_{channel}", window 0..n-1, step 0..95, channel 0..6) with exactly
+  the function below. Copy it into your script UNCHANGED, including its imports, and call write_predictions(pred) with a float array of shape [n, 96, 7]
+  (n windows, 96 steps, 7 channels, standardised units). Do NOT write your own code for the file, the ids or the number formatting, and do not build
+  strings with numpy arithmetic (no `+` on string arrays, no astype(str)):
+@@WRITER@@
 - If the environment variable SMOKE equals 1, predict only the first 8 windows and write only those rows.
 - Do not read any other data file, do not use the network, and do not use subprocess, exec, eval, compile, importlib or URLs in the code. A static check rejects
   these and also the words pip, git, curl, wget and download anywhere in the file, including comments.
 """
+ADAPTER_CONTRACT = ADAPTER_CONTRACT.replace("@@WRITER@@", "```python\n" + WRITE_PREDICTIONS_CODE + "```")
 ADAPTER_USER = (
     "Task: write_adapter\n{contract}\nStart command of the authors: {command}\n\n"
     "Model file(s):\n{model_files}\n\nTraining and test loop file:\n{training_file}\n\nEntry script (argument definitions):\n{entry}\n\n"
