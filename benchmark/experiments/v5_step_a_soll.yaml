@@ -139,14 +139,63 @@ patterns:
     epochs: {topic: 'epoch', value: '(?<!\d)10(?!\d)', wrong: '\d'}
     patience: {topic: 'patience|early|stopping', value: '(?<!\d)3(?!\d)', wrong: '\d'}
 
-# Ziel 3: die vier bekannten irreführenden Fälle; eine Zeile des Plan-Textes, die sie als gültig führt, zählt als Treffer.
+# Ziel 3: die vier bekannten irreführenden Fälle. Der Plan-Text wird zeilenweise gelesen ("- Thema: Wert  (Quelle: \"Zitat\")" plus Markierungen).
+# Eine Zeile zählt nur als Treffer, wenn sie den Fall als GÜLTIG für den Claim führt:
+#   - nicht markiert (misleading_unless: repository default / optional advice / other model ...),
+#   - keine Konfliktzeile (enthält "repository says" oder "-> use the value": beide Werte werden dort nur genannt),
+#   - nicht ausdrücklich einem anderen Modell/einer Abbildung zugeordnet (exclude_line).
+# Regel-Arten: kind "line" (Regex auf die ganze Zeile), "field" (Regex auf Thema und auf Wert getrennt), "source" (Quelle der Zeile).
+# status: ambiguous: mehrdeutige Zeilen, die weder Treffer noch sauber sind; werden gelistet, zählen nicht als Treffer.
 misleading_unless: 'optional advice|repository default|other model|other dataset|not applicable|does not apply|inductive setting|not for this'
 misleading:
   wu_sgc_2019:
-    - {id: sgc_standardisation, line: 'standardi[sz]|zero mean|unit standard deviation|zero.?mean', description: "SGC-Standardisierung als Pflicht (README: optional)"}
+    - id: sgc_standardisation
+      rule: "Merkmals-Standardisierung (zero mean/unit std) als gültige Angabe im Plan (README: optional)"
+      kind: line
+      line: 'standardi[sz]|zero mean|unit standard deviation|zero.?mean'
   zeng_dlinear_2023:
-    - {id: dlinear_argparse_default, line: '(seq.?len|input|look.?back|sequence length)[^\n]*(?<!\d)96(?!\d)|(learning.?rate|\blr\b)[^\n]*(0?\.0001|1e-?0?4)', description: "DLinear: argparse-Default für Eingabelänge 96 / Lernrate 1e-4 als gültig"}
+    - id: dlinear_argparse_default
+      rule: "Eingabelänge 96 als gültige Angabe (Thema Eingabelänge/seq_len, Wert 96) für den Claim, nicht als Default/optional markiert, nicht für Transformer/Abbildung"
+      kind: field
+      topic: '(seq.?len|input|look.?back|sequence length|window)'
+      not_topic: 'label|pred|horizon|model.?id|dataset|size|channel|enc|dec'
+      value: '(?<![\d.])96(?![\d.])'
+      not_value: '336|_96'
+      exclude_line: 'transformer|informer|autoformer|visuali[sz]|figure|fig\.'
+    - id: dlinear_argparse_default
+      rule: "Lernrate 1e-4/0.0001 als gültige Angabe (Thema Lernrate, Wert 0.0001), nicht als Default/optional markiert, nicht für Transformer/Abbildung"
+      kind: field
+      topic: '(learning.?rate|\blr\b)'
+      not_topic: 'schedule|decay|adjust'
+      value: '(?<![\d.])0?\.0001(?!\d)|1e-?0?4\b'
+      exclude_line: 'transformer|informer|autoformer|visuali[sz]|figure|fig\.'
   velickovic_dgi_2019:
-    - {id: dgi_inductive, line: '512 features in each MP|minibatch|mini-batch|(?<!\d)256(?!\d)|sample[sd]?\s+10|10,\s*10,\s*25|neighbou?r(s|hood)? sampl|inductive|reddit|\bppi\b|three message|3 message', description: "DGI: induktive Angaben (Reddit/PPI) für den transduktiven Claim"}
+    - id: dgi_inductive
+      rule: "drei Message-Passing-Schichten als gültige Architektur (induktive Reddit/PPI-Einstellung; für Cora eine Schicht)"
+      kind: line
+      line: '(three|3)\s+(MP|message[- ]passing)\s+layers?|(three|3)[- ]layer'
+    - id: dgi_inductive
+      rule: "Nachbar-Sampling (sample 10, 10 und 25 Nachbarn) als gültige Angabe (induktiv)"
+      kind: line
+      line: 'sampl\w*\s+\d+[^.]{0,40}neighbou?rs|neighbou?r\w*\s+sampl'
+    - id: dgi_inductive
+      rule: "Minibatch 256 als gültige Angabe (induktiv; Cora ist ein einziger Graph)"
+      kind: line
+      line: 'mini-?batch\w*[^.]{0,20}(?<![\d.])256(?![\d.])|(?<![\d.])256(?![\d.])[^.]{0,20}mini-?batch'
   shchur_gat_2018:
-    - {id: shchur_gat_64_per_head, line: '(hidden|units|size)[^\n]*(?<!\d)64(?!\d)(?![^\n]*(8 (attention )?heads|8\s*[x×*]\s*8|in total|total|overall))|64[^\n]*(per|each) (attention )?head', description: "Shchur-GAT: Hidden 64 je Kopf statt gesamt"}
+    - id: shchur_gat_64_per_head
+      rule: "64 als Größe JE KOPF (Hidden 64 gesamt wäre richtig: 8 Köpfe x 8)"
+      kind: line
+      line: '(?<![\d.])64(?![\d.])\D{0,15}(per|each)\s+(attention\s+)?head|(per|each)\s+(attention\s+)?head\D{0,15}(?<![\d.])64(?![\d.])'
+    - id: shchur_gat_64_per_head
+      rule: "Angabe aus gcn.conf (GCN-Konfiguration) als gültig für GAT geführt"
+      kind: source
+      source: 'gcn\.conf'
+    - id: shchur_gat_64_ambiguous
+      status: ambiguous
+      rule: "Hidden size 64 ohne Kopfzahl (je Kopf oder gesamt unklar), oder Konfliktzeile mit gcn.conf"
+      kind: field
+      topic: '(hidden|units|size)'
+      value: '(?<![\d.])64(?![\d.])'
+      unless_line: 'head|8\s*[x×*]\s*8|in total|total|overall'
+      allow_conflict: true

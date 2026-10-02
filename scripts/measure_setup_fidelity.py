@@ -166,16 +166,72 @@ def score_point(details: list[dict], spec: dict) -> tuple[str, dict]:
     return "unklar", {"evidence": hits[0]}
 
 
+CONFLICT_RE = re.compile(r"repository says|-> use the value|highest-ranked source", re.I)
+
+
+def parse_plan_line(line: str) -> dict:
+    """Zeile des Plan-Textes "- Thema: Wert  (Quelle: \"Zitat\")  [Markierung]" -> topic, value, src, conflict."""
+    t = line.strip()
+    out = {"topic": "", "value": t, "src": "", "conflict": bool(CONFLICT_RE.search(t)), "text": t}
+    m = re.match(r"-\s*(.*?):\s+(.*)$", t)
+    if not m:
+        return out
+    topic, rest = m.groups()
+    idx = rest.find("  (")
+    if idx < 0:
+        return {**out, "topic": topic, "value": rest}
+    tail = rest[idx + 3:]
+    cut = tail.find(': "')
+    return {**out, "topic": topic, "value": rest[:idx], "src": tail[:cut] if cut >= 0 else tail}
+
+
+def rule_matches(spec: dict, row: dict) -> bool:
+    """Trifft die Regel die geparste Zeile? kind line: ganze Zeile; field: Thema und Wert getrennt; source: Quelle der Zeile."""
+    kind = spec.get("kind", "line")
+    if row["conflict"] and kind != "line" and not spec.get("allow_conflict"):
+        return False   # Konfliktzeilen nennen beide Werte nur, sie fuehren keinen als gueltig
+    if spec.get("exclude_line") and re.search(spec["exclude_line"], row["text"], re.I):
+        return False
+    if spec.get("unless_line") and re.search(spec["unless_line"], row["text"], re.I):
+        return False
+    if kind == "line":
+        return bool(re.search(spec["line"], row["text"], re.I))
+    if kind == "source":
+        return bool(re.search(spec["source"], row["src"], re.I))
+    if kind == "field":
+        if not re.search(spec["topic"], row["topic"], re.I) or (spec.get("not_topic") and re.search(spec["not_topic"], row["topic"], re.I)):
+            return False
+        if not re.search(spec["value"], row["value"], re.I) or (spec.get("not_value") and re.search(spec["not_value"], row["value"], re.I)):
+            return False
+        return True
+    raise ValueError(f"unbekannte Regel-Art {kind!r}")
+
+
 def misleading_hits(plan_text: str, specs: list[dict], unless: str) -> list[dict]:
-    """Zeilen des Plan-Textes, die einen der bekannten irrefuehrenden Faelle als gueltig fuehren (ohne Markierung)."""
+    """Zeilen des Plan-Textes, die einen der bekannten irrefuehrenden Faelle als gueltig fuehren (status "hit"), und mehrdeutige Zeilen
+    (status "ambiguous", zaehlen nicht als Treffer). Markierte Zeilen (optional advice, repository default ...) werden uebersprungen.
+    Je Eintrag: id, rule (Regel im Wortlaut), line."""
     out = []
     skip = re.compile(unless, re.I)
-    for spec in specs:
-        rx = re.compile(spec["line"], re.I)
-        for line in plan_text.splitlines():
-            if rx.search(line) and not skip.search(line):
-                out.append({"id": spec["id"], "line": line.strip()[:300]})
-    return out
+    for line in plan_text.splitlines():
+        if not line.strip() or skip.search(line):
+            continue
+        row = parse_plan_line(line)
+        hits = [sp for sp in specs if sp.get("status") != "ambiguous" and rule_matches(sp, row)]
+        for sp in hits:
+            out.append({"id": sp["id"], "rule": sp["rule"], "line": row["text"][:300], "status": "hit"})
+        if not hits:
+            for sp in specs:
+                if sp.get("status") == "ambiguous" and rule_matches(sp, row):
+                    out.append({"id": sp["id"], "rule": sp["rule"], "line": row["text"][:300], "status": "ambiguous"})
+                    break
+    seen, dedup = set(), []
+    for h in out:
+        key = (h["id"], h["rule"], h["line"], h["status"])
+        if key not in seen:
+            seen.add(key)
+            dedup.append(h)
+    return dedup
 
 
 def load_label(label: str, root: Path = OUT_ROOT) -> dict[str, list[dict]]:
@@ -188,7 +244,7 @@ def load_label(label: str, root: Path = OUT_ROOT) -> dict[str, list[dict]]:
 
 def evaluate(soll: dict, runs: dict[str, list[dict]]) -> dict:
     """Auswertung eines Labels. Rueckgabe: {units, totals, goals, doubts, misleading}."""
-    units, doubts, mislead = {}, [], []
+    units, doubts, mislead, ambiguous = {}, [], [], []
     tot = Counter()
     for u, reps in runs.items():
         if u not in soll["patterns"]:
@@ -207,7 +263,7 @@ def evaluate(soll: dict, runs: dict[str, list[dict]]) -> dict:
         units[u] = {"reps": len(reps), "points": rows}
         for r in reps:
             for h in misleading_hits(r.get("plan_text", ""), soll["misleading"].get(u, []), soll["misleading_unless"]):
-                mislead.append({"unit": u, "rep": r["rep"], **h})
+                (mislead if h["status"] == "hit" else ambiguous).append({"unit": u, "rep": r["rep"], **h})
     n = sum(tot.values())
     share = tot["korrekt"] / n if n else 0.0
     norm_units = [u for u in units if any(p in NORM_POINTS for p in units[u]["points"])]
@@ -220,7 +276,7 @@ def evaluate(soll: dict, runs: dict[str, list[dict]]) -> dict:
         "ziel2": {"korrekt": tot["korrekt"], "gesamt": n, "anteil": share, "erreicht_ohne_basis": share >= GOAL2_SHARE},
         "ziel3": {"treffer": len(mislead), "units": sorted(known & set(runs)), "erreicht": not mislead and known <= set(runs)},
     }
-    return {"units": units, "totals": dict(tot), "goals": goals, "doubts": doubts, "misleading": mislead}
+    return {"units": units, "totals": dict(tot), "goals": goals, "doubts": doubts, "misleading": mislead, "ambiguous": ambiguous}
 
 
 def format_score(label: str, ev: dict, base: dict | None = None, base_label: str | None = None) -> str:
@@ -244,7 +300,10 @@ def format_score(label: str, ev: dict, base: dict | None = None, base_label: str
     out.append(f"Ziel 3 (keine irrefuehrende Angabe als gueltig im Plan-Text, {len(g3['units'])} von 4 bekannten Einheiten gemessen): "
                f"{g3['treffer']} Treffer -> {'ja' if g3['erreicht'] else 'nein'}")
     for m in ev["misleading"]:
-        out.append(f"  irrefuehrend: {m['unit']} Wdh {m['rep']} [{m['id']}]: {m['line']}")
+        out.append(f"  irrefuehrend: {m['unit']} Wdh {m['rep']} [{m['id']}] Regel: {m['rule']} | Zeile: {m['line']}")
+    out.append(f"Mehrdeutige Zeilen des Plan-Textes (zaehlen nicht als Treffer, Handpruefung): {len(ev['ambiguous'])}")
+    for m in ev["ambiguous"]:
+        out.append(f"  mehrdeutig: {m['unit']} Wdh {m['rep']} [{m['id']}] Regel: {m['rule']} | Zeile: {m['line']}")
     out.append(f"Zweifelsfaelle (Thema getroffen, Wert unklar; Handpruefung, zaehlen nicht als korrekt): {len(ev['doubts'])}")
     for d in ev["doubts"]:
         out.append(f"  {d['unit']} Wdh {d['rep']} {d['point']}: {d['topic']} = {d['value']}")
@@ -305,6 +364,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--check-soll", action="store_true")
     ap.add_argument("--score", metavar="LABEL")
     ap.add_argument("--vs", metavar="LABEL", help="Basis-Label fuer Ziel 2")
+    ap.add_argument("--runs-root", type=Path, default=OUT_ROOT, help="Verzeichnis mit den Labels (Standard runs/v5_step_a)")
     ap.add_argument("--label")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--units", help="kommagetrennt; Standard: alle acht")
@@ -318,8 +378,8 @@ def main(argv: list[str] | None = None) -> None:
     elif a.check_soll:
         print(format_check(check_soll(soll, units)))
     elif a.score:
-        ev = evaluate(soll, load_label(a.score))
-        print(format_score(a.score, ev, evaluate(soll, load_label(a.vs)) if a.vs else None, a.vs))
+        ev = evaluate(soll, load_label(a.score, a.runs_root))
+        print(format_score(a.score, ev, evaluate(soll, load_label(a.vs, a.runs_root)) if a.vs else None, a.vs))
     elif a.label:
         collect(a.label, units, a.reps, a.setup_v2, a.max_gross_usd)
     else:

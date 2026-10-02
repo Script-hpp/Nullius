@@ -62,20 +62,64 @@ def test_dgi_applies_to_and_shchur_hidden():
     assert m.score_point([det("hidden size", "64 per head")], h)[0] == "falsch"
 
 
-def test_misleading_hits_and_markers():
-    specs = SOLL["misleading"]["wu_sgc_2019"]
+def hits(unit, line):
+    return [(h["id"], h["status"]) for h in m.misleading_hits(line, SOLL["misleading"][unit], SOLL["misleading_unless"])]
+
+
+def test_sgc_standardisation_and_markers():
     line = '- feature normalization: zero mean and unit standard deviation  (repo-readme: "normalize features to zero mean")'
-    assert [h["id"] for h in m.misleading_hits(line, specs, SOLL["misleading_unless"])] == ["sgc_standardisation"]
-    assert m.misleading_hits(line + "  [optional advice]", specs, SOLL["misleading_unless"]) == []     # markiert = nicht als gueltig gefuehrt
-    dg = SOLL["misleading"]["velickovic_dgi_2019"]
-    assert m.misleading_hits("- features: 512 features in each MP layer (paper)", dg, SOLL["misleading_unless"])
-    assert m.misleading_hits("- learning rate: 0.001 (paper)", dg, SOLL["misleading_unless"]) == []
-    dl = SOLL["misleading"]["zeng_dlinear_2023"]
-    assert m.misleading_hits("- input length: 96  (repo:run_longExp.py: \"default=96\")", dl, SOLL["misleading_unless"])
-    assert m.misleading_hits("- input length: 336  (repo:etth1.sh: \"--seq_len 336\")", dl, SOLL["misleading_unless"]) == []
-    sg = SOLL["misleading"]["shchur_gat_2018"]
-    assert m.misleading_hits("- hidden size: 64 per attention head (paper)", sg, SOLL["misleading_unless"])
-    assert m.misleading_hits("- hidden size: 8 attention heads x 8 = 64 in total (paper)", sg, SOLL["misleading_unless"]) == []
+    assert hits("wu_sgc_2019", line) == [("sgc_standardisation", "hit")]
+    assert hits("wu_sgc_2019", line + "  [optional advice]") == []                  # markiert = nicht als gueltig gefuehrt
+    assert hits("wu_sgc_2019", "- learning rate: 0.2 (paper)") == []
+
+
+def test_dlinear_rule_only_hits_valid_96_or_1e4():
+    unless = "  [repository default (the paper may tune this per dataset)]"
+    # Fehlalarme der Basis-Messung: richtige Zeilen duerfen nicht treffen
+    assert hits("zeng_dlinear_2023", '- input_length: 336  (paper: "we re-port L=336 for LTSF-Linear and L=96 for Transformers by default.")') == []
+    assert hits("zeng_dlinear_2023", '- model_id: ETTh1_336_96  (repo:etth1.sh@c: "--model_id ETTh1_336_96")') == []
+    assert hits("zeng_dlinear_2023", '- pred_len: 96  (repo:etth1.sh@c: "--pred_len 96")') == []
+    assert hits("zeng_dlinear_2023", '- seq_len: 336  (repo:etth1.sh@c: "--seq_len 336")') == []
+    # echte Treffer: 96 bzw. 1e-4 als gueltige Angabe
+    assert hits("zeng_dlinear_2023", '- seq_len: 96  (repo:run_longExp.py@c: "--seq_len 96")') == [("dlinear_argparse_default", "hit")]
+    assert hits("zeng_dlinear_2023", '- input length: 96  (paper: "L=96")') == [("dlinear_argparse_default", "hit")]
+    assert hits("zeng_dlinear_2023", '- learning_rate: 0.0001  (repo:run_longExp.py@c: "default=0.0001")') == [("dlinear_argparse_default", "hit")]
+    assert hits("zeng_dlinear_2023", '- learning rate: 1e-4  (paper: "lr 1e-4")') == [("dlinear_argparse_default", "hit")]
+    # nicht als gueltig gefuehrt: Default/optional markiert, Transformer/Abbildung, Konfliktzeile
+    assert hits("zeng_dlinear_2023", '- seq_len: default=96  (repo:run_longExp.py@c: "default=96")' + unless) == []
+    assert hits("zeng_dlinear_2023", '- input length: 96 for Transformer baselines  (paper: "L=96 for Transformers")') == []
+    assert hits("zeng_dlinear_2023", '- input length: 96  (paper: "Figure 5 visualization uses L=96")') == []
+    assert hits("zeng_dlinear_2023", '- seq_len: paper says 96 (paper: "L=96"); repository says 336 (repo:etth1.sh@c: "seq_len=336")') == []
+
+
+def test_shchur_gat_rule_statuses():
+    q = '(paper: "GAT 64 0.01 0.6/0.3 0.01 92 K")'
+    assert hits("shchur_gat_2018", f"- hidden size: 64 per attention head  {q}") == [("shchur_gat_64_per_head", "hit")]
+    assert hits("shchur_gat_2018", '- hidden_size: 64  (repo:config/optimized/gcn.conf.yaml@c: "hidden_size: 64")') == [("shchur_gat_64_per_head", "hit")]
+    assert hits("shchur_gat_2018", '- learning_rate: 0.01  (repo:config/optimized/gcn.conf.yaml@c: "learning_rate: 0.01")') == [("shchur_gat_64_per_head", "hit")]
+    # mehrdeutig: 64 ohne Kopfzahl; zaehlt nicht als Treffer, wird aber gelistet
+    assert hits("shchur_gat_2018", f"- Hyperparameter - hidden size: 64  {q}") == [("shchur_gat_64_ambiguous", "ambiguous")]
+    conflict = f'- hidden size: paper says 64 {q}; repository says 16 (repo:config/reference/gcn.conf.yaml@c: "hidden_size: 16")'
+    assert hits("shchur_gat_2018", conflict) == [("shchur_gat_64_ambiguous", "ambiguous")]
+    assert hits("shchur_gat_2018", "- hidden size: 8 attention heads x 8 = 64 in total  (paper)") == []
+    assert hits("shchur_gat_2018", f"- learning rate: 0.01  {q}") == []
+
+
+def test_dgi_rule_only_hits_mp_layers_sampling_minibatch():
+    assert hits("velickovic_dgi_2019", '- features: F = 512 features, PReLU  (paper: "We compute F = 512 features")') == []   # F=512 gilt auch fuer Cora
+    assert hits("velickovic_dgi_2019", "- learning rate: 0.001 (paper)") == []
+    assert hits("velickovic_dgi_2019", "- Model architecture - MP layers: three MP layers, each computing 512 features  (paper)") == [("dgi_inductive", "hit")]
+    assert hits("velickovic_dgi_2019", "- Subsampling: sample 10, 10 and 25 neighbors at the first, second and third level  (paper)") == [("dgi_inductive", "hit")]
+    assert hits("velickovic_dgi_2019", "- Minibatch size: minibatches of 256 nodes throughout training  (paper)") == [("dgi_inductive", "hit")]
+    assert hits("velickovic_dgi_2019", "- Minibatch size: minibatches of 256 nodes  (paper)  [optional advice]") == []
+
+
+def test_score_output_names_the_rule(tmp_path):
+    plan = "- seq_len: 96  (repo:run_longExp.py@c: \"--seq_len 96\")\n- hidden size: 64  (paper: \"GAT 64\")"
+    write_runs(tmp_path, "r", {"zeng_dlinear_2023": [([], plan)] * 1, "shchur_gat_2018": [([], plan)]})
+    text = m.format_score("r", m.evaluate(SOLL, m.load_label("r", tmp_path)))
+    assert "Regel: Eingabelänge 96 als gültige Angabe" in text and "[dlinear_argparse_default]" in text
+    assert "Mehrdeutige Zeilen des Plan-Textes" in text and "mehrdeutig: shchur_gat_2018" in text
 
 
 def write_runs(root, label, per_unit):
