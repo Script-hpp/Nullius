@@ -19,6 +19,7 @@ import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
 import { useHead } from '../useHead'
+import { headFromSummary } from '../paperhead'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
 import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
@@ -37,7 +38,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const [activeTab, setActiveTab] = useState<Tab>(initialTab === 'log' || initialTab === 'evidence' || initialTab === 'tree' || initialTab === 'files' ? initialTab : 'graph')
   const [file, setFile] = useState<'code' | 'plan'>('code')
   const [timelapse, setTimelapse] = useState(playTimelapse)   // the 30-second panel, opened by the button or by ?play=1
-  const head = useHead(ref_.paper_id)
+  const stored = useHead(ref_.paper_id)
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // code versions of the replay: code_<hash>.py from the export, older exports only have the final code.py
   const finalHash = useMemo(() => {
@@ -48,6 +49,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
   if (!run) return <main className="mx-auto max-w-6xl px-4 py-10 text-muted md:px-8">Loading run data…</main>
   const d = run.dossier
+  const head = headFromSummary(d.summary) ?? stored   // what this run wrote itself, else the stored head of the paper
   const claim: Json = d.claims?.[0]
   const v: Json = d.verdicts?.[0]
   if (!claim) return <main className="mx-auto max-w-6xl px-4 py-10 text-muted md:px-8">Empty run.</main>

@@ -201,6 +201,15 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         })
         break
       }
+      case 'paper_summary': {
+        const t = typeof e.text === 'string' ? e.text : ''
+        const n = Array.isArray(e.institutions) ? e.institutions.length : 0
+        push('claim', {
+          actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: 'Plain-language summary of the paper written',
+          detail: [t ? 'Two or three simple sentences from the arXiv abstract.' : null, n ? `${n} affiliation${n === 1 ? '' : 's'} read from the paper text, each checked against a quote.` : null, 'Reported only, never part of the check.'].filter(Boolean).join(' '),
+        })
+        break
+      }
       case 'target_resolved': {
         const v = num(e.value)
         push('claim', {

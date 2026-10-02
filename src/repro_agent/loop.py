@@ -35,6 +35,7 @@ from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
 from .droplast_note import droplast_note
 from .events import EventLog
+from .paper_head import abstract as fetch_abstract, arxiv_meta as fetch_arxiv_meta, build_head, claim_for_prompt
 from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
 from .harness.smoke import check_smoke_output
@@ -606,6 +607,45 @@ class Orchestrator:
         if out.get("status") != "ok":
             return {"error": str(out.get("reason", ""))[:300]}
         return {"metric": out["metric"], "value": float(out["value"]), "baselines": out.get("baselines") or {}}
+
+    # ---- Kurzbeschreibung des Papers (nur Bericht) ----------------------------
+    def _paper_summary_round(self, paper: dict, claims: list[Claim]) -> dict | None:
+        """Produktpfad (graph_repair): fuer ein Paper ohne Eintrag in summaries.json eine Kurzbeschreibung in einfachen Worten, Autoren und Jahr (arXiv-Abstract-Seite)
+        und Universitaeten (nur aus dem schon gelesenen Paper-Text, mit Zitat-Check). Ergebnis nur ins Dossier (Feld summary) und Ereignis `paper_summary`;
+        kein Prompt des Agenten bekommt es. Fehler = Warnung, der Lauf laeuft weiter; Abrechnungs-, Budget- und Kostenfehler laufen durch."""
+        if not getattr(self, "graph_repair", False) or not claims:
+            return None
+        arxiv_id = paper["arxiv_url"].rstrip("/").split("/abs/")[-1]
+        stored = REPO_ROOT / "web" / "public" / "data" / "discovery" / "summaries.json"
+        try:
+            if arxiv_id in json.loads(stored.read_text()):
+                return None   # stored once already (benchmark and catalog papers): the web app reads that
+        except (OSError, json.JSONDecodeError):
+            pass
+        claim = next((c for c in claims if c.origin == "paper"), claims[0])
+        try:
+            abs_text = getattr(self, "_fetch_abstract", fetch_abstract)(arxiv_id)
+            if not abs_text:
+                raise ValueError("kein Abstract auf der arXiv-Seite")
+            meta = None
+            try:
+                meta = getattr(self, "_fetch_meta", fetch_arxiv_meta)(arxiv_id)
+            except Exception as exc:   # Autoren/Jahr sind optional
+                self._warn(f"Autoren und Jahr nicht gelesen ({type(exc).__name__}); die Kurzbeschreibung entsteht trotzdem.")
+            pt = self.paper_text
+            doc = {"text": pt.text, "source_kind": pt.source_kind, "arxiv_version": pt.arxiv_version} if pt is not None else None
+            head = build_head(lambda system, user, t: self._ask("code", system, user, max_tokens=3000, temperature=t).content,
+                              claim_for_prompt(paper, claim), abs_text, meta, doc, arxiv_id)
+        except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
+            raise
+        except Exception as exc:
+            self._warn(f"Kurzbeschreibung nicht erstellt ({type(exc).__name__}: {str(exc)[:120]}); der Lauf ist davon nicht betroffen.")
+            return None
+        if not head:
+            self._warn("Kurzbeschreibung nicht erstellt (keine gueltige Antwort); der Lauf ist davon nicht betroffen.")
+            return None
+        self._emit("paper_summary", **head)
+        return head
 
     # ---- Tavily Rolle 2: Zielwerte aus dem Paper -------------------------------
     def resolve_targets(self, paper: dict, claims: list[Claim]) -> None:
@@ -1254,6 +1294,7 @@ class Orchestrator:
         self._cost_base = self.llm.total_cost_usd
         if self.use_tavily:
             self.resolve_targets(paper, claims)
+        paper_head = self._paper_summary_round(paper, claims)   # nach Rolle 2; nur Bericht
         repo_info = None
         extra_details = discovery_details(paper)   # Katalog: Eingabelaenge, Quelle Discovery-Zitat
         if self.use_setup_details and self.paper_text is not None:
@@ -1274,7 +1315,7 @@ class Orchestrator:
             self.details = extra_details
         dossier = Dossier(
             paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
-            setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings),
+            setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings), summary=paper_head,
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())

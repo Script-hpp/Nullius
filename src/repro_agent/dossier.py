@@ -103,6 +103,8 @@ class Dossier:
     droplast_notes: dict = field(default_factory=dict)   # claim_id -> Hinweis "Paperzahl passt zur drop_last-Rechnung" (droplast_note.py), nur Bericht
     # Community-Check nach dem Urteil (nur Bericht, nie Teil des Urteils): {"findings", "dropped", "pages", "queries", "mode", ...} bzw. None
     community: dict | None = None
+    # Kurzbeschreibung und Kopf des Papers (paper_head.build_head): {text, source, authors, year, institutions, ...}; nur Bericht, nie in einem Prompt des Agenten
+    summary: dict | None = None
     explanations: dict = field(default_factory=dict)   # claim_id -> {"items": [...], "dropped": n}; nur bei teilweise/nicht reproduziert
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
@@ -136,6 +138,7 @@ class Dossier:
             droplast_notes=data.get("droplast_notes", {}),
             community=data.get("community"),
             explanations=data.get("explanations", {}),
+            summary=data.get("summary"),
         )
 
     def condensed_for_reasoning(self) -> str:
