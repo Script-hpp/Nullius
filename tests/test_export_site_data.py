@@ -60,3 +60,32 @@ def test_missing_catalog_gives_empty_json(tmp_path):
     out = tmp_path / "data"
     exp.main(["--catalog-only"], out=out, catalog_yaml=tmp_path / "none.yaml")
     assert json.loads((out / "catalog.json").read_text()) == []
+
+
+def run_dir(tmp_path, claims, plans):
+    run = tmp_path / "runs" / "p1" / "20261001-000000"
+    run.mkdir(parents=True)
+    (run / "dossier.json").write_text(json.dumps({"paper_id": "p1", "claims": claims, "attempts": [], "verdicts": []}))
+    for name, text in plans.items():
+        (run / name).write_text(text)
+    return run
+
+
+def test_export_copies_the_plan_of_the_first_paper_claim_not_a_placebos(tmp_path):
+    from repro_agent import site_export as se
+    claims = [{"id": "c_placebo", "origin": "placebo"}, {"id": "c", "origin": "paper"}, {"id": "c_obj", "origin": "einwand"}]
+    run = run_dir(tmp_path, claims, {"c_plan.md": "PAPER PLAN", "c_placebo_plan.md": "PLACEBO PLAN", "c_obj_plan.md": "OBJECTION PLAN"})
+    for _ in range(3):   # the glob order of the file system must not matter
+        out = tmp_path / "out"
+        se.export_run(run, out, {})
+        assert (out / "p1" / "20261001-000000" / "plan.md").read_text() == "PAPER PLAN"
+
+
+def test_export_without_the_claims_plan_copies_nothing_when_several_plans_exist(tmp_path):
+    from repro_agent import site_export as se
+    run = run_dir(tmp_path, [{"id": "c", "origin": "paper"}], {"x_plan.md": "X", "y_plan.md": "Y"})
+    se.export_run(run, tmp_path / "out", {})
+    assert not (tmp_path / "out" / "p1" / "20261001-000000" / "plan.md").exists()
+    run2 = run_dir(tmp_path / "two", [{"id": "c", "origin": "paper"}], {"only_plan.md": "ONLY"})   # a single plan is taken as before
+    se.export_run(run2, tmp_path / "out2", {})
+    assert (tmp_path / "out2" / "p1" / "20261001-000000" / "plan.md").read_text() == "ONLY"
