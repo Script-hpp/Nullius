@@ -49,7 +49,7 @@ Mit dem eingefrorenen Stand, je fünf Seeds, Token Factory (Store `nachlauf_m3_d
 | RLinear | `script.md:3`, nach Absturz vom Modell korrigiert (`--model Linear` → `RLinear`), als Abweichung gelistet | 0,3660 auf 2688 Fenstern (`drop_last`, Batch 128) | 0,3708 ± 0,0013 | reproduziert | 4 | 0,019 $ |
 | DLinear | `scripts/EXP-LongForecasting/Linear/etth1.sh`, dokumentiert | 0,3841 | 0,3781 ± 0,0082 | reproduziert | 3 | 0,026 $ |
 
-P2 und P3 bei allen zehn Seed-Läufen bestanden, Adapter jeweils im ersten Versuch. Die Werte sind identisch mit der Handarbeit aus dem Vorversuch. Die gesamte Entwicklung an diesen zwei Einheiten kostete 0,31 $ brutto (13 Läufe im Store, darunter ein Lauf mit erfundenem Befehl und ein gescheiterter).
+P2 und P3 bei allen zehn Seed-Läufen bestanden, Adapter jeweils im ersten Versuch. Die Werte sind identisch mit der Handarbeit aus dem Vorversuch. Die gesamte Entwicklung an diesen zwei Einheiten kostete 0,31 $ brutto (9 Läufe im Store, darunter ein Lauf mit erfundenem Befehl und ein gescheiterter; dazu ein Absturz vor dem ersten Store-Eintrag).
 
 ## Offene Punkte für einen zweiten Versuch (nur falls der Nutzer ihn will)
 
