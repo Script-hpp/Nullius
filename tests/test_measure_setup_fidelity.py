@@ -197,3 +197,60 @@ def test_no_soll_values_in_src_prompts():
     """Kein Wert und keine Methode der Soll-Liste in Prompts oder Code unter src/ (Vorab-Festlegung)."""
     src = "\n".join(p.read_text() for p in (ROOT / "src").rglob("*.py") if "harness" not in p.parts)
     assert "v5_step_a_soll" not in src and "measure_setup_fidelity" not in src
+
+
+# ---- Nachbesserung Messskript (score2): Wertformen, Standardisierung nur bei Merkmalen, Kipf epochs, Rohantworten ----------------
+def test_equivalent_value_forms_are_recognised():
+    wd = SOLL["patterns"]["kipf_gcn_2017"]["weight_decay"]
+    for form in ("5e-4", "5 · 10 −4", "5·10⁻⁴", "5 × 10^-4", "5 * 10^{-4}", "0.0005", "5⋅10−4"):
+        assert m.score_point([det("L2_regularization", form)], wd)[0] == "korrekt", form
+    assert m.score_point([det("L2_regularization", "5 · 10 −5")], wd)[0] == "falsch"          # andere Groessenordnung bleibt falsch
+    assert m.canonical_value("5·10⁻⁴").endswith("0.0005") and m.canonical_value("1e-3").endswith("0.001")
+    lr = SOLL["patterns"]["kipf_gcn_2017"]["lr"]
+    assert m.score_point([det("learning rate", "1 · 10 −2")], lr)[0] == "korrekt"              # = 0.01
+
+
+def test_boolean_normalisation_switch_means_not_normalised():
+    q = SOLL["patterns"]["shchur_pitfalls_2018"]["feature_norm"]
+    for topic, value in (("Feature normalization (row L2 norm)", "False"), ("normalize_features", "false"), ("feature normalisation", "no")):
+        assert m.score_point([det(topic, value)], q)[0] == "korrekt", (topic, value)
+    assert m.score_point([det("normalize_features", "True")], q)[0] == "falsch"                         # an = normalisiert, Shchur: nicht
+    k = SOLL["patterns"]["kipf_gcn_2017"]["feature_norm"]
+    assert m.score_point([det("normalize_features", "False")], k)[0] == "falsch"                         # Kipf: zeilennormalisiert
+
+
+def test_standardisation_wrong_only_for_feature_standardisation():
+    q = SOLL["patterns"]["shchur_pitfalls_2018"]["feature_norm"]
+    graph = det("standardization", "If standardize=True, apply dataset_graph.standardize(); otherwise ...")
+    proc = det("training procedure standardization", "standardized training and hyperparameter selection procedure")
+    assert m.score_point([graph], q)[0] == "unklar" and m.score_point([proc], q)[0] == "unklar"          # nicht falsch
+    wu = SOLL["patterns"]["wu_sgc_2019"]["feature_norm"]
+    assert m.score_point([det("feature normalization", "zero mean and unit standard deviation")], wu)[0] == "falsch"
+    assert m.score_point([det("feature preprocessing", "features standardised")], wu)[0] == "falsch"
+
+
+def test_kipf_epochs_quote_and_400_epochs():
+    ep = SOLL["patterns"]["kipf_gcn_2017"]["epochs"]
+    opt = det("optimizer", "Adam with learning rate 0.01", quote="We train all models for a maximum of 200 epochs (training iterations) using Adam")
+    assert m.score_point([opt], ep)[0] == "korrekt"                                                      # 200 in der optimizer-Zeile (Zitat)
+    four = det("training_epochs", "400 epochs per split (no early stopping)")
+    st, _ = m.score_point([four], ep)
+    assert st == "unklar"                                                                                # Anhang-Protokoll: nicht falsch, aber auch nicht korrekt
+    assert m.score_point([four, opt], ep)[0] == "korrekt"
+    assert m.score_point([det("epochs", "400 epochs")], ep)[0] == "falsch"                               # als gueltig gefuehrt: falsch
+    assert m.score_point([det("learning rate", "0.01")], ep)[0] == "fehlt"
+
+
+def test_raw_trace_records_answers_and_drop_reasons():
+    from repro_agent.setup_details import Doc
+
+    docs = [Doc("paper", "We use a learning rate of 0.01 and dropout 0.5 in all runs.")]
+    answer = json.dumps([{"topic": "lr", "value": "0.01", "quote": "learning rate of 0.01"},
+                         {"topic": "wd", "value": "5e-4", "quote": "weight decay of 5e-4"}])
+    calls = [{"user": "Goal ...\nEXCERPT:\nWe use a learning rate of 0.01 and dropout 0.5 in all runs.\n", "response": "think\n" + answer,
+              "finish_reason": "stop", "completion_tokens": 50, "status": "ok"},
+             {"user": "pick files", "response": "[]", "finish_reason": "stop", "completion_tokens": 3, "status": "ok"}]
+    tr = m.raw_trace(calls, docs)
+    assert tr[0]["doc"] == "paper" and tr[0]["n_items"] == 2 and [d["reason"] for d in tr[0]["dropped"]] == ["Zitat nicht im Quelltext"]
+    assert tr[0]["finish_reason"] == "stop" and "learning rate" in tr[0]["response"]
+    assert tr[1]["doc"] is None and tr[1]["n_items"] == 0
