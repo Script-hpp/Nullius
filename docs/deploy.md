@@ -104,7 +104,7 @@ Voraussetzungen: Nebius-Projekt mit Compute-Zugang, `nebius` CLI angemeldet (`ne
 ## Kosten grob (bis 15.12.2026, etwa 76 Tage ab 1.10.)
 - **Coolify auf dem eigenen Server: 0 $ zusätzlich** (Server und Domain vorhanden). Die folgenden VM-Zahlen gelten nur für die Nebius-Alternative.
 - Nebius-VM Ice Lake ab 0,06 $/h: ≈ 110 $ **[zu prüfen]**; Volume 30 GB ≈ 4 $; IP und Traffic laut Preisseite 0 $. Summe ≈ **115 $**, bei AMD Genoa ≈ 245 $. Die VM erst kurz vor der Abgabe (etwa 20.10.) anlegen spart rund 20 Tage (≈ 30 $); bis dahin reicht der lokale Betrieb.
-- Live-Läufe: Schnellprüfung etwa 0,03 bis 0,10 $ je Lauf (Katalog-Läufe: SL-GCN 0,025 bis 0,028 $, MoHETS 0,093 $ brutto). `MAX_DAILY_REPRO_JOBS=3` begrenzt das auf rund 0,30 $ pro Tag, also bis 15.12. höchstens etwa 25 $, zusätzlich gedeckelt durch `BUDGET_TOTAL_USD` (Warnung 80 %, Stopp 95 %).
+- Live-Läufe: Schnellprüfung etwa 0,03 bis 0,10 $ je Lauf (Katalog-Läufe: SL-GCN 0,025 bis 0,028 $, MoHETS 0,093 $ brutto). `MAX_DAILY_REPRO_JOBS=3` begrenzt das auf rund 0,30 $ pro Tag, also bis 15.12. höchstens etwa 25 $, zusätzlich gedeckelt durch `BUDGET_TOTAL_USD` (Warnung 80 %, Stopp 95 %). **Stand 2026-10-02:** Diese Zahlen stammen aus der Zeit vor `setup_v2`; maßgeblich ist `docs/budget_plan.md` (`MAX_DAILY_REPRO_JOBS=1`, Server-Anteil 20 $ als `BUDGET_TOTAL_USD`, Kosten einer Schnellprüfung mit aktuellem Code noch zu messen).
 - Anderer Anbieter statt Nebius-VM: ≈ 12 €.
 
 ## Betrieb bis 15.12.
