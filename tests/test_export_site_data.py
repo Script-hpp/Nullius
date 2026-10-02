@@ -62,7 +62,13 @@ def test_missing_catalog_gives_empty_json(tmp_path):
     assert json.loads((out / "catalog.json").read_text()) == []
 
 
+def full(claims):
+    """Complete claim dicts (Dossier.load, used by the badge, needs every field)."""
+    return [{"text": "t", "metric": "accuracy", "target": 0.8, "tolerance": 0.01, "source": "s", **c} for c in claims]
+
+
 def run_dir(tmp_path, claims, plans):
+    claims = full(claims)
     run = tmp_path / "runs" / "p1" / "20261001-000000"
     run.mkdir(parents=True)
     (run / "dossier.json").write_text(json.dumps({"paper_id": "p1", "claims": claims, "attempts": [], "verdicts": []}))
