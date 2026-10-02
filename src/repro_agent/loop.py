@@ -1110,6 +1110,7 @@ class Orchestrator:
                     self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
                     extra = repair_hint(summary) if product else ""
                     code = self.repair_code(plan, task, code, (summary or "") + extra + hints)
+                    self._emit("repair_result", claim_id=claim.id, seed=seed, from_hash=code_hash, to_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     if not product:
                         return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
