@@ -1,0 +1,14 @@
+[nachlauf_command] {"n": 0, "command": "python -u run_longExp.py --is_training 1 --root_path ./dataset/ --data_path ETTh1.csv --model_id ETTh1_720_96 --model SparseTSF --data ETTh1 --features M --seq_len 720 --pred_len 96 --period_len 24 --enc_in 7 --train_epochs 30 --patience 5 --itr 1 --batch_size 256 --learning_rat
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+[nachlauf_train] {"seed": null, "exit_code": 1, "wall_s": 3.6, "own_metric": null, "timed_out": false}
+[nachlauf_command] {"n": 1, "hash": "821378bd1e64", "status": "fehler", "documented": true, "rejected_by": null}
+[nachlauf_repair] {"kind": "command", "round": 1, "reason": "s/pandas/core/series.py\", line 5084, in apply\n    ).apply()\n      ^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/pandas/core/apply.py\", line 1520, in apply\n    return self.apply_standard()\n  "}
+[nachlauf_train] {"seed": null, "exit_code": 1, "wall_s": 3.6, "own_metric": null, "timed_out": false}
+[nachlauf_command] {"n": 2, "hash": "5371d027d892", "status": "fehler", "documented": true, "rejected_by": null}
+[nachlauf_repair] {"kind": "command", "round": 2, "reason": "s/pandas/core/series.py\", line 5084, in apply\n    ).apply()\n      ^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/pandas/core/apply.py\", line 1520, in apply\n    return self.apply_standard()\n  "}
+[nachlauf_train] {"seed": null, "exit_code": 1, "wall_s": 5.1, "own_metric": null, "timed_out": false}
+[nachlauf_command] {"n": 3, "hash": "756da90a3f2b", "status": "fehler", "documented": false, "rejected_by": null}
+[nachlauf_repair] {"kind": "command", "round": 3, "reason": "Traceback (most recent call last):\n  File \"/work/repo/run_longExp.py\", line 130, in <module>\n    exp.train(setting)\n  File \"/work/repo/exp/exp_main.py\", line 170, in train\n    outputs = self.model(bat"}
+[nachlauf_train] {"seed": null, "exit_code": 1, "wall_s": 3.8, "own_metric": null, "timed_out": false}
+[nachlauf_command] {"n": 4, "hash": "468d5e2b831a", "status": "fehler", "documented": false, "rejected_by": null}
+ERGEBNIS {"paper": "sparsetsf_2024", "claim": "sparsetsf_etth1_96_mse", "unit": "SparseTSF", "repo": "https://github.com/lss-1138/SparseTSF", "commit": "b8c2740eecc84d8095ffce49ba5acafe68e53bb8", "code_commit": "7c6ddbf", "cost_usd_run": 0.04783, "cost_usd_run_gross": 0.05692, "n_llm_calls": 5, "urteil": "nicht reproduzierbar (Setup)", "mean": NaN, "std": NaN, "target": 0.362, "valid": false, "rejected_by": [], "outcome": "training_failed", "warnings": ["eine Messung, keine Streuung"], "command": "python -u run_longExp.py --is_training 1 --root_path ./dataset/ --data_path ETTh1.csv --model_id ETTh1_720_96 --model SparseTSF --data ETTh1 --features S --seq_len 720 --pred_len 96 --period_len 24 --enc_in 1 --train_epochs 30 --patience 5 --itr 1 --batch_size 256 --learning_rate 0.02", "command_documented": null, "run_dir": "runs/nachlauf/sparsetsf_2024/20261003-001755"}
