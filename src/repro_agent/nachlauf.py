@@ -142,7 +142,8 @@ def _shell_vars(text: str) -> dict[str, str]:
 
 
 _FOR_RE = re.compile(r"^\s*for\s+(\w+)\s+in\s+(.+?)\s*(?:;\s*do\s*|;\s*|\s+do\s*)?$")
-MAX_LOOP_COMBOS = 12
+MAX_LOOP_COMBOS = 500      # Wertekombinationen je Zeile (Schleifen ueber Listen: je Kombination ein aufgeloester Kandidat)
+MAX_LOOP_VALUES = 200
 
 
 def _loop_values(raw: str, vars_: dict[str, str]) -> list[str]:
@@ -151,7 +152,7 @@ def _loop_values(raw: str, vars_: dict[str, str]) -> list[str]:
         vals = shlex.split(raw)
     except ValueError:
         vals = raw.split()
-    return [v for v in vals if "$" not in v and v != "do"][:MAX_LOOP_COMBOS]
+    return [v for v in vals if "$" not in v and v != "do"][:MAX_LOOP_VALUES]
 
 
 def _lines_with_vars(text: str):
@@ -466,7 +467,7 @@ class _Run:
             else:
                 return {**res, "status": "skipped", "reason": "no seed method"}
         tr = sb.run(b, train_cmd(spec, script_override, extra), TRAIN_TIMEOUT_S)
-        res.update(train_exit=tr.exit_code, train_wall_s=_wall_s(tr.stdout), timed_out=tr.timed_out)
+        res.update(train_exit=tr.exit_code, train_wall_s=_wall_s(tr.stdout), timed_out=tr.timed_out, stderr_full=(tr.stderr or "")[-20000:])
         own = re.findall(spec.own_metric_pattern, tr.stdout, re.M)
         res["own_metric"] = float(own[-1]) if own else None
         self.emit("nachlauf_train", seed=seed, exit_code=tr.exit_code, wall_s=res["train_wall_s"], own_metric=res["own_metric"], timed_out=tr.timed_out)

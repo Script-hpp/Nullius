@@ -74,6 +74,7 @@ COMMAND_SYSTEM = (
 )
 COMMAND_FORMAT = """\
 {
+  "more": false,
   "command_candidate": 3,
   "checkpoint_glob": "path pattern relative to the repository root where the training run saves the weights, e.g. out/*/weights.bin",
   "test_loader": {"drop_last": {"candidate": 1, "value": true},
@@ -92,6 +93,9 @@ COMMAND_USER = (
     "- All numbers are the numbers in square brackets at the start of a listed line, never line numbers of files.\n"
     "- command_candidate: the number of the documented command that trains the model of this result on this dataset for this forecast horizon. "
     "Use null if none of them matches; never guess and never write a command yourself.\n"
+    "- The commands are ranked by how well they match the result (model, dataset, horizon, input length), grouped by file, with variables and loop values already "
+    "substituted. If none matches and the list says more commands exist, answer {{\"more\": true}} to see the next ones (allowed at most twice); do not ask "
+    "for more when one of the listed commands matches.\n"
     "- test_loader.drop_last.candidate: the number of the line (second list) that sets drop_last for the loader used when testing; value is true or false as "
     "written on that line; use null if none matches.\n"
     "- test_loader.batch_size: give the switch name when the code takes the test batch size from a command-line argument (the switch of the argument "
@@ -121,11 +125,15 @@ REPAIR_COMMAND_USER = (
     "Result to check: {claim} (dataset: {dataset}).\n"
     "The training run with this command did not produce a usable result.\nCommand: {command} (documented command number {k})\n\nProblem:\n{problem}\n\n"
     "Documented commands found in the repository by a program:\n{candidates}\n\n"
-    "Answer with one JSON object: {{\"command_candidate\": N, \"command\": ..., \"checkpoint_glob\": ..., \"install\": [package names]}}. "
+    "{installed}"
+    "Answer with one JSON object: {{\"command_candidate\": N, \"command\": ..., \"checkpoint_glob\": ..., \"install\": [package names], \"downgrade\": [...]}}. "
     "N is the number of a documented command: keep the current one or choose another by number. \"command\" is optional: a one-line variant of that documented "
     "command with changed, added or removed switches (the same script). A command without a number is rejected. You may also change the checkpoint "
     "path pattern, or ask to install a missing package, but only a package that is named in the repository's dependency files. "
-    "Use an empty list for install if none is needed.\n\nFiles:\n{files}"
+    "downgrade is for one case only: the traceback ends inside an installed library (a path in site-packages) and the cause is a library version that is "
+    "too new. Then you may ask for a lower version of that library, written as a package name with a bound, e.g. [\"somelib<2\"] or [\"somelib==1.5.3\"] "
+    "(invented example); only a package that appears in the last traceback, and only a version lower than the installed one. "
+    "Use empty lists for install and downgrade if none is needed.\n\nFiles:\n{files}"
 )
 
 ADAPTER_SYSTEM = (
@@ -205,6 +213,15 @@ NO_CANDIDATE_SENTENCE = ("The command must come from one of the numbered documen
                          "You may change switches of that command, but you must not invent a command.")
 SAME_SCRIPT_SENTENCE = "The command must run the same script as the documented command with the given number."
 NO_COMMAND_REASON = "no documented start command found for this claim"
+P1_PROTECTED_SENTENCE = ("The switch {flag} defines the dataset, the task type, the number of channels, the horizon or the input length of the experiment "
+                         "and must not be changed, added or removed. Change only other switches.")
+P1_MODEL_SENTENCE = "The model switch {flag} may only be changed to a value that contains the model name of the result."
+DOWNGRADE_FORM_SENTENCE = ("A downgrade must be written as package<N or package==x.y.z, naming a version lower than the installed one: "
+                           "{item} is not accepted.")
+DOWNGRADE_TRACEBACK_SENTENCE = ("The package {pkg} cannot be downgraded: it is not installed or it does not appear in the last traceback "
+                                "(a path inside site-packages).")
+DOWNGRADE_LOWER_SENTENCE = "The package {pkg} can only be changed to a lower version than the installed one."
+REPO_FRAME_LABEL = "Last traceback frame inside the repository: "
 PACKAGE_SENTENCE = ("The package {pkg} is not named in the repository's dependency files, so it must not be installed. "
                     "Only packages named there may be installed.")
 
@@ -590,6 +607,122 @@ def verify_answer(ans: dict, files: dict[str, str], cands: list | None = None, l
     return out
 
 
+# ---- Fehlertext mit Repo-Zeile, Downgrade, geschuetzte Schalter (zweiter Versuch) ------------------------------------------------------
+
+FRAME_RE = re.compile(r'^\s*File "([^"]+)", line (\d+), in (.+?)\s*$')
+REPO_PATH_PREFIXES = (f"{nl.REPO_DIR}/", f"{nl.SEED_DIR}/")
+
+
+def repo_frame(stderr: str) -> str | None:
+    """Letzte Traceback-Zeile, deren Pfad im Repo liegt (oder die Seed-Kopie des Einstiegsskripts), samt Codezeile aus der Traceback-Ausgabe
+    (nicht neu gelesen). None, wenn kein Frame im Repo liegt."""
+    lines = (stderr or "").splitlines()
+    found = None
+    for i, line in enumerate(lines):
+        m = FRAME_RE.match(line)
+        if m and m.group(1).startswith(REPO_PATH_PREFIXES):
+            code = lines[i + 1].strip() if i + 1 < len(lines) and not FRAME_RE.match(lines[i + 1]) and lines[i + 1].startswith((" ", "\t")) else ""
+            path = m.group(1)[len(nl.REPO_DIR) + 1:] if m.group(1).startswith(nl.REPO_DIR + "/") else m.group(1)
+            found = f"{path}, line {m.group(2)}, in {m.group(3)}" + (f": {code}" if code else "")
+    return found
+
+
+def problem_text(result: dict) -> str:
+    """Fehlertext fuer die Reparatur: die letzte Repo-Zeile des Tracebacks (falls vorhanden) vor dem Ende von stderr (1500 Zeichen); keine Zusammenfassung."""
+    tail = result.get("reason") or result.get("status") or ""
+    frame = repo_frame(result.get("stderr_full") or "")
+    return f"{REPO_FRAME_LABEL}{frame}\n\n{tail}" if frame else tail
+
+
+def last_traceback(stderr: str) -> str:
+    parts = (stderr or "").split("Traceback (most recent call last):")
+    return parts[-1] if len(parts) > 1 else ""
+
+
+def parse_freeze(text: str) -> dict[str, str]:
+    return {_norm_pkg(n): v.strip() for n, _, v in (l.partition("==") for l in (text or "").splitlines() if "==" in l)}
+
+
+def _norm_pkg(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _vkey(v: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in re.findall(r"\d+", v.split("+")[0].split("-")[0])[:4])
+
+
+DOWNGRADE_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*(<|==)\s*(\d+(?:\.\d+)*)\s*$")
+REPO_PIN_RE = r"^\s*{name}\s*(==|<=|<)\s*(\d+(?:\.\d+)*)"
+
+
+def in_last_traceback(pkg: str, stderr_full: str) -> bool:
+    n = _norm_pkg(pkg)
+    names = {n.replace("-", "_"), nl.PIP_IMPORT_ALIASES.get(n, "")} - {""}
+    block = last_traceback(stderr_full)
+    return any(re.search(rf"(?:site|dist)-packages/{re.escape(x)}(?:/|\.py|-)", block, re.I) for x in names)
+
+
+def check_downgrade(item, freeze: dict[str, str], stderr_full: str, dep_text: str) -> tuple[str | None, str | None]:
+    """Prueft einen Downgrade-Wunsch deterministisch. Rueckgabe (Pin wie `pandas<2` oder None, fester Satz bei Ablehnung). Erlaubt: Paket im Snapshot
+    installiert UND im letzten Traceback (Pfad in site-packages), Version nur kleiner als die installierte (`pkg<N` mit installierter Version >= N, oder
+    `pkg==x.y.z` kleiner). Nennt die Abhaengigkeitsdatei des Repos eine Version (==, <, <=), die die installierte ausschliesst, hat sie Vorrang."""
+    m = DOWNGRADE_RE.match(item) if isinstance(item, str) else None
+    if not m:
+        return None, DOWNGRADE_FORM_SENTENCE.format(item=str(item)[:40])
+    pkg, op, ver = m.group(1), m.group(2), m.group(3)
+    installed = freeze.get(_norm_pkg(pkg))
+    if installed is None or not in_last_traceback(pkg, stderr_full):
+        return None, DOWNGRADE_TRACEBACK_SENTENCE.format(pkg=pkg)
+    for line in (dep_text or "").splitlines():                      # Abhaengigkeitsdatei des Repos hat Vorrang, wenn sie eine ausschliessende Version nennt
+        rm = re.match(REPO_PIN_RE.format(name=re.escape(pkg).replace("\\-", "[-_.]").replace("\\_", "[-_.]")), line, re.I)
+        if rm:
+            rop, rver = rm.group(1), rm.group(2)
+            excludes = (_vkey(installed) != _vkey(rver)) if rop == "==" else (_vkey(installed) >= _vkey(rver) if rop == "<" else _vkey(installed) > _vkey(rver))
+            if excludes and (_vkey(rver) < _vkey(installed) or rop in ("<", "<=")):
+                op, ver = rop, rver
+                break
+    lower = (_vkey(installed) >= _vkey(ver)) if op in ("<",) else (_vkey(ver) < _vkey(installed) if op == "==" else _vkey(installed) > _vkey(ver))
+    if not lower:
+        return None, DOWNGRADE_LOWER_SENTENCE.format(pkg=pkg)
+    return f"{pkg}{op}{ver}", None
+
+
+# Geschuetzte Schalter: legen Datensatz, Art der Aufgabe (multivariat/univariat), Zahl der Kanaele, Horizont oder Eingabelaenge fest. NICHT vollstaendig:
+# gaengige Namen aus Zeitreihen-Repos; zusaetzlich gilt jeder Schalter, dessen Wert (alt oder neu) Datensatzname, Horizont oder Eingabelaenge des Claims ist.
+PROTECTED_FLAG_NAMES = {
+    "--data", "--dataset", "--data_name", "--data_set", "--features", "--feature", "--task", "--task_name", "--target", "--enc_in", "--dec_in", "--c_out",
+    "--channel", "--channels", "--n_vars", "--num_vars", "--num_channels", "--c_in", "--input_dim", "--output_dim", "--seq_len", "--pred_len", "--label_len",
+    "--horizon", "--lookback", "--look_back", "--input_len", "--output_len", "--context_length", "--prediction_length", "--history_len", "--univariate",
+    "--multivariate", "--variate",
+}
+MODEL_FLAG_NAMES = {"--model", "--model_name", "--arch", "--network", "--backbone"}
+
+
+def protected_violations(old_cmd: str, new_cmd: str, words: dict) -> list[str]:
+    """Fester Satz je verletztem Schalter. Verglichen wird `new_cmd` mit dem gewaehlten dokumentierten Befehl `old_cmd`: geschuetzte Schalter (Namensliste oder
+    Wert gleich Datensatzname, Horizont oder Eingabelaenge des Claims) duerfen nicht geaendert, entfernt oder hinzugefuegt werden; der Modellschalter nur auf einen
+    Wert, der den Modellnamen des Claims enthaelt. Geraete- und Pfadschalter (nl.ALLOWED_FLAGS) bleiben frei."""
+    _, old = nl._parse(nl._tokens(old_cmd))
+    _, new = nl._parse(nl._tokens(new_cmd))
+    ds = (words.get("dataset") or "").lower()
+    special = {str(v) for v in (words.get("horizon"), words.get("input_len")) if v is not None}
+    model_parts = [p.lower() for p in (words.get("model_parts") or [])]
+    out: list[str] = []
+    for flag in sorted(set(old) | set(new)):
+        if flag in nl.ALLOWED_FLAGS or old.get(flag) == new.get(flag):
+            continue
+        vals = [str(v).lower() for v in (old.get(flag), new.get(flag)) if v is not None]
+        stems = {v for val in vals for v in (val, val.rsplit(".", 1)[0])}
+        if flag in MODEL_FLAG_NAMES:
+            nv = new.get(flag)
+            if nv is None or not model_parts or not any(p in str(nv).lower() for p in model_parts):
+                out.append(P1_MODEL_SENTENCE.format(flag=flag))
+            continue
+        if flag in PROTECTED_FLAG_NAMES or (ds and ds in stems) or (stems & special):
+            out.append(P1_PROTECTED_SENTENCE.format(flag=flag))
+    return out
+
+
 def pick_files(files: dict[str, str], *names) -> list[str]:
     return [n for n in names if isinstance(n, str) and n in files]
 
@@ -641,7 +774,13 @@ class NachlaufAgent:
         self.rng, self.np_rng, self.parallel = rng, np_rng, parallel
         self.explore_offsets = explore_offsets
         self.rec = AgentRecord()
-        self.cands: list = []        # nummerierte Kandidaten im Prompt
+        self.cands: list = []        # nummerierte Kandidaten im Prompt (bisher gezeigte Seiten)
+        self.ordered: list = []      # alle Kandidaten in der Reihenfolge nach Passung zum Claim
+        self.words: dict = {}
+        self.freeze: dict[str, str] = {}       # installierte Versionen im Trainings-Snapshot (pip freeze)
+        self.env_changes: list[dict] = []      # Downgrades der Reparatur (Dossier: env_changes, Zeugnis: Warnung)
+        self._last_stderr = ""
+        self.first_cmd = ""                    # der zuerst gewaehlte dokumentierte Befehl (Bezug fuer die geschuetzten Schalter)
         self.loader: list = []       # drop_last-Zeilen im Prompt
         self.chosen: "cand.Candidate | None" = None
 
@@ -658,13 +797,43 @@ class NachlaufAgent:
     def _cand_listing(self) -> str:
         return "\n".join(c.line_text() for c in self.cands) or "(none)"
 
+    def _counts(self) -> str:
+        ci = self.rec.candidates
+        left = ci["n_total"] - len(self.cands)
+        more_left = cand.MAX_MORE - ci.get("more_requests", 0)
+        txt = f"ranked, 1-{len(self.cands)} of {ci['n_total']} shown"
+        if left > 0 and more_left > 0:
+            txt += f"; {left} more exist, you may ask for the next {min(cand.PAGE_SIZE, left)} with {{\"more\": true}} ({more_left} request(s) left)"
+        elif left > 0:
+            txt += f"; {left} more exist but no further request is possible"
+        return txt
+
+    def _more_page(self, reading: RepoReading) -> bool:
+        """Naechste Seite der geordneten Kandidaten (deterministisch); False, wenn keine Anforderung oder keine Kandidaten mehr uebrig sind."""
+        ci = self.rec.candidates
+        if ci.get("more_requests", 0) >= cand.MAX_MORE or len(self.cands) >= len(self.ordered):
+            return False
+        ci["more_requests"] = ci.get("more_requests", 0) + 1
+        ci["pages"] = ci.get("pages", 1) + 1
+        self.cands = self.ordered[:cand.PAGE_SIZE * ci["pages"]]
+        ci["n_shown"], ci["n_dropped"] = len(self.cands), len(self.ordered) - len(self.cands)
+        ci["shown"] = [c.line_text() for c in self.cands]
+        for c in self.cands:      # Dateien der neu gezeigten Kandidaten gehoeren zu den gelesenen Dateien
+            reading.files.setdefault(c.file, reading.full.get(c.file, "")[:MAX_FILE_CHARS])
+        self.emit("nachlauf_repair", kind="more_candidates", request=ci["more_requests"], shown=len(self.cands))
+        return True
+
     def ask_command(self, claim_text: str, dataset: str, reading: RepoReading) -> tuple[dict, dict]:
         files_txt = _render_files(reading.files)
-        ci = self.rec.candidates
-        counts = f"{ci['n_shown']} of {ci['n_total']} shown" + (f", {ci['n_dropped']} more not shown" if ci["n_dropped"] else "")
-        ans = self.asker.json("start_command", COMMAND_SYSTEM, COMMAND_USER.format(
-            claim=claim_text, dataset=dataset, format=COMMAND_FORMAT, counts=counts, candidates=self._cand_listing(),
-            loader="\n".join(l.line_text() for l in self.loader) or "(none)", listing="\n".join(reading.listing[:80]), files=files_txt))
+        while True:
+            ans = self.asker.json("start_command", COMMAND_SYSTEM, COMMAND_USER.format(
+                claim=claim_text, dataset=dataset, format=COMMAND_FORMAT, counts=self._counts(), candidates=self._cand_listing(),
+                loader="\n".join(l.line_text() for l in self.loader) or "(none)", listing="\n".join(reading.listing[:80]), files=files_txt))
+            a_ = _obj(ans)
+            if chosen_candidate(a_, self.cands) is None and a_.get("more") is True and self._more_page(reading):
+                files_txt = _render_files(reading.files)
+                continue
+            break
         ver = verify_answer(ans, reading.files, self.cands, self.loader)
         # Nummern und Zeilen werden nicht nachgefragt (kein Zitat zu pruefen); nur das Zitat der Zeitmerkmale darf einmal neu erfragt werden
         for k, v in ver.items():
@@ -737,9 +906,22 @@ class NachlaufAgent:
     # -- Schritt 3a: Training mit Reparatur
     def _repair_command(self, claim: Claim, dataset: str, spec: nl.UnitSpec, reading: RepoReading, problem: str) -> dict:
         ans = self.asker.json("repair_command", COMMAND_SYSTEM, REPAIR_COMMAND_USER.format(
-            claim=claim.text, dataset=dataset, command=spec.command, k=self.chosen.k if self.chosen else "?", problem=problem[-1500:],
-            candidates=self._cand_listing(), files=_render_files(reading.files)))
+            claim=claim.text, dataset=dataset, command=spec.command, k=self.chosen.k if self.chosen else "?", problem=problem[-1500 - 600:],
+            candidates=self._cand_listing(), installed=self._installed_text(), files=_render_files(reading.files)))
         return ans
+
+    def _installed_text(self) -> str:
+        """Installierte Versionen der Bibliotheken, die im letzten Traceback vorkommen (deterministisch, fuer die Downgrade-Wahl)."""
+        hits = [f"{p} {v}" for p, v in sorted(self.freeze.items()) if in_last_traceback(p, self._last_stderr)][:8]
+        return f"Installed versions of the libraries that appear in the last traceback: {', '.join(hits)}.\n\n" if hits else ""
+
+    def _refresh_freeze(self, run: nl._Run) -> None:
+        try:
+            out = self.sb.run(self.sb.branch(run.train_snap), "pip freeze", 120).stdout
+        except Exception:      # nur Dokumentation der tatsaechlichen Version; ein Fehler hier aendert nichts am Lauf
+            return
+        if out.strip():
+            self.freeze = parse_freeze(out)
 
     def _dependency_text(self, reading: RepoReading) -> str:
         return "\n".join(t for p, t in reading.files.items() if DEPENDENCY_FILE_RE.search(p))
@@ -775,7 +957,8 @@ class NachlaufAgent:
                     rec["documented"], rec["diff"] = p1["documented"], p1["diff"]
                     self.rec.attempts.append(rec)
                     return spec, result
-                problem = result.get("reason") or result["status"]
+                self._last_stderr = result.get("stderr_full") or ""
+                problem = problem_text(result)       # letzte Repo-Zeile des Tracebacks vor dem Ende von stderr
             rec["reason"] = problem[-300:]
             self.rec.attempts.append(rec)
             self.emit("nachlauf_command", n=k, hash=h, status=rec["status"], documented=p1.get("documented"), rejected_by=rec.get("rejected_by"))
@@ -790,6 +973,14 @@ class NachlaufAgent:
             for pkg in installs:
                 named = PKG_NAME_RE.match(pkg) and re.search(rf"(?<![\w.-]){re.escape(_norm(pkg))}(?![\w.-])", dep)
                 (ok_pk if named else rejected_pk).append(pkg)
+            dg_raw = ans.get("downgrade") if isinstance(ans.get("downgrade"), list) else []
+            pins, dg_pend = [], []
+            for item in dg_raw[:5]:
+                pin, why = check_downgrade(item, self.freeze, self._last_stderr, self._dependency_text(reading))
+                if pin:
+                    pins.append(pin)
+                else:
+                    dg_pend.append(why)
             k_new = _num(ans.get("command_candidate"))
             cnd = next((c for c in self.cands if c.k == k_new), None) if k_new is not None else None
             mod = sanitize_command(_text(ans.get("command")))
@@ -802,22 +993,47 @@ class NachlaufAgent:
                 self.rec.repairs.append({"kind": "command_rejected", "round": k, "reason": "different script", "k": cnd.k})
             else:
                 new_cmd = mod or cnd.command
-                if cnd.script != spec.script:     # anderer Kandidat mit anderem Einstiegsskript: die Seed-Wahl galt dem alten Skript
-                    spec = dataclasses.replace(spec, seed={"kind": "none", "repo_seed": None}, seed_note="no seed method: single measurement")
-                    self.rec.repairs.append({"kind": "seed_dropped", "round": k, "reason": "script changed"})
-                self.chosen = cnd
-                spec = dataclasses.replace(spec, command=new_cmd, script=cnd.script, command_source={"file": cnd.file, "line": cnd.line})
+                viol = protected_violations(self.first_cmd or spec.command, new_cmd, self.words)       # P1 streng: geschuetzte Schalter, Modellname
+                if viol:
+                    pend.extend(viol)
+                    self.rec.repairs.append({"kind": "command_rejected", "round": k, "reason": "protected switch", "sentences": viol})
+                else:
+                    if cnd.script != spec.script:     # anderer Kandidat mit anderem Einstiegsskript: die Seed-Wahl galt dem alten Skript
+                        spec = dataclasses.replace(spec, seed={"kind": "none", "repo_seed": None}, seed_note="no seed method: single measurement")
+                        self.rec.repairs.append({"kind": "seed_dropped", "round": k, "reason": "script changed"})
+                    self.chosen = cnd
+                    spec = dataclasses.replace(spec, command=new_cmd, script=cnd.script, command_source={"file": cnd.file, "line": cnd.line})
+            packages = [*spec.pip_packages]
+            for pin in pins:                       # Downgrade: ersetzt einen vorhandenen Eintrag des Pakets
+                name = DOWNGRADE_RE.match(pin).group(1) if DOWNGRADE_RE.match(pin) else re.split(r"[<=>]", pin)[0]
+                packages = [p for p in packages if _norm_pkg(re.split(r"[<=>~!]", p)[0]) != _norm_pkg(name)] + [pin]
             spec = dataclasses.replace(
                 spec, checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or spec.checkpoint_glob,
-                pip_packages=[*spec.pip_packages, *[p for p in ok_pk if p not in spec.pip_packages]])
+                pip_packages=[*packages, *[p for p in ok_pk if p not in packages]])
             if rejected_pk:
                 pend.extend(PACKAGE_SENTENCE.format(pkg=p) for p in rejected_pk)
                 self.rec.repairs.append({"kind": "package_rejected", "round": k, "packages": rejected_pk})
+            if dg_pend:
+                pend.extend(dg_pend)
+                self.rec.repairs.append({"kind": "downgrade_rejected", "round": k, "sentences": dg_pend})
             if pend:       # abgelehnte Reparatur: fester Satz, der naechste Versuch ist verbraucht, es laeuft nichts
                 pending = " ".join(pend)
             if ok_pk:
                 self.rec.repairs.append({"kind": "package_install", "round": k, "packages": ok_pk})
-                self._rebuild(run, spec, k)
+            if pins:
+                self.rec.repairs.append({"kind": "downgrade", "round": k, "pins": pins})
+                before = dict(self.freeze)
+                for pin in pins:
+                    nm = DOWNGRADE_RE.match(pin).group(1)
+                    self.env_changes.append({"package": nm, "spec": pin, "from": before.get(_norm_pkg(nm)), "to": None, "round": k,
+                                             "reason": "older version after a traceback inside the library"})
+            if ok_pk or pins:
+                self._rebuild(run, spec, k)        # Trainings- UND Vorhersage-Snapshot neu: Training und Adapter nutzen dieselbe Umgebung
+                if pins:
+                    self._refresh_freeze(run)
+                    for ec in self.env_changes:
+                        if ec["to"] is None and ec["round"] == k:
+                            ec["to"] = self.freeze.get(_norm_pkg(ec["package"]))
         return spec, None
 
     # -- Schritt 3b: Adapter
@@ -917,6 +1133,7 @@ class NachlaufAgent:
             claim_, dossier, info = nl.new_dossier(spec)
             reason = f"unexpected error in the agent part: {type(exc).__name__}: {str(exc)[:300]}"
             self.rec.outcome = "error"
+            self._attach(dossier, info, [])
             from .loop import Orchestrator
             dossier.verdicts.append(Orchestrator._verdict(None, claim_, [], len(seeds or [1]), [reason], None, {}))
             info["agent"] = self._agent_info()
@@ -931,7 +1148,10 @@ class NachlaufAgent:
         reading = read_repo_at_commit(self.sb, self.asker, repo_url, commit, claim_text, dataset)
         # dokumentierte Befehle deterministisch finden (alle verfolgten Textdateien mit Python-Aufruf), Modell waehlt per Nummer
         all_c, skipped = cand.extract_candidates(reading.full, reading.listing)
-        self.cands, cinfo = cand.narrow(all_c, cand.claim_words(claim_text, dataset))
+        self.words = cand.claim_words(claim_text, dataset)
+        self.ordered = cand.order_candidates(all_c, self.words)      # Punktwert je aufgeloestem Kandidaten, gruppiert nach Datei
+        self.cands = self.ordered[:cand.PAGE_SIZE]
+        cinfo = cand.candidate_info(self.ordered, len(self.cands), self.words, pages=1)
         cinfo["skipped_unresolved"], cinfo["shown"] = skipped, [c.line_text() for c in self.cands]
         self.rec.candidates = cinfo
         for c in self.cands:      # Dateien mit Kandidaten gehoeren immer zu den gelesenen Dateien, unabhaengig von der Auswahl des Modells
@@ -965,6 +1185,7 @@ class NachlaufAgent:
         if not ver["command_candidate"]["belegt"]:
             return finish_failed(NO_COMMAND_REASON, "no_command")
         self.chosen = chosen = chosen_candidate(ans, self.cands)
+        self.first_cmd = chosen.command
         spec = self._spec(claim, paper_id, repo_url, commit, ans, ver, reading, chosen, {"kind": "none", "repo_seed": None})
         self._spec_cur = spec
         timefeat = ver.get("needs_time_features", {})
@@ -991,6 +1212,7 @@ class NachlaufAgent:
         if raw:
             return finish_failed(f"raw data in the prediction snapshot: {raw}", "raw_data")
         probe = run.probe_training()
+        self.freeze = parse_freeze(probe["freeze"])
         run.repo_files = {**reading.files, **reading.full, **run.repo_files}      # ungekuerzte Dateien der Kandidaten fuer P1
         run.script_text = run.repo_files.get(spec.script, "")
         if probe["head"] != commit:
@@ -1022,6 +1244,11 @@ class NachlaufAgent:
 
     def _attach(self, dossier: Dossier, info: dict, warnings: list[str]) -> None:
         for w in warnings:
+            if w not in dossier.warnings:
+                dossier.warnings.append(w)
+        info["env_changes"] = [dict(e) for e in self.env_changes]       # volle Angaben im Dossier, Kurzfassung als Warnung im Zeugnis
+        for e in self.env_changes:
+            w = f"Umgebung geändert: {e['spec']} statt {e['from'] or 'unbekannt'}" + (f" (installiert: {e['to']})" if e.get("to") else "")
             if w not in dossier.warnings:
                 dossier.warnings.append(w)
 
