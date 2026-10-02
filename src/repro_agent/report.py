@@ -53,6 +53,22 @@ def render_markdown(dossier: Dossier) -> str:
             for src in verdict.sources:
                 lines.append(f"- {src}")
         lines.append("")
+    c = dossier.community
+    if c is not None:
+        lines.append("## What others found (Tavily Rolle 3, nur Bericht, nicht Teil des Urteils)")
+        if c["findings"]:
+            lines.extend(f"- [{f['kind']}] {f['statement']} — \"{f['quote']}\" ({f['url']})"
+                         + (f" [Repo-Abgleich: {f['repo_check']}]" if f.get("repo_check") not in (None, "nicht pruefbar") else "")
+                         for f in c["findings"])
+        else:
+            lines.append("No public discussion found.")
+        lines.append(f"Abfrage: {c.get('queried_at', '?')} ({c.get('mode', '?')}), {len(c.get('pages', []))} Seiten gelesen, "
+                     f"{c.get('dropped', 0)} Aussagen verworfen (Zitat nicht im Text).")
+        lines.append("")
+    for cid, ex in dossier.explanations.items():
+        lines.append(f"## Possible explanations für {cid} (Tavily Rolle 6, ungeprüfte Hypothesen, nicht Teil des Urteils)")
+        lines.extend(f"- {i['explanation']} — \"{i['quote']}\" ({i['url']})" for i in ex["items"]) if ex["items"] else lines.append("None found.")
+        lines.append("")
     lines.append(f"Modus: {dossier.mode} (Agent schreibt eigenen Code, nur belegte Angaben aus Paper/Repo)")
     if dossier.repo:
         lines.append(f"Repo gelesen: {dossier.repo['url']} @ {dossier.repo['commit'][:10]}")

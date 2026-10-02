@@ -64,6 +64,50 @@ class TavilyTools:
             self._note(3, "crawl", repo_url.rstrip("/") + "/issues", crawl)
         return {"search": search, "crawl": crawl}
 
+    def search_community(self, paper_title: str, limit: int = 5) -> dict:
+        """Rolle 3 (Community-Check): Search nach Kritik und Reproduktionsberichten, mit Rohtext der Treffer. Nur Orte, an denen
+        Diskussion steht; Zitier-Aggregatoren sind ausgeschlossen (die eigene arXiv-Seite filtert `community.drop_noise`)."""
+        return self._note(3, "search", paper_title, self._client.search(
+            query=f'{paper_title} reproduce OR reproducibility OR "could not reproduce" OR issue',
+            max_results=limit, include_raw_content="text",
+            include_domains=["github.com", "openreview.net", "arxiv.org", "reddit.com"],
+            exclude_domains=["scirp.org", "semanticscholar.org", "researchgate.net", "scholar.google.com", "paperswithcode.com", "connectedpapers.com"],
+        ))
+
+    def search_method_critique(self, method: str, dataset: str, limit: int = 5) -> dict:
+        """Rolle 3: methodenzentrierte Suche nach Kritik-Papers und Re-Evaluationen (z. B. Shchur 2018 "Pitfalls" fuer GCN auf Cora).
+        Ergaenzt die Titel-Suche, ersetzt sie nicht."""
+        return self._note(3, "search", f"{method} {dataset}", self._client.search(
+            query=f'{method} {dataset} reproducibility OR re-evaluation OR pitfalls OR "could not reproduce"',
+            max_results=limit, include_raw_content="text", include_domains=["arxiv.org", "openreview.net"],
+        ))
+
+    def search_repo_issues(self, owner_repo: str, limit: int = 5) -> dict:
+        """Rolle 3: Issues des Paper-Repos per Suche statt der drei neuesten per Crawl: Query "<repo> reproduce results accuracy",
+        beschraenkt auf github.com/<owner>/<repo>."""
+        repo = owner_repo.split("/")[-1]
+        return self._note(3, "search", owner_repo, self._client.search(
+            query=f"{repo} reproduce results accuracy", max_results=limit, include_raw_content="text",
+            include_domains=[f"github.com/{owner_repo}"],
+        ))
+
+    def crawl_issues(self, repo_url: str, limit: int = 3) -> dict:
+        """Rolle 3: Issue-Seite des Repos (immer mit `limit`). Fehler werden als {"error", "results": []} zurueckgegeben."""
+        url = repo_url.rstrip("/") + "/issues"
+        try:
+            res = self._client.crawl(
+                url=url, limit=limit, max_depth=1, chunks_per_source=3,
+                instructions="Issues about the evaluation protocol, test set, drop_last, data leakage or "
+                             "whether the reported results can be reproduced",
+            )
+        except Exception as exc:   # das schon bezahlte Search-Ergebnis nicht wegen eines Crawl-Fehlers verlieren
+            return {"error": f"{type(exc).__name__}: {exc}", "results": []}
+        return self._note(3, "crawl", url, res)
+
+    def read_pages(self, urls: list[str], limit: int = 3) -> dict:
+        """Rolle 3: Seiten lesen, deren URLs schon bekannt sind (Discovery-Community-Treffer). Ein Extract statt einer neuen Suche."""
+        return self._note(3, "extract", urls[:limit], self._client.extract(urls=urls[:limit], extract_depth="basic"))
+
     def get_setup_details(self, url: str) -> dict:
         """Rolle 4: Hyperparameter, Datenaufteilung aus README/Configs/Anhang."""
         return self._note(4, "extract", url, self._client.extract(urls=[url], extract_depth="advanced"))
@@ -74,9 +118,10 @@ class TavilyTools:
             query=error_text, max_results=max_results, include_domains=ERROR_DOMAINS,
         ))
 
-    def clarify_discrepancy(self, paper_title: str) -> dict:
+    def clarify_discrepancy(self, paper_title: str, max_results: int = 3) -> dict:
         """Rolle 6: neuere arXiv-Version, Errata, Issues bei Abweichung."""
-        return self._client.search(query=f"{paper_title} errata updated results erratum")
+        return self._note(6, "search", paper_title, self._client.search(
+            query=f"{paper_title} errata updated results erratum", max_results=max_results, include_raw_content="text"))
 
     def cite_sources(self, urls: list[str], paper_title: str) -> dict:
         """Rolle 7: zitierfaehige Quellen fuers Urteil. Research max 1x pro Paper."""

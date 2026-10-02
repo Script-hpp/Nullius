@@ -14,6 +14,7 @@ import { PaperHead } from './PaperHead'
 import { Film } from './film/Film'
 import { DropLast } from './DropLast'
 import { ReadmeBadge } from './ReadmeBadge'
+import { CommunityCard } from './CommunityCard'
 import { Trust } from './Trust'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
@@ -147,6 +148,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       </section>
 
       <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={(x) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))} />
+
+      <CommunityCard dossier={d} claimId={claim.id} />
 
       <Trust fidelityUnchecked={fidelityUnchecked} />
 

@@ -22,7 +22,7 @@ export function Film({ events, dossier, claim, title, tone, resultLabel, sentenc
   useEffect(() => { let live = true; if (firstHash) codeLoader(firstHash).then((c) => { if (live) setLoadedCode(c) }); return () => { live = false } }, [firstHash, codeLoader])
   const firstCode = loadedCode ?? finalCode   // the first code version, or the final one in older exports
 
-  const present = useMemo(() => presentScenes({ events: claimEvents, claim, hasPlan: !!plan, hasCode: !!(firstCode ?? finalCode), hasVerdict: (dossier.verdicts ?? []).length > 0, repair: !!repair }), [claimEvents, claim, plan, firstCode, finalCode, dossier, repair])
+  const present = useMemo(() => presentScenes({ events: claimEvents, claim, hasPlan: !!plan, hasCode: !!(firstCode ?? finalCode), hasVerdict: (dossier.verdicts ?? []).length > 0, repair: !!repair, community: !!dossier.community }), [claimEvents, claim, plan, firstCode, finalCode, dossier, repair])
   const scenes = useMemo(() => scenePlan(present), [present])
   const [ms, setMs] = useState(0)
   const [playing, setPlaying] = useState(autoplay)

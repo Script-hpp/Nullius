@@ -101,6 +101,9 @@ class Dossier:
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
     fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
     droplast_notes: dict = field(default_factory=dict)   # claim_id -> Hinweis "Paperzahl passt zur drop_last-Rechnung" (droplast_note.py), nur Bericht
+    # Community-Check nach dem Urteil (nur Bericht, nie Teil des Urteils): {"findings", "dropped", "pages", "queries", "mode", ...} bzw. None
+    community: dict | None = None
+    explanations: dict = field(default_factory=dict)   # claim_id -> {"items": [...], "dropped": n}; nur bei teilweise/nicht reproduziert
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
 
@@ -131,6 +134,8 @@ class Dossier:
             fault_repairs=data.get("fault_repairs", {}),
             repo_diff=data.get("repo_diff", {}),
             droplast_notes=data.get("droplast_notes", {}),
+            community=data.get("community"),
+            explanations=data.get("explanations", {}),
         )
 
     def condensed_for_reasoning(self) -> str:
