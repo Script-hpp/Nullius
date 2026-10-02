@@ -1,0 +1,69 @@
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+[nachlauf_train] {"seed": 1024, "exit_code": 0, "wall_s": 22.2, "own_metric": 0.366, "timed_out": false}
+[nachlauf_predict] {"seed": 1024, "exit_code": 0, "wall_s": 3.5, "timed_out": false}
+[nachlauf_self_check] {"seed": 1024, "status": "geprueft", "distance": 4.329936831287684e-05, "compared_with": "drop_last_128"}
+P2 offset 146: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 487: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 206: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 26: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 706: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 0: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 762: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 1024, "ok": true, "offsets": [146, 487, 206, 26, 82, 706, 0, 762], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 0, "exit_code": 0, "wall_s": 22.3, "own_metric": 0.3691, "timed_out": false}
+[nachlauf_predict] {"seed": 0, "exit_code": 0, "wall_s": 3.5, "timed_out": false}
+[nachlauf_self_check] {"seed": 0, "status": "geprueft", "distance": 4.3995573780042374e-05, "compared_with": "drop_last_128"}
+P2 offset 146: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 487: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 206: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 26: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 706: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 0: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 762: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 0, "ok": true, "offsets": [146, 487, 206, 26, 82, 706, 0, 762], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 1, "exit_code": 0, "wall_s": 24.8, "own_metric": 0.3665, "timed_out": false}
+[nachlauf_predict] {"seed": 1, "exit_code": 0, "wall_s": 3.6, "timed_out": false}
+[nachlauf_self_check] {"seed": 1, "status": "geprueft", "distance": 2.651881909676579e-05, "compared_with": "drop_last_128"}
+P2 offset 146: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 487: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 206: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 26: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 706: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 0: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 762: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 1, "ok": true, "offsets": [146, 487, 206, 26, 82, 706, 0, 762], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 2, "exit_code": 0, "wall_s": 25.4, "own_metric": 0.3659, "timed_out": false}
+[nachlauf_predict] {"seed": 2, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 2, "status": "geprueft", "distance": 4.378148262412784e-05, "compared_with": "drop_last_128"}
+P2 offset 146: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 487: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 206: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 26: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 706: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 0: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 762: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 2, "ok": true, "offsets": [146, 487, 206, 26, 82, 706, 0, 762], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 3, "exit_code": 0, "wall_s": 25.3, "own_metric": 0.3671, "timed_out": false}
+[nachlauf_predict] {"seed": 3, "exit_code": 0, "wall_s": 3.6, "timed_out": false}
+[nachlauf_self_check] {"seed": 3, "status": "geprueft", "distance": 3.1399040123170074e-05, "compared_with": "drop_last_128"}
+P2 offset 146: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 487: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 206: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 26: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 706: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 0: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 762: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 3, "ok": true, "offsets": [146, 487, 206, 26, 82, 706, 0, 762], "max_abs_diff": 0.0, "reason": null}
+rlinear seed 1024: stabil measured=0.3697852935868186 
+rlinear seed 0: stabil measured=0.372873563163714 
+rlinear seed 1: stabil measured=0.3704336398864266 
+rlinear seed 2: stabil measured=0.3697607082767019 
+rlinear seed 3: stabil measured=0.37095535352416 
+rlinear: reproduziert mean=0.3707617116875642 std=0.0012806682885235755
+runs/nachlauf_manual/rlinear/20261002-194057/dossier.json
+exit 0

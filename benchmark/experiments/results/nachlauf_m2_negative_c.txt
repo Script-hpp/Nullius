@@ -1,0 +1,15 @@
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+[nachlauf_train] {"seed": 1024, "exit_code": 0, "wall_s": 24.4, "own_metric": 0.366, "timed_out": false}
+[nachlauf_predict] {"seed": 1024, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 1024, "status": "ungueltig", "distance": 0.05783907394243115, "compared_with": "drop_last_128"}
+P2 offset 491: windows in probe 6 (mapping stays in the orchestrator), max diff 2.7668261000000003
+P2 offset 627: windows in probe 6 (mapping stays in the orchestrator), max diff 3.3253679110000003
+P2 offset 301: windows in probe 8 (mapping stays in the orchestrator), max diff 4.9756269799999995
+P2 offset 736: windows in probe 6 (mapping stays in the orchestrator), max diff 2.9636743
+P2 offset 557: windows in probe 6 (mapping stays in the orchestrator), max diff 2.16707822
+P2 offset 4: windows in probe 8 (mapping stays in the orchestrator), max diff 2.3068874299999997
+P2 offset 59: windows in probe 8 (mapping stays in the orchestrator), max diff 2.334268128
+P2 offset 687: windows in probe 6 (mapping stays in the orchestrator), max diff 2.59489046
+[nachlauf_independence] {"seed": 1024, "ok": false, "offsets": [491, 627, 301, 736, 557, 4, 59, 687], "max_abs_diff": 4.9756269799999995, "reason": "prediction depends on other windows"}
+negative c (honest predictions written shifted by one window (cyclic)): abgelehnt: ja | Pruefung: P2+P3 (erwartet: P2/P3) | Grund: P3: harness and author code do not measure the same thing (distance 0.0578); P2: prediction depends on other windows
+exit 0

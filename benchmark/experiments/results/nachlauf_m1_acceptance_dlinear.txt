@@ -1,0 +1,69 @@
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+[nachlauf_train] {"seed": 2021, "exit_code": 0, "wall_s": 20.3, "own_metric": 0.3841443955898285, "timed_out": false}
+[nachlauf_predict] {"seed": 2021, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 2021, "status": "geprueft", "distance": 5.829724103456613e-08, "compared_with": "all_windows"}
+P2 offset 530: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 463: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 298: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 780: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 413: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 447: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 45: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 2021, "ok": true, "offsets": [530, 463, 82, 298, 780, 413, 447, 45], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 0, "exit_code": 0, "wall_s": 21.2, "own_metric": 0.3895268738269806, "timed_out": false}
+[nachlauf_predict] {"seed": 0, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 0, "status": "geprueft", "distance": 3.57954456076115e-08, "compared_with": "all_windows"}
+P2 offset 530: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 463: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 298: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 780: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 413: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 447: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 45: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 0, "ok": true, "offsets": [530, 463, 82, 298, 780, 413, 447, 45], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 1, "exit_code": 0, "wall_s": 24.1, "own_metric": 0.37388795614242554, "timed_out": false}
+[nachlauf_predict] {"seed": 1, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 1, "status": "geprueft", "distance": 7.115749756092526e-08, "compared_with": "all_windows"}
+P2 offset 530: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 463: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 298: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 780: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 413: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 447: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 45: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 1, "ok": true, "offsets": [530, 463, 82, 298, 780, 413, 447, 45], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 2, "exit_code": 0, "wall_s": 26.5, "own_metric": 0.3717109262943268, "timed_out": false}
+[nachlauf_predict] {"seed": 2, "exit_code": 0, "wall_s": 3.4, "timed_out": false}
+[nachlauf_self_check] {"seed": 2, "status": "geprueft", "distance": 4.437098732879008e-08, "compared_with": "all_windows"}
+P2 offset 530: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 463: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 298: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 780: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 413: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 447: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 45: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 2, "ok": true, "offsets": [530, 463, 82, 298, 780, 413, 447, 45], "max_abs_diff": 0.0, "reason": null}
+[nachlauf_train] {"seed": 3, "exit_code": 0, "wall_s": 27.8, "own_metric": 0.3713166415691376, "timed_out": false}
+[nachlauf_predict] {"seed": 3, "exit_code": 0, "wall_s": 3.3, "timed_out": false}
+[nachlauf_self_check] {"seed": 3, "status": "geprueft", "distance": 7.725173889472359e-08, "compared_with": "all_windows"}
+P2 offset 530: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 463: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 82: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 298: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 780: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 413: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 447: windows in probe 6 (mapping stays in the orchestrator), max diff 0.0
+P2 offset 45: windows in probe 8 (mapping stays in the orchestrator), max diff 0.0
+[nachlauf_independence] {"seed": 3, "ok": true, "offsets": [530, 463, 82, 298, 780, 413, 447, 45], "max_abs_diff": 0.0, "reason": null}
+dlinear seed 2021: stabil measured=0.38414433729258746 
+dlinear seed 0: abweichung measured=0.389526838031535 
+dlinear seed 1: stabil measured=0.373887884984928 
+dlinear seed 2: stabil measured=0.37171088192333945 
+dlinear seed 3: stabil measured=0.37131671882087647 
+dlinear: reproduziert mean=0.37811733221065325 std=0.008241371016563694
+runs/nachlauf_manual/dlinear/20261002-201340/dossier.json
+exit 0

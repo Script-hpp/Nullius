@@ -1,0 +1,15 @@
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+[nachlauf_train] {"seed": 1024, "exit_code": 0, "wall_s": 25.4, "own_metric": 0.366, "timed_out": false}
+[nachlauf_predict] {"seed": 1024, "exit_code": 0, "wall_s": 3.6, "timed_out": false}
+[nachlauf_self_check] {"seed": 1024, "status": "ungueltig", "distance": 0.36599999999999894, "compared_with": "drop_last_128"}
+P2 offset 36: windows in probe 8 (mapping stays in the orchestrator), max diff 2.7554250999999996
+P2 offset 122: windows in probe 8 (mapping stays in the orchestrator), max diff 3.6591118500000004
+P2 offset 516: windows in probe 6 (mapping stays in the orchestrator), max diff 2.4197304200000005
+P2 offset 235: windows in probe 8 (mapping stays in the orchestrator), max diff 4.4382980000000005
+P2 offset 749: windows in probe 6 (mapping stays in the orchestrator), max diff 3.65507816
+P2 offset 224: windows in probe 8 (mapping stays in the orchestrator), max diff 4.730025100000001
+P2 offset 27: windows in probe 8 (mapping stays in the orchestrator), max diff 3.1806493099999997
+P2 offset 25: windows in probe 8 (mapping stays in the orchestrator), max diff 3.2148704799999996
+[nachlauf_independence] {"seed": 1024, "ok": false, "offsets": [36, 122, 516, 235, 749, 224, 27, 25], "max_abs_diff": 4.730025100000001, "reason": "prediction depends on other windows"}
+negative a (adapter copies targets from later windows of the file (window i+96)): abgelehnt: ja | Pruefung: P2+P3 (erwartet: P2) | Grund: P3: harness and author code do not measure the same thing (distance 0.3660); P2: prediction depends on other windows
+exit 0

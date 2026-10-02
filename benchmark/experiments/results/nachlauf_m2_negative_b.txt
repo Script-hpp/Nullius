@@ -1,0 +1,3 @@
+find / -name 'ETTh1*' im Vorhersage-Snapshot: (leer)
+negative b (start command with --train_only True): abgelehnt: ja | Pruefung: P1 (erwartet: P1) | Grund: --train_only: Schalter zielt auf Training mit allen Daten (Name)
+exit 0
