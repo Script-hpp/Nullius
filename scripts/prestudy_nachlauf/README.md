@@ -27,3 +27,10 @@ Arbeitsverzeichnis ausserhalb des Repos: `W=/home/onuralp/Desktop/hackathon/pres
   `run_rtsf_seed.sh <N>` und `run_ltsf_seed.sh <N>` (Training, Checkpoint sichern, Adapter, Harness; Ausgaben nach `$W/out/`).
 - `summarize.py $W`: Tabelle ueber alle Seeds.
 - Der Lauf mit dem Repo-Seed (1024 bzw. 2021) wurde mit den Startbefehlen oben direkt gestartet; Checkpoint danach nach `$W/ckpt/<einheit>_seed<Seed>/` kopiert, Adapter und `evaluate.py` wie oben.
+
+## Schritt 2 (Nebius-Sandbox, vom Reviewer gestartet)
+`sandbox_run.py` (Test: `tests/test_prestudy_sandbox_run.py`, Fake-Sandbox). Nicht im Auftrag 33b ausgefuehrt.
+- Vorschau ohne Sandbox-Client: `uv run python scripts/prestudy_nachlauf/sandbox_run.py --unit rlinear --dry-run`
+- Lauf: `uv run python scripts/prestudy_nachlauf/sandbox_run.py --unit rlinear` (Seeds Repo-Seed, 0 bis 3; `--seeds repo,0`, `--snapshot <tag>` zum Wiederverwenden; analog `--unit dlinear`)
+- Ausgabe: je Seed eine JSON-Zeile, Rohausgabe `benchmark/experiments/results/nachlauf_prestudy_sandbox_<einheit>.txt`.
+- `common.py`: Umgebungsvariable `PRESTUDY_HARNESS_DIR` setzt den Harness-Pfad (nur Sandbox; lokal unveraendert).

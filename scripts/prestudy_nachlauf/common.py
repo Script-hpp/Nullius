@@ -9,6 +9,7 @@ from __future__ import annotations
 import builtins
 import io
 import json
+import os
 import runpy
 import sys
 from contextlib import redirect_stdout
@@ -16,7 +17,8 @@ from pathlib import Path
 
 import numpy as np
 
-HARNESS_DIR = Path(__file__).resolve().parents[2] / "src" / "repro_agent" / "harness"
+# Lokal: Harness aus dem Repo. In der Sandbox (sandbox_run.py) zeigt PRESTUDY_HARNESS_DIR auf das Verzeichnis mit etth1_data.py.
+HARNESS_DIR = Path(os.environ.get("PRESTUDY_HARNESS_DIR") or Path(__file__).resolve().parents[2] / "src" / "repro_agent" / "harness")
 sys.path.insert(0, str(HARNESS_DIR))
 import etth1_data  # noqa: E402  (unveraenderter Harness)
 
