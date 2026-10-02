@@ -79,7 +79,7 @@ def test_reference_solutions_never_report_training(name):
 
 
 def test_tasks_mask_only_for_cora_family():
-    assert "labels'][d['val_idx']] = -1" in cora_task().mask_val_cmd and "cora_public" in cora_task().mask_val_cmd
+    assert "permutation(l[v])" in cora_task().mask_val_cmd and "cora_public" in cora_task().mask_val_cmd
     assert "cora_lcc_public" in cora_lcc_task().mask_val_cmd and "cora_public.npz" not in cora_lcc_task().mask_val_cmd
     assert etth1_task().mask_val_cmd == ""
 

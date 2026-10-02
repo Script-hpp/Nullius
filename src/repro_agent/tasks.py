@@ -28,7 +28,8 @@ class Task:
     smoke_dim_names: tuple[str, ...] = ()
     # Nutzungspruefung: Kommando, das im Branch die Daten veraendert (Cora: Kanten entfernen), siehe ablation_gcn.md
     ablation_cmd: str = ""
-    # B1 (v5): Kommando, das im Branch die Labels der Validierungsknoten maskiert (labels[val_idx] = -1); "" = nicht maskierbar (ETTh1:
+    # B1 (v5): Kommando, das im Branch die Labels der Validierungsknoten unter den Validierungsknoten vertauscht (feste Permutation, keine -1:
+    # mit -1 stuerzen auch Referenzen mit Early Stopping auf Validierung ab, `y[val_idx]` im Loss); "" = nicht maskierbar (ETTh1:
     # Validierung ist ein Serienstueck ohne getrennte Ziele, Training darauf ist kein Label-Leck)
     mask_val_cmd: str = ""
     # B2 (v5): Kantenrichtungs-Probe auf einem synthetischen Graphen im Format des Datensatzes: (Pfad der npz im Branch, Knoten, Val, Test)
@@ -122,7 +123,7 @@ def cora_task() -> Task:
         edge_probe=("/data/cora_public.npz", 2708, 500, 1000),
         mask_val_cmd=(
             "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
-            "d['labels'] = d['labels'].copy(); d['labels'][d['val_idx']] = -1; "
+            "v = d['val_idx']; l = d['labels'].copy(); l[v] = np.random.RandomState(0).permutation(l[v]); d['labels'] = l; "
             "np.savez_compressed('/data/cora_public.npz', **d)\""
         ),
         smoke_ids_cmd=(   # erwartete ids = die ersten N (aufsteigend) von test_idx, aus dem Datensatz selbst
