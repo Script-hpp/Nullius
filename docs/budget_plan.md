@@ -1,6 +1,24 @@
 # Budgetplan Token Factory bis 15.12.2026
 
-Stand 2026-10-02 abends. Alle Beträge brutto (netto × 1,19), aus `logs/costs.jsonl`. Maßgeblich bleibt die Nebius-Konsole; der letzte Abgleich war am 01.10. (Abweichung 0,4 %). **Vor dem Deployment erneut in der Konsole prüfen**, die Vergleichswerte in `scripts/cost_report.py` sind älter.
+Stand 2026-10-02 abends. Alle Beträge brutto (netto × 1,19), aus `logs/costs.jsonl`. Maßgeblich bleibt die Nebius-Konsole; letzter Abgleich am 02.10. 19:43 UTC (siehe unten). **Vor dem Deployment erneut in der Konsole prüfen**; die Vergleichswerte in `scripts/cost_report.py` sind älter und dort noch nicht nachgetragen.
+
+## Abgleich mit der Nebius-Konsole (2026-10-02, 19:43 UTC)
+
+Vom Nutzer aus der Konsole abgelesen (Usage 02.09. bis 02.10.2026, „Last updated: 17:45 UTC"), daneben das Log bis 17:45 UTC, ohne Cache-Treffer:
+
+| | Konsole | Log | Abweichung |
+|---|---|---|---|
+| Ultra, Eingabe / Ausgabe (Mio. Tokens) | 1,08 / 0,84 | 1,07 / 0,83 | Rundung |
+| Lightning, Eingabe / Ausgabe | 0,10 / 0,08 | 0,10 / 0,08 | keine |
+| Super, Eingabe / Ausgabe | 30,10 / 14,21 | 30,10 / 14,21 | keine |
+| Summe netto | 25,43 $ | 25,41 $ | 0,1 % |
+| MwSt. | 4,83 $ | 4,83 $ | |
+| Summe brutto | 30,25 $ | 30,24 $ | 0,03 % |
+| **Kontostand** | **30,74 $** | 31,09 $ (59,50 minus Verbrauch seit Stichtag) | 0,35 $ |
+
+Lesart: Verbrauch und Preise im Log stimmen mit der Konsole überein (weit unter der Schwelle von 10 %). Der **Kontostand der Konsole liegt 0,35 $ unter dem Wert, den das Log ableitet**. Die Ursache ist nicht geklärt; möglich ist, dass der Kontostand 59,50 $ nicht genau zum Stichtag 29.09. 08:00 UTC abgelesen wurde. Nach 17:45 UTC kamen laut Log nur 0,04 $ dazu. **Maßgeblich ist die Konsole: für die Planung gilt 30,74 $.**
+
+Empfehlung: Stichtag neu setzen, damit Code und Konsole wieder gleich rechnen: in `.env` `BUDGET_TOTAL_USD=30.74` und `BUDGET_SINCE=2026-10-02T19:43Z`. Automatischer Stopp dann bei 95 % davon verbraucht, also bei 1,54 $ Rest.
 
 ## Stand
 
@@ -8,7 +26,8 @@ Stand 2026-10-02 abends. Alle Beträge brutto (netto × 1,19), aus `logs/costs.j
 |---|---|
 | Kontostand zum Stichtag 2026-09-29 | 59,50 |
 | Verbraucht laut Log | 28,38 |
-| Rest | 31,12 |
+| Rest laut Log (Stand des ersten Plans, vor dem Abgleich oben) | 31,12 |
+| **Kontostand laut Konsole, 02.10. 19:43 UTC** | **30,74** |
 
 Verbrauch je Tag: 29.09. 1,73 · 30.09. 0,32 · 01.10. 11,83 · 02.10. 14,51 (Benchmark v4, v5 Schritt A, Probelauf).
 
@@ -25,7 +44,7 @@ Zugesagt, aber noch nicht eingelöst: Builders Program, +25 $ Token Factory (ver
 | Reserve für Unvorhergesehenes | 4,00 | |
 | **Summe** | **10,50** | |
 
-Bleibt für die Jury-Phase: rund **20 $**.
+Bleibt für die Jury-Phase: rund **20 $** (30,74 $ Kontostand minus 10,50 $; die 0,35 $ Differenz zum Log gehen zulasten der Reserve).
 
 Nicht mehr geplant: Benchmark v5 und ein zweiter Probelauf (vom Nutzer gestrichen), weitere Messrunden von Schritt A. Jeder weitere Lauf mit Kosten über 1 $ braucht eine Entscheidung des Nutzers.
 
