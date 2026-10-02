@@ -18,7 +18,7 @@ Vom Nutzer aus der Konsole abgelesen (Usage 02.09. bis 02.10.2026, „Last updat
 
 Lesart: Verbrauch und Preise im Log stimmen mit der Konsole überein (weit unter der Schwelle von 10 %). Der **Kontostand der Konsole liegt 0,35 $ unter dem Wert, den das Log ableitet**. Die Ursache ist nicht geklärt; möglich ist, dass der Kontostand 59,50 $ nicht genau zum Stichtag 29.09. 08:00 UTC abgelesen wurde. Nach 17:45 UTC kamen laut Log nur 0,04 $ dazu. **Maßgeblich ist die Konsole: für die Planung gilt 30,74 $.**
 
-Empfehlung: Stichtag neu setzen, damit Code und Konsole wieder gleich rechnen: in `.env` `BUDGET_TOTAL_USD=30.74` und `BUDGET_SINCE=2026-10-02T19:43Z`. Automatischer Stopp dann bei 95 % davon verbraucht, also bei 1,54 $ Rest.
+Stichtag neu gesetzt (vom Nutzer am 2026-10-02 in `.env` eingetragen, vom Reviewer geprüft): `BUDGET_TOTAL_USD=30.74`, `BUDGET_SINCE=2026-10-02T19:43Z`. Code und Konsole rechnen damit wieder gleich. Warnung bei 80 % verbraucht (24,59 $), automatischer Stopp bei 95 % (29,20 $ verbraucht, 1,54 $ Rest).
 
 ## Stand
 
@@ -31,7 +31,7 @@ Empfehlung: Stichtag neu setzen, damit Code und Konsole wieder gleich rechnen: i
 
 Verbrauch je Tag: 29.09. 1,73 · 30.09. 0,32 · 01.10. 11,83 · 02.10. 14,51 (Benchmark v4, v5 Schritt A, Probelauf).
 
-Zugesagt, aber noch nicht eingelöst: Builders Program, +25 $ Token Factory (verfällt 90 Tage nach Ausgabe). Der Plan unten kommt **ohne** dieses Guthaben aus.
+**Builders Program:** laut Nutzer (2026-10-02) längst eingelöst; das Guthaben steckt also schon im Kontostand. **Es kommt kein weiteres Guthaben hinzu.** Was auf dem Konto ist, muss bis 15.12. reichen; darüber hinaus zahlt die hinterlegte Karte. Verfall des Builders-Guthabens (90 Tage nach Ausgabe): Datum in der Konsole prüfen, es muss nach dem 15.12.2026 liegen.
 
 ## Plan bis zur Abgabe (30.10.)
 
@@ -64,7 +64,7 @@ Die Demo muss erreichbar und kostenlos testbar bleiben. Juroren müssen nicht se
 
 Erwartung statt schlimmstem Fall: Eine Schnellprüfung kostete vor `setup_v2` 0,03 bis 0,10 $ (`docs/deploy.md`). Mit `setup_v2` ist sie teurer; der Probelauf kam auf rund 0,39 $ je Benchmark-Lauf mit **zwei** Claims und vollen Seeds, das ist keine Messung einer Schnellprüfung. **Offen:** Kosten einer Schnellprüfung mit dem aktuellen Code messen (fällt beim Vorzeige-Lauf fürs Video ohnehin an) und hier eintragen. Liegt sie unter 0,25 $, kann `MAX_COST_PER_RUN_USD` auf 0.30 sinken.
 
-Wird das Builders-Guthaben eingelöst: `MAX_DAILY_REPRO_JOBS` auf 3, Server-Anteil auf 35 $, beide Werte und `BUDGET_SINCE` neu eintragen.
+Die Werte oben gelten ohne Aufstockung. Lädt der Nutzer das Konto auf, können `MAX_DAILY_REPRO_JOBS` und der Server-Anteil steigen; dann beide Werte und `BUDGET_SINCE` neu eintragen.
 
 ## Zwei Logs, ein Konto
 
@@ -89,4 +89,16 @@ Der Probelauf von Schritt C hat seinen Stopp von 2 $ überschritten (3,08 $ bis 
 
 ## Tavily
 
-Kontingent getrennt von Token Factory. Im Plan oben fallen Tavily-Aufrufe nur bei den Vorzeige-Läufen an (Standard `TAVILY_MODE=live`) und in der Jury-Phase bei Live-Läufen und Discovery. M1 bis M4 des Nachlaufs laufen ohne Tavily. Stand der Credits vor dem Deployment im Tavily-Dashboard prüfen und hier eintragen.
+Kontingent getrennt von Token Factory. Stand laut Dashboard (vom Nutzer abgelesen, 2026-10-02 abends):
+
+| | verbraucht | verfügbar |
+|---|---|---|
+| Monatsplan „Researcher" | 100 | 1 000 Credits je Monat |
+| Add-on (Builders Program) | 0 | 3 125 Credits |
+| „Pay as you go" | aus | Bei leerem Kontingent schlagen Aufrufe fehl, es entstehen keine Zusatzkosten. **So lassen.** |
+
+Verfügbar bis 15.12.: 900 Credits im laufenden Monat, dazu der Monatsplan für November und Dezember (falls der Plan weiterläuft: je 1 000) und 3 125 Credits Add-on. Ob und wann das Add-on verfällt, im Dashboard prüfen.
+
+Verbrauch je Lauf ist **nicht gemessen**. Bis zum Deployment einmal messen (Credits im Dashboard vor und nach einem Live-Lauf und einer Discovery) und hier eintragen; erst dann lässt sich sagen, wie viele Läufe pro Tag das Kontingent bis 15.12. trägt. Bis dahin gilt: `MAX_DAILY_JOBS=3` (Discovery) und `MAX_DAILY_REPRO_JOBS=1`.
+
+Im Plan oben fallen Tavily-Aufrufe nur bei den Vorzeige-Läufen an (Standard `TAVILY_MODE=live`) und in der Jury-Phase bei Live-Läufen und Discovery. M1 bis M4 des Nachlaufs laufen ohne Tavily. Regeln unverändert: Crawl immer mit `limit`, Research höchstens einmal je Paper, keine Tests mit echten Aufrufen.

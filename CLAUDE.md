@@ -268,7 +268,7 @@ Gespeichert als JSON pro Paper-Lauf unter `runs/<paper_id>/<timestamp>/`.
 
 ## Budget und Kostenkontrolle
 
-Verfügbar: 25 $ Token Factory, Tavily-Key. Builders Program beantragt (+25 $ TF, +25 $ Tavily, verfallen 90 Tage nach Ausgabe).
+Verfügbar: Token Factory laut Konsole 30,74 $ (Stand 2026-10-02, Builders-Guthaben bereits enthalten, kein weiteres zugesagt), Tavily Monatsplan 1 000 Credits plus 3 125 Add-on (Builders, verfällt 90 Tage nach Ausgabe). Planung: `docs/budget_plan.md`.
 
 > Token Factory belastet hinterlegte Karte automatisch, wenn Guthaben ins Minus geht. Überschreitungen zahlen wir selbst.
 
@@ -466,7 +466,7 @@ Um dieses Produkterlebnis bereitzustellen, wird die Architektur wie folgt aufgeb
 |---|---|
 | Nebius-Sandbox hat Rate-Limits | prüfen, sonst `LocalSandbox` als Fallback |
 | Fremde Repos laufen nicht (Versionen, tote Links) | einfache Papers zuerst, Tavily-Fehlersuche, Versuchs-Limit |
-| Budget leer | Prototyp auf OpenRouter Free, Cache, Kostenbremse, Builders-Credits |
+| Budget leer | Prototyp auf OpenRouter Free, Cache, Kostenbremse, Budgetplan (`docs/budget_plan.md`) |
 | Free-Endpunkt instabil | Retries mit Backoff; kritische Läufe nur auf Prod |
 | Agent schönt Zahlen | unabhängiger Harness, Agent liefert nur Vorhersagen |
 | Falsches „nicht reproduziert" | vorsichtige Formulierung, Toleranz vorab, Versuche offenlegen |
@@ -486,7 +486,7 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [x] Sandbox-Beta-Freigabe abwarten (genehmigt, kostenlos)
 - [x] Rate-Limits von Nebius-Sandbox prüfen (2026-09-28: 20 parallele Branches ohne Fehler; höher nicht getestet, Semaphor im Orchestrator trotzdem sinnvoll)
 - [x] Exakte Modell-IDs auf OpenRouter und Token Factory eintragen (TF geprüft 2026-09-28: Lightning 0,06/0,24 $, Super 0,30/0,90 $, Ultra 1/3 $ pro Mio. Tokens)
-- [ ] Builders-Program-Codes einlösen
+- [x] Builders-Program-Codes eingelöst (Token Factory und Tavily; Stand und Planung in `docs/budget_plan.md`)
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren
 - [x] Benchmark-Liste festgelegt: 6 Papers, 8 Paper-Claim-Einheiten statt 8–10 Papers (`benchmark/experiments/benchmark_v2.md`); Läufe und Auswertung laufen noch, Zahlen `TBD`
 - [x] Live-Modus (FastAPI + SSE) gebaut (`src/repro_agent/api.py`)
