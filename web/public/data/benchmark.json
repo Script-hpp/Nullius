@@ -1,0 +1,958 @@
+{
+ "versions": [
+  {
+   "id": "v4",
+   "date": "2026-10-02",
+   "code_commit": "bf520c1, 2b13b31",
+   "n_runs": 48,
+   "units": [
+    {
+     "paper": "kipf_gcn_2017",
+     "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+     "claim": "gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "reproduziert",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "wu_sgc_2019",
+     "title": "Simplifying Graph Convolutional Networks",
+     "claim": "sgc_cora_acc",
+     "metric": "accuracy",
+     "target": 0.81,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "nicht reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_dlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "dlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.375,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "teilweise",
+        "reproduziert",
+        "reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "nicht reproduzierbar (Setup)"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_pitfalls_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "teilweise",
+        "reproduziert",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_gat_2018",
+     "title": "Graph Attention Networks",
+     "claim": "gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.83,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "teilweise"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_dgi_2019",
+     "title": "Deep Graph Infomax",
+     "claim": "dgi_cora_acc",
+     "metric": "accuracy",
+     "target": 0.823,
+     "reference_verdict": "teilweise",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "Agenten-Fehler vermutet"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_gat_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.818,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "nicht reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_nlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "nlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.374,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "teilweise",
+        "nicht reproduziert",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    }
+   ],
+   "summary": {
+    "agree_A": 1,
+    "agree_B": 2,
+    "placebo_passed": 0,
+    "n_units": 8
+   }
+  },
+  {
+   "id": "v3",
+   "date": "2026-10-01",
+   "code_commit": "4bab96e",
+   "n_runs": 48,
+   "units": [
+    {
+     "paper": "kipf_gcn_2017",
+     "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+     "claim": "gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "Agenten-Fehler vermutet",
+        "reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "reproduziert",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "Agenten-Fehler vermutet",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "wu_sgc_2019",
+     "title": "Simplifying Graph Convolutional Networks",
+     "claim": "sgc_cora_acc",
+     "metric": "accuracy",
+     "target": 0.81,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "reproduziert",
+        "reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_dlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "dlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.375,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "nicht reproduzierbar (Setup)"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)"
+      ],
+      "B": [
+       "Agenten-Fehler vermutet",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_pitfalls_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "reproduziert",
+        "Agenten-Fehler vermutet",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "Agenten-Fehler vermutet",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_gat_2018",
+     "title": "Graph Attention Networks",
+     "claim": "gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.83,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "Ausfall",
+       "verdicts": [
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "nicht reproduzierbar (Setup)"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_dgi_2019",
+     "title": "Deep Graph Infomax",
+     "claim": "dgi_cora_acc",
+     "metric": "accuracy",
+     "target": 0.823,
+     "reference_verdict": "teilweise",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduzierbar (Setup)",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "Agenten-Fehler vermutet",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "Agenten-Fehler vermutet",
+       "Agenten-Fehler vermutet",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_gat_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.818,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_nlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "nlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.374,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "teilweise",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "Agenten-Fehler vermutet",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    }
+   ],
+   "summary": {
+    "agree_A": 2,
+    "agree_B": 2,
+    "placebo_passed": 0,
+    "n_units": 8
+   }
+  },
+  {
+   "id": "v2",
+   "date": "2026-10-01",
+   "code_commit": "d71a8af",
+   "n_runs": 48,
+   "units": [
+    {
+     "paper": "kipf_gcn_2017",
+     "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+     "claim": "gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "teilweise",
+        "nicht reproduzierbar (Setup)",
+        "reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "teilweise",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "Agenten-Fehler vermutet",
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "wu_sgc_2019",
+     "title": "Simplifying Graph Convolutional Networks",
+     "claim": "sgc_cora_acc",
+     "metric": "accuracy",
+     "target": 0.81,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "nicht reproduziert",
+        "reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "teilweise",
+       "verdicts": [
+        "reproduziert",
+        "teilweise",
+        "teilweise"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "teilweise",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_dlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "dlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.375,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "reproduziert",
+       "verdicts": [
+        "reproduziert",
+        "reproduziert",
+        "Agenten-Fehler vermutet"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_pitfalls_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gcn_cora_acc",
+     "metric": "accuracy",
+     "target": 0.815,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "teilweise",
+       "verdicts": [
+        "teilweise",
+        "teilweise",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduziert",
+        "teilweise",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_gat_2018",
+     "title": "Graph Attention Networks",
+     "claim": "gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.83,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduzierbar (Setup)",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    },
+    {
+     "paper": "velickovic_dgi_2019",
+     "title": "Deep Graph Infomax",
+     "claim": "dgi_cora_acc",
+     "metric": "accuracy",
+     "target": 0.823,
+     "reference_verdict": "teilweise",
+     "arms": {
+      "A": {
+       "majority": "nicht reproduziert",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduziert",
+        "teilweise"
+       ]
+      },
+      "B": {
+       "majority": "Ausfall",
+       "verdicts": [
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduzierbar (Setup)",
+        "reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "Agenten-Fehler vermutet",
+       "nicht reproduzierbar (Setup)"
+      ]
+     }
+    },
+    {
+     "paper": "shchur_gat_2018",
+     "title": "Pitfalls of Graph Neural Network Evaluation",
+     "claim": "shchur_gat_cora_acc",
+     "metric": "accuracy",
+     "target": 0.818,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "Ausfall",
+       "verdicts": [
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduzierbar (Setup)",
+        "nicht reproduzierbar (Setup)"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "nicht reproduziert",
+        "nicht reproduzierbar (Setup)",
+        "teilweise"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduzierbar (Setup)"
+      ],
+      "B": [
+       "nicht reproduzierbar (Setup)",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    },
+    {
+     "paper": "zeng_nlinear_2023",
+     "title": "Are Transformers Effective for Time Series Forecasting?",
+     "claim": "nlinear_etth1_96_mse",
+     "metric": "mse",
+     "target": 0.374,
+     "reference_verdict": "reproduziert",
+     "arms": {
+      "A": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "Agenten-Fehler vermutet",
+        "reproduziert",
+        "nicht reproduziert"
+       ]
+      },
+      "B": {
+       "majority": "keine Mehrheit",
+       "verdicts": [
+        "Agenten-Fehler vermutet",
+        "teilweise",
+        "nicht reproduziert"
+       ]
+      }
+     },
+     "placebo": {
+      "A": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ],
+      "B": [
+       "nicht reproduziert",
+       "nicht reproduziert",
+       "nicht reproduziert"
+      ]
+     }
+    }
+   ],
+   "summary": {
+    "agree_A": 2,
+    "agree_B": 2,
+    "placebo_passed": 0,
+    "n_units": 8
+   }
+  }
+ ]
+}
