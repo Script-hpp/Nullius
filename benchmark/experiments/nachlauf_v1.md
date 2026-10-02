@@ -99,3 +99,17 @@ Kein zweiter Prüflauf mit demselben Code. Nach einer Code-Änderung ist genau e
 **Entwicklung bis zum Einfrieren (offengelegt).** An den beiden Entwicklungs-Einheiten gab es fünf Nachbesserungsrunden nach echten Läufen (Token Factory, zusammen 0,31 $ brutto, Store `runs/nachlauf_dev.jsonl`): Absturz bei falsch geformter Modellantwort; erfundener Startbefehl (Anlass dieses Nachtrags); Seed-Zeile falsch gewählt; unklarer Satz im Adapter-Vertrag zum Arbeitsverzeichnis; fehlerhafte eigene Schreiblogik des Modells für die Ergebnisdatei (jetzt feste Funktion im Vertrag). Mit dem eingefrorenen Stand (`283cdf2`, identisch in `751be6b`) laufen beide Einheiten gültig mit fünf Seeds: RLinear 0,3708 ± 0,0013 (4 LLM-Aufrufe), DLinear 0,3781 ± 0,0082 (3 LLM-Aufrufe), Adapter jeweils im ersten Versuch, P2 und P3 bei allen Seeds bestanden. Diese Ergebnisse sind Entwicklungsergebnisse und zählen nicht für die Erfolgsregel.
 
 **Ablauf der Prüfung:** vier Läufe nacheinander in der Reihenfolge SparseTSF, FITS, PatchTST/42, NLinear, gestartet vom Reviewer aus dem Hauptverzeichnis, unbeaufsichtigt über Nacht (vom Nutzer freigegeben). Kein Eingriff, keine Wiederholung eines Laufs mit demselben Code. Bricht ein Lauf an der Infrastruktur ab (Sandbox- oder API-Ausfall ohne Urteil), wird genau dieser Lauf einmal mit unverändertem Code neu gestartet und der Vorfall berichtet.
+
+## Nachtrag 2026-10-03 (zweiter Versuch, vor jeder Code-Änderung festgelegt, vom Nutzer freigegeben)
+
+Die Prüfung hat Punkt 1 verfehlt (0 von 4, `results/nachlauf_v1.md`). Die Vorab-Festlegung erlaubt nach einer Code-Änderung **genau einen** weiteren Lauf auf denselben vier Einheiten. Der Nutzer hat ihn am 2026-10-03 um 00:5x Uhr freigegeben, unbeaufsichtigt über Nacht.
+
+**Was sich gegenüber dem ersten Versuch ändert (nur diese drei Ursachen und ein Hilfsmittel):**
+1. Ordnung der Befehls-Kandidaten nach Passung zum Claim (Modellname, Datensatz, Horizont und Eingabelänge nach Auflösung der Skript-Variablen), gruppiert nach Datei, mit der Möglichkeit für das Modell, weitere Kandidaten anzufordern.
+2. Ältere Paketversion als erlaubte Reparatur, wenn ein Training in einer installierten Bibliothek abstürzt; jede solche Änderung steht als Abweichung der Umgebung im Dossier und im Zeugnis.
+3. P1 strenger: Die Reparatur darf Schalter nicht ändern, die Datensatz, Art der Aufgabe, Zahl der Kanäle, Horizont oder Eingabelänge bestimmen; der Modellname darf nur auf den Namen aus dem Claim geändert werden.
+4. Hilfsmittel: Der Fehlertext für die Reparatur enthält zusätzlich die letzte Zeile des Tracebacks, die im Repo liegt.
+
+**Was gleich bleibt:** Einheiten, Commits, Zielwerte, Toleranz, Erfolgsregel (mit dem Nachtrag zur Gültigkeit), Prüfungen P2 bis P4, je eine Generierung, fünf Seeds, Kostenstopp 3 $ brutto (eigener Store `runs/nachlauf_v1_try2.jsonl`). Vor dem Lauf müssen beide Entwicklungs-Einheiten mit dem neuen Code weiter gültig laufen; sonst findet der zweite Versuch nicht statt.
+
+**Ehrlichkeit:** Die Änderungen sind durch die Fehler an den vier Einheiten veranlasst; diese Einheiten sind nicht mehr unberührt. Der zweite Versuch wird immer als „zweiter Versuch" berichtet, getrennt vom ersten, und der erste bleibt das Ergebnis der Prüfung an unberührten Einheiten. Ein dritter Versuch ist ausgeschlossen. Der Code des zweiten Versuchs wird vor dem Lauf hier mit Commit nachgetragen.
