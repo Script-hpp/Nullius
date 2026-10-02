@@ -6,12 +6,12 @@ import { buildStory, lineDiff, type Card, type DiffLine } from './repairStory.ts
 
 export const FILM_MS = 30_000
 
-export type SceneId = 'tavily' | 'code' | 'repair' | 'sandbox' | 'harness' | 'verdict'
+export type SceneId = 'tavily' | 'code' | 'repair' | 'sandbox' | 'harness' | 'community' | 'verdict'
 export type Scene = { id: SceneId; start: number; end: number }
 
 // Relative length of each scene; the plan is scaled to FILM_MS, so a run without a repair still lasts 30 s.
-const WEIGHT: Record<SceneId, number> = { tavily: 6, code: 5, repair: 5, sandbox: 5, harness: 6, verdict: 3 }
-const ORDER: SceneId[] = ['tavily', 'code', 'repair', 'sandbox', 'harness', 'verdict']
+const WEIGHT: Record<SceneId, number> = { tavily: 6, code: 5, repair: 5, sandbox: 5, harness: 6, community: 4, verdict: 3 }
+const ORDER: SceneId[] = ['tavily', 'code', 'repair', 'sandbox', 'harness', 'community', 'verdict']
 
 export function scenePlan(present: Set<SceneId>, lengthMs = FILM_MS): Scene[] {
   const ids = ORDER.filter((id) => present.has(id))
@@ -43,8 +43,11 @@ export function addressBar(url: string): string {
 }
 
 // Domains Tavily was asked about in this run (tavily_call targets) and the page the claim was read from; each once, in order.
+// Only the calls that read the paper and its code page (roles 2 and 4); the later search of public discussion (roles 3 and 6) is its own scene.
+export const isPaperCall = (e: Event) => e.type === 'tavily_call' && e.role !== 3 && e.role !== 6
+
 export function sourceDomains(events: Event[], evidenceUrl?: string): string[] {
-  const urls = [evidenceUrl, ...events.filter((e) => e.type === 'tavily_call' && typeof e.target === 'string' && /^https?:/.test(e.target)).map((e) => e.target as string)]
+  const urls = [evidenceUrl, ...events.filter((e) => isPaperCall(e) && typeof e.target === 'string' && /^https?:/.test(e.target)).map((e) => e.target as string)]
   const out: string[] = []
   for (const u of urls) if (u) { const d = domainOf(u); if (!out.includes(d)) out.push(d) }
   return out
@@ -159,31 +162,32 @@ export function diffFlash(a: string, b: string, n = 4): DiffLine[] {
 }
 
 // ---- which scenes this run has ----
-export function presentScenes(o: { events: Event[]; claim: Json; hasPlan: boolean; hasCode: boolean; hasVerdict: boolean; repair: boolean }): Set<SceneId> {
+export function presentScenes(o: { events: Event[]; claim: Json; hasPlan: boolean; hasCode: boolean; hasVerdict: boolean; repair: boolean; community?: boolean }): Set<SceneId> {
   const s = new Set<SceneId>()
-  if (claimEvidence(o.claim) || o.events.some((e) => e.type === 'tavily_call')) s.add('tavily')
+  if (claimEvidence(o.claim) || o.events.some(isPaperCall)) s.add('tavily')
   if (o.hasPlan || o.hasCode) s.add('code')
   if (o.repair) s.add('repair')
   const br = branches(o.events)
   if (br.length > 0) s.add('sandbox')
   if (measurements(o.events, String(o.claim?.id)).length > 0) s.add('harness')
+  if (o.community) s.add('community')
   if (o.hasVerdict) s.add('verdict')
   return s
 }
 
 // Sentences, one per scene. Each is true for the run it is shown for (the scenes it depends on are only present when their data is).
-export const SENTENCE: Record<Exclude<SceneId, 'repair' | 'verdict' | 'tavily'>, (n?: number) => string> = {
+export const SENTENCE: Record<Exclude<SceneId, 'repair' | 'verdict' | 'tavily' | 'community'>, (n?: number) => string> = {
   code: () => 'Nemotron plans the experiment and writes the code.',
   sandbox: (n) => `Each random seed runs in its own sandbox branch${n ? `: ${n} branches` : ''}.`,
   harness: () => 'Our harness scores every run. The agent never sees the true answers.',
 }
 
 export const ACTOR: Record<SceneId, string> = {
-  tavily: 'Tavily', code: 'Nemotron on Token Factory', repair: 'Nemotron + Tavily', sandbox: 'Nebius Sandbox', harness: 'Our harness', verdict: 'Our harness',
+  tavily: 'Tavily', code: 'Nemotron on Token Factory', repair: 'Nemotron + Tavily', sandbox: 'Nebius Sandbox', harness: 'Our harness', community: 'Tavily + Nemotron', verdict: 'Our harness',
 }
 
 export const SCENE_LABEL: Record<SceneId, string> = {
-  tavily: 'Paper', code: 'Code', repair: 'Repair', sandbox: 'Sandbox', harness: 'Check', verdict: 'Verdict',
+  tavily: 'Paper', code: 'Code', repair: 'Repair', sandbox: 'Sandbox', harness: 'Check', community: 'Others', verdict: 'Verdict',
 }
 
 // "The real run took 41 minutes" (first to last event).
@@ -298,4 +302,19 @@ export function fitSteps(steps: string[], budget: number): string[] {
     used += w
   }
   return out
+}
+
+// The community scene: the public notes the check found (reported only, never part of the verdict). Null if the run has no community check.
+export type Note = { statement: string; quote: string; host: string; kind: string }
+export function communityScene(dossier: Json): { notes: Note[]; total: number; sentence: string } | null {
+  const c = dossier?.community
+  if (!c) return null
+  const all: Json[] = c.findings ?? []
+  const n = all.length
+  const sentence = n > 0
+    ? `Tavily also searches public discussion of the paper: ${n} note${n === 1 ? '' : 's'} found, each with a quote from the page. They never change the verdict.`
+    : 'Tavily also searched public discussion of the paper and found nothing. It never changes the verdict.'
+  const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, '') } catch { return u } }
+  const notes = all.slice(0, 2).map((f) => ({ statement: String(f.statement), quote: String(f.quote).length > 150 ? String(f.quote).slice(0, 149) + '…' : String(f.quote), host: host(String(f.url)), kind: String(f.kind ?? 'other') }))
+  return { notes, total: n, sentence }
 }

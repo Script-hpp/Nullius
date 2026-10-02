@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Check, Search, X } from 'lucide-react'
 import { ResultBand } from '../ResultChart'
 import { splitFormulas } from '../../latex'
+import { communityScene } from '../../film'
 import { SENTENCE, addressBar, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, mathWords, measurements, pipelineOf, fitSteps, planCodeLinks, planItems, sourceDomains, splitCategory, tavilySentence, typed, type RepairScene, type SceneId } from '../../film'
 import { TONE_TEXT_VAR, TONE_VAR, type Tone } from '../../labels'
 import type { Event, Json } from '../../data'
@@ -301,6 +302,30 @@ function HarnessScene({ d, p }: { d: SceneData; p: number }) {
   )
 }
 
+// ---- community: what others found (reported only) ----
+function CommunitySceneView({ d, p }: { d: SceneData; p: number }) {
+  const c = communityScene(d.dossier)
+  if (!c) return null
+  return (
+    <div className="flex h-full flex-col">
+      <Sentence>{c.sentence}</Sentence>
+      <div className={`${body} flex flex-col justify-center gap-[1.4cqw]`}>
+        {c.notes.map((n, i) => {
+          const t = ramp(p, 0.15 + i * 0.25, 0.4 + i * 0.25)
+          return (
+            <div key={i} className="rounded-xl border border-line bg-surface-2 px-[2cqw] py-[1.3cqw]" style={{ opacity: t, transform: `translateY(${(1 - t) * 14}px)` }}>
+              <div className="mb-[0.5cqw] flex items-center justify-between gap-3 text-[clamp(9px,1.2cqw,11px)] font-semibold uppercase tracking-[0.14em] text-muted"><span>{n.kind}</span><span className="font-mono normal-case tracking-normal">{n.host}</span></div>
+              <div className="text-[clamp(11px,1.6cqw,14.5px)] font-medium leading-snug text-fg-3">{n.statement}</div>
+              <div className={`mt-[0.8cqw] border-l-2 border-line-strong pl-[1.2cqw] italic text-fg-4 ${mono}`}>“{n.quote}”</div>
+            </div>
+          )
+        })}
+        {c.total > c.notes.length && <div className={`${small} text-muted`} style={{ opacity: ramp(p, 0.7, 0.9) }}>and {c.total - c.notes.length} more on the certificate</div>}
+      </div>
+    </div>
+  )
+}
+
 // ---- 6. Verdict stamp ----
 function VerdictScene({ d, p }: { d: SceneData; p: number }) {
   const t = ramp(p, 0.1, 0.4)
@@ -326,6 +351,7 @@ export function Scene({ id, p, data }: { id: SceneId; p: number; data: SceneData
     case 'repair': return data.repair ? <RepairSceneView d={data} p={p} /> : null
     case 'sandbox': return <SandboxScene d={data} p={p} />
     case 'harness': return <HarnessScene d={data} p={p} />
+    case 'community': return <CommunitySceneView d={data} p={p} />
     case 'verdict': return <VerdictScene d={data} p={p} />
   }
 }

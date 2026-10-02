@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { FILM_MS, addressBar, cardWeight, fitSteps, mappingComments, definitionLine, pipelineOf, planCodeLinks, splitCategory, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planItems, mathWords, stripMarkdown, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
+import { FILM_MS, addressBar, communityScene, isPaperCall, cardWeight, fitSteps, mappingComments, definitionLine, pipelineOf, planCodeLinks, splitCategory, branchX, branches, claimEvidence, codeLines, diffFlash, dossierAt, durationText, measurements, planItems, mathWords, stripMarkdown, presentScenes, repairScene, sceneAt, scenePlan, sourceDomains, tavilySentence, typed, type SceneId } from './film.ts'
 import type { Event } from './data.ts'
 
 const all: SceneId[] = ['tavily', 'code', 'repair', 'sandbox', 'harness', 'verdict']
@@ -242,4 +242,28 @@ test('fit steps: the first steps that fit the budget, at least one, formulas wei
   assert.deepEqual(fitSteps(steps, 0.1), steps.slice(0, 1))       // never empty
   assert.deepEqual(fitSteps([], 5), [])
   assert.equal(fitSteps(['Plain: a', 'Plain: b', 'Plain: c', 'Plain: d'], 3.2).length, 3)
+})
+
+test('community scene: only for runs with a community check; sentence matches the number of notes; paper calls exclude the discussion search', () => {
+  assert.equal(communityScene({}), null)
+  const none = communityScene({ community: { findings: [] } })!
+  assert.match(none.sentence, /found nothing\. It never changes the verdict/)
+  const c = communityScene({ community: { findings: [
+    { statement: 'Seed matters', quote: 'x'.repeat(200), url: 'https://github.com/a/b/issues/1', kind: 'protocol note' },
+    { statement: 'Second', quote: 'q', url: 'https://www.reddit.com/r/x', kind: 'other' },
+    { statement: 'Third', quote: 'q', url: 'https://x.org', kind: 'other' },
+  ] } })!
+  assert.equal(c.total, 3)
+  assert.equal(c.notes.length, 2)
+  assert.equal(c.notes[0].host, 'github.com')
+  assert.ok(c.notes[0].quote.length <= 150 && c.notes[0].quote.endsWith('…'))
+  assert.match(c.sentence, /3 notes found, each with a quote from the page\. They never change the verdict/)
+  assert.equal(communityScene({ community: { findings: [{ statement: 's', quote: 'q', url: 'https://a.org' }] } })!.sentence.includes('1 note found'), true)
+  const calls = [{ ts: 0, type: 'tavily_call', role: 2, target: 'https://arxiv.org/abs/1' }, { ts: 1, type: 'tavily_call', role: 3, target: 'https://reddit.com/x' }, { ts: 2, type: 'tavily_call', role: 6, target: 'https://x.org' }] as Event[]
+  assert.deepEqual(calls.map(isPaperCall), [true, false, false])
+  assert.deepEqual(sourceDomains(calls), ['arxiv.org'])
+  const claim = { id: 'c', target_evidence: null }
+  const scenes = presentScenes({ events: [], claim, hasPlan: true, hasCode: false, hasVerdict: true, repair: false, community: true })
+  assert.deepEqual([...scenes].sort(), ['code', 'community', 'verdict'])
+  assert.deepEqual(scenePlan(scenes).map((x) => x.id), ['code', 'community', 'verdict'])   // the stamp stays the last scene
 })
