@@ -1,0 +1,18 @@
+# Startbefehl wie in script.md:3 (unveraendert, --model Linear)
+Args in experiment:
+Namespace(is_training=1, model='Linear', data='ETTh1', root_path='./dataset/', data_path='ETTh1.csv', features='M', target='OT', freq='h', checkpoints='./checkpoints/', seq_len=336, pred_len=96, individual=False, seg=20, channel=7, d_model=512, layers=2, embed='timeF', do_predict=False, rev=True, dr
+Use CPU
+Traceback (most recent call last):
+  File "/home/onuralp/Desktop/hackathon/prestudy_work/rtsf/run.py", line 90, in <module>
+    exp = Exp(args)  # set experiments
+          ^^^^^^^^^
+  File "/home/onuralp/Desktop/hackathon/prestudy_work/rtsf/exp/exp_main.py", line 18, in __init__
+    super(Exp_Main, self).__init__(args)
+  File "/home/onuralp/Desktop/hackathon/prestudy_work/rtsf/exp/exp_basic.py", line 8, in __init__
+    self.model = self._build_model().to(self.device)
+                 ^^^^^^^^^^^^^^^^^^^
+  File "/home/onuralp/Desktop/hackathon/prestudy_work/rtsf/exp/exp_main.py", line 26, in _build_model
+    model = model_dict[self.args.model].Model(self.args).float()
+            ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'Linear'
+python -u run.py --is_training 1 --data_path ETTh1.csv --data ETTh1 --feature  7,02s user 0,61s system 120% cpu 6,322 total
