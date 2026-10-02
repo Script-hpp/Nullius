@@ -32,6 +32,7 @@ from .config import load_settings
 from .costs import BudgetExceeded
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
 from .harness.code_check import find_violations
+from .droplast_note import droplast_note
 from .events import EventLog
 from .harness.ablation import classify_ablation
 from .harness.coverage_check import Coverage
@@ -586,6 +587,7 @@ class Orchestrator:
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
             "baselines": out.get("baselines"), "coverage": coverage, "val": val,
+            "metrics_droplast": out.get("metrics_droplast"),   # nur Dossier/Zeugnis (Testwerte), nie in einen Prompt
             "diagnostics": out.get("diagnostics"),             # nur Dossier/Events; pred_std geht in die Fehler-Rueckmeldung, nie Teststatistik
             "stdout_tail": (r.stdout or "")[-300:],            # Ende der Trainingsausgabe (z. B. Val-Loss) als Evidenz
         }
@@ -808,6 +810,7 @@ class Orchestrator:
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
                    explanation=verdict.explanation)
+        self._droplast_round(claim, dossier, discarded, verdict)   # nur Bericht, nach dem Urteil
 
     def _run_candidates(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, seed: int, k: int,
@@ -947,6 +950,17 @@ class Orchestrator:
         finish("adopted", "Fehler-Check, Ablation und Validierung bestanden", **val_info)
         return nv, new_code, new_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Code {old_h} durch {new_h} ersetzt"], discarded
 
+    def _droplast_round(self, claim: Claim, dossier: Dossier, discarded: set[str], verdict: Verdict) -> None:
+        """ETTh1: Hinweis, wenn die Behauptung fast genau die drop_last-Rechnung trifft (droplast_note.py). Liest nur, aendert das Urteil nie."""
+        if claim.metric not in ("mse", "mae") or not (verdict.measured_mean == verdict.measured_mean):   # NaN = kein Messwert
+            return
+        per_seed = [a.metrics_droplast for a in dossier.attempts if a.claim_id == claim.id and a.metrics_droplast
+                    and a.measured is not None and a.code_hash not in discarded]
+        note = droplast_note(claim.metric, claim.target, claim.tolerance, verdict.measured_mean, per_seed)
+        if note:
+            dossier.droplast_notes[claim.id] = note
+            self._emit("droplast_note", claim_id=claim.id, kind=note["kind"], batch_size=note["batch_size"], droplast=note["droplast"], full=note["full"])
+
     def _val_fault_check(self, claim: Claim, code_hash: str, seed: int) -> str | None:
         """Klassifikation: Validierungs-Genauigkeit (vom Harness mit eigenen Val-Labels) unter der Mehrheitsklasse-Baseline = Zufallsniveau,
         typisch falsche Zuordnung Vorhersage -> Knoten (M1). Deterministisch, kein LLM; der Hinweis an `code` enthaelt keine Zahlen."""
@@ -1083,7 +1097,7 @@ class Orchestrator:
                     claim_id=claim.id, branch_id=branch, parent_snapshot=snapshot, code_hash=code_hash,
                     seed=seed, status=status, measured=value, error_summary=summary,
                     cost_usd=self.spent_usd, metrics=res.get("metrics"), coverage=res.get("coverage"),
-                    diagnostics=res.get("diagnostics"), candidate=candidate, val=res.get("val"),
+                    diagnostics=res.get("diagnostics"), candidate=candidate, val=res.get("val"), metrics_droplast=res.get("metrics_droplast"),
                 ))
                 self.__dict__.setdefault("_diag", {})[(code_hash, seed)] = res.get("diagnostics")
                 if res.get("val"):

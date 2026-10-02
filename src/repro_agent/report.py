@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .dossier import Dossier
+from .droplast_note import droplast_text
 
 
 def render_markdown(dossier: Dossier) -> str:
@@ -29,6 +30,9 @@ def render_markdown(dossier: Dossier) -> str:
         nf = dossier.fault_repairs.get(verdict.claim_id)
         if nf:
             lines.append(f"Fehler-Reparaturen: {nf} (Ergebnis schlechter als eine triviale Baseline, Code wurde neu geschrieben)")
+        dn = dossier.droplast_notes.get(verdict.claim_id)
+        if dn:
+            lines.append(droplast_text(dn))
         lines.append(verdict.explanation)
         claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
         ev = claim.target_evidence if claim else None
