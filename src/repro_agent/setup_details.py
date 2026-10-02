@@ -292,7 +292,7 @@ def format_conflicts(details: list[SetupDetail]) -> str:
 # ---- v5 Schritt A (Schalter setup_v2): Pflichtliste je Task-Familie (V1), Quellenrang (V2), Feld "gilt fuer" (V3) -----------------
 # Die Pflichtliste nennt nur Themen, nie Werte oder Methodenwissen.
 RANKS = ("start script", "config", "paper", "code", "readme text", "argparse default")   # hoechster Rang zuerst
-OPTIONAL_RE = re.compile(r"\b(optional(ly)?|for example|for instance|e\.g\.|can|may|could|you might)\b", re.I)
+OPTIONAL_RE = re.compile(r"\b(optional(ly)?|for example|for instance|e\.g\.|can|may|could|you might|advice|helpful)\b", re.I)
 DEFAULT_RE = re.compile(r"default\s*=|DEFINE_\w+\(", re.I)
 START_RE = re.compile(r"\.sh$|(^|/)(execute|run|train|main|exp)[\w.-]*\.py$", re.I)
 CONFIG_RE = re.compile(r"\.(ya?ml|json|conf|cfg|ini|toml)$", re.I)
