@@ -102,6 +102,58 @@ papers:
         source: "Tabelle 2, arXiv (b1_candidates.md), zur Laufzeit per Tavily belegt"
         extract: {method: "RLinear", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
 
+  # ---- Neue Einheiten fuer die Pruefung des Modus Nachlauf (benchmark/experiments/nachlauf_v1.md). Nicht Teil von Benchmark v4. ----
+  - id: sparsetsf_2024
+    title: "SparseTSF: Modeling Long-term Time Series Forecasting with 1k Parameters"
+    arxiv_url: "https://arxiv.org/abs/2405.00946"
+    dataset: "ETTh1"
+    expectation: "offen (Nachlauf v1, neue Einheit)"
+    seeds: 5
+    claims:
+      # Zielwert Tabelle 11 ("after fixing code bug"), arXiv v2, vom Reviewer am 2026-10-02 gegen die HTML-Fassung geprueft:
+      # `SparseTSF (ours) 0.362 0.403 0.434 0.426 ...` (erste Spalte ETTh1-96). Tabelle 2 (vor der Korrektur) nennt 0.359.
+      - id: sparsetsf_etth1_96_mse
+        text: "SparseTSF erreicht MSE 0,362 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 720)"
+        metric: mse
+        target: 0.362
+        tolerance: 0.01
+        source: "Tabelle 11, arXiv v2 (nach Korrektur des drop_last-Fehlers)"
+        extract: {method: "SparseTSF", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+
+  - id: fits_2023
+    title: "FITS: Modeling Time Series with 10k Parameters"
+    arxiv_url: "https://arxiv.org/abs/2307.03756"
+    dataset: "ETTh1"
+    expectation: "offen (Nachlauf v1, neue Einheit)"
+    seeds: 5
+    claims:
+      # Zielwert Tabelle 1, arXiv v3, vom Reviewer am 2026-10-02 gegen die HTML-Fassung geprueft: Zeile FITS `0.372 0.404 0.427 0.424 ...`
+      # (erste Spalte ETTh1-96). Eingabefenster laut Paper per Gittersuche aus {90, 180, 360, 720} gewaehlt.
+      - id: fits_etth1_96_mse
+        text: "FITS erreicht MSE 0,372 auf ETTh1 bei Vorhersagehorizont 96"
+        metric: mse
+        target: 0.372
+        tolerance: 0.01
+        source: "Tabelle 1, arXiv v3"
+        extract: {method: "FITS", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+
+  - id: patchtst_2023
+    title: "A Time Series is Worth 64 Words: Long-term Forecasting with Transformers"
+    arxiv_url: "https://arxiv.org/abs/2211.14730"
+    dataset: "ETTh1"
+    expectation: "offen (Nachlauf v1, neue Einheit)"
+    seeds: 5
+    claims:
+      # Zielwert Tabelle 3, arXiv v2, vom Reviewer am 2026-10-02 gegen die HTML-Fassung geprueft: ETTh1, Horizont 96: PatchTST/64 0.370,
+      # PatchTST/42 0.375 (PatchTST/42: Eingabefenster 336, Patchlaenge 16, Schrittweite 8).
+      - id: patchtst42_etth1_96_mse
+        text: "PatchTST/42 erreicht MSE 0,375 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.375
+        tolerance: 0.01
+        source: "Tabelle 3, arXiv v2"
+        extract: {method: "PatchTST/42", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+
   - id: dacrema_progress_2019
     title: "Are We Really Making Much Progress? A Worrying Analysis of Recent Neural Recommendation Approaches"
     arxiv_url: "https://arxiv.org/abs/1907.06902"

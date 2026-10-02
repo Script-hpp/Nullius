@@ -74,3 +74,24 @@ Kein zweiter Prüflauf mit demselben Code. Nach einer Code-Änderung ist genau e
 - Vier Einheiten, eine Generierung: eine Stichprobe. Drei der vier Repos sind mit den Entwicklungs-Repos verwandt (gleiche Code-Familie).
 - Die Zahlen des Vorversuchs sind Handarbeit und bleiben so beschriftet.
 - Kein Wert aus `tests/reference/`, aus dem Vorversuch oder aus dieser Tabelle steht in einem Prompt. Der Agent bekommt Claim, Repo-Dateien und Fehlermeldungen.
+
+## Nachtrag 2026-10-02 (vor dem ersten Lauf der Prüfung, vom Nutzer freigegeben)
+
+**Anlass.** Im ersten echten Agenten-Lauf an einer Entwicklungs-Einheit (RLinear, Code `3f6051a`) las das Modell die Datei mit den dokumentierten Befehlen nicht und baute in der Reparatur einen Startbefehl aus den `argparse`-Definitionen. Training und alle Prüfungen P1 bis P4 liefen durch, das Urteil war „reproduziert" (0,3746), aber mit einem Befehl, den die Autoren nicht dokumentieren. Nach der Regel oben hätte dieser Lauf als „gültig" gezählt. Der Code ist inzwischen geändert (`f81b35f`: dokumentierte Befehle werden per Programm gesucht, das Modell wählt per Nummer, ohne Kandidaten kein Lauf).
+
+**Verschärfung der Erfolgsregel, Punkt 1.** Ein Nachlauf zählt nur als gültig, wenn zusätzlich gilt: **Der Startbefehl geht auf eine wörtliche Zeile einer Datei des Repos zurück** (Quelle mit Datei und Zeile im Dossier). Abweichungen von dieser Zeile sind erlaubt, wenn P1 sie listet (Beispiel aus der Entwicklung: korrigierter Modellname). Ein Lauf ohne solche Quelle wird im Ergebnis als „Lauf mit nicht dokumentiertem Befehl" ausgewiesen und zählt nicht als gültig. Das ist strenger als die ursprüngliche Regel; sonst ändert sich nichts.
+
+**Commits der neuen Einheiten** (Stand des Hauptzweigs am 2026-10-02, per `git ls-remote` abgefragt, ohne die Repos zu klonen oder zu lesen):
+
+| Einheit | Repo | Commit | Claim in `papers.yaml` |
+|---|---|---|---|
+| SparseTSF | `github.com/lss-1138/SparseTSF` | `b8c2740eecc84d8095ffce49ba5acafe68e53bb8` | `sparsetsf_2024` / `sparsetsf_etth1_96_mse` |
+| FITS | `github.com/VEWOXIC/FITS` | `d040bb015b6299da26d879b90dd19c80fb72c160` | `fits_2023` / `fits_etth1_96_mse` |
+| PatchTST/42 | `github.com/yuqinie98/PatchTST` | `204c21efe0b39603ad6e2ca640ef5896646ab1a9` | `patchtst_2023` / `patchtst42_etth1_96_mse` |
+| NLinear | `github.com/cure-lab/LTSF-Linear` | `0c113668a3b88c4c4ee586b8c5ec3e539c4de5a6` | `zeng_nlinear_2023` / `nlinear_etth1_96_mse` |
+
+**Zielwerte gegen das Paper geprüft** (Reviewer, 2026-10-02, HTML-Fassungen auf arXiv; kein Tavily-Aufruf): SparseTSF 0,362 (Tabelle 11 „after fixing code bug", arXiv v2; Tabelle 2 vor der Korrektur nennt 0,359), FITS 0,372 (Tabelle 1, arXiv v3), PatchTST/42 0,375 (Tabelle 3, arXiv v2; PatchTST/64 wäre 0,370), NLinear 0,374 (Tabelle 2 des LTSF-Linear-Papers, bereits per Fixture und Spaltenprüfung belegt, siehe `papers.yaml`).
+
+**Bekannt aus `b1_candidates.md`, vor der Prüfung offengelegt:** Der SparseTSF-Stand `b8c2740eec` hat den Test-Loader bereits korrigiert (`drop_last = False`); die Zielwerte von FITS und PatchTST stammen aus der Zeit vor dem Fund des `drop_last`-Fehlers. Der Reviewer kennt diese Dateien aus der früheren Kandidatensuche, der Agenten-Code wurde nicht an ihnen entwickelt.
+
+**Code-Stand der Prüfung:** wird mit dem Commit von `main` nach dem Merge von `nachlauf-m3` hier nachgetragen, bevor der erste Lauf startet. Ab dann ist `src/` eingefroren.
