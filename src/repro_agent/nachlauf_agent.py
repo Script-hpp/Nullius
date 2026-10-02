@@ -36,6 +36,7 @@ from .harness.code_check import find_violations
 from .costs import BudgetExceeded
 from .llm import BillingBlocked, LLMResponse
 from .loop import extract_code
+from . import nachlauf_candidates as cand
 from .repo_source import _last_string_list, imported_files
 from .setup_details import quote_in_text
 
@@ -44,6 +45,7 @@ MAX_FILE_CHARS = 16_000        # je Datei im Prompt
 MAX_TOTAL_CHARS = 120_000      # alle Dateien eines Prompts
 MAX_LISTING = 600
 MAX_DEP_FILES = 6
+MAX_LOADER_FILES = 8
 EXPLORE_OFFSETS = 2            # P2-Versaetze waehrend der Erkundung (die Endlaeufe nutzen alle, Standard 8)
 BASE_PIP = ["pandas", "scikit-learn", "matplotlib"]   # Standardpakete der Datenlader dieser Familie (nicht in den Task-Paketen)
 LENGTH_RETRY_TOKENS = (None, 12_000, 16_000)
@@ -67,18 +69,15 @@ FILE_SELECT_USER = (
 )
 
 COMMAND_SYSTEM = (
-    "You read a code repository and extract how its authors run one experiment. Every statement about the repository needs a verbatim quote "
-    "(copied character for character) from one of the provided files. Reply with exactly one JSON object and no other text."
+    "You read a code repository and decide how its authors run one experiment. You never write a command yourself: you choose a numbered, "
+    "documented command from a list that a program extracted from the repository. Reply with exactly one JSON object and no other text."
 )
 COMMAND_FORMAT = """\
 {
-  "command": "single line, starts with python, run from the repository root",
-  "command_source": {"file": "path of the file the command comes from", "quote": "the verbatim line(s) of that file"},
-  "seed": {"kind": "flag | copy | none", "flag": "switch name, only for kind flag", "file": "entry script path, only for kind copy",
-           "line": "verbatim line of the entry script that sets the random seed, only for kind copy"},
+  "command_candidate": 3,
   "checkpoint_glob": "path pattern relative to the repository root where the training run saves the weights, e.g. out/*/weights.bin",
-  "test_loader": {"drop_last": {"value": true, "file": "path", "quote": "verbatim code that builds the test loader and sets drop_last"},
-                  "batch_size": {"value": 32, "file": "path", "quote": "verbatim text that fixes the batch size used for testing"}},
+  "test_loader": {"drop_last": {"candidate": 1, "value": true},
+                  "batch_size": {"switch": "name of the command-line switch that sets the test batch size, e.g. --bs"}},
   "input_len": 0, "output_len": 0,
   "needs_time_features": {"value": false, "file": "path of the model file", "quote": "verbatim code of the model's forward function that uses time-stamp features, or null"},
   "model_file": "path of the file that defines the model class", "training_file": "path of the file with the training and test loop"
@@ -86,34 +85,45 @@ COMMAND_FORMAT = """\
 COMMAND_USER = (
     "Task: start_command\n"
     "Result to check: {claim} (dataset: {dataset}).\n"
-    "Find how the authors run this experiment and answer with one JSON object of this shape:\n{format}\n\n"
+    "Documented commands found in the repository by a program ({counts}):\n{candidates}\n\n"
+    "Lines that set drop_last, found by a program in the files that build data loaders:\n{loader}\n\n"
+    "Answer with one JSON object of this shape:\n{format}\n\n"
     "Rules:\n"
-    "- The command must be the one the authors document for this model, dataset and forecast horizon. Change nothing except device and path switches. "
-    "Never use a switch that trains on all data or uses test data in training.\n"
-    "- One line starting with python, no pipes, no && or ;, no output redirection, no environment variable prefix.\n"
-    "- Quotes must be copied exactly from the provided files. Use null for anything the repository does not state; do not guess.\n"
-    "- seed.kind: flag if the entry script defines a command-line switch for the random seed; copy if the seed is a fixed number in one line of the entry "
-    "script (give that exact line); none if neither exists.\n"
-    "- input_len and output_len are the input length and forecast length given in your command.\n"
-    "- needs_time_features is true only if the model's forward function actually uses the time-stamp features of the batch.\n"
-    "Invented example of an answer's style (not from any real repository): command `python -u main_demo.py --task demo --horizon 24`, "
-    "quote `python -u main_demo.py --task demo --horizon 24 --lr 0.01`.\n\n"
+    "- command_candidate: the number of the documented command that trains the model of this result on this dataset for this forecast horizon. "
+    "Use null if none of them matches; never guess and never write a command yourself.\n"
+    "- test_loader.drop_last.candidate: the number of the line (second list) that sets drop_last for the loader used when testing; value is true or false as "
+    "written on that line; use null if none matches.\n"
+    "- test_loader.batch_size: give the switch name when the code takes the test batch size from a command-line argument (the switch of the argument "
+    "definitions); otherwise give {{\"file\": ..., \"quote\": ...}} with a verbatim quote that fixes the batch size to a number.\n"
+    "- input_len and output_len are the input length and forecast length of the chosen command.\n"
+    "- needs_time_features is true only if the model's forward function actually uses the time-stamp features of the batch; then quote that code verbatim.\n"
+    "Invented example of the answer's style (not from any real repository): {{\"command_candidate\": 2, \"test_loader\": {{\"drop_last\": {{\"candidate\": 4, "
+    "\"value\": false}}, \"batch_size\": {{\"switch\": \"--bs\"}}}}}}.\n\n"
     "Repository file list (first entries):\n{listing}\n\nFiles:\n{files}"
 )
 COMMAND_REASK = (
     "Task: start_command_requote\n"
     "Result to check: {claim} (dataset: {dataset}).\n"
-    "These items of your previous answer could not be verified as verbatim quotes of the named files: {items}.\n"
+    "These items of your previous answer could not be verified: {items}.\n"
     "Reply with one JSON object that contains only these items, in the same structure as before, each with an exact quote copied from the named file, "
     "or null if the repository does not state it.\n\nFiles:\n{files}"
+)
+SEED_USER = (
+    "Task: choose_seed\n"
+    "The documented command for this result is: {command}\nIt runs the entry script {script}. Lines of that script that set a random seed, found by a program:\n{seeds}\n\n"
+    "Answer with one JSON object {{\"seed_candidate\": N}} where N is the number of the line that sets the random seed of the training run "
+    "(a fixed number in the script, or a command-line switch for the seed), or null if none of these lines is the seed of the training.\n"
+    "Invented example: {{\"seed_candidate\": 1}}."
 )
 REPAIR_COMMAND_USER = (
     "Task: repair_command\n"
     "Result to check: {claim} (dataset: {dataset}).\n"
-    "The training run with this command did not produce a usable result.\nCommand: {command}\n\nProblem:\n{problem}\n\n"
-    "Answer with one JSON object: {{\"command\": ..., \"command_source\": {{\"file\": ..., \"quote\": ...}}, \"checkpoint_glob\": ..., "
-    "\"install\": [package names]}}. You may change the command (still the authors' documented one, with fixes only where the error requires), the "
-    "checkpoint path pattern, or ask to install a missing package, but only a package that is named in the repository's dependency files. "
+    "The training run with this command did not produce a usable result.\nCommand: {command} (documented command number {k})\n\nProblem:\n{problem}\n\n"
+    "Documented commands found in the repository by a program:\n{candidates}\n\n"
+    "Answer with one JSON object: {{\"command_candidate\": N, \"command\": ..., \"checkpoint_glob\": ..., \"install\": [package names]}}. "
+    "N is the number of a documented command: keep the current one or choose another by number. \"command\" is optional: a one-line variant of that documented "
+    "command with changed, added or removed switches (the same script). A command without a number is rejected. You may also change the checkpoint "
+    "path pattern, or ask to install a missing package, but only a package that is named in the repository's dependency files. "
     "Use an empty list for install if none is needed.\n\nFiles:\n{files}"
 )
 
@@ -161,6 +171,10 @@ P2_SENTENCE = ("The prediction for a window changed when other windows were remo
 P1_SENTENCE = "The switch {flag} is not allowed: it trains on all data or uses test data in training. Use a command without it."
 COMMAND_SHAPE_SENTENCE = ("The command must be a single python command line without pipes, redirects, environment prefixes, && or ;, "
                           "run from the repository root.")
+NO_CANDIDATE_SENTENCE = ("The command must come from one of the numbered documented commands: give its number in command_candidate. "
+                         "You may change switches of that command, but you must not invent a command.")
+SAME_SCRIPT_SENTENCE = "The command must run the same script as the documented command with the given number."
+NO_COMMAND_REASON = "no documented start command found for this claim"
 PACKAGE_SENTENCE = ("The package {pkg} is not named in the repository's dependency files, so it must not be installed. "
                     "Only packages named there may be installed.")
 
@@ -304,8 +318,11 @@ class RepoReading:
     url: str
     commit: str
     listing: list[str]
-    files: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)      # fuer den Prompt (gekuerzt): Auswahl des Modells + Pflichtdateien
     chosen: list[str] = field(default_factory=list)
+    full: dict[str, str] = field(default_factory=dict)       # Dateien mit Python-Aufruf eines Skripts (git grep), ungekuerzt (Kandidatensuche)
+    loader_files: dict[str, str] = field(default_factory=dict)   # Dateien mit DataLoader/drop_last (git grep), immer mitgegeben
+    fetch: object = None                                     # Pfad -> Text oder None (spaetes Lesen, z. B. des Einstiegsskripts)
 
 
 def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text: str, dataset: str) -> RepoReading:
@@ -339,7 +356,32 @@ def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text
     read(chosen)
     read(extra)
     read(imported_files(files, listing)[:4])
-    return RepoReading(url=url, commit=commit, listing=listing, files=files, chosen=chosen)
+
+    def fetch(p: str) -> str | None:
+        try:
+            data = sandbox.get_file(b, f"/repo/{p}")
+        except (OSError, FileNotFoundError, KeyError):
+            return None
+        return data.decode(errors="replace") if len(data) <= cand.MAX_FILE_BYTES else None
+
+    def grep(ere: str) -> list[str]:
+        out = sandbox.run(b, cand.grep_cmd(ere), 120).stdout.splitlines()
+        return [p.strip() for p in out if p.strip() in valid]
+
+    full: dict[str, str] = {}
+    for p in grep(cand.CMD_GREP_ERE)[:cand.MAX_GREP_FILES]:        # deterministisch: alle Dateien mit Python-Aufruf eines Skripts, unabhaengig von der Modellauswahl
+        text = fetch(p)
+        if text is not None:
+            full[p] = text
+    loaders: dict[str, str] = {}
+    paths = [p for p in grep(cand.LOADER_GREP_ERE) if p.endswith(".py")]
+    paths.sort(key=lambda p: (0 if re.search(r"data|loader|factory", p, re.I) else 1, p.count("/"), p))      # flache Pfade zuerst (Hauptcode vor Kopien in Unterordnern)
+    for p in paths[:MAX_LOADER_FILES]:
+        text = fetch(p)
+        if text is not None:
+            loaders[p] = text
+            files.setdefault(p, text[:MAX_FILE_CHARS])         # Loader-Dateien gehoeren immer zu den gelesenen Dateien
+    return RepoReading(url=url, commit=commit, listing=listing, files=files, chosen=chosen, full=full, loader_files=loaders, fetch=fetch)
 
 
 FALLBACK_RE = re.compile(r"(^|/)(readme[\w.-]*|[\w.-]*\.sh|(run|train|main|exp)[\w.-]*\.py|[\w/.-]*model[\w.-]*\.py|[\w/.-]*(loader|data_factory|dataset)[\w.-]*\.py)$", re.I)
@@ -429,78 +471,76 @@ def _text(x) -> str:
     return x if isinstance(x, str) else ""
 
 
-def verify_answer(ans: dict, files: dict[str, str], only: set[str] | None = None) -> dict:
-    """Prueft jede Angabe einzeln. Rueckgabe: {item: {"belegt": bool, "reason": str, "value": ...}} fuer command_source, seed,
-    test_loader.drop_last, test_loader.batch_size, needs_time_features (nur `only`, falls gesetzt).
-    Jede Angabe mit falschem Typ oder falscher Form (String statt Objekt, Liste, null, fehlender Schluessel, nicht lesbare Zahl) gilt als nicht belegt
-    und geht in denselben Rueckfall wie ein nicht woertliches Zitat."""
-    ans = _obj(ans)
+def _num(v) -> int | None:
+    """Kandidatennummer: int oder reine Ziffernfolge; bool, Fliesskomma, Listen u. a. gelten als keine Nummer."""
+    return _intval(v)
+
+
+def chosen_candidate(ans: dict, cands: list) -> "cand.Candidate | None":
+    k = _num(_obj(ans).get("command_candidate"))
+    return next((c for c in cands if c.k == k), None) if k is not None else None
+
+
+def verify_answer(ans: dict, files: dict[str, str], cands: list | None = None, loader: list | None = None, only: set[str] | None = None) -> dict:
+    """Prueft jede Angabe einzeln. Rueckgabe {item: {"belegt": bool, "reason": str, ...}} fuer command_candidate, test_loader.drop_last,
+    test_loader.batch_size, needs_time_features (nur `only`, falls gesetzt). Der Befehl und seine Quelle kommen aus der Kandidatenliste des
+    Orchestrators (nie aus der Antwort); drop_last-Zeile und Wert ebenso. Jede Angabe mit falschem Typ oder falscher Form (String statt Objekt, Liste,
+    null, fehlender Schluessel, nicht lesbare Zahl, unbekannte Nummer) gilt als nicht belegt und geht in denselben Rueckfall."""
+    ans, cands, loader = _obj(ans), cands or [], loader or []
     out: dict[str, dict] = {}
     want = lambda k: only is None or k in only  # noqa: E731
-    cmd = sanitize_command(_text(ans.get("command")))
+    chosen = chosen_candidate(ans, cands)
 
-    if want("command_source"):
-        raw = ans.get("command_source")
-        src = _obj(raw)
-        ok, why = _quote_ok(src.get("quote"), src.get("file"), files) if src else (False, "command_source must be an object with file and quote")
-        out["command_source"] = {"belegt": ok, "reason": why, "file": src.get("file"), "quote": src.get("quote")}
-
-    if want("seed"):
-        raw = ans.get("seed")
-        seed = _obj(raw)
-        kind = seed.get("kind")
-        res: dict = {"belegt": False, "reason": "", "kind": kind if isinstance(kind, str) else None}
-        if not seed:
-            res["reason"] = "seed must be an object with kind (flag, copy or none)"
-            if raw in ("none", "None"):      # gerettet: ausdruecklich "keine Seed-Methode"
-                res.update(belegt=True, kind="none", reason="")
-        elif kind == "none":
-            res.update(belegt=True, kind="none")
-        elif kind == "flag":
-            flag = _text(seed.get("flag"))
-            defs = [t for t in files.values() if "add_argument" in t or "DEFINE_" in t]
-            hit = next((t for t in defs if re.search(rf"""['"]{re.escape(flag)}['"]""", t)), None) if flag.startswith("--") else None
-            if hit:
-                m = re.search(rf"""['"]{re.escape(flag)}['"][^)]*?default\s*=\s*(-?\d+)""", hit, re.S)
-                res.update(belegt=True, flag=flag, repo_seed=int(m.group(1)) if m else None)
-            else:
-                res["reason"] = "switch not found in an argument definition of the provided files"
-        elif kind == "copy":
-            path, line = _text(seed.get("file")), _text(seed.get("line"))
-            text = files.get(path, "")
-            matches = [l for l in text.splitlines() if l.strip() == line.strip() and line.strip()]
-            ints = re.findall(r"(?<![\w.])-?\d+(?![\w.])", line)
-            if not line.strip():
-                res["reason"] = "kind copy needs the verbatim seed line"
-            elif path != script_of(cmd):
-                res["reason"] = "seed line is not in the entry script of the command"
-            elif len(matches) != 1 or len(ints) != 1:
-                res["reason"] = f"seed line must occur exactly once and contain exactly one integer (found {len(matches)} lines, {len(ints)} integers)"
-            else:
-                actual = matches[0]
-                template = actual.replace("{", "{{").replace("}", "}}")
-                template = re.sub(r"(?<![\w.])-?\d+(?![\w.])", "{seed}", template, count=1)
-                res.update(belegt=True, file=path, regex=re.escape(actual), template=template, repo_seed=int(ints[0]))
+    if want("command_candidate"):
+        raw = ans.get("command_candidate")
+        if raw is None:
+            out["command_candidate"] = {"belegt": False, "reason": "no candidate chosen", "k": None}
+        elif chosen is None:
+            out["command_candidate"] = {"belegt": False, "reason": f"{str(raw)[:40]!r} is not the number of a listed command", "k": None}
         else:
-            res["reason"] = "seed.kind must be flag, copy or none"
-        out["seed"] = res
+            out["command_candidate"] = {"belegt": True, "reason": "", "k": chosen.k, "file": chosen.file, "line": chosen.line, "text": chosen.text,
+                                        "command": chosen.command, "note": chosen.note}
 
     tl = _obj(ans.get("test_loader"))
     if want("test_loader.drop_last"):
         d = _obj(tl.get("drop_last"))
-        ok, why = _quote_ok(d.get("quote"), d.get("file"), files) if d else (False, "drop_last must be an object with value, file and quote")
-        if ok and "drop_last" not in str(d.get("quote")):
-            ok, why = False, "quote does not mention drop_last"
-        if ok and not isinstance(d.get("value"), bool):
-            ok, why = False, "value must be true or false"
-        out["test_loader.drop_last"] = {"belegt": ok, "reason": why, "value": d.get("value"), "file": d.get("file"), "quote": d.get("quote")}
+        k = _num(d.get("candidate"))
+        line = next((l for l in loader if l.k == k), None) if k is not None else None
+        val = cand.drop_last_value(line.text) if line else None
+        if not d:
+            res = {"belegt": False, "reason": "drop_last must be an object with candidate and value", "value": None}
+        elif line is None:
+            res = {"belegt": False, "reason": "no listed drop_last line chosen", "value": None}
+        elif val is None:
+            res = {"belegt": False, "reason": "the chosen line does not set drop_last to a literal True or False", "value": None}
+        else:
+            res = {"belegt": True, "reason": "", "value": val, "file": line.file, "line": line.line, "text": line.text}
+            if isinstance(d.get("value"), bool) and d["value"] != val:
+                res["model_value"] = d["value"]          # das Modell widerspricht der Zeile: die Zeile gilt
+        out["test_loader.drop_last"] = res
+
     if want("test_loader.batch_size"):
         d = _obj(tl.get("batch_size"))
-        v = _intval(d.get("value"))     # '128' als Ziffernfolge wird gerettet; das Zitat entscheidet
-        ok, why = _quote_ok(d.get("quote"), d.get("file"), files, extra_hay=cmd) if d else (False, "batch_size must be an object with value, file and quote")
-        if ok and (v is None or v <= 0 or not re.search(rf"(?<![\d.]){v}(?![\d.])", str(d.get("quote")))):
-            ok, why = False, "batch size value does not appear in the quote"
-        out["test_loader.batch_size"] = {"belegt": ok, "reason": why, "value": v, "file": d.get("file"), "quote": d.get("quote")}
+        res = {"belegt": False, "reason": "batch_size must be an object with switch, or file and quote", "value": None}
+        sw = d.get("switch")
+        if isinstance(sw, str) and sw.startswith("-"):
+            v = cand.switch_value(chosen.command, sw) if chosen else None
+            if v is not None:
+                res = {"belegt": True, "reason": "", "value": v, "source": "command", "switch": sw}
+            else:
+                dflt = cand.argument_default(sw, files)
+                if dflt:
+                    res = {"belegt": True, "reason": "", "value": dflt[0], "source": f"{dflt[1]}:{dflt[2]}", "switch": sw, "quote": dflt[3]}
+                else:
+                    res["reason"] = f"no value of {sw} in the command and no default= in an argument definition"
+        elif d.get("quote") is not None or d.get("file") is not None:
+            ok, why = _quote_ok(d.get("quote"), d.get("file"), files)
+            ints = re.findall(r"(?<![\w.])\d+(?![\w.])", _text(d.get("quote")))
+            if ok and len(ints) == 1:
+                res = {"belegt": True, "reason": "", "value": int(ints[0]), "source": f"{d.get('file')}", "quote": d.get("quote")}
+            else:
+                res["reason"] = why or "the quote must contain exactly one number"
+        out["test_loader.batch_size"] = res
 
     if want("needs_time_features"):
         raw = ans.get("needs_time_features")
@@ -526,6 +566,10 @@ def pick_files(files: dict[str, str], *names) -> list[str]:
 class AgentRecord:
     """Alles, was das Modell geliefert hat, und was davon belegt wurde (Dossier: nachlauf[claim]["agent"])."""
     reading: dict = field(default_factory=dict)
+    candidates: dict = field(default_factory=dict)       # Zahl gefunden/gezeigt/verworfen, Stichprobe der verworfenen, gezeigte Liste, Wahl
+    seed_candidates: list = field(default_factory=list)
+    seed_choice: dict = field(default_factory=dict)
+    loader_lines: list = field(default_factory=list)
     command_answer: dict = field(default_factory=dict)
     verification: dict = field(default_factory=dict)
     discarded: list = field(default_factory=list)
@@ -563,6 +607,9 @@ class NachlaufAgent:
         self.rng, self.np_rng, self.parallel = rng, np_rng, parallel
         self.explore_offsets = explore_offsets
         self.rec = AgentRecord()
+        self.cands: list = []        # nummerierte Kandidaten im Prompt
+        self.loader: list = []       # drop_last-Zeilen im Prompt
+        self.chosen: "cand.Candidate | None" = None
 
     # -- Hilfen
     def emit(self, type: str, **data) -> None:
@@ -574,68 +621,76 @@ class NachlaufAgent:
             (self.out_dir / name).write_text(text)
 
     # -- Schritt 2: Startbefehl
+    def _cand_listing(self) -> str:
+        return "\n".join(c.line_text() for c in self.cands) or "(none)"
+
     def ask_command(self, claim_text: str, dataset: str, reading: RepoReading) -> tuple[dict, dict]:
         files_txt = _render_files(reading.files)
+        ci = self.rec.candidates
+        counts = f"{ci['n_shown']} of {ci['n_total']} shown" + (f", {ci['n_dropped']} more not shown" if ci["n_dropped"] else "")
         ans = self.asker.json("start_command", COMMAND_SYSTEM, COMMAND_USER.format(
-            claim=claim_text, dataset=dataset, format=COMMAND_FORMAT, listing="\n".join(reading.listing[:80]), files=files_txt), required="command")
-        ver = verify_answer(ans, reading.files)
-        bad = [k for k, v in ver.items() if not v["belegt"]]
-        if bad:
-            detail = "; ".join(f"{k} ({ver[k]['reason']})" for k in bad)
-            self.emit("nachlauf_repair", kind="requote", items=bad)
-            again = self.asker.json("start_command_requote", COMMAND_SYSTEM, COMMAND_REASK.format(
-                claim=claim_text, dataset=dataset, items=detail, files=files_txt))
-            merged = {**ans}
-            again = _obj(again)
-            for k in bad:
-                top, _, sub = k.partition(".")
-                new = again.get(top)
-                if new is None:
-                    continue
-                if sub:
-                    base = dict(_obj(merged.get(top)))
-                    base[sub] = new.get(sub) if isinstance(new, dict) else None
-                    merged[top] = base
-                else:
-                    merged[top] = new
-            ver2 = verify_answer(merged, reading.files, only=set(bad))
-            for k in bad:
-                if not ver2.get(k, {"belegt": False})["belegt"]:
-                    self.rec.discarded.append({"item": k, "first": ver[k], "second": ver2.get(k)})
+            claim=claim_text, dataset=dataset, format=COMMAND_FORMAT, counts=counts, candidates=self._cand_listing(),
+            loader="\n".join(l.line_text() for l in self.loader) or "(none)", listing="\n".join(reading.listing[:80]), files=files_txt))
+        ver = verify_answer(ans, reading.files, self.cands, self.loader)
+        # Nummern und Zeilen werden nicht nachgefragt (kein Zitat zu pruefen); nur das Zitat der Zeitmerkmale darf einmal neu erfragt werden
+        for k, v in ver.items():
+            if not v["belegt"] and k != "needs_time_features":
+                self.rec.discarded.append({"item": k, "first": v, "second": None})
+        if not ver["needs_time_features"]["belegt"]:
+            detail = f"needs_time_features ({ver['needs_time_features']['reason']})"
+            self.emit("nachlauf_repair", kind="requote", items=["needs_time_features"])
+            again = _obj(self.asker.json("start_command_requote", COMMAND_SYSTEM, COMMAND_REASK.format(
+                claim=claim_text, dataset=dataset, items=detail, files=files_txt)))
+            merged = {**_obj(ans)}
+            if again.get("needs_time_features") is not None:
+                merged["needs_time_features"] = again["needs_time_features"]
+            ver2 = verify_answer(merged, reading.files, self.cands, self.loader, only={"needs_time_features"})
+            if not ver2["needs_time_features"]["belegt"]:
+                self.rec.discarded.append({"item": "needs_time_features", "first": ver["needs_time_features"], "second": ver2["needs_time_features"]})
             ans, ver = merged, {**ver, **ver2}
-        return ans, ver
+        return _obj(ans), ver
+
+    def ask_seed(self, chosen: "cand.Candidate", reading: RepoReading) -> dict:
+        """Seed-Kandidaten im Einstiegsskript des GEWAEHLTEN Befehls (deterministisch), das Modell waehlt per Nummer. Rueckgabe: Spec-Seed."""
+        script = chosen.script
+        text = reading.full.get(script) or (reading.fetch(script) if callable(reading.fetch) else None) or ""
+        if text:
+            reading.files.setdefault(script, text[:MAX_FILE_CHARS])
+        sc = cand.seed_candidates(script, text)
+        self.rec.seed_candidates = [c.line_text() for c in sc]
+        none = {"kind": "none", "repo_seed": None}
+        if not sc:
+            return none
+        ans = _obj(self.asker.json("choose_seed", COMMAND_SYSTEM, SEED_USER.format(
+            command=chosen.command, script=script, seeds="\n".join(c.line_text() for c in sc))))
+        k = _num(ans.get("seed_candidate"))
+        pick = next((c for c in sc if c.k == k), None) if k is not None else None
+        spec_seed = cand.seed_spec(pick, text) if pick else None
+        if spec_seed is None:
+            self.rec.discarded.append({"item": "seed", "first": {"reason": "no usable seed line chosen" if pick is None else "chosen line is not unique or has not exactly one number",
+                                                                 "k": k}, "second": None})
+            return none
+        self.rec.seed_choice = {"k": pick.k, "file": pick.file, "line": pick.line, "text": pick.text, "kind": pick.kind}
+        return spec_seed
 
     def _spec(self, claim: Claim, paper_id: str, url: str, commit: str, ans: dict, ver: dict, reading: RepoReading,
-              seed_override: dict | None = None) -> nl.UnitSpec:
+              chosen: "cand.Candidate", seed: dict) -> nl.UnitSpec:
         files = reading.files
         ans = _obj(ans)
-        cmd = sanitize_command(_text(ans.get("command")))
-        src = _obj(ans.get("command_source"))
-        src_file = _text(src.get("file"))
-        line = line_number(files.get(src_file, ""), _text(src.get("quote"))) if ver.get("command_source", {}).get("belegt") else 0
-        seed_v = ver.get("seed", {})
-        if seed_v.get("belegt") and seed_v.get("kind") == "copy":
-            seed = {"kind": "copy", "repo_seed": seed_v["repo_seed"], "regex": seed_v["regex"], "template": seed_v["template"]}
-        elif seed_v.get("belegt") and seed_v.get("kind") == "flag":
-            seed = {"kind": "flag", "flag": seed_v["flag"], "repo_seed": seed_v.get("repo_seed")}
-        else:
-            seed = {"kind": "none", "repo_seed": None}
         dl, bs = ver.get("test_loader.drop_last", {}), ver.get("test_loader.batch_size", {})
         if dl.get("belegt") and bs.get("belegt"):
-            test_loader = {"drop_last": bool(dl["value"]), "batch": int(bs["value"]),
-                           "source": f"{dl.get('file')}:{line_number(files.get(dl.get('file'), ''), str(dl.get('quote')))}"}
+            test_loader = {"drop_last": bool(dl["value"]), "batch": int(bs["value"]), "source": f"{dl['file']}:{dl['line']}", "batch_source": bs.get("source")}
         elif dl.get("belegt") and dl["value"] is False:
-            test_loader = {"drop_last": False, "batch": int(bs.get("value") or 0), "source": f"{dl.get('file')}:{line_number(files.get(dl.get('file'), ''), str(dl.get('quote')))}"}
+            test_loader = {"drop_last": False, "batch": 0, "source": f"{dl['file']}:{dl['line']}"}       # ohne drop_last zaehlt die Batchgroesse nicht
         else:
-            test_loader = {"drop_last": False, "batch": 0, "source": None, "belegt": False}   # P3 vergleicht mit allen Fenstern
-        script = script_of(cmd)
+            test_loader = {"drop_last": False, "batch": 0, "source": None, "belegt": False}              # P3 vergleicht mit allen Fenstern
         argfiles = [p for p, t in files.items() if "add_argument" in t]
         reqs = [p for p in files if re.search(r"(^|/)requirements[\w.-]*\.txt$", p)]
         return nl.UnitSpec(
             unit=re.sub(r"[^a-z0-9]+", "", paper_id.lower())[:24] or "unit", paper_id=f"nachlauf/{paper_id}", claim_text=claim.text, target=claim.target,
-            tolerance=claim.tolerance, repo_url=url, commit=commit, command=cmd, command_source={"file": src_file, "line": line}, script=script,
-            seed=seed, adapter_source="", test_loader=test_loader, argparse_files=argfiles, requirements_files=reqs, pip_packages=list(BASE_PIP),
-            checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or "checkpoints/*/*.pth",
+            tolerance=claim.tolerance, repo_url=url, commit=commit, command=chosen.command, command_source={"file": chosen.file, "line": chosen.line},
+            script=chosen.script, seed=seed, adapter_source="", test_loader=test_loader, argparse_files=argfiles, requirements_files=reqs,
+            pip_packages=list(BASE_PIP), checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or "checkpoints/*/*.pth",
             own_metric_pattern=rf"(?im)^\s*(?:test[ _-]*)?{re.escape(claim.metric)}\s*[:=]\s*([0-9.eE+-]+)", metric=claim.metric, claim_id=claim.id,
             seed_note={"copy": "copy of the entry script, only the seed line changed (diff checked in the branch)",
                        "flag": "command-line switch of the repository", "none": "no seed method: single measurement"}[seed["kind"]],
@@ -645,7 +700,8 @@ class NachlaufAgent:
     # -- Schritt 3a: Training mit Reparatur
     def _repair_command(self, claim: Claim, dataset: str, spec: nl.UnitSpec, reading: RepoReading, problem: str) -> dict:
         ans = self.asker.json("repair_command", COMMAND_SYSTEM, REPAIR_COMMAND_USER.format(
-            claim=claim.text, dataset=dataset, command=spec.command, problem=problem[-1500:], files=_render_files(reading.files)), required="command")
+            claim=claim.text, dataset=dataset, command=spec.command, k=self.chosen.k if self.chosen else "?", problem=problem[-1500:],
+            candidates=self._cand_listing(), files=_render_files(reading.files)))
         return ans
 
     def _dependency_text(self, reading: RepoReading) -> str:
@@ -697,18 +753,31 @@ class NachlaufAgent:
             for pkg in installs:
                 named = PKG_NAME_RE.match(pkg) and re.search(rf"(?<![\w.-]){re.escape(_norm(pkg))}(?![\w.-])", dep)
                 (ok_pk if named else rejected_pk).append(pkg)
-            new_cmd = sanitize_command(_text(ans.get("command"))) or spec.command
-            ver = verify_answer({**ans, "command": new_cmd}, reading.files, only={"command_source"})
-            src = _obj(ans.get("command_source"))
-            sfile = _text(src.get("file")) or spec.command_source.get("file", "")
-            ln = line_number(reading.files.get(sfile, ""), _text(src.get("quote"))) if ver.get("command_source", {}).get("belegt") else 0
+            k_new = _num(ans.get("command_candidate"))
+            cnd = next((c for c in self.cands if c.k == k_new), None) if k_new is not None else None
+            mod = sanitize_command(_text(ans.get("command")))
+            pend: list[str] = []
+            if cnd is None:                       # Befehl ohne Kandidaten-Nummer: nie ausfuehren
+                pend.append(NO_CANDIDATE_SENTENCE)
+                self.rec.repairs.append({"kind": "command_rejected", "round": k, "reason": "no candidate number"})
+            elif mod and script_of(mod).lstrip("./").rsplit("/", 1)[-1] != cnd.script.rsplit("/", 1)[-1]:
+                pend.append(SAME_SCRIPT_SENTENCE)
+                self.rec.repairs.append({"kind": "command_rejected", "round": k, "reason": "different script", "k": cnd.k})
+            else:
+                new_cmd = mod or cnd.command
+                if cnd.script != spec.script:     # anderer Kandidat mit anderem Einstiegsskript: die Seed-Wahl galt dem alten Skript
+                    spec = dataclasses.replace(spec, seed={"kind": "none", "repo_seed": None}, seed_note="no seed method: single measurement")
+                    self.rec.repairs.append({"kind": "seed_dropped", "round": k, "reason": "script changed"})
+                self.chosen = cnd
+                spec = dataclasses.replace(spec, command=new_cmd, script=cnd.script, command_source={"file": cnd.file, "line": cnd.line})
             spec = dataclasses.replace(
-                spec, command=new_cmd, script=script_of(new_cmd) or spec.script, checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or spec.checkpoint_glob,
-                command_source={"file": sfile, "line": ln} if ln else dict(spec.command_source),
+                spec, checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or spec.checkpoint_glob,
                 pip_packages=[*spec.pip_packages, *[p for p in ok_pk if p not in spec.pip_packages]])
-            if rejected_pk:       # Paket nicht in den Abhaengigkeitsdateien: fester Satz, der naechste Versuch ist verbraucht, es laeuft nichts
-                pending = " ".join(PACKAGE_SENTENCE.format(pkg=p) for p in rejected_pk)
+            if rejected_pk:
+                pend.extend(PACKAGE_SENTENCE.format(pkg=p) for p in rejected_pk)
                 self.rec.repairs.append({"kind": "package_rejected", "round": k, "packages": rejected_pk})
+            if pend:       # abgelehnte Reparatur: fester Satz, der naechste Versuch ist verbraucht, es laeuft nichts
+                pending = " ".join(pend)
             if ok_pk:
                 self.rec.repairs.append({"kind": "package_install", "round": k, "packages": ok_pk})
                 self._rebuild(run, spec, k)
@@ -803,10 +872,7 @@ class NachlaufAgent:
             tb = traceback.format_exc()
             self._save("error.txt", tb)
             self.emit("nachlauf_repair", kind="crash", reason=f"{type(exc).__name__}: {str(exc)[:200]}")
-            spec = self._spec_cur or nl.UnitSpec(
-                unit=re.sub(r"[^a-z0-9]+", "", paper_id.lower())[:24] or "unit", paper_id=f"nachlauf/{paper_id}", claim_text=claim.text, target=claim.target,
-                tolerance=claim.tolerance, repo_url=repo_url, commit=commit, command="", command_source={}, script="",
-                seed={"kind": "none", "repo_seed": None}, adapter_source="", test_loader={}, claim_id=claim.id, metric=claim.metric, claim_source=claim.source)
+            spec = self._spec_cur or self._minimal_spec(claim, paper_id, repo_url, commit)
             claim_, dossier, info = nl.new_dossier(spec)
             reason = f"unexpected error in the agent part: {type(exc).__name__}: {str(exc)[:300]}"
             self.rec.outcome = "error"
@@ -822,21 +888,19 @@ class NachlaufAgent:
         t0 = time.time()
         claim_text = claim.text
         reading = read_repo_at_commit(self.sb, self.asker, repo_url, commit, claim_text, dataset)
+        # dokumentierte Befehle deterministisch finden (alle verfolgten Textdateien mit Python-Aufruf), Modell waehlt per Nummer
+        all_c, skipped = cand.extract_candidates(reading.full, reading.listing)
+        self.cands, cinfo = cand.narrow(all_c, cand.claim_words(claim_text, dataset))
+        cinfo["skipped_unresolved"], cinfo["shown"] = skipped, [c.line_text() for c in self.cands]
+        self.rec.candidates = cinfo
+        for c in self.cands:      # Dateien mit Kandidaten gehoeren immer zu den gelesenen Dateien, unabhaengig von der Auswahl des Modells
+            reading.files.setdefault(c.file, reading.full.get(c.file, "")[:MAX_FILE_CHARS])
+        self.loader = cand.loader_lines(reading.loader_files)
+        self.rec.loader_lines = [l.line_text() for l in self.loader]
         self.rec.reading = {"url": repo_url, "commit": commit, "n_tracked": len(reading.listing), "chosen": reading.chosen, "files": sorted(reading.files)}
-        ans, ver = self.ask_command(claim_text, dataset, reading)
-        self.rec.command_answer, self.rec.verification = ans, ver
-        self._save("command_answer.json", json.dumps({"answer": ans, "verification": ver, "discarded": self.rec.discarded}, indent=2, ensure_ascii=False, default=str))
-        spec = self._spec(claim, paper_id, repo_url, commit, ans, ver, reading)
+        spec = self._minimal_spec(claim, paper_id, repo_url, commit)
         self._spec_cur = spec
-        warnings = []
-        if not ver.get("command_source", {}).get("belegt"):
-            warnings.append("Startbefehl nicht belegt: kein woertliches Zitat in den Dateien des Repos")
-        if not ver.get("seed", {}).get("belegt") or spec.seed["kind"] == "none":
-            warnings.append("eine Messung, keine Streuung")
-        if spec.test_loader.get("belegt") is False:
-            warnings.append("Test-Loader nicht belegt: P3 vergleicht mit allen Fenstern")
-        self.emit("nachlauf_command", n=0, command=spec.command, belegt={k: v["belegt"] for k, v in ver.items()}, seed_kind=spec.seed["kind"],
-                  test_loader=spec.test_loader, discarded=[d["item"] for d in self.rec.discarded])
+        warnings: list[str] = []
 
         def finish_failed(reason: str, status_note: str) -> Dossier:
             claim_, dossier, info = nl.new_dossier(spec)
@@ -850,9 +914,31 @@ class NachlaufAgent:
             info["agent"] = self._agent_info()
             return dossier
 
+        if not self.cands:           # kein dokumentierter Befehl: kein erfundener Befehl
+            return finish_failed(NO_COMMAND_REASON, "no_command")
+        ans, ver = self.ask_command(claim_text, dataset, reading)
+        self.rec.command_answer, self.rec.verification = ans, ver
+        self._save("command_answer.json", json.dumps({"answer": ans, "verification": ver, "discarded": self.rec.discarded, "candidates": cinfo},
+                                                     indent=2, ensure_ascii=False, default=str))
+        if not ver["command_candidate"]["belegt"]:
+            return finish_failed(NO_COMMAND_REASON, "no_command")
+        self.chosen = chosen = chosen_candidate(ans, self.cands)
+        spec = self._spec(claim, paper_id, repo_url, commit, ans, ver, reading, chosen, {"kind": "none", "repo_seed": None})
+        self._spec_cur = spec
         timefeat = ver.get("needs_time_features", {})
         if timefeat.get("belegt") and timefeat.get("value"):
             return finish_failed("model needs time features, not supported in v1", "needs_time_features")
+        seed = self.ask_seed(chosen, reading)         # Seed-Pruefung NACH der Wahl des Befehls
+        spec = dataclasses.replace(spec, seed=seed, seed_note={"copy": "copy of the entry script, only the seed line changed (diff checked in the branch)",
+                                                               "flag": "command-line switch of the repository", "none": "no seed method: single measurement"}[seed["kind"]])
+        self._spec_cur = spec
+        if seed["kind"] == "none":
+            warnings.append("eine Messung, keine Streuung")
+        if spec.test_loader.get("belegt") is False:
+            warnings.append("Test-Loader nicht belegt: P3 vergleicht mit allen Fenstern")
+        self.emit("nachlauf_command", n=0, command=spec.command, command_source=spec.command_source, candidate=chosen.k,
+                  belegt={k: v["belegt"] for k, v in ver.items()}, seed_kind=spec.seed["kind"], test_loader=spec.test_loader,
+                  n_candidates=cinfo["n_total"], discarded=[d["item"] for d in self.rec.discarded])
 
         # Snapshots und Vorpruefungen (wie run_unit)
         run = nl._Run(self.sb, spec, self.events, self.log, self.public_loader, self.rng, self.np_rng)
@@ -863,7 +949,7 @@ class NachlaufAgent:
         if raw:
             return finish_failed(f"raw data in the prediction snapshot: {raw}", "raw_data")
         probe = run.probe_training()
-        run.repo_files = {**reading.files, **run.repo_files}
+        run.repo_files = {**reading.files, **reading.full, **run.repo_files}      # ungekuerzte Dateien der Kandidaten fuer P1
         run.script_text = run.repo_files.get(spec.script, "")
         if probe["head"] != commit:
             return finish_failed(f"repository commit in the snapshot {probe['head']} != {commit}", "commit_mismatch")
@@ -895,6 +981,12 @@ class NachlaufAgent:
         for w in warnings:
             if w not in dossier.warnings:
                 dossier.warnings.append(w)
+
+    def _minimal_spec(self, claim: Claim, paper_id: str, url: str, commit: str) -> nl.UnitSpec:
+        return nl.UnitSpec(
+            unit=re.sub(r"[^a-z0-9]+", "", paper_id.lower())[:24] or "unit", paper_id=f"nachlauf/{paper_id}", claim_text=claim.text, target=claim.target,
+            tolerance=claim.tolerance, repo_url=url, commit=commit, command="", command_source={}, script="", seed={"kind": "none", "repo_seed": None},
+            adapter_source="", test_loader={}, claim_id=claim.id, metric=claim.metric, claim_source=claim.source)
 
     def _agent_info(self) -> dict:
         r = self.rec

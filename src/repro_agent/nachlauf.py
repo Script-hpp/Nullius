@@ -141,6 +141,43 @@ def _shell_vars(text: str) -> dict[str, str]:
     return vars_
 
 
+_FOR_RE = re.compile(r"^\s*for\s+(\w+)\s+in\s+(.+?)\s*(?:;\s*do\s*|;\s*|\s+do\s*)?$")
+MAX_LOOP_COMBOS = 12
+
+
+def _loop_values(raw: str, vars_: dict[str, str]) -> list[str]:
+    raw = _VAR_USE.sub(lambda m: vars_.get(m.group(1) or m.group(2), m.group(0)), raw)
+    try:
+        vals = shlex.split(raw)
+    except ValueError:
+        vals = raw.split()
+    return [v for v in vals if "$" not in v and v != "do"][:MAX_LOOP_COMBOS]
+
+
+def _lines_with_vars(text: str):
+    """Logische Zeilen mit den Variablen, die fuer sie gelten: im Skript gesetzte Variablen und die Werte der umgebenden Schleifen
+    (`for v in a b; do ... done`); eine Zeile in einer Schleife kommt je Wertekombination einmal (hoechstens MAX_LOOP_COMBOS).
+    Liefert (Startzeile, Text, Variablen, Schleifenwerte)."""
+    import itertools
+    file_vars = _shell_vars(text)
+    loops: list[tuple[str, list[str]]] = []
+    for line_no, line in _logical_lines(text):
+        m = _FOR_RE.match(line)
+        if m:
+            loops.append((m.group(1), _loop_values(m.group(2), file_vars)))
+            continue
+        if re.match(r"^\s*done\b", line):
+            loops = loops[:-1]
+            continue
+        used = [(v, vals) for v, vals in loops if re.search(rf"\$\{{?{re.escape(v)}\b", line)]
+        combos = [{}]
+        if used:
+            names = [v for v, _ in used]
+            combos = [dict(zip(names, c)) for c in itertools.islice(itertools.product(*[vals or [""] for _, vals in used]), MAX_LOOP_COMBOS)]
+        for combo in combos:
+            yield line_no, line, {**file_vars, **combo}, combo
+
+
 def _tokens(line: str, vars_: dict[str, str] | None = None) -> list[str]:
     line = _LOG_RE.sub(" ", line)
     if vars_:
@@ -211,9 +248,8 @@ def check_command(command: str, repo_files: dict[str, str], source: dict) -> dic
     text = repo_files.get(source["file"], "")
     cmd_prefix, cmd_flags = _parse(_tokens(command))
     keys = [t for t in cmd_prefix if t.endswith(".py")] or cmd_prefix[-1:]
-    vars_ = _shell_vars(text)
     best: tuple[int, int, str, list[dict]] | None = None
-    for line_no, line in _logical_lines(text):
+    for line_no, line, vars_, _combo in _lines_with_vars(text):
         toks = _tokens(line, vars_)
         prefix, flags = _parse(toks)
         if not any(k in prefix for k in keys):

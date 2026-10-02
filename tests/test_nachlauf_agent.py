@@ -13,6 +13,7 @@ import pytest
 
 from repro_agent import nachlauf as nl
 from repro_agent import nachlauf_agent as na
+from repro_agent import nachlauf_candidates as cand
 from repro_agent.dossier import Claim
 from repro_agent.harness import independence as ind
 from repro_agent.llm import LLMResponse
@@ -28,30 +29,50 @@ CMD = "python -u train_gizmo.py --task demo --horizon 96 --lr 0.01 --input_len 3
 
 # ---- erfundenes Repo ("gizmo"): keine Datei, kein Name und kein Schalter der Entwicklungs-Repos -----------------------------------
 
+RUN_SH = """model=gizmonet
+len=336
+for h in 24 96; do
+python -u train_gizmo.py --task demo --model $model --horizon $h --input_len $len --lr 0.01 \\
+  --batch_size 128 > logs/h$h.log 2>&1
+done
+
+python -u train_gizmo.py --task other --horizon 24
+"""
+CMD = "python -u train_gizmo.py --task demo --model gizmonet --horizon 96 --input_len 336 --lr 0.01 --batch_size 128"
 REPO = {
-    "README.md": f"# Gizmo\nRun the demo experiment:\n\n{CMD}\n\nOther tasks: python -u train_gizmo.py --task other --horizon 24\n",
+    "README.md": "# Gizmo\nSee scripts/ for the commands of each experiment.\n",
+    "scripts/run_demo.sh": RUN_SH,
     "train_gizmo.py": ("import argparse\nseed = 4242\nparser = argparse.ArgumentParser()\n"
                        "parser.add_argument('--horizon', type=int, default=24, help='forecast length')\n"
                        "parser.add_argument('--use_all', action='store_true', help='train on the entire dataset incl. the test part')\n"
-                       "parser.add_argument('--lr', type=float, default=0.01, help='learning rate')\n"),
+                       "parser.add_argument('--lr', type=float, default=0.01, help='learning rate')\n"
+                       "parser.add_argument('--batch_size', type=int, default=64, help='batch size')\n"
+                       "parser.add_argument('--seed', type=int, default=7, help='random seed')\n"),
     "gizmo/model.py": "import torch.nn as nn\nclass Model(nn.Module):\n    def __init__(self, cfg):\n        self.lin = nn.Linear(cfg.input_len, cfg.horizon)\n    def forward(self, x):\n        return self.lin(x)\n",
     "gizmo/loop.py": "def run():\n    torch.save(model.state_dict(), 'out/demo/weights.bin')\n    print('mse:', test_mse)\n",
-    "gizmo/loader.py": "def make(flag):\n    batch_size = 128\n    drop_last = True\n",
+    "gizmo/loader.py": "def make(flag, args):\n    batch_size = args.batch_size\n    drop_last = True\n",
     "requirements.txt": "numpy\nfoo-lib==1.0\n",
     "docs/notes.md": "unrelated notes\n",
 }
 LISTING = sorted(REPO) + ["LICENSE", "assets/logo.png"]
-GOOD = {
-    "command": CMD,
-    "command_source": {"file": "README.md", "quote": CMD},
-    "seed": {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 4242"},
-    "checkpoint_glob": "out/*/weights.bin",
-    "test_loader": {"drop_last": {"value": True, "file": "gizmo/loader.py", "quote": "drop_last = True"},
-                    "batch_size": {"value": 128, "file": "gizmo/loader.py", "quote": "batch_size = 128"}},
-    "input_len": 336, "output_len": 96,
-    "needs_time_features": {"value": False, "file": "gizmo/model.py", "quote": None},
-    "model_file": "gizmo/model.py", "training_file": "gizmo/loop.py",
-}
+
+
+def pick(user: str, needle: str) -> int | None:
+    """Nummer der Zeile `[k] ...` im Prompt, die `needle` enthaelt (das Modell waehlt per Nummer)."""
+    m = re.search(rf"^\[(\d+)\][^\n]*{re.escape(needle)}", user, re.M)
+    return int(m.group(1)) if m else None
+
+
+def good_answer(user: str) -> str:
+    return jx({"command_candidate": pick(user, "h=96"), "command": "python evil_invented.py --x 1",     # frei erfundener Befehl: wird ignoriert
+               "checkpoint_glob": "out/*/weights.bin",
+               "test_loader": {"drop_last": {"candidate": pick(user, "drop_last = True"), "value": True}, "batch_size": {"switch": "--batch_size"}},
+               "input_len": 336, "output_len": 96, "needs_time_features": {"value": False, "file": "gizmo/model.py", "quote": None},
+               "model_file": "gizmo/model.py", "training_file": "gizmo/loop.py"})
+
+
+def seed_answer(needle: str = "seed = 4242"):
+    return lambda user: jx({"seed_candidate": pick(user, needle)})
 
 
 def jx(obj) -> str:
@@ -99,9 +120,16 @@ class AgentSandbox(SeriesFake):
 
     def run(self, b, cmd, timeout_s):
         f, kind = self.branches[b], self.kind[b]
+        if cmd.startswith("cd /repo && git grep -lIE"):
+            self.ops.append(("run", b, cmd, timeout_s))
+            import shlex as _sh
+            ere = _sh.split(cmd)[6]
+            rx = re.compile(ere.replace("[[:space:]]", r"\s"))
+            hits = sorted(p for p, t in self.repo.items() if rx.search(t) and not p.endswith((".csv", ".json", ".ipynb")))
+            return RunResult(0, "".join(h + "\n" for h in hits), "", False)
         if cmd.startswith("cd /repo && git ls-files"):
             self.ops.append(("run", b, cmd, timeout_s))
-            return RunResult(0, "\n".join(LISTING) + "\n", "", False)
+            return RunResult(0, "\n".join(sorted(self.repo) + ["LICENSE", "assets/logo.png"]) + "\n", "", False)
         if cmd.startswith("ls -1 /work/repo/"):
             self.ops.append(("run", b, cmd, timeout_s))
             pat = cmd.split()[2]
@@ -163,7 +191,7 @@ class FakeLLM:
 
 def base_script(**over) -> dict:
     s = {"select_files": ["```json\n" + json.dumps(["README.md", "train_gizmo.py", "gizmo/model.py", "gizmo/loop.py", "gizmo/loader.py"]) + "\n```"],
-         "start_command": [jx(GOOD)], "write_adapter": [code("honest")]}
+         "start_command": [good_answer], "choose_seed": [seed_answer()], "write_adapter": [code("honest")]}
     s.update(over)
     return s
 
@@ -186,23 +214,31 @@ def info_of(d):
 
 # ---- Gut-Fall ------------------------------------------------------------------------------------------------------------------
 
+def ok_train_script(fail_first=0, stderr="RuntimeError: boom\n"):
+    return lambda n, cmd: (1, "stdout-only-marker-77", stderr) if n <= fail_first else None
+
+
 def test_good_case_from_start_to_verdict(tmp_path):
-    sb, llm = AgentSandbox(), None
+    sb = AgentSandbox()
     llm = FakeLLM(base_script())
     d, agent = go(sb, llm, tmp_path)
-    assert llm.purposes() == ["select_files", "start_command", "write_adapter"]       # 3 Aufrufe im Normalfall
+    assert llm.purposes() == ["select_files", "start_command", "choose_seed", "write_adapter"]      # 4 Aufrufe im Normalfall
     assert d.mode == "nachlauf" and d.verdicts[0].urteil == "reproduziert"
     info = info_of(d)
-    assert info["command"] == CMD and info["command_documented"] is True and info["command_source"] == {"file": "README.md", "line": 4}
-    assert info["seed_method"].startswith("copy") and info["test_loader"] == {"drop_last": True, "batch": 128, "source": "gizmo/loader.py:3"}
+    # Befehl und Quelle kommen aus der Kandidatenliste (Datei, Zeile), nicht aus der Antwort des Modells ("evil_invented.py" wird ignoriert)
+    assert info["command"] == CMD and info["command_documented"] is True and info["command_source"] == {"file": "scripts/run_demo.sh", "line": 4}
+    assert "evil_invented" not in json.dumps(info["command"]) and info["seed_method"].startswith("copy")
+    assert info["test_loader"] == {"drop_last": True, "batch": 128, "source": "gizmo/loader.py:3", "batch_source": "command"}
     assert info["own_metric"].keys() == {"4242", "0"} and info["self_check"]["4242"]["status"] == "geprueft"
     assert info["independence"]["0"]["ok"] and info["env_diff"] == [{"package": "foo-lib", "required": "==1.0", "installed": None}]
     ag = info["agent"]
-    assert ag["outcome"] == "ok" and ag["n_llm_calls"] == 3 and ag["verification"]["command_source"]["belegt"] and ag["discarded"] == []
+    assert ag["outcome"] == "ok" and ag["n_llm_calls"] == 4 and ag["verification"]["command_candidate"]["belegt"] and ag["discarded"] == []
+    assert ag["candidates"]["n_total"] == 3 and ag["candidates"]["n_shown"] == 3 and ag["candidates"]["n_dropped"] == 0
+    assert ag["seed_choice"]["text"] == "seed = 4242" and any("train_gizmo.py:2" in x for x in ag["seed_candidates"])
     assert [a.status for a in d.attempts] == ["stabil", "stabil"]
-    # Seeds: Repo-Seed mit unveraendertem Skript, Seed 0 ueber Seed-Kopie
     trains = [o[2] for o in sb.ops if o[0] == "run" and "unshare -n" in o[2] and "train_gizmo" in o[2]]
     assert len(trains) == 3 and " train_gizmo.py " in trains[0] and "/opt/seed/train_gizmo.py" in trains[-1]      # Erkundung, Repo-Seed, Seed 0
+    assert all("evil_invented" not in t for t in trains)
     types_ = {json.loads(l)["type"] for l in (tmp_path / "events.jsonl").read_text().splitlines()}
     assert {"nachlauf_command", "nachlauf_adapter", "nachlauf_train", "nachlauf_independence"} <= types_
     assert list(tmp_path.glob("adapter_*.py")) and (tmp_path / "command_answer.json").exists()
@@ -218,49 +254,196 @@ def test_adapter_and_branch_isolation_in_the_agent_flow(tmp_path):
     assert not any(o[0] == "run" and "predict.py" in o[2] and sb.kind[o[1]] != "predict" for o in sb.ops)
 
 
-# ---- Zitate -----------------------------------------------------------------------------------------------------------------
+# ---- Kandidaten (38c) ------------------------------------------------------------------------------------------------------------
 
-def test_non_literal_quote_is_asked_again_once_then_accepted(tmp_path):
-    bad = json.loads(json.dumps(GOOD))
-    bad["command_source"]["quote"] = "python train_gizmo.py --horizon 96"          # steht so nicht in der Datei
-    fixed = {"command_source": GOOD["command_source"]}
+def test_candidates_are_found_although_the_model_does_not_select_the_command_file(tmp_path):
+    sel = "```json\n" + json.dumps(["train_gizmo.py", "gizmo/model.py"]) + "\n```"          # run_demo.sh fehlt in der Auswahl des Modells
     sb = AgentSandbox()
-    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=[jx(fixed)]))
+    llm = FakeLLM(base_script(select_files=[sel]))
+    d, agent = go(sb, llm, tmp_path)
+    prompt = next(c[2] for c in llm.calls if c[0] == "start_command")
+    assert "scripts/run_demo.sh:4:" in prompt and "(command with h=96:" in prompt
+    assert "scripts/run_demo.sh" in info_of(d)["agent"]["reading"]["files"]                  # Dateien mit Kandidaten gehoeren immer zu den gelesenen
+    assert info_of(d)["command_source"] == {"file": "scripts/run_demo.sh", "line": 4} and info_of(d)["command"] == CMD
+    assert "gizmo/loader.py" in info_of(d)["agent"]["reading"]["files"]                       # Loader-Dateien ebenso (DataLoader/drop_last per grep)
+
+
+def test_extract_candidates_from_shell_loop_with_variables_and_continuation_lines():
+    cs, skipped = cand.extract_candidates({"scripts/run_demo.sh": RUN_SH + 'python -u train_gizmo.py --x $nowhere\n'}, LISTING)
+    assert skipped == 1
+    got = [(c.file, c.line, c.note, c.command) for c in cs]
+    assert got == [
+        ("scripts/run_demo.sh", 4, "h=24", CMD.replace("--horizon 96", "--horizon 24")),
+        ("scripts/run_demo.sh", 4, "h=96", CMD),
+        ("scripts/run_demo.sh", 8, "", "python -u train_gizmo.py --task other --horizon 24"),
+    ]
+    assert cs[0].text.endswith("--batch_size 128 > logs/h$h.log 2>&1") and cs[0].script == "train_gizmo.py"
+    # Aufrufe von Dateien, die nicht im Repo liegen, und `python -m` sind keine Kandidaten
+    none, _ = cand.extract_candidates({"a.md": "run `python -u not_in_repo.py --x 1` or python -m pkg.mod --y\n"}, LISTING)
+    assert none == []
+    md, _ = cand.extract_candidates({"README.md": "Train:\n\n    python train_gizmo.py --task demo && echo done\n"}, LISTING)
+    assert [c.command for c in md] == ["python train_gizmo.py --task demo"]
+
+
+def test_check_command_resolves_loop_variables():
+    r = nl.check_command(CMD, {"scripts/run_demo.sh": RUN_SH}, {"file": "scripts/run_demo.sh", "line": 4})
+    assert r["documented"] is True and r["diff"] == [] and r["source"]["line"] == 4
+
+
+def test_no_candidate_gives_setup_verdict_without_any_training(tmp_path):
+    repo = {k: v for k, v in REPO.items() if k != "scripts/run_demo.sh"}
+    sb = AgentSandbox(repo=repo)
+    llm = FakeLLM(base_script())
     d, _ = go(sb, llm, tmp_path)
-    assert llm.purposes().count("start_command_requote") == 1
-    ag = info_of(d)["agent"]
-    assert ag["verification"]["command_source"]["belegt"] and ag["discarded"] == []
-    assert not [w for w in d.warnings if "nicht belegt" in w]
+    v = d.verdicts[0]
+    assert v.urteil == "nicht reproduzierbar (Setup)" and na.NO_COMMAND_REASON in v.explanation
+    assert "start_command" not in llm.purposes() and not any(o[0] == "run" and "unshare" in o[2] for o in sb.ops)    # kein Modellaufruf, kein Training
+    assert not any(o[0] == "snapshot" and not o[1].startswith("nachlauf-read") for o in sb.ops)
+    assert info_of(d)["agent"]["outcome"] == "no_command"
 
 
-def test_still_unbelegt_after_the_second_ask_falls_back(tmp_path):
-    bad = json.loads(json.dumps(GOOD))
-    bad["command"] = CMD.replace("--lr 0.01", "--lr 0.5")                                                 # steht so nirgends im Repo
-    bad["command_source"]["quote"] = "python totally_made_up.py"
-    bad["seed"] = {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 1234"}                      # Zeile gibt es nicht
-    bad["test_loader"]["drop_last"]["quote"] = "drop_last = False"                                         # steht nicht in der Datei
+def test_model_chooses_none_gives_the_same_setup_verdict(tmp_path):
+    none = lambda user: jx({"command_candidate": None, "checkpoint_glob": "out/*/weights.bin"})  # noqa: E731
     sb = AgentSandbox()
-    sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"      # ohne belegten Loader gilt der Wert ueber alle Fenster
-    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=[jx({"command_source": bad["command_source"], "seed": bad["seed"],
-                                                                                   "test_loader": {"drop_last": bad["test_loader"]["drop_last"]}})]))
-    d, _ = go(sb, llm, tmp_path)
-    assert llm.purposes().count("start_command_requote") == 1                                              # genau einmal neu gefragt
-    info, ag = info_of(d), info_of(d)["agent"]
-    assert {x["item"] for x in ag["discarded"]} == {"command_source", "seed", "test_loader.drop_last"}
-    assert info["command_documented"] is False and any("Startbefehl nicht belegt" in w for w in d.warnings)            # P1 meldet es, Lauf geht weiter
-    assert "eine Messung, keine Streuung" in d.warnings and any("Test-Loader nicht belegt" in w for w in d.warnings)
-    assert [a.seed for a in d.attempts if a.status in ("stabil", "abweichung")] == [4242] or [a.seed for a in d.attempts if a.status in ("stabil", "abweichung")] == [None]
-    assert info["test_loader"]["source"] is None and list(info["self_check"].values())[0]["compared_with"] == "all_windows"  # P3 mit allen Fenstern
+    d, _ = go(sb, FakeLLM(base_script(start_command=[none])), tmp_path)
+    assert d.verdicts[0].urteil == "nicht reproduzierbar (Setup)" and na.NO_COMMAND_REASON in d.verdicts[0].explanation
+    assert not any(o[0] == "run" and "unshare" in o[2] for o in sb.ops)
 
+
+def test_unknown_candidate_number_is_no_command(tmp_path):
+    bad = lambda user: jx({"command_candidate": 99})  # noqa: E731
+    d, _ = go(AgentSandbox(), FakeLLM(base_script(start_command=[bad])), tmp_path)
+    assert na.NO_COMMAND_REASON in d.verdicts[0].explanation
+    assert info_of(d)["agent"]["discarded"][0]["item"] == "command_candidate"
+
+
+def many_candidates(n):
+    lines = [f"python -u train_gizmo.py --task t{i} --horizon 24" for i in range(n)]
+    lines += ["python -u train_gizmo.py --task demo --model gizmonet --horizon 96"]
+    return "\n".join(lines) + "\n"
+
+
+def test_narrowing_prefers_claim_words_and_counts_the_rest():
+    text = many_candidates(60)
+    cs, _ = cand.extract_candidates({"scripts/many.sh": text}, LISTING)
+    shown, info = cand.narrow(cs, cand.claim_words("GizmoNet reaches MSE 0.40 on ETTh1 at horizon 96 (input window 336)", "ETTh1"))
+    assert info["n_total"] == 61 and info["n_shown"] == cand.MAX_CANDIDATES_PROMPT == len(shown) and info["n_dropped"] == 31
+    assert any("--horizon 96" in c.command for c in shown) and shown[0].k == 1 and [c.k for c in shown] == list(range(1, 31))
+    assert info["words"]["model"] == "GizmoNet" and info["dropped_sample"]
+
+
+def test_narrowing_is_recorded_in_the_dossier_and_prompt(tmp_path):
+    repo = {**REPO, "scripts/many.sh": many_candidates(60)}
+    sb = AgentSandbox(repo=repo)
+    llm = FakeLLM(base_script(select_files=["[]"]))
+    d, _ = go(sb, llm, tmp_path)
+    ci = info_of(d)["agent"]["candidates"]
+    assert ci["n_total"] >= 63 and ci["n_shown"] == 30 and ci["n_dropped"] == ci["n_total"] - 30 and len(ci["shown"]) == 30
+    assert "30 of" in next(c[2] for c in llm.calls if c[0] == "start_command") and "more not shown" in next(c[2] for c in llm.calls if c[0] == "start_command")
+
+
+# ---- Test-Loader und Seed aus dem Code (38c) ---------------------------------------------------------------------------------------
+
+def ctx_for(command_needle="h=96"):
+    cs, _ = cand.extract_candidates({"scripts/run_demo.sh": RUN_SH}, LISTING)
+    shown, _ = cand.narrow(cs, cand.claim_words("GizmoNet reaches MSE", "ETTh1"))
+    ll = cand.loader_lines({"gizmo/loader.py": REPO["gizmo/loader.py"]})
+    return shown, ll, next(c.k for c in shown if command_needle in c.note or command_needle in c.command)
+
+
+def verify(ans_part, k=None, command_needle="h=96"):
+    shown, ll, kk = ctx_for(command_needle)
+    ans = {"command_candidate": k or kk, **ans_part}
+    return na.verify_answer(ans, REPO, shown, ll)
+
+
+def test_batch_size_from_command_from_default_and_not_belegt():
+    dl = {"drop_last": {"candidate": 1, "value": True}}
+    v = verify({"test_loader": {**dl, "batch_size": {"switch": "--batch_size"}}})["test_loader.batch_size"]
+    assert v["belegt"] and v["value"] == 128 and v["source"] == "command"                                # Wert des Schalters im gewaehlten Befehl
+    v = verify({"test_loader": {**dl, "batch_size": {"switch": "--batch_size"}}}, command_needle="--task other")["test_loader.batch_size"]
+    assert v["belegt"] and v["value"] == 64 and v["source"] == "train_gizmo.py:7" and "default=64" in v["quote"]   # default= der Argumentdefinition
+    v = verify({"test_loader": {**dl, "batch_size": {"switch": "--bs"}}})["test_loader.batch_size"]
+    assert v["belegt"] is False and "no value" in v["reason"]                                              # Schalter weder im Befehl noch definiert
+    v = verify({"test_loader": {**dl, "batch_size": {"file": "gizmo/loader.py", "quote": "batch_size = args.batch_size"}}})["test_loader.batch_size"]
+    assert v["belegt"] is False                                                                           # nur ein Verweis auf ein Argument: kein Wert im Zitat
+    v = verify({"test_loader": {**dl, "batch_size": {"file": "gizmo/loader.py", "quote": "batch_size = 32"}}})["test_loader.batch_size"]
+    assert v["belegt"] is False                                                                           # Zitat nicht in der Datei
+    code_py = {**REPO, "gizmo/loader.py": "batch_size = 32\ndrop_last = False\n"}
+    v = na.verify_answer({"test_loader": {"batch_size": {"file": "gizmo/loader.py", "quote": "batch_size = 32"}}}, code_py, [], [], only={"test_loader.batch_size"})
+    assert v["test_loader.batch_size"]["belegt"] and v["test_loader.batch_size"]["value"] == 32           # woertliches Zitat mit Zahl aus dem Code
+
+
+def test_drop_last_line_and_value_come_from_the_listed_line():
+    v = verify({"test_loader": {"drop_last": {"candidate": 1, "value": False}, "batch_size": {"switch": "--batch_size"}}})["test_loader.drop_last"]
+    assert v["belegt"] and v["value"] is True and v["model_value"] is False and v["line"] == 3        # die Zeile gilt, nicht die Behauptung
+    ref = {**REPO, "gizmo/loader.py": "drop_last = flag\n"}
+    ll = cand.loader_lines({"gizmo/loader.py": ref["gizmo/loader.py"]})
+    v = na.verify_answer({"test_loader": {"drop_last": {"candidate": 1, "value": True}}}, ref, [], ll, only={"test_loader.drop_last"})["test_loader.drop_last"]
+    assert v["belegt"] is False and "literal" in v["reason"]
+
+
+def test_seed_candidates_assignment_switch_and_none():
+    sc = cand.seed_candidates("train_gizmo.py", REPO["train_gizmo.py"])
+    assert [(c.kind, c.line, c.value) for c in sc] == [("copy", 2, 4242), ("flag", 8, 7)] and sc[1].flag == "--seed"
+    assert cand.seed_spec(sc[0], REPO["train_gizmo.py"]) == {"kind": "copy", "repo_seed": 4242, "regex": "seed\\ =\\ 4242", "template": "seed = {seed}"}
+    assert cand.seed_spec(sc[1], REPO["train_gizmo.py"]) == {"kind": "flag", "flag": "--seed", "repo_seed": 7}
+    assert cand.seed_candidates("x.py", "import numpy\nrandom.seed(seed)\nx = 3\n") == []                  # kein Seed mit Zahl, keine Schalterdefinition
+    call = cand.seed_candidates("x.py", "np.random.seed(11)\n")
+    assert [(c.kind, c.value) for c in call] == [("copy", 11)]
+    dup = "seed = 5\nseed = 5\n"
+    assert cand.seed_spec(cand.seed_candidates("x.py", dup)[0], dup) is None                              # Zeile nicht eindeutig
+
+
+def test_seed_choice_switch_runs_seeds_through_the_flag(tmp_path):
+    sb = AgentSandbox()
+    d, _ = go(sb, FakeLLM(base_script(choose_seed=[seed_answer("--seed")])), tmp_path, seeds=("repo", 0))
+    info = info_of(d)
+    assert info["seed_method"] == "command-line switch of the repository" and info["agent"]["seed_choice"]["kind"] == "flag"
+    trains = [o[2] for o in sb.ops if o[0] == "run" and "unshare -n" in o[2] and "train_gizmo" in o[2]]
+    assert any(" --seed 0" in t for t in trains) and not any("--seed 7" in t for t in trains)               # Repo-Seed (default 7): Lauf ohne Schalter
+    assert [a.seed for a in d.attempts if a.status in ("stabil", "abweichung")] == [7, 0]
+
+
+def test_no_seed_candidates_means_no_seed_call_and_a_warning(tmp_path):
+    repo = {**REPO, "train_gizmo.py": "import argparse\nparser = argparse.ArgumentParser()\nparser.add_argument('--horizon', type=int, default=24)\n"}
+    sb = AgentSandbox(repo=repo)
+    llm = FakeLLM(base_script(choose_seed=[]))
+    d, _ = go(sb, llm, tmp_path)
+    assert "choose_seed" not in llm.purposes() and "eine Messung, keine Streuung" in d.warnings
+    assert [a.seed for a in d.attempts if a.status in ("stabil", "abweichung")] == [None]
+
+
+def test_seed_choice_null_or_wrong_form_falls_back_to_a_single_measurement(tmp_path):
+    for answer in (jx({"seed_candidate": None}), jx({"seed_candidate": "copy"}), "no json", jx({"seed_candidate": 77}), '["copy"]'):
+        d, _ = go(AgentSandbox(), FakeLLM(base_script(choose_seed=[lambda u, a=answer: a, lambda u, a=answer: a, lambda u, a=answer: a])), tmp_path / str(abs(hash(answer))))
+        assert "eine Messung, keine Streuung" in d.warnings or d.verdicts[0].urteil == "nicht reproduzierbar (Setup)"
+
+
+# ---- needs_time_features ------------------------------------------------------------------------------------------------------------
 
 def test_needs_time_features_ends_with_setup_verdict_before_any_training(tmp_path):
-    tf = json.loads(json.dumps(GOOD))
-    tf["needs_time_features"] = {"value": True, "file": "gizmo/model.py", "quote": "return self.lin(x)"}
+    def tf(user):
+        return jx({**json.loads(good_answer(user).split("```json\n")[1].split("\n```")[0]),
+                   "needs_time_features": {"value": True, "file": "gizmo/model.py", "quote": "return self.lin(x)"}})
     sb = AgentSandbox()
-    d, _ = go(sb, FakeLLM(base_script(start_command=[jx(tf)])), tmp_path)
+    d, _ = go(sb, FakeLLM(base_script(start_command=[tf])), tmp_path)
     v = d.verdicts[0]
     assert v.urteil == "nicht reproduzierbar (Setup)" and "model needs time features, not supported in v1" in v.explanation
     assert not any(o[0] == "run" and "unshare" in o[2] for o in sb.ops)
+
+
+def test_needs_time_features_quote_is_asked_again_once(tmp_path):
+    def bad(user):
+        return jx({**json.loads(good_answer(user).split("```json\n")[1].split("\n```")[0]),
+                   "needs_time_features": {"value": True, "file": "gizmo/model.py", "quote": "not literally there"}})
+    llm = FakeLLM(base_script(start_command=[bad], start_command_requote=[jx({"needs_time_features": {"value": False}})]))
+    d, _ = go(AgentSandbox(), llm, tmp_path)
+    assert llm.purposes().count("start_command_requote") == 1 and d.verdicts[0].urteil == "reproduziert"
+    llm2 = FakeLLM(base_script(start_command=[bad], start_command_requote=[jx({"needs_time_features": {"value": True, "file": "gizmo/model.py", "quote": "still wrong"}})]))
+    d2, _ = go(AgentSandbox(), llm2, tmp_path / "b")
+    assert llm2.purposes().count("start_command_requote") == 1                                      # nur einmal; danach "nicht belegt", Lauf geht weiter
+    assert d2.verdicts[0].urteil == "reproduziert" and info_of(d2)["agent"]["discarded"][0]["item"] == "needs_time_features"
 
 
 # ---- Training mit Reparatur ----------------------------------------------------------------------------------------------------
@@ -269,12 +452,17 @@ def long_err() -> str:
     return "x" * 3000 + "\nTraceback (most recent call last):\nModuleNotFoundError: No module named 'foo_lib'\n"
 
 
+def repair(**kw):
+    """Reparatur-Antwort: waehlt den Kandidaten h=96 per Nummer (der Prompt nennt ihn in der Liste), Rest wie angegeben."""
+    def answer(user):
+        base = {"command_candidate": pick(user, "h=96"), "checkpoint_glob": "out/*/weights.bin", "install": []}
+        return jx({**base, **kw})
+    return answer
+
+
 def test_training_failure_repair_with_stderr_tail_and_named_package(tmp_path):
-    def script(n, cmd):
-        return (1, "stdout-only-marker-77", long_err()) if n == 1 else None
-    repaired = {"command": CMD, "command_source": GOOD["command_source"], "checkpoint_glob": "out/*/weights.bin", "install": ["foo-lib"]}
-    sb = AgentSandbox(train_script=script)
-    llm = FakeLLM(base_script(repair_command=[jx(repaired)]))
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "stdout-only-marker-77", long_err()) if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[repair(install=["foo-lib"])]))
     d, _ = go(sb, llm, tmp_path)
     assert d.verdicts[0].urteil == "reproduziert"
     prompt = next(c[2] for c in llm.calls if c[0] == "repair_command")
@@ -286,12 +474,8 @@ def test_training_failure_repair_with_stderr_tail_and_named_package(tmp_path):
 
 
 def test_package_not_in_dependency_files_is_rejected_without_a_run(tmp_path):
-    def script(n, cmd):
-        return (1, "", long_err()) if n == 1 else None
-    evil = {"command": CMD, "command_source": GOOD["command_source"], "checkpoint_glob": "out/*/weights.bin", "install": ["evil-pkg"]}
-    clean = {**evil, "install": []}
-    sb = AgentSandbox(train_script=script)
-    llm = FakeLLM(base_script(repair_command=[jx(evil), jx(clean)]))
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", long_err()) if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[repair(install=["evil-pkg"]), repair()]))
     d, _ = go(sb, llm, tmp_path)
     assert d.verdicts[0].urteil == "reproduziert"
     repair_prompts = [c[2] for c in llm.calls if c[0] == "repair_command"]
@@ -299,27 +483,64 @@ def test_package_not_in_dependency_files_is_rejected_without_a_run(tmp_path):
     assert not any("evil-pkg" in " ".join(cmds) for cmds in sb.snapshot_cmds.values())                             # nie installiert
     atts = info_of(d)["agent"]["attempts"]
     assert [a["status"] for a in atts] == ["fehler", "ungueltig", "ok"] and atts[1]["rejected_by"] == ["package"]
-    assert sb.train_calls == 4 - 0 - 1 or sb.train_calls >= 2                                                      # Versuch 2 lief nicht
 
 
-def test_forbidden_switch_is_rejected_by_p1_with_a_fixed_sentence(tmp_path):
-    forbidden = json.loads(json.dumps(GOOD))
-    forbidden["command"] = CMD + " --use_all"
-    repaired = {"command": CMD, "command_source": GOOD["command_source"], "checkpoint_glob": "out/*/weights.bin", "install": []}
-    sb = AgentSandbox()
-    llm = FakeLLM(base_script(start_command=[jx(forbidden)], repair_command=[jx(repaired)]))
+def test_repair_may_modify_the_chosen_command_and_p1_lists_the_deviation(tmp_path):
+    variant = CMD.replace("--lr 0.01", "--lr 0.02")
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[repair(command=variant)]))
+    d, _ = go(sb, llm, tmp_path)
+    info = info_of(d)
+    assert info["command"] == variant and info["command_documented"] is False
+    assert info["command_diff"] == [{"kind": "changed", "flag": "--lr", "doc": "0.01", "command": "0.02"}]
+    assert any("Startbefehl weicht von der Dokumentation ab" in w for w in d.warnings)
+
+
+def test_repair_may_choose_another_candidate_by_number(tmp_path):
+    other = lambda user: jx({"command_candidate": pick(user, "--task other"), "checkpoint_glob": "out/*/weights.bin", "install": []})  # noqa: E731
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    d, _ = go(sb, FakeLLM(base_script(repair_command=[other])), tmp_path)
+    info = info_of(d)
+    assert info["command"] == "python -u train_gizmo.py --task other --horizon 24" and info["command_source"] == {"file": "scripts/run_demo.sh", "line": 8}
+    assert info["command_documented"] is True
+
+
+def test_repair_command_without_candidate_number_is_rejected(tmp_path):
+    invented = lambda user: jx({"command": "python -u train_gizmo.py --task made_up --horizon 96", "checkpoint_glob": "out/*/weights.bin", "install": []})  # noqa: E731
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[invented, repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    prompts = [c[2] for c in llm.calls if c[0] == "repair_command"]
+    assert len(prompts) == 2 and na.NO_CANDIDATE_SENTENCE in prompts[1]                                      # fester Satz in der naechsten Reparatur
+    assert not any(o[0] == "run" and "made_up" in o[2] for o in sb.ops)                                      # nie ausgefuehrt
+    atts = info_of(d)["agent"]["attempts"]
+    assert [a["status"] for a in atts] == ["fehler", "ungueltig", "ok"] and atts[1]["rejected_by"] == ["package"]
+    assert info_of(d)["agent"]["repairs"][0]["kind"] == "command_rejected"
+    assert d.verdicts[0].urteil == "reproduziert"
+
+
+def test_repair_variant_with_a_different_script_is_rejected(tmp_path):
+    other_script = lambda user: jx({"command_candidate": pick(user, "h=96"), "command": "python -u other_script.py --x 1", "install": []})  # noqa: E731
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[other_script, repair()]))
+    go(sb, llm, tmp_path)
+    assert na.SAME_SCRIPT_SENTENCE in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
+    assert not any(o[0] == "run" and "other_script" in o[2] for o in sb.ops)
+
+
+def test_forbidden_switch_in_a_repair_variant_is_rejected_by_p1_with_a_fixed_sentence(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[repair(command=CMD + " --use_all"), repair()]))
     d, _ = go(sb, llm, tmp_path)
     assert d.verdicts[0].urteil == "reproduziert"
     assert not any(o[0] == "run" and "unshare" in o[2] and "--use_all" in o[2] for o in sb.ops)                    # kein Lauf mit diesem Befehl
-    prompt = next(c[2] for c in llm.calls if c[0] == "repair_command")
-    assert na.P1_SENTENCE.format(flag="--use_all") in prompt
-    assert info_of(d)["agent"]["attempts"][0]["rejected_by"] == ["P1"]
+    assert na.P1_SENTENCE.format(flag="--use_all") in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
+    assert info_of(d)["agent"]["attempts"][1]["rejected_by"] == ["P1"]
 
 
 def test_attempt_limit_gives_setup_verdict_with_all_attempts(tmp_path):
     sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n"))
-    repaired = {"command": CMD, "command_source": GOOD["command_source"], "checkpoint_glob": "out/*/weights.bin", "install": []}
-    llm = FakeLLM(base_script(repair_command=[jx(repaired)] * 3))
+    llm = FakeLLM(base_script(repair_command=[repair()] * 3))
     d, _ = go(sb, llm, tmp_path, max_attempts=4)
     assert d.verdicts[0].urteil == "nicht reproduzierbar (Setup)"
     assert len(info_of(d)["agent"]["attempts"]) == 4 and llm.purposes().count("repair_command") == 3 and "write_adapter" not in llm.purposes()
@@ -512,7 +733,7 @@ def test_run_nachlauf_script_writes_store_row_and_stops_on_budget(tmp_path, caps
     rc = m.main(["--paper", "rlinear_2023", "--repo", "https://example.invalid/gizmo.git", "--commit", COMMIT, "--store", str(store), "--seeds", "repo", "--offsets", "2"],
                 sandbox_factory=lambda: sb, llm_factory=lambda: llm)
     row = json.loads(store.read_text().splitlines()[0])
-    assert row["paper"] == "rlinear_2023" and row["valid"] is True and row["cost_usd_run"] == pytest.approx(0.03) and row["n_llm_calls"] == 3
+    assert row["paper"] == "rlinear_2023" and row["valid"] is True and row["cost_usd_run"] == pytest.approx(0.04) and row["n_llm_calls"] == 4
     assert {"urteil", "mean", "std", "code_commit", "rejected_by", "run_dir", "cost_usd_run_gross"} <= row.keys()
     assert (tmp_path / row["run_dir"] / "dossier.json").exists() and rc in (0, 1)
     # zweiter Aufruf: der Store ist schon ueber der Grenze -> kein LLM-Aufruf, Zeile "abgebrochen"
@@ -542,10 +763,12 @@ def test_public_file_is_loaded_once_per_run(tmp_path):
 # ---- 38b: robuste Antworten, Rohantworten, unerwartete Fehler -----------------------------------------------------------------------
 
 WRONG_FORMS = [None, "text", 5, 1.5, True, [], ["x"], [{"a": 1}], {}, {"x": 1}, {"file": 5, "quote": 5}, {"file": ["a"], "quote": ["b"]}]
+GOOD_PARTS = {"test_loader": {"drop_last": {"candidate": 1, "value": True}, "batch_size": {"switch": "--batch_size"}},
+              "needs_time_features": {"value": False, "file": "gizmo/model.py", "quote": None}}
 
 
 def mutated(key, value, sub=None):
-    ans = json.loads(json.dumps(GOOD))
+    ans = json.loads(json.dumps(GOOD_PARTS))
     if sub:
         ans[key][sub] = value
     else:
@@ -553,89 +776,96 @@ def mutated(key, value, sub=None):
     return ans
 
 
+def verify_raw(ans_part, only=None, k="good"):
+    shown, ll, kk = ctx_for()
+    ans = {"command_candidate": kk if k == "good" else k, **ans_part}
+    return na.verify_answer(ans, REPO, shown, ll, only=only)
+
+
 MALFORMED = (
-    [("command_source", None, v, "command_source") for v in WRONG_FORMS + [{"file": "README.md"}, {"quote": CMD}, {"file": "README.md", "quote": None}]]
-    + [("seed", None, v, "seed") for v in WRONG_FORMS + ["copy", "flag", {"kind": "copy"}, {"kind": 7}, {"kind": "flag"}, {"kind": "flag", "flag": 5},
-                                                          {"kind": "copy", "file": ["x"], "line": ["y"]}, {"kind": "copy", "file": "train_gizmo.py", "line": ""}]]
-    + [("test_loader", "drop_last", v, "test_loader.drop_last") for v in WRONG_FORMS + [{"value": True}, {"value": "yes", "file": "gizmo/loader.py", "quote": "drop_last = True"},
-                                                                                   {"value": True, "file": "gizmo/loader.py", "quote": "no such text"}]]
-    + [("test_loader", "batch_size", v, "test_loader.batch_size") for v in WRONG_FORMS + ["128", 128, {"value": 128}, {"value": "abc", "file": "gizmo/loader.py", "quote": "batch_size = 128"},
-                                                                                    {"value": [128], "file": "gizmo/loader.py", "quote": "batch_size = 128"},
-                                                                                    {"value": 128, "file": "gizmo/loader.py", "quote": "batch_size = 64"}]]
+    [("command_candidate", None, v, "command_candidate") for v in WRONG_FORMS + [0, -1, 99, "abc", [1], {"k": 1}]]
+    + [("test_loader", "drop_last", v, "test_loader.drop_last") for v in WRONG_FORMS + [{"candidate": 99, "value": True}, {"candidate": "x"}, {"candidate": [1]}, {"value": True},
+                                                                                   {"candidate": None, "value": True}]]
+    + [("test_loader", "batch_size", v, "test_loader.batch_size") for v in WRONG_FORMS + ["128", 128, {"switch": 5}, {"switch": "bs"}, {"switch": "--nowhere"},
+                                                                                    {"file": "gizmo/loader.py"}, {"quote": "batch_size = 8"},
+                                                                                    {"file": "gizmo/loader.py", "quote": "batch_size = args.batch_size"},
+                                                                                    {"file": ["gizmo/loader.py"], "quote": "batch_size = 8"}]]
 )
 
 
 @pytest.mark.parametrize("key,sub,value,item", MALFORMED)
 def test_malformed_field_is_unbelegt_and_never_crashes(key, sub, value, item):
-    ver = na.verify_answer(mutated(key, value, sub), REPO)
-    assert set(ver) == {"command_source", "seed", "test_loader.drop_last", "test_loader.batch_size", "needs_time_features"}
+    part = mutated(key, value, sub) if key != "command_candidate" else dict(GOOD_PARTS)
+    ver = verify_raw(part, k=value) if key == "command_candidate" else verify_raw(part)
+    assert set(ver) == {"command_candidate", "test_loader.drop_last", "test_loader.batch_size", "needs_time_features"}
     assert ver[item]["belegt"] is False, (item, value, ver[item])
-    # alle anderen Angaben bleiben unberuehrt belegt
-    assert all(v["belegt"] for k, v in ver.items() if k != item)
+
+
+def test_malformed_answer_that_is_not_an_object():
+    for ans in (None, "text", 5, [], ["command_candidate"]):
+        ver = na.verify_answer(ans, REPO, *ctx_for()[:2])
+        assert ver["command_candidate"]["belegt"] is False
 
 
 @pytest.mark.parametrize("value", ["yes", "no", ["true"], 5, {}, {"value": "maybe"}, {"value": True}, {"value": True, "file": "gizmo/model.py", "quote": "not in file"}])
 def test_needs_time_features_malformed_is_never_a_yes(value):
-    ver = na.verify_answer(mutated("needs_time_features", value), REPO, only={"needs_time_features"})["needs_time_features"]
+    ver = verify_raw(mutated("needs_time_features", value), only={"needs_time_features"})["needs_time_features"]
     assert ver["value"] is False                                  # nie ein "ja" ohne belegtes Zitat
 
 
 @pytest.mark.parametrize("value", [None, False, {"value": False}, {"value": None}])
 def test_needs_time_features_no_forms_are_ok(value):
-    assert na.verify_answer(mutated("needs_time_features", value), REPO, only={"needs_time_features"})["needs_time_features"] == {"belegt": True, "reason": "", "value": False}
+    assert verify_raw(mutated("needs_time_features", value), only={"needs_time_features"})["needs_time_features"] == {"belegt": True, "reason": "", "value": False}
 
 
 def test_rescues_that_make_sense():
-    assert na.verify_answer(mutated("seed", "none"), REPO, only={"seed"})["seed"]["belegt"] is True               # "none" als Wort
-    assert na.verify_answer(mutated("needs_time_features", False), REPO, only={"needs_time_features"})["needs_time_features"]["belegt"] is True
-    v = na.verify_answer(mutated("test_loader", "128", "batch_size") | {"test_loader": {**GOOD["test_loader"], "batch_size": {**GOOD["test_loader"]["batch_size"], "value": "128"}}}, REPO,
-                         only={"test_loader.batch_size"})
-    assert v["test_loader.batch_size"]["belegt"] is True and v["test_loader.batch_size"]["value"] == 128       # Ziffernfolge, Zitat entscheidet
-    assert na.verify_answer("not even a dict", REPO)["command_source"]["belegt"] is False
+    assert verify_raw(mutated("needs_time_features", False), only={"needs_time_features"})["needs_time_features"]["belegt"] is True
+    v = verify_raw(mutated("test_loader", "128", "batch_size") | {"test_loader": {**GOOD_PARTS["test_loader"], "batch_size": {"switch": "--batch_size"}}},
+                   only={"test_loader.batch_size"})
+    assert v["test_loader.batch_size"]["belegt"] is True and v["test_loader.batch_size"]["value"] == 128
+    assert na._intval("128") == 128 and na._intval(True) is None and na._intval(1.5) is None
+    assert verify_raw({}, k="2")["command_candidate"]["belegt"] is True                                 # Nummer als Ziffernfolge
 
 
-def test_reported_case_requote_answer_with_seed_as_string_does_not_crash(tmp_path):
-    bad = json.loads(json.dumps(GOOD))
-    bad["command_source"]["quote"] = "not literally in the file"
-    bad["seed"] = {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 1"}
-    bad["test_loader"]["batch_size"]["quote"] = "batch_size = 64"
-    requote = {"command_source": CMD, "seed": "copy", "test_loader": {"batch_size": "128"}}          # Typen falsch, wie im echten Lauf
-    sb = AgentSandbox()
-    sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"
-    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=[jx(requote)]))
-    d, _ = go(sb, llm, tmp_path)
-    ag = info_of(d)["agent"]
-    assert {x["item"] for x in ag["discarded"]} == {"command_source", "seed", "test_loader.batch_size"}
-    assert ag["outcome"] == "ok" and d.verdicts[0].urteil in ("reproduziert", "teilweise", "nicht reproduziert")
-    assert "eine Messung, keine Streuung" in d.warnings and any("Test-Loader nicht belegt" in w for w in d.warnings)
+def test_wrong_typed_answers_in_the_flow_do_not_crash(tmp_path):
+    """Falsche Typen in der Antwort (wie im echten Lauf mit seed als String): Rueckfall, nie ein Absturz."""
+    good = lambda user: json.loads(good_answer(user).split("```json\n")[1].split("\n```")[0])  # noqa: E731
+    answers = [
+        lambda u: jx({**good(u), "test_loader": "128"}),
+        lambda u: jx({**good(u), "test_loader": {"drop_last": "true", "batch_size": 128}}),
+        lambda u: jx({**good(u), "checkpoint_glob": 5, "input_len": "abc", "model_file": ["x"], "training_file": None}),
+        lambda u: jx({**good(u), "needs_time_features": "no"}),
+    ]
+    for i, ans in enumerate(answers):
+        sb = AgentSandbox()
+        sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"
+        d, _ = go(sb, FakeLLM(base_script(start_command=[ans], start_command_requote=[jx({})], choose_seed=[seed_answer()])), tmp_path / str(i))
+        assert d.mode == "nachlauf"
 
 
-def test_requote_answer_that_is_not_an_object_at_all(tmp_path):
-    bad = json.loads(json.dumps(GOOD))
-    bad["seed"] = {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 1"}
-    sb = AgentSandbox()
-    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=['{"seed": ["copy"], "other": 1}']))
-    d, _ = go(sb, llm, tmp_path)
+def test_seed_answer_as_string_does_not_crash(tmp_path):
+    reported = lambda u: jx({"seed_candidate": "copy", "other": {"x": 1}})  # noqa: E731
+    d, _ = go(AgentSandbox(), FakeLLM(base_script(choose_seed=[reported])), tmp_path)
     assert info_of(d)["agent"]["outcome"] == "ok" and "eine Messung, keine Streuung" in d.warnings
+    assert [x["item"] for x in info_of(d)["agent"]["discarded"]] == ["seed"]
 
 
 def test_repair_command_with_wrong_shapes_does_not_crash(tmp_path):
-    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
-    llm = FakeLLM(base_script(repair_command=[jx({"command": None, "command_source": "x", "install": "foo-lib", "checkpoint_glob": 5})]))
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n <= 1 else None)
+    wrong = lambda u: jx({"command_candidate": "x", "command": None, "command_source": "x", "install": "foo-lib", "checkpoint_glob": 5})  # noqa: E731
+    llm = FakeLLM(base_script(repair_command=[wrong, repair()]))
     d, _ = go(sb, llm, tmp_path)
-    assert d.verdicts[0].urteil == "reproduziert"                                    # alter Befehl und altes Muster bleiben, zweiter Versuch gelingt
-    assert [a["status"] for a in info_of(d)["agent"]["attempts"]] == ["fehler", "ok"]
+    assert d.verdicts[0].urteil == "reproduziert"
+    assert [a["status"] for a in info_of(d)["agent"]["attempts"]] == ["fehler", "ungueltig", "ok"]          # falsche Form: Versuch verbraucht, nichts erfunden
 
 
 @pytest.mark.parametrize("answer", ["no list at all", "[1, 2, {\"a\": 1}]", "[\"does/not/exist.py\"]", "{\"files\": [\"README.md\"]}", ""])
 def test_unusable_file_selection_falls_back_to_name_based_choice(tmp_path, answer):
     sb = AgentSandbox()
-    if "files" in answer:      # schmale Auswahl: Test-Loader bleibt unbelegt, P3 vergleicht mit allen Fenstern
-        sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"
     d, agent = go(sb, FakeLLM(base_script(select_files=[answer], start_command_requote=[jx({})])), tmp_path)
     assert info_of(d)["agent"]["outcome"] == "ok"
     files = set(info_of(d)["agent"]["reading"]["files"])
-    assert "README.md" in files and (len(files) == 2 or "train_gizmo.py" in files)    # nur die sehr schmale, aber gueltige Auswahl behaelt wenige Dateien
+    assert "README.md" in files and "scripts/run_demo.sh" in files and "gizmo/loader.py" in files   # Kandidaten- und Loader-Dateien immer, unabhaengig von der Auswahl
 
 
 def test_raw_answers_are_written_before_parsing_and_never_prompted(tmp_path):
@@ -644,7 +874,8 @@ def test_raw_answers_are_written_before_parsing_and_never_prompted(tmp_path):
     llm = FakeLLM(base_script())
     d, agent = go(sb, llm, tmp_path)
     assert (tmp_path / "llm_select_files_1.txt").read_text() == sel
-    assert (tmp_path / "llm_start_command_1.txt").read_text() == jx(GOOD)
+    raw = (tmp_path / "llm_start_command_1.txt").read_text()
+    assert raw.startswith("Reasoning...") and '"command_candidate"' in raw and (tmp_path / "llm_choose_seed_1.txt").exists()
     assert "variant: honest" in (tmp_path / "llm_write_adapter_1.txt").read_text()
     assert not any("llm_" in p["user"] or "llm_" in p["system"] for p in agent.asker.prompts)
 
