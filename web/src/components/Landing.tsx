@@ -173,7 +173,11 @@ function Footer() {
         <div className="md:pr-14">
           <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Does it work?</h2>
           <p className="mb-0 mt-5 text-lg leading-relaxed text-fg-3">
-            We tested it on papers with known results: <span className="font-mono text-fg">{sum ? `${sum.agree_B} of ${sum.n_units}` : 'TBD'}</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">{sum ? `${sum.agree_A} of ${sum.n_units}` : 'TBD'}</span> without it.
+            {sum?.placebo_total !== undefined && sum.placebo_reproduced !== undefined ? (
+              <>We tested it on papers with known results. It never certified a wrong number: <span className="font-mono text-fg">{sum.placebo_reproduced} of {sum.placebo_total}</span> deliberately wrong claims passed. Rebuilding a paper from its text alone is harder: <span className="font-mono text-fg">{sum.agree_B} of {sum.n_units}</span> with Tavily, <span className="font-mono text-fg">{sum.agree_A} of {sum.n_units}</span> without.</>
+            ) : (
+              <>We tested it on papers with known results: <span className="font-mono text-fg">{sum ? `${sum.agree_B} of ${sum.n_units}` : 'TBD'}</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">{sum ? `${sum.agree_A} of ${sum.n_units}` : 'TBD'}</span> without it.</>
+            )}
           </p>
           <p className="mb-0 mt-4 max-w-md text-[13px] leading-relaxed text-muted">
             A match means the target value was reached. Whether the method matches the paper is not checked yet. <a href="#benchmark" className="text-fg-3 underline underline-offset-4 hover:text-fg">How the benchmark works</a>

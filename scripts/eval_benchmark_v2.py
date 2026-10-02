@@ -62,6 +62,11 @@ def reference_verdicts(refs: dict) -> dict[str, dict]:
             for u, v in refs["units"].items()}
 
 
+def distances(real_rows: list[dict]) -> list[float]:
+    """|Mittelwert der Generierung - Zielwert| ueber gueltige echte Generierungen (post hoc)."""
+    return [abs(r["mean"] - r["target"]) for r in real_rows if r.get("mean") == r.get("mean") and r.get("mean") is not None]
+
+
 def _fmt(x) -> str:
     return "–" if x is None or x != x else f"{x:.4f}"
 
@@ -110,8 +115,7 @@ def evaluate(rows: list[dict], refs: dict) -> str:
             near = "–" if origin == "placebo" else f"{sum(r['urteil'] in VALID[:2] for r in rs)} von {len(rs)}"
             out.append(f"| {label} | {arm} | {sum(r['urteil'] == want(r) for r in rs)} von {len(rs)} | {sum(klass(r['urteil']) == AUSFALL for r in rs)} | {near} | "
                        f"{', '.join(f'{k} {v}' for k, v in Counter(r['urteil'] for r in rs).most_common())} |")
-    dev = {arm: [abs(r["mean"] - r["target"]) for u in units for r in by[(u, arm, "paper")] if r.get("mean") == r.get("mean") and r.get("mean") is not None]
-           for arm in ARMS}
+    dev = {arm: distances([r for u in units for r in by[(u, arm, "paper")]]) for arm in ARMS}
     out.append("\nMedian der Abweichung vom Zielwert (gültige echte Generierungen, post hoc): "
                + ", ".join(f"{a} {statistics.median(v):.4f} (n={len(v)})" if v else f"{a} –" for a, v in dev.items()) + "\n")
 

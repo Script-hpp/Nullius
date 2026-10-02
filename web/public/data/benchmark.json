@@ -315,7 +315,15 @@
     "agree_A": 1,
     "agree_B": 2,
     "placebo_passed": 0,
-    "n_units": 8
+    "n_units": 8,
+    "placebo_reproduced": 0,
+    "placebo_total": 48,
+    "reproduced_real": 7,
+    "reproduced_real_agree": 7,
+    "median_distance_A": 0.028956596409055346,
+    "median_distance_n_A": 24,
+    "median_distance_B": 0.01662373145979701,
+    "median_distance_n_B": 23
    }
   },
   {
@@ -633,7 +641,15 @@
     "agree_A": 2,
     "agree_B": 2,
     "placebo_passed": 0,
-    "n_units": 8
+    "n_units": 8,
+    "placebo_reproduced": 0,
+    "placebo_total": 48,
+    "reproduced_real": 13,
+    "reproduced_real_agree": 12,
+    "median_distance_A": 0.019574551131928075,
+    "median_distance_n_A": 19,
+    "median_distance_B": 0.02972989851678376,
+    "median_distance_n_B": 22
    }
   },
   {
@@ -951,7 +967,15 @@
     "agree_A": 2,
     "agree_B": 2,
     "placebo_passed": 0,
-    "n_units": 8
+    "n_units": 8,
+    "placebo_reproduced": 0,
+    "placebo_total": 48,
+    "reproduced_real": 13,
+    "reproduced_real_agree": 12,
+    "median_distance_A": 0.016996917866731215,
+    "median_distance_n_A": 20,
+    "median_distance_B": 0.011349180327868857,
+    "median_distance_n_B": 20
    }
   }
  ]
