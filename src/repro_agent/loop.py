@@ -1426,6 +1426,7 @@ class Orchestrator:
                 excluded = [d for d in self.details if getattr(d, "excluded", "")]
                 self._emit("setup_v2", family=v2_info["family"], missing_first=v2_info["missing_first"], missing=setup_missing,
                            targeted_docs=v2_info["targeted_docs"], added=v2_info["added"],
+                           bodies=v2_info["bodies"], literals=v2_info["literals"],
                            excluded=[{"topic": d.topic, "value": d.value, "reason": d.excluded} for d in excluded])
         elif extra_details:
             self.details = extra_details
