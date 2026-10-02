@@ -345,7 +345,8 @@ def raw_trace(calls: list[dict], docs) -> list[dict]:
     by_doc = {d.name: d for d in docs}
     out = []
     for c in calls:
-        excerpt = c["user"].split("EXCERPT:\n", 1)[-1].strip() if "EXCERPT:" in c["user"] else ""
+        head = re.search(r"EXCERPT[^\n]*:\n", c["user"])   # "EXCERPT:" (v1) oder "EXCERPT from <Quelle>:" (setup_v2)
+        excerpt = c["user"][head.end():].strip() if head else ""
         doc = next((d for d in docs if excerpt and excerpt[:200] in d.text), None)
         items = _parse_list(c["response"]) if doc else []
         dropped = []

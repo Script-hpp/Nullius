@@ -254,3 +254,14 @@ def test_raw_trace_records_answers_and_drop_reasons():
     assert tr[0]["doc"] == "paper" and tr[0]["n_items"] == 2 and [d["reason"] for d in tr[0]["dropped"]] == ["Zitat nicht im Quelltext"]
     assert tr[0]["finish_reason"] == "stop" and "learning rate" in tr[0]["response"]
     assert tr[1]["doc"] is None and tr[1]["n_items"] == 0
+
+
+def test_raw_trace_finds_the_document_for_v2_prompts_with_source_label():
+    from repro_agent.setup_details import Doc
+
+    docs = [Doc("repo:config/gcn.conf.yaml@abc", "hidden_size: 64\nlearning_rate: 0.01\n")]
+    calls = [{"user": "Goal\nEXCERPT from file config/gcn.conf.yaml:\nhidden_size: 64\nlearning_rate: 0.01\n",
+              "response": json.dumps([{"topic": "h", "value": "64", "quote": "hidden_size: 64"}]), "finish_reason": "stop",
+              "completion_tokens": 9, "status": "ok"}]
+    tr = m.raw_trace(calls, docs)
+    assert tr[0]["doc"] == "repo:config/gcn.conf.yaml@abc" and tr[0]["n_items"] == 1 and tr[0]["dropped"] == []
