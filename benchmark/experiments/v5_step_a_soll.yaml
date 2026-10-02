@@ -1,0 +1,152 @@
+# Soll-Liste v5 Schritt A (Inhalt wörtlich aus benchmark/experiments/v5_step_a.md, Vorab-Festlegung, final) plus feste Auswertungsmuster.
+# Nur für die Auswertung (scripts/measure_setup_fidelity.py); nie in einem Prompt oder im src/-Code.
+#
+# patterns.<unit>.<punkt>:
+#   topic:  Regex auf "Thema + Wert" der Angabe (case-insensitive); trifft sie, ist das Thema getroffen.
+#   value:  Regex auf den Wert (case-insensitive); trifft sie, gilt die Angabe als korrekt.
+#   wrong:  optional, Regex auf den Wert; trifft sie (und value nicht), gilt die Angabe als falsch.
+# Thema getroffen, weder value noch wrong: Zweifelsfall (Handprüfung durch den Reviewer, zählt nicht als korrekt).
+# misleading.<unit>: Regex auf die Zeilen des Plan-Textes (format_for_prompt + Konflikte); Zeile gilt als "irreführend als gültig",
+#   wenn `line` trifft und `unless` nicht (Markierung "optional advice", "repository default", "applies to other ..." usw.).
+
+units:
+  kipf_gcn_2017: {claim: gcn_cora_acc}
+  wu_sgc_2019: {claim: sgc_cora_acc}
+  velickovic_gat_2018: {claim: gat_cora_acc}
+  velickovic_dgi_2019: {claim: dgi_cora_acc}
+  shchur_pitfalls_2018: {claim: shchur_gcn_cora_acc}
+  shchur_gat_2018: {claim: shchur_gat_cora_acc}
+  zeng_dlinear_2023: {claim: dlinear_etth1_96_mse}
+  zeng_nlinear_2023: {claim: nlinear_etth1_96_mse}
+
+soll:
+  kipf_gcn_2017:
+    feature_norm: "Merkmale zeilennormalisiert"
+    adj_norm: "D^-1/2 (A+I) D^-1/2"
+    lr: 0.01
+    weight_decay: "5e-4, nur erste Schicht"
+    dropout: 0.5
+    hidden: 16
+    epochs: 200
+    early_stopping: "Validierungsloss, Fenster 10"
+  wu_sgc_2019:
+    feature_norm: "Merkmale zeilennormalisiert (nicht standardisiert)"
+    adj_norm: "D^-1/2 (A+I) D^-1/2, K = 2"
+    lr: 0.2
+    epochs: 100
+    weight_decay: "auf Validierung gesucht (hyperopt), kein fester Wert"
+  velickovic_gat_2018:
+    feature_norm: "Merkmale zeilennormalisiert"
+    lr: 0.005
+    weight_decay: "L2 5e-4"
+    dropout: "0.6 auf Eingaben und Attention"
+    hidden: "8 Köpfe x 8 Merkmale, Ausgabe 1 Kopf"
+    early_stopping: "Validierungsloss und -accuracy, Geduld 100"
+  velickovic_dgi_2019:
+    feature_norm: "Merkmale zeilennormalisiert"
+    encoder: "eine GCN-Schicht, 512 Einheiten, PReLU (transduktiv)"
+    lr: 0.001
+    early_stopping: "Trainingsloss, Geduld 20"
+    classifier: "logistische Regression auf den Einbettungen"
+    applies_to: "transduktive Einstellung (nicht die induktiven Angaben)"
+  shchur_pitfalls_2018:   # GCN
+    feature_norm: "Merkmale NICHT normalisiert"
+    lr: 0.01
+    weight_decay: "L2 1e-3"
+    dropout: 0.8
+    hidden: 64
+    early_stopping: "Geduld 50, Gesamt-Validierungsloss"
+  shchur_gat_2018:
+    feature_norm: "Merkmale NICHT normalisiert"
+    lr: 0.01
+    weight_decay: "L2 0.01"
+    dropout: "0.6 Eingaben, 0.3 Attention"
+    hidden: "8 Köpfe x 8 Merkmale (Hidden 64 gesamt, nicht 64 je Kopf)"
+    early_stopping: "Geduld 50, Gesamt-Validierungsloss"
+  zeng_dlinear_2023:
+    input_length: 336
+    lr: 0.005
+    lr_schedule: "type1, pro Epoche halbiert"
+    batch_size: 32
+    epochs: 10
+    patience: 3
+  zeng_nlinear_2023:
+    method: "letzten Wert des Fensters abziehen und wieder addieren"
+    input_length: 336
+    lr: 0.005
+    lr_schedule: "type1, pro Epoche halbiert"
+    batch_size: 32
+    epochs: 10
+    patience: 3
+
+patterns:
+  kipf_gcn_2017:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    adj_norm: {topic: 'adjacen|laplacian|propagat|renormali|symmetric', value: 'D\^?\{?-?\s?(1/2|0\.5)|symmetric|\(\s*A\s*\+\s*I|self.?loop|renormali', wrong: 'row.?normali|D\^\{?-1\}?\s*A'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
+    weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '5e-?0?4|0?\.0005', wrong: '\d'}
+    dropout: {topic: 'dropout', value: '(?<![\d.])0?\.5(?!\d)', wrong: '\d'}
+    hidden: {topic: 'hidden|units|width|dimension', value: '(?<!\d)16(?!\d)', wrong: '\d'}
+    epochs: {topic: 'epoch|iteration', value: '(?<!\d)200(?!\d)', wrong: '\d'}
+    early_stopping: {topic: 'early|patience|stopping|window', value: '(?<!\d)10(?!\d)', wrong: '\d'}
+  wu_sgc_2019:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column'}
+    adj_norm: {topic: 'adjacen|propagat|renormali|symmetric|\bK\b|hops|power|filter', value: 'symmetric|\(\s*A\s*\+\s*I|renormali|self.?loop|D\^?\{?-?\s?(1/2|0\.5)', wrong: 'row.?normali'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.2(?!\d)', wrong: '\d'}
+    epochs: {topic: 'epoch|iteration', value: '(?<!\d)100(?!\d)', wrong: '\d'}
+    weight_decay: {topic: 'weight.?decay|l2|regulari[sz]|lambda|hyperopt|tun', value: 'hyperopt|tun|search|valid|select|chos|optimi[sz]', wrong: ''}
+  velickovic_gat_2018:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.005(?!\d)|5e-?0?3', wrong: '\d'}
+    weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '5e-?0?4|0?\.0005', wrong: '\d'}
+    dropout: {topic: 'dropout', value: '(?<![\d.])0?\.6(?!\d)', wrong: '\d'}
+    hidden: {topic: 'hidden|head|units|features|attention', value: '8\D{0,25}(head|attention)|(head|attention)\D{0,25}8|8\s*[x×*]\s*8|(?<!\d)8(?!\d).*(?<!\d)8(?!\d)', wrong: '\d'}
+    early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)100(?!\d)', wrong: '\d'}
+  velickovic_dgi_2019:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    encoder: {topic: 'encoder|layer|activation|embedding|prelu|hidden|units', value: 'prelu|512', wrong: ''}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.001(?!\d)|1e-?0?3', wrong: '\d'}
+    early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)20(?!\d)', wrong: '\d'}
+    classifier: {topic: 'classif|logistic|evaluation|linear', value: 'logistic|linear', wrong: ''}
+    applies_to: {topic: 'transductive|inductive|setting|applies', value: 'transductive|cora|citeseer|pubmed', wrong: 'inductive|reddit|\bppi\b'}
+  shchur_pitfalls_2018:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
+    weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '1e-?0?3|0?\.001(?!\d)', wrong: '\d'}
+    dropout: {topic: 'dropout', value: '(?<![\d.])0?\.8(?!\d)', wrong: '\d'}
+    hidden: {topic: 'hidden|units|width|dimension|size', value: '(?<!\d)64(?!\d)', wrong: '\d'}
+    early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)50(?!\d)', wrong: '\d'}
+  shchur_gat_2018:
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
+    weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
+    dropout: {topic: 'dropout', value: '0?\.6.*0?\.3|0?\.3.*0?\.6', wrong: '\d'}
+    hidden: {topic: 'hidden|head|units|size|attention', value: '8\D{0,25}head|head\D{0,25}8|8\s*[x×*]\s*8|total|overall|in total', wrong: '64\D{0,12}(per|each)|(per|each)\D{0,12}64'}
+    early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)50(?!\d)', wrong: '\d'}
+  zeng_dlinear_2023:
+    input_length: {topic: 'input|seq.?len|look.?back|window|history|length', value: '(?<!\d)336(?!\d)', wrong: '(?<!\d)(96|192|720)(?!\d)'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.005(?!\d)|5e-?0?3', wrong: '\d'}
+    lr_schedule: {topic: 'schedule|lradj|decay|halv|adjust|anneal', value: 'type1|halv|0?\.5\s*(\*\*|\^)|every epoch|each epoch|per epoch', wrong: 'constant|fixed'}
+    batch_size: {topic: 'batch', value: '(?<!\d)32(?!\d)', wrong: '\d'}
+    epochs: {topic: 'epoch', value: '(?<!\d)10(?!\d)', wrong: '\d'}
+    patience: {topic: 'patience|early|stopping', value: '(?<!\d)3(?!\d)', wrong: '\d'}
+  zeng_nlinear_2023:
+    method: {topic: 'nlinear|last value|subtract|normali[sz]|method|trend|decompos', value: 'last (value|element|time ?step|observ)|subtract|(sequence|series|window).{0,30}last', wrong: 'decompos|moving.?average|trend.{0,20}(season|remainder)'}
+    input_length: {topic: 'input|seq.?len|look.?back|window|history|length', value: '(?<!\d)336(?!\d)', wrong: '(?<!\d)(96|192|720)(?!\d)'}
+    lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.005(?!\d)|5e-?0?3', wrong: '\d'}
+    lr_schedule: {topic: 'schedule|lradj|decay|halv|adjust|anneal', value: 'type1|halv|0?\.5\s*(\*\*|\^)|every epoch|each epoch|per epoch', wrong: 'constant|fixed'}
+    batch_size: {topic: 'batch', value: '(?<!\d)32(?!\d)', wrong: '\d'}
+    epochs: {topic: 'epoch', value: '(?<!\d)10(?!\d)', wrong: '\d'}
+    patience: {topic: 'patience|early|stopping', value: '(?<!\d)3(?!\d)', wrong: '\d'}
+
+# Ziel 3: die vier bekannten irreführenden Fälle; eine Zeile des Plan-Textes, die sie als gültig führt, zählt als Treffer.
+misleading_unless: 'optional advice|repository default|other model|other dataset|not applicable|does not apply|inductive setting|not for this'
+misleading:
+  wu_sgc_2019:
+    - {id: sgc_standardisation, line: 'standardi[sz]|zero mean|unit standard deviation|zero.?mean', description: "SGC-Standardisierung als Pflicht (README: optional)"}
+  zeng_dlinear_2023:
+    - {id: dlinear_argparse_default, line: '(seq.?len|input|look.?back|sequence length)[^\n]*(?<!\d)96(?!\d)|(learning.?rate|\blr\b)[^\n]*(0?\.0001|1e-?0?4)', description: "DLinear: argparse-Default für Eingabelänge 96 / Lernrate 1e-4 als gültig"}
+  velickovic_dgi_2019:
+    - {id: dgi_inductive, line: '512 features in each MP|minibatch|mini-batch|(?<!\d)256(?!\d)|sample[sd]?\s+10|10,\s*10,\s*25|neighbou?r(s|hood)? sampl|inductive|reddit|\bppi\b|three message|3 message', description: "DGI: induktive Angaben (Reddit/PPI) für den transduktiven Claim"}
+  shchur_gat_2018:
+    - {id: shchur_gat_64_per_head, line: '(hidden|units|size)[^\n]*(?<!\d)64(?!\d)(?![^\n]*(8 (attention )?heads|8\s*[x×*]\s*8|in total|total|overall))|64[^\n]*(per|each) (attention )?head', description: "Shchur-GAT: Hidden 64 je Kopf statt gesamt"}
