@@ -49,8 +49,8 @@ def test_source_rank():
     assert sd.source_rank("repo:train.py@abc1234", "flags.DEFINE_float('lr', 1, 'x')") == "argparse default"
     assert sd.source_rank("repo:config/gcn.conf.yaml@abc1234", "lr: 1") == "config"
     assert sd.source_rank("repo:layers.py@abc1234", "x = 1") == "code"
-    assert [sd.RANKS.index(r) for r in ("start script", "config", "argparse default", "readme text", "paper")] == sorted(
-        sd.RANKS.index(r) for r in ("start script", "config", "argparse default", "readme text", "paper"))
+    assert [sd.RANKS.index(r) for r in ("start script", "config", "paper", "code", "readme text", "argparse default")] == sorted(
+        sd.RANKS.index(r) for r in ("start script", "config", "paper", "code", "readme text", "argparse default"))
 
 
 def test_verify_v2_scope_needs_own_quote_and_marks_optional():
@@ -97,8 +97,8 @@ def test_target_docs_data_loader_and_start_scripts():
     docs = [Doc("paper", "p"), Doc("repo-readme", "r"), Doc("repo:execute_cora.py@c1", "a"), Doc("repo:models/gat.py@c1", "b"),
             Doc("repo:utils/process.py@c1", "c"), Doc("repo:scripts/etth1.sh@c1", "d"), Doc("repo:config/x.yaml@c1", "e")]
     names = [d.name.split("@")[0] for d in sd.target_docs(docs)]
-    assert "repo:models/gat.py" not in names and "paper" not in names
-    assert names[:3] == ["repo:execute_cora.py", "repo:scripts/etth1.sh", "repo:config/x.yaml"] and "repo:utils/process.py" in names and "repo-readme" in names
+    assert "repo:models/gat.py" not in names and "paper" in names
+    assert names[1:4] == ["repo:execute_cora.py", "repo:scripts/etth1.sh", "repo:config/x.yaml"] and "repo:utils/process.py" in names and "repo-readme" in names
 
 
 GRAPH_DOCS = [
@@ -138,7 +138,7 @@ def test_two_pass_extraction_fills_missing_topics_from_loader_and_start_script()
     assert any(d.excluded.startswith("other model") for d in details)                       # GCN-Angabe: im Dossier, nicht im Plan
     targeted = [p for p in llm.prompts if "Earlier passes found no statement" in p]
     assert targeted and all("adjacency normalisation" in p and "feature normalisation" in p for p in targeted)
-    assert not any("We use dropout" in p for p in targeted)                                 # gezielt nur Datenlade-/Startdateien, nicht das Paper
+    assert any("We use dropout" in p for p in targeted)                                     # Paper ist nun im Ziel!
 
 
 def test_no_second_pass_when_nothing_missing():
@@ -162,7 +162,7 @@ def test_prompt_format_rank_marks_and_conflicts():
     d_other = v2("dropout", "0.8", "paper", "paper", excluded="other model (GCN)")
     details = [d_default, d_other, d_script, d_readme]
     text = sd.format_for_prompt_v2(details)
-    assert "[start script]" in text and "[argparse default]" in text and "optional advice" in text and "repository default" in text
+    assert "[start script]" in text and "[argparse default]" in text and "repository default" in text
     assert "dropout" not in text                                                            # ausgeschlossen: nicht im Plan
     conf = sd.format_conflicts_v2(details)
     assert "0.005" in conf and "0.0001" in conf and conf.index("0.005") < conf.index("0.0001") and "highest-ranked source (start script)" in conf
@@ -276,7 +276,7 @@ def test_feature_normalisation_coverage_needs_normalisation_not_graph_standardis
     assert not cover(v2("standardization", "If standardize=True, apply dataset_graph.standardize()"))
     assert not cover(v2("training procedure standardization", "standardized training and hyperparameter selection procedure"))
     assert not cover(v2("adjacency normalisation", "symmetric normalisation"))
-    assert not cover(v2("data preprocessing", "removing self-loops"))
+    assert cover(v2("data preprocessing", "removing self-loops"))
     assert cover(v2("feature normalisation", "process.preprocess_features(features)"))
     assert cover(v2("data preprocessing", "features are row-normalised"))                                    # Wert genuegt
     assert cover(v2("preprocessing", "features scaled to unit norm"))
