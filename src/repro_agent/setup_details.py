@@ -81,7 +81,16 @@ ANSWER_FORMAT_V2 = (   # v5 V3: jede Angabe nennt, fuer welches Modell/welchen D
 )
 
 
-def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2: bool = False) -> list:
+def excerpt_label(doc_name: str) -> str:
+    """v2: der Extraktor erfaehrt, aus welcher Quelle der Ausschnitt stammt (Dateipfad, README, Paper); der Dateiname traegt oft den Modellbezug."""
+    if doc_name == "paper":
+        return "the paper"
+    if doc_name == "repo-readme":
+        return "the repository README"
+    return "file " + doc_name.split(":", 1)[-1].split("@")[0]
+
+
+def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2: bool = False, source: str = "") -> list:
     resp = llm.complete("extract", [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": (
@@ -99,7 +108,7 @@ def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2
             "one each value belongs to. Only what this excerpt says; in code, report values exactly as "
             "written. If there is none, answer [].\n"
             + (ANSWER_FORMAT_V2 if v2 else ANSWER_FORMAT) +
-            f"EXCERPT:\n{chunk}"
+            (f"EXCERPT from {excerpt_label(source)}:\n{chunk}" if v2 and source else f"EXCERPT:\n{chunk}")
         )},
     ], temperature=0.0, max_tokens=6000, timeout_s=600)
     return _parse_list(resp.content)
@@ -109,7 +118,7 @@ def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, 
     """Rohangaben des Modells je Dokument, noch ungeprueft: [{"doc": Name, "item": Objekt}]."""
     jobs = [(doc, chunk) for doc in docs for chunk in _chunks(doc.text[:MAX_TEXT_CHARS])]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2), jobs))
+        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2, j[0].name), jobs))
     return [{"doc": doc.name, "item": item} for (doc, _), lst in zip(jobs, raw_lists) for item in lst]
 
 
@@ -323,8 +332,44 @@ def verify_raw_v2(raw: list[dict], docs: list[Doc], norm=_norm) -> tuple[list[Se
     return out, dropped
 
 
-def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str) -> str:
+GENERIC_DATASET_WORDS = GENERIC_MODEL_WORDS | {   # Obermengen und Platzhalter: nennen keinen konkreten Datensatz
+    "citation", "networks", "network", "datasets", "dataset", "benchmark", "benchmarks", "graph", "graphs", "node", "nodes", "classification",
+    "standard", "common", "several", "multiple", "other", "others", "tasks", "task", "experiments", "experiment", "splits", "split"}
+PATH_STOP = {"conf", "config", "cfg", "yaml", "yml", "json", "toml", "ini", "train", "training", "test", "tests", "run", "main", "exp", "utils",
+             "util", "data", "dataset", "datasets", "model", "models", "optimized", "reference", "scripts", "script", "readme", "args", "execute",
+             "process", "layers", "tools", "base", "common", "default", "sparse", "single", "job", "preprocess", "loader", "provider", "init"}
+
+
+def paper_model_words(paper_text: str, tokens: list[str]) -> set[str]:
+    """Welche der Dateinamen-Woerter kommen im Paper als Modellname vor? Als Akronym (GCN), mit Binnenmajuskel (DLinear) oder mehrfach
+    gross mitten im Satz (Informer); gewoehnliche Woerter wie "Data" oder "Train" zaehlen nicht."""
+    out = set()
+    for t in tokens:
+        forms = re.findall(rf"(?<![A-Za-z0-9]){re.escape(t)}(?![A-Za-z0-9])", paper_text, re.I)
+        if any((f.isupper() and len(f) >= 3) or (f != f.lower() and f != f.capitalize()) for f in forms):
+            out.add(t)
+        elif len(re.findall(rf"[a-z,(] +{re.escape(t.capitalize())}(?![A-Za-z0-9])", paper_text)) >= 3:
+            out.add(t)
+    return out
+
+
+def path_model_exclusion(d: SetupDetailV2, claim_text: str, paper_text: str) -> str:
+    """Pfadregel: nennt der Dateiname einer Repo-Angabe ein Modellwort, das im Claim fehlt, aber im Paper als Modellname vorkommt
+    (gcn.conf.yaml bei einem GAT-Claim), gilt die Angabe nicht fuer den Claim, unabhaengig vom Label des Modells."""
+    if not d.source.startswith("repo:") or not paper_text:
+        return ""
+    name = d.source.split(":", 1)[-1].split("@")[0].rsplit("/", 1)[-1]
+    tokens = [t for t in re.split(r"[^a-z0-9]+", name.lower()) if len(t) >= 3 and not t.isdigit() and t not in PATH_STOP]
+    claim_n = _norm(claim_text)
+    other = [t for t in tokens if t not in claim_n and t in paper_model_words(paper_text, tokens)]
+    return f"other model (file name {name})" if other else ""
+
+
+def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str, paper_text: str = "") -> str:
     """Grund, warum die Angabe nicht fuer diesen Claim gilt ("" = gilt oder Geltungsbereich unbekannt). Nur belegte Bereiche zaehlen."""
+    by_path = path_model_exclusion(d, claim_text, paper_text)
+    if by_path:
+        return by_path
     ap = d.applies_to
     if not ap:
         return ""
@@ -334,7 +379,8 @@ def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str) -> str:
     if tokens and not any(t in claim_n for t in tokens):
         return f"other model ({ap['model']})"
     ds = _norm(ap.get("dataset", ""))
-    ds_tokens = [t for t in re.split(r"[^a-z0-9]+", ds) if len(t) >= 3 and t not in GENERIC_MODEL_WORDS]
+    # Obermengen ("citation networks") nennen keinen anderen Datensatz: ausgeschlossen wird nur, wenn ein konkreter ANDERER Datensatz genannt ist
+    ds_tokens = [t for t in re.split(r"[^a-z0-9]+", ds) if len(t) >= 3 and t not in GENERIC_DATASET_WORDS]
     if ds not in GENERIC_SCOPE and ds_tokens and not any(t in data_n or any(w in t for w in data_n.split() if len(w) >= 3) for t in ds_tokens):
         return f"other dataset ({ap['dataset']})"
     setting = ap.get("setting", "")
@@ -343,16 +389,26 @@ def scope_exclusion(d: SetupDetailV2, claim_text: str, dataset: str) -> str:
     return ""
 
 
-def apply_scope(details: list[SetupDetailV2], claim_text: str, dataset: str) -> list[SetupDetailV2]:
-    return [dataclasses.replace(d, excluded=scope_exclusion(d, claim_text, dataset)) if not d.excluded else d for d in details]
+def apply_scope(details: list[SetupDetailV2], claim_text: str, dataset: str, paper_text: str = "") -> list[SetupDetailV2]:
+    return [dataclasses.replace(d, excluded=scope_exclusion(d, claim_text, dataset, paper_text)) if not d.excluded else d for d in details]
+
+
+VALUE_TOPICS = {"feature normalisation"}   # fuer diese Pflichtthemen zaehlt auch der Wert der Angabe, nicht nur ihr Thema
+FEATURE_NORM_RE = re.compile(r"normali|row|scal", re.I)
+FEATURE_NORM_EXCLUDE = re.compile(r"graph|training procedure|adjacen|laplacian|propagat|label", re.I)
 
 
 def missing_topics(details: list[SetupDetailV2], family: str) -> list[str]:
-    """Pflichtthemen ohne gueltige (nicht ausgeschlossene) Angabe; nur das Thema der Angabe zaehlt, nie ihr Wert."""
-    live = [d.topic for d in details if not d.excluded]
+    """Pflichtthemen ohne gueltige (nicht ausgeschlossene) Angabe. Meist zaehlt nur das Thema der Angabe, nie ihr Wert; fuer "feature
+    normalisation" gilt Thema ODER Wert (normali|row|scal) und weder Graph-Standardisierung noch Trainingsprotokoll."""
+    live = [d for d in details if not d.excluded]
     out = []
     for name, inc, exc in MANDATORY[family]:
-        if not any(re.search(inc, t, re.I) and not (exc and re.search(exc, t, re.I)) for t in live):
+        if name in VALUE_TOPICS:
+            ok = any(FEATURE_NORM_RE.search(f"{d.topic} {d.value}") and not FEATURE_NORM_EXCLUDE.search(f"{d.topic} {d.value}") for d in live)
+        else:
+            ok = any(re.search(inc, d.topic, re.I) and not (exc and re.search(exc, d.topic, re.I)) for d in live)
+        if not ok:
             out.append(name)
     return out
 
@@ -368,7 +424,7 @@ def target_docs(docs: list[Doc]) -> list[Doc]:
     return picked[:MAX_TARGET_DOCS]
 
 
-def _targeted_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, topics: list[str]) -> list:
+def _targeted_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, topics: list[str], source: str = "") -> list:
     resp = llm.complete("extract", [
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": (
@@ -376,10 +432,105 @@ def _targeted_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, t
             "Earlier passes found no statement for these settings: " + "; ".join(topics) + ".\n"
             "From the excerpt below (code, script, config or README), list only statements that set or describe exactly these "
             "settings for the experiment of the goal, with the value exactly as written. If the excerpt has none, answer [].\n"
-            + ANSWER_FORMAT_V2 + f"EXCERPT:\n{chunk}"
+            + ANSWER_FORMAT_V2 + (f"EXCERPT from {excerpt_label(source)}:\n{chunk}" if source else f"EXCERPT:\n{chunk}")
         )},
     ], temperature=0.0, max_tokens=6000, timeout_s=600)
     return _parse_list(resp.content)
+
+
+CALL_RE = re.compile(r"([A-Za-z_][\w.]*)\s*\(")
+MAX_BODY_CHARS = 3000
+MAX_BODY_LOOKUPS = 4
+LITERAL_RE = re.compile(r"^([A-Za-z_]\w*)\s*=\s*(-?\d[\d.eE+-]*|True|False|None|'[^']*'|\"[^\"]*\"|\[[\w.,'\"\s-]*\])\s*(#.*)?$")
+SHELL_RE = re.compile(r"^([A-Za-z_]\w*)=(\S+)\s*(#.*)?$")
+MAX_LITERALS = 60
+
+
+def function_body(text: str, name: str) -> str:
+    """Rumpf von `def name(...)` (bis zur naechsten Definition auf gleicher oder aeusserer Einrueckung), "" wenn nicht definiert."""
+    m = re.search(rf"^([ \t]*)def {re.escape(name)}\s*\(", text, re.M)
+    if not m:
+        return ""
+    indent = len(m.group(1).expandtabs())
+    out = [text[m.start():].split("\n", 1)[0]]
+    for line in text[m.start():].split("\n")[1:]:
+        if line.strip() and len(line) - len(line.lstrip()) <= indent and not line.lstrip().startswith(("#", ")", "]", "}")):
+            break
+        out.append(line)
+    return "\n".join(out)[:MAX_BODY_CHARS]
+
+
+def call_bodies(details: list[SetupDetailV2], docs: list[Doc], skip: set[str]) -> list[tuple[Doc, str, SetupDetailV2, str]]:
+    """Angaben, deren Wert ein Aufruf f(...) ist und f in einem gelesenen Repo-Dokument definiert ist: (Dokument der Definition, Rumpf, Angabe, f)."""
+    out, seen = [], set(skip)
+    py_docs = [d for d in docs if d.name.startswith("repo:") and ".py@" in d.name]
+    for det in details:
+        if det.excluded:
+            continue
+        for call in CALL_RE.findall(f"{det.value} {det.quote}"):
+            name = call.rsplit(".", 1)[-1]
+            if name in seen:
+                continue
+            for doc in py_docs:
+                body = function_body(doc.text, name)
+                if body:
+                    seen.add(name)
+                    out.append((doc, body, det, name))
+                    break
+        if len(out) >= MAX_BODY_LOOKUPS:
+            break
+    return out[:MAX_BODY_LOOKUPS]
+
+
+def _body_chunk(llm: LLMClient, doc: Doc, body: str, det: SetupDetailV2, claim_text: str, dataset: str) -> list:
+    return _targeted_chunk(llm, body, claim_text, dataset, [det.topic], doc.name)
+
+
+def literal_lines(doc: Doc) -> list[tuple[str, str, str]]:
+    """Literalzuweisungen auf Modulebene (Python `name = 0.5  # kommentar`, Shell `name=5`): [(Name, Literal, ganze Zeile)]."""
+    out = []
+    for line in doc.text.splitlines():
+        if not line or line[0] in " \t#" or line.startswith(("def ", "class ", "import ", "from ", "if ", "for ")):
+            continue
+        m = LITERAL_RE.match(line.rstrip()) or SHELL_RE.match(line.rstrip())
+        if m:
+            out.append((m.group(1), m.group(2), line.strip()))
+    return out[:MAX_LITERALS]
+
+
+def _relevance(llm: LLMClient, doc: Doc, lines: list[tuple[str, str, str]], claim_text: str, dataset: str) -> list:
+    numbered = "\n".join(f"{i}: {ln}" for i, (_, _, ln) in enumerate(lines))
+    resp = llm.complete("extract", [
+        {"role": "system", "content": SYSTEM},
+        {"role": "user", "content": (
+            f"Goal: reproduce this result: {claim_text} (dataset: {dataset}).\n"
+            f"Below are the literal assignments at module level of {excerpt_label(doc.name)}. Pick the lines that set up the experiment "
+            "(data preprocessing, model size, optimiser, regularisation, schedule, training length, stopping) and give each picked line a "
+            "short topic label that says what the setting is. Skip lines that are only bookkeeping (paths, flags for hardware, names).\n"
+            'Answer with a JSON list of {"i": the line number, "topic": short label}. Keep your reasoning short and end with the JSON list.\n\n'
+            f"LINES:\n{numbered}"
+        )},
+    ], temperature=0.0, max_tokens=4000, timeout_s=600)
+    return _parse_list(resp.content)
+
+
+def literal_details(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str) -> list[SetupDetailV2]:
+    """Rueckfall fuer fehlende Pflichtthemen: Literalzuweisungen in Startskripten werden deterministisch als Angabe uebernommen
+    (Zeile = Zitat, Wert = Literal), das LLM waehlt nur die relevanten Zeilen und benennt das Thema."""
+    out = []
+    for doc in docs:
+        path = doc.name.split(":", 1)[-1].split("@")[0]
+        if not doc.name.startswith("repo:") or not START_RE.search(path):
+            continue
+        lines = literal_lines(doc)
+        if not lines:
+            continue
+        for it in _relevance(llm, doc, lines, claim_text, dataset):
+            if not isinstance(it, dict) or not isinstance(it.get("i"), int) or not 0 <= it["i"] < len(lines) or not str(it.get("topic", "")).strip():
+                continue
+            name, literal, line = lines[it["i"]]
+            out.append(SetupDetailV2(str(it["topic"]).strip(), literal, line, doc.name, None, source_rank(doc.name, line)))
+    return out
 
 
 def extract_setup_details_v2(
@@ -389,26 +540,47 @@ def extract_setup_details_v2(
     Ablauf: erste Extraktion, Geltungsbereich pruefen, fehlende Pflichtthemen gezielt in Datenlade- und Startdateien suchen,
     erneut pruefen. Jede Angabe braucht ein woertliches Zitat (verify_raw), "nicht gefunden" ist ein gueltiges Ergebnis."""
     family = family_for(dataset)
+    paper_text = next((d.text for d in docs if d.name == "paper"), "")
+    scope = lambda ds: apply_scope(ds, claim_text, dataset, paper_text)
     details, dropped = verify_raw_v2(collect_raw(llm, docs, claim_text, dataset, v2=True), docs)
-    details = apply_scope(details, claim_text, dataset)
-    missing = missing_topics(details, family)
-    info = {"family": family, "missing_first": list(missing), "targeted_docs": [], "added": 0}
+    details = scope(details)
+    info = {"family": family, "targeted_docs": [], "added": 0, "bodies": [], "literals": 0}
     n_dropped = len(dropped)
+
+    def merge(extra: list[SetupDetailV2]) -> int:
+        seen = {(d.source, _norm(d.quote)) for d in details}
+        new = [d for d in scope(extra) if (d.source, _norm(d.quote)) not in seen]
+        details.extend(new)
+        return len(new)
+
+    def expand_bodies() -> None:
+        """Wert ist ein Aufruf f(...), f steht in einem gelesenen Repo-Dokument: den Rumpf nachlesen (Zitat aus dem Rumpf, gegen das Dokument geprueft)."""
+        nonlocal n_dropped
+        for doc, body, det, fname in call_bodies(details, docs, {b["function"] for b in info["bodies"]}):
+            raw = [{"doc": doc.name, "item": it} for it in _body_chunk(llm, doc, body, det, claim_text, dataset)]
+            extra, dropped_b = verify_raw_v2(raw, [doc])
+            n_dropped += len(dropped_b)
+            info["bodies"].append({"function": fname, "doc": doc.name, "topic": det.topic, "added": merge(extra)})
+
+    expand_bodies()
+    missing = missing_topics(details, family)
+    info["missing_first"] = list(missing)
     if missing:
         targets = target_docs(docs)
         info["targeted_docs"] = [d.name for d in targets]
         jobs = [(d, c) for d in targets for c in _chunks(d.text[:MAX_TEXT_CHARS])]
         if jobs:
             with ThreadPoolExecutor(max_workers=4) as pool:
-                lists = list(pool.map(lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing), jobs))
+                lists = list(pool.map(lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing, j[0].name), jobs))
             raw2 = [{"doc": d.name, "item": it} for (d, _), lst in zip(jobs, lists) for it in lst]
             extra, dropped2 = verify_raw_v2(raw2, targets)
-            seen = {(d.source, _norm(d.quote)) for d in details}
-            new = [d for d in apply_scope(extra, claim_text, dataset) if (d.source, _norm(d.quote)) not in seen]
-            details += new
-            info["added"] = len(new)
+            info["added"] = merge(extra)
             n_dropped += len(dropped2)
+        expand_bodies()
         missing = missing_topics(details, family)
+        if missing:   # Rueckfall: Literalzuweisungen der Startskripte
+            info["literals"] = merge(literal_details(llm, docs, claim_text, dataset))
+            missing = missing_topics(details, family)
     return details, n_dropped, missing, info
 
 
