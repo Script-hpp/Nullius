@@ -100,7 +100,8 @@ def test_ablation_and_rest_seeds_only_for_winner(tmp_path):
     run(o, tmp_path)
     abl = [kw for t, kw in events if t == "ablation"]
     assert len(abl) == 1 and abl[0]["accuracy_full"] == 0.60                            # Seed 0 des Siegers wiederverwendet
-    assert sum(1 for _, c in sb.cmds if "cora_val_eval.py" in c) == 3                   # Val nur Seed 0 je Kandidat, nicht bei Ablation/Rest
+    # Val nur Seed 0 je Kandidat (3) plus der B1-Lauf mit maskierten Val-Labels je Kandidat (3), nicht bei Ablation/Rest
+    assert sum(1 for _, c in sb.cmds if "cora_val_eval.py" in c) == 6
 
 
 def test_fallback_without_val_values_takes_first_runnable(tmp_path):
