@@ -94,3 +94,7 @@ Lesart: Unsere ehrliche Auswertung liegt bei RLinear 0,0044 über dem Paperwert,
 
 - GCNII bleibt als Referenzlösung im Repo (`tests/reference/gcnii_cora_reference.py`), aber nicht im Benchmark; ein Lauf mit weniger Schichten oder Epochen wäre eine andere Einheit (nicht gewollt).
 - Die Referenzläufe laufen lokal, nicht in der Nebius-Sandbox; Laufzeiten dort können abweichen (RLinear und SparseTSF mit 6 bis 7 s weit unter dem Timeout).
+
+### Nachtrag 2026-10-02: Lauf des Autorencodes (Vorversuch Nachlauf)
+
+Die Nachbildung oben ist jetzt durch einen Lauf des Autorencodes ergänzt (`results/nachlauf_prestudy.md`, Handarbeit, lokal und in der Nebius-Sandbox, kein Agenten-Ergebnis). RLinear, `plumprc/RTSF` Stand `0fec00104f`, Seed 1024 des Repos: Eigenausgabe des Autorencodes 0,3660 (Test-Loader mit `drop_last = True`, Batch 128, 2688 von 2785 Fenstern), unser Harness auf allen 2785 Fenstern 0,3698, Harness-Nachrechnung der 2688 Fenster 0,36596. Fünf Seeds, alle Fenster: 0,3708 ± 0,0013. Der Startbefehl aus `script.md` lief nur mit `--model RLinear` statt `Linear` und mit `numpy<2`. Der obige Text bleibt unverändert; der Satz „ein Lauf des Autorencodes fand nicht statt“ galt bis zu diesem Nachtrag.

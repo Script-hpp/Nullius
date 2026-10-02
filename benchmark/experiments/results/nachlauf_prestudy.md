@@ -116,3 +116,62 @@ Reicht „fester Commit, unveränderte Repo-Dateien, geprüfter Adapter“? Aus 
 - Nur lokal, nur 16 Kerne und 16 Threads; keine Aussage zu Sandbox-Laufzeit oder Snapshot-Größe (Schritt 2). Größe der Python-Umgebung lokal: 1,2 GB (venv mit torch CPU und Zubehör), Checkpoints und Daten klein (Checkpoints 1,9 MB gesamt, Daten 2,5 MB).
 - Sandbox-Image `python:3.11-slim` hat numpy und torch vorinstalliert (neueste Versionen, numpy 2 wahrscheinlich): RTSF braucht dort `numpy<2` im Snapshot, das ist eine Änderung an der Umgebung, nicht an Repo-Dateien.
 - Die Zahlen gelten für diese beiden Repos auf diesen Commits mit torch 2.14.1 statt `torch==1.9.0`.
+
+---
+
+# Teil „Schritt 2, Nebius-Sandbox“ (Reviewer, 2026-10-02)
+
+Skript `scripts/prestudy_nachlauf/sandbox_run.py` (Stand `fcfa72d`), Rohausgaben `nachlauf_prestudy_sandbox_rlinear.txt` und `nachlauf_prestudy_sandbox_dlinear.txt`. Kein LLM, kein Tavily, Kosten 0 $. Je Seed ein eigener Branch vom selben Basis-Snapshot, streng nacheinander. Training und Adapter liefen unter `unshare -n`, der Harness wurde erst danach frisch in den Branch kopiert.
+
+**Vorfall:** Der erste Start scheiterte vor jedem Sandbox-Aufruf an einem falschen Import (`repro_agent.sandbox` statt `repro_agent.sandbox.base`; Fehler in der Vorgabe des Reviewers, behoben in `fcfa72d`). Der zweite Start lief ohne Wiederholung durch. Parallel lief ein Benchmark-Prozess eines anderen Auftrags auf derselben Sandbox; ein Einfluss auf Laufzeiten ist möglich und nicht gemessen.
+
+## Snapshot
+
+- Image `python:3.11-slim`, Python 3.11.15, torch 2.14.1+cpu, numpy 1.26.4 (`numpy<2`, wie in Schritt 1 begründet), pandas 3.0.6, scikit-learn 1.9.1.
+- Größe: 1,9 GB gesamt, davon 1,4 GB `/usr/local` (Pakete), 26 MB `/work` (beide Klone mit Daten).
+- Commits und SHA-256 von `ETTh1.csv` im Snapshot geprüft: wie in Schritt 1.
+
+## Ergebnisse
+
+| | RLinear | DLinear |
+|---|---|---|
+| Status aller 5 Seeds | ok | ok |
+| Trainingszeit je Seed im Branch | 21,8 bis 25,8 s | 19,3 bis 26,8 s |
+| Adapter je Seed | 8,0 bis 8,3 s | 8,0 bis 8,4 s |
+| Gerät | CPU (`Use CPU` in der Ausgabe) | CPU |
+| Zuordnungsprüfung | bestanden, 1,5e-14 | bestanden, 1,5e-14 |
+| `git status` und `git diff --stat` im Klon | leer | leer |
+| Eigenausgabe Autorencode, Repo-Seed | 0,3660 | 0,38414 |
+| Harness alle 2785 Fenster, Repo-Seed | 0,36979 | 0,38414 |
+| Harness `drop_last`, Batch des Startbefehls, Repo-Seed | 0,36596 (Batch 128, 2688 Fenster) | 0,38409 (Batch 32, 2784 Fenster) |
+| Selbstprüfung des Adapters (größter Abstand über 5 Seeds) | 0,00004 (`drop_last` 128 gegen Eigenausgabe, diese auf 4 Stellen gerundet) | < 1e-7 (alle Fenster gegen Eigenausgabe; Repo testet ohne `drop_last`) |
+| Harness alle Fenster, Einzelwerte (Seed Repo, 0, 1, 2, 3) | 0,3698 / 0,3729 / 0,3704 / 0,3698 / 0,3710 | 0,3841 / 0,3895 / 0,3739 / 0,3717 / 0,3713 |
+| Mittel ± Std (ddof = 1) | 0,3708 ± 0,0013 | 0,3781 ± 0,0082 |
+| Zielwert, Abstand, Urteil (Toleranz 0,01) | 0,366, 0,0048, reproduziert | 0,375, 0,0031, reproduziert |
+
+Die Sandbox-Werte stimmen mit den lokalen Werten aus Schritt 1 auf mindestens sechs Stellen überein (gleiche Paketversionen, CPU).
+
+## Entscheidungsregel (aus `docs/prestudy_nachlauf.md`, unverändert)
+
+| Punkt | RLinear | DLinear |
+|---|---|---|
+| 1. Sandbox, CPU, Training ohne Netz, höchstens 10 Minuten je Seed | ja (höchstens 25,8 s) | ja (höchstens 26,8 s) |
+| 2. Zuordnungsprüfung (2785 Fenster, Abweichung ≤ 1e-4) | ja | ja |
+| 3. Keine Datei des Repos geändert | ja | ja |
+| 4. Selbstprüfung des Adapters ≤ 0,001 | ja | ja |
+
+**Ergebnis nach der Regel: „Weiter mit dem Bau des Modus (nur ETTh1-Familie)“.** Beide Einheiten erfüllen alle vier Punkte. Ob und wann gebaut wird, entscheidet der Nutzer.
+
+## Einschränkungen (für die Entscheidung wichtig)
+
+1. **Der Vorversuch zeigt Machbarkeit von Hand, nicht durch einen Agenten.** Adapter, Startbefehl und Umgebung hat ein Mensch bzw. ein Worker geschrieben. Ob Nemotron den Adapter für ein fremdes Repo schreibt, ist offen. Die sieben Stellen, an denen Repo-Wissen nötig war, stehen oben unter „Adapter“.
+2. **Die Startbefehle liefen nicht in jedem Fall wie dokumentiert.** RTSF: `script.md` nennt `--model Linear`, der Code kennt nur `RLinear`; dazu `numpy<2`. Im Modus muss der Agent solche Abweichungen finden und offen ausweisen; jede Abweichung vom dokumentierten Befehl gehört ins Zeugnis.
+3. **Leak-Schutz.** Der Adapter hat Zugriff auf die Testlabels; ein Adapter, der Labels als Vorhersage schreibt, würde vom Harness nicht abgelehnt. Die Selbstprüfung gegen die Eigenausgabe des Repos fängt das, setzt aber voraus, dass das Repo eine eigene Test-Metrik ausgibt. Für den Bau ist eine härtere Trennung nötig (Adapter bekommt nur Eingabefenster, oder der Harness rechnet die Vorhersage selbst aus dem geladenen Modell nach). Ohne eine solche Maßnahme darf der Modus nicht „unabhängig geprüft“ heißen.
+4. **Netz-Isolation:** `unshare -n` ist derselbe Mechanismus wie im Loop; ein eigener Test, dass im Branch wirklich kein Netz erreichbar war, lief in diesem Vorversuch nicht.
+5. **Zwei Repos derselben Code-Familie.** Keine Aussage zu Graph-Repos, zu Repos mit GPU-Pflicht oder zu Repos ohne eigene Test-Ausgabe.
+6. Beide Urteile sind „reproduziert“; der Vorversuch enthält keinen Fall, in dem der Autorencode den Paperwert verfehlt.
+
+## Befunde, die über die Machbarkeit hinausgehen (Handarbeit, kein Agenten-Ergebnis)
+
+- **RLinear:** Der Autorencode gibt 0,3660 aus, gleich dem Paperwert 0,366, auf 2688 von 2785 Testfenstern (`drop_last = True`, Batch 128). Dasselbe Modell erreicht auf allen 2785 Fenstern 0,3698. Damit ist die in `b1_candidates.md` nur nachgebildete Erklärung durch einen Lauf des Autorencodes belegt, für diesen Commit und Seed 1024. Der Unterschied (0,004) liegt innerhalb der Toleranz, das Urteil ändert sich nicht.
+- **DLinear:** Der Autorencode liegt mit dem Repo-Seed bei 0,3841, also 0,009 über dem Paperwert; über fünf Seeds 0,3781 ± 0,0082. Im Benchmark v4 (Arm B, Nachbau) kam der Agent auf 0,3866 und 0,3930 („teilweise“), Ursache laut `failure_analysis_v4.md` `argparse`-Defaults statt der Werte aus `etth1.sh`. Das ist ein Beispiel für die Lücke zwischen Code und Beschreibung, **post hoc** und an einer Einheit.
