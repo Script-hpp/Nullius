@@ -537,3 +537,163 @@ def test_public_file_is_loaded_once_per_run(tmp_path):
                              log=lambda *_: None, explore_offsets=[5, 100])
     agent.run("gizmo_2024", claim_for(sb), "https://example.invalid/gizmo.git", COMMIT, seeds=["repo", 0], offsets=[5, 100])
     assert len(calls) == 1
+
+
+# ---- 38b: robuste Antworten, Rohantworten, unerwartete Fehler -----------------------------------------------------------------------
+
+WRONG_FORMS = [None, "text", 5, 1.5, True, [], ["x"], [{"a": 1}], {}, {"x": 1}, {"file": 5, "quote": 5}, {"file": ["a"], "quote": ["b"]}]
+
+
+def mutated(key, value, sub=None):
+    ans = json.loads(json.dumps(GOOD))
+    if sub:
+        ans[key][sub] = value
+    else:
+        ans[key] = value
+    return ans
+
+
+MALFORMED = (
+    [("command_source", None, v, "command_source") for v in WRONG_FORMS + [{"file": "README.md"}, {"quote": CMD}, {"file": "README.md", "quote": None}]]
+    + [("seed", None, v, "seed") for v in WRONG_FORMS + ["copy", "flag", {"kind": "copy"}, {"kind": 7}, {"kind": "flag"}, {"kind": "flag", "flag": 5},
+                                                          {"kind": "copy", "file": ["x"], "line": ["y"]}, {"kind": "copy", "file": "train_gizmo.py", "line": ""}]]
+    + [("test_loader", "drop_last", v, "test_loader.drop_last") for v in WRONG_FORMS + [{"value": True}, {"value": "yes", "file": "gizmo/loader.py", "quote": "drop_last = True"},
+                                                                                   {"value": True, "file": "gizmo/loader.py", "quote": "no such text"}]]
+    + [("test_loader", "batch_size", v, "test_loader.batch_size") for v in WRONG_FORMS + ["128", 128, {"value": 128}, {"value": "abc", "file": "gizmo/loader.py", "quote": "batch_size = 128"},
+                                                                                    {"value": [128], "file": "gizmo/loader.py", "quote": "batch_size = 128"},
+                                                                                    {"value": 128, "file": "gizmo/loader.py", "quote": "batch_size = 64"}]]
+)
+
+
+@pytest.mark.parametrize("key,sub,value,item", MALFORMED)
+def test_malformed_field_is_unbelegt_and_never_crashes(key, sub, value, item):
+    ver = na.verify_answer(mutated(key, value, sub), REPO)
+    assert set(ver) == {"command_source", "seed", "test_loader.drop_last", "test_loader.batch_size", "needs_time_features"}
+    assert ver[item]["belegt"] is False, (item, value, ver[item])
+    # alle anderen Angaben bleiben unberuehrt belegt
+    assert all(v["belegt"] for k, v in ver.items() if k != item)
+
+
+@pytest.mark.parametrize("value", ["yes", "no", ["true"], 5, {}, {"value": "maybe"}, {"value": True}, {"value": True, "file": "gizmo/model.py", "quote": "not in file"}])
+def test_needs_time_features_malformed_is_never_a_yes(value):
+    ver = na.verify_answer(mutated("needs_time_features", value), REPO, only={"needs_time_features"})["needs_time_features"]
+    assert ver["value"] is False                                  # nie ein "ja" ohne belegtes Zitat
+
+
+@pytest.mark.parametrize("value", [None, False, {"value": False}, {"value": None}])
+def test_needs_time_features_no_forms_are_ok(value):
+    assert na.verify_answer(mutated("needs_time_features", value), REPO, only={"needs_time_features"})["needs_time_features"] == {"belegt": True, "reason": "", "value": False}
+
+
+def test_rescues_that_make_sense():
+    assert na.verify_answer(mutated("seed", "none"), REPO, only={"seed"})["seed"]["belegt"] is True               # "none" als Wort
+    assert na.verify_answer(mutated("needs_time_features", False), REPO, only={"needs_time_features"})["needs_time_features"]["belegt"] is True
+    v = na.verify_answer(mutated("test_loader", "128", "batch_size") | {"test_loader": {**GOOD["test_loader"], "batch_size": {**GOOD["test_loader"]["batch_size"], "value": "128"}}}, REPO,
+                         only={"test_loader.batch_size"})
+    assert v["test_loader.batch_size"]["belegt"] is True and v["test_loader.batch_size"]["value"] == 128       # Ziffernfolge, Zitat entscheidet
+    assert na.verify_answer("not even a dict", REPO)["command_source"]["belegt"] is False
+
+
+def test_reported_case_requote_answer_with_seed_as_string_does_not_crash(tmp_path):
+    bad = json.loads(json.dumps(GOOD))
+    bad["command_source"]["quote"] = "not literally in the file"
+    bad["seed"] = {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 1"}
+    bad["test_loader"]["batch_size"]["quote"] = "batch_size = 64"
+    requote = {"command_source": CMD, "seed": "copy", "test_loader": {"batch_size": "128"}}          # Typen falsch, wie im echten Lauf
+    sb = AgentSandbox()
+    sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"
+    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=[jx(requote)]))
+    d, _ = go(sb, llm, tmp_path)
+    ag = info_of(d)["agent"]
+    assert {x["item"] for x in ag["discarded"]} == {"command_source", "seed", "test_loader.batch_size"}
+    assert ag["outcome"] == "ok" and d.verdicts[0].urteil in ("reproduziert", "teilweise", "nicht reproduziert")
+    assert "eine Messung, keine Streuung" in d.warnings and any("Test-Loader nicht belegt" in w for w in d.warnings)
+
+
+def test_requote_answer_that_is_not_an_object_at_all(tmp_path):
+    bad = json.loads(json.dumps(GOOD))
+    bad["seed"] = {"kind": "copy", "file": "train_gizmo.py", "line": "seed = 1"}
+    sb = AgentSandbox()
+    llm = FakeLLM(base_script(start_command=[jx(bad)], start_command_requote=['{"seed": ["copy"], "other": 1}']))
+    d, _ = go(sb, llm, tmp_path)
+    assert info_of(d)["agent"]["outcome"] == "ok" and "eine Messung, keine Streuung" in d.warnings
+
+
+def test_repair_command_with_wrong_shapes_does_not_crash(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[jx({"command": None, "command_source": "x", "install": "foo-lib", "checkpoint_glob": 5})]))
+    d, _ = go(sb, llm, tmp_path)
+    assert d.verdicts[0].urteil == "reproduziert"                                    # alter Befehl und altes Muster bleiben, zweiter Versuch gelingt
+    assert [a["status"] for a in info_of(d)["agent"]["attempts"]] == ["fehler", "ok"]
+
+
+@pytest.mark.parametrize("answer", ["no list at all", "[1, 2, {\"a\": 1}]", "[\"does/not/exist.py\"]", "{\"files\": [\"README.md\"]}", ""])
+def test_unusable_file_selection_falls_back_to_name_based_choice(tmp_path, answer):
+    sb = AgentSandbox()
+    if "files" in answer:      # schmale Auswahl: Test-Loader bleibt unbelegt, P3 vergleicht mit allen Fenstern
+        sb.own = f"mse:{mse_all_and_droplast(honest(sb.pub['test_inputs']), sb.truth)[0]:.4f}, mae:0.4"
+    d, agent = go(sb, FakeLLM(base_script(select_files=[answer], start_command_requote=[jx({})])), tmp_path)
+    assert info_of(d)["agent"]["outcome"] == "ok"
+    files = set(info_of(d)["agent"]["reading"]["files"])
+    assert "README.md" in files and (len(files) == 2 or "train_gizmo.py" in files)    # nur die sehr schmale, aber gueltige Auswahl behaelt wenige Dateien
+
+
+def test_raw_answers_are_written_before_parsing_and_never_prompted(tmp_path):
+    sel = base_script()["select_files"][0]
+    sb = AgentSandbox()
+    llm = FakeLLM(base_script())
+    d, agent = go(sb, llm, tmp_path)
+    assert (tmp_path / "llm_select_files_1.txt").read_text() == sel
+    assert (tmp_path / "llm_start_command_1.txt").read_text() == jx(GOOD)
+    assert "variant: honest" in (tmp_path / "llm_write_adapter_1.txt").read_text()
+    assert not any("llm_" in p["user"] or "llm_" in p["system"] for p in agent.asker.prompts)
+
+
+def test_unusable_model_answer_ends_with_setup_verdict_not_a_traceback(tmp_path):
+    sb = AgentSandbox()
+    llm = FakeLLM(base_script(start_command=["I cannot answer in JSON", "still not json {", "nope"]))
+    d, agent = go(sb, llm, tmp_path)
+    v = d.verdicts[0]
+    assert v.urteil == "nicht reproduzierbar (Setup)" and "AgentAnswerError" in v.explanation
+    assert all((tmp_path / f"llm_start_command_{i}.txt").exists() for i in (1, 2, 3))      # Rohantworten bleiben nachvollziehbar
+    assert (tmp_path / "error.txt").exists() and info_of(d)["agent"]["error"]["type"] == "AgentAnswerError"
+    assert d.mode == "nachlauf" and agent.guard.run_net() == pytest.approx(0.01 * 4)         # Kosten der Aufrufe stehen fest
+
+
+def test_unexpected_error_ends_with_setup_verdict_and_reason(tmp_path, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("boom in verification")
+    monkeypatch.setattr(na, "verify_answer", boom)
+    d, agent = go(AgentSandbox(), FakeLLM(base_script()), tmp_path)
+    assert d.verdicts[0].urteil == "nicht reproduzierbar (Setup)" and "boom in verification" in d.verdicts[0].explanation
+    assert info_of(d)["agent"]["error"]["type"] == "RuntimeError" and "Traceback" in (tmp_path / "error.txt").read_text()
+    assert agent.guard.run_net() > 0                                                        # Kosten bis zum Absturz
+
+
+@pytest.mark.parametrize("exc", [na.BudgetStop("stop"), na.BillingBlocked("billing"), na.BudgetExceeded("budget")])
+def test_budget_and_billing_errors_still_propagate(tmp_path, monkeypatch, exc):
+    def raiser(*a, **k):
+        raise exc
+    monkeypatch.setattr(na, "verify_answer", raiser)
+    with pytest.raises(type(exc)):
+        go(AgentSandbox(), FakeLLM(base_script()), tmp_path)
+
+
+def test_script_writes_store_row_with_costs_after_an_unexpected_error(tmp_path, monkeypatch):
+    m = load_script("scripts/run_nachlauf.py", "run_nachlauf_t3")
+    m.ROOT = tmp_path
+    sb = AgentSandbox()
+    store = tmp_path / "store.jsonl"
+    llm = FakeLLM(base_script(), cost=0.01)
+
+    class Spy(na.NachlaufAgent):
+        def __init__(self, *a, **k):
+            super().__init__(*a, public_loader=lambda: sb.pub, np_rng=np.random.default_rng(0), explore_offsets=[5, 100], log=lambda *_: None, **k)
+
+    m.na = types.SimpleNamespace(**{**{k: getattr(na, k) for k in dir(na) if not k.startswith("__")}, "NachlaufAgent": Spy})
+    monkeypatch.setattr(na, "verify_answer", lambda *a, **k: (_ for _ in ()).throw(ValueError("unexpected shape")))
+    rc = m.main(["--paper", "rlinear_2023", "--repo", "https://example.invalid/gizmo.git", "--commit", COMMIT, "--store", str(store), "--seeds", "repo"],
+                sandbox_factory=lambda: sb, llm_factory=lambda: llm)
+    row = json.loads(store.read_text().splitlines()[0])
+    assert rc == 1 and row["urteil"] == "nicht reproduzierbar (Setup)" and row["valid"] is False
+    assert row["cost_usd_run"] == pytest.approx(0.02) and row["n_llm_calls"] == 2 and (tmp_path / row["run_dir"] / "dossier.json").exists()

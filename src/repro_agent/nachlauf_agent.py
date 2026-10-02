@@ -33,7 +33,8 @@ from .dossier import Attempt, Claim, Dossier
 from .events import EventLog
 from .harness import independence
 from .harness.code_check import find_violations
-from .llm import LLMResponse
+from .costs import BudgetExceeded
+from .llm import BillingBlocked, LLMResponse
 from .loop import extract_code
 from .repo_source import _last_string_list, imported_files
 from .setup_details import quote_in_text
@@ -241,8 +242,10 @@ def parse_json_object(text: str, required: str | None = None) -> dict | None:
 class Asker:
     """Alle LLM-Aufrufe des Modus: Kostenstopp vorher, abgeschnittene Antworten (finish_reason length) nie verwerten, Protokoll aller Prompts."""
 
-    def __init__(self, llm, guard: CostGuard, events: EventLog | None = None, log=print):
+    def __init__(self, llm, guard: CostGuard, events: EventLog | None = None, log=print, out_dir: Path | None = None):
         self.llm, self.guard, self.events, self.log = llm, guard, events, log
+        self.out_dir = Path(out_dir) if out_dir else None
+        self._counts: dict[str, int] = {}
         self.calls: list[dict] = []
         self.prompts: list[dict] = []      # {purpose, system, user}: nur fuer Tests und Diagnose, nie im Dossier
 
@@ -250,10 +253,19 @@ class Asker:
         self.guard.check()
         resp = self.llm.complete(role, [{"role": "system", "content": system}, {"role": "user", "content": user}],
                                  temperature=temperature, max_tokens=max_tokens, timeout_s=400)
+        self._dump(purpose, resp)      # Rohantwort sofort, noch vor dem Parsen (nur Laufordner, nie in einen Prompt)
         self.prompts.append({"purpose": purpose, "system": system, "user": user})
         self.calls.append({"purpose": purpose, "role": role, "try": n, "cost_usd": round(getattr(resp, "cost_usd", 0.0), 5),
                            "finish_reason": getattr(resp, "finish_reason", None), "cached": bool(getattr(resp, "cached", False))})
         return resp
+
+    def _dump(self, purpose: str, resp) -> None:
+        n = self._counts[purpose] = self._counts.get(purpose, 0) + 1
+        if self.out_dir:
+            try:
+                (self.out_dir / f"llm_{purpose}_{n}.txt").write_text(getattr(resp, "content", "") or "")
+            except OSError:
+                pass
 
     def ask(self, purpose: str, role: str, system: str, user: str, parse, note: str, max_tokens: int | None = None, temperature: float = 0.2):
         """Bis zu 3 Versuche. Abgeschnitten oder nicht lesbar: hoehere Temperatur (gleicher Prompt gaebe aus dem Cache dieselbe Antwort), hoehere
@@ -310,7 +322,9 @@ def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text
     raw = asker.files("select_files", FILE_SELECT_SYSTEM, FILE_SELECT_USER.format(
         claim=claim_text, dataset=dataset, n=MAX_FILES, listing="\n".join(listing[:MAX_LISTING])))
     valid = set(listing)
-    chosen = [p for p in dict.fromkeys(raw) if p in valid][:MAX_FILES]
+    chosen = [p for p in dict.fromkeys(x for x in raw if isinstance(x, str)) if p in valid][:MAX_FILES]
+    if not chosen:      # Auswahl unbrauchbar (leer, falsche Form, keine gueltigen Pfade): deterministischer Rueckfall
+        chosen = fallback_files(listing)
     extra = [p for p in listing if DEPENDENCY_FILE_RE.search(p)][:MAX_DEP_FILES]
     files: dict[str, str] = {}
 
@@ -326,6 +340,14 @@ def read_repo_at_commit(sandbox, asker: Asker, url: str, commit: str, claim_text
     read(extra)
     read(imported_files(files, listing)[:4])
     return RepoReading(url=url, commit=commit, listing=listing, files=files, chosen=chosen)
+
+
+FALLBACK_RE = re.compile(r"(^|/)(readme[\w.-]*|[\w.-]*\.sh|(run|train|main|exp)[\w.-]*\.py|[\w/.-]*model[\w.-]*\.py|[\w/.-]*(loader|data_factory|dataset)[\w.-]*\.py)$", re.I)
+
+
+def fallback_files(listing: list[str]) -> list[str]:
+    """Wenn die Dateiauswahl des Modells unbrauchbar ist: Dokumentation, Skripte, Einstieg, Modell- und Ladedateien nach Namen."""
+    return [p for p in listing if FALLBACK_RE.search(p)][:MAX_FILES]
 
 
 def _render_files(files: dict[str, str], only: list[str] | None = None, budget: int = MAX_TOTAL_CHARS) -> str:
@@ -349,6 +371,8 @@ def _quote_ok(quote, file, files: dict[str, str], extra_hay: str = "") -> tuple[
     """Zitat steht woertlich (normalisiert, Auslassungen erlaubt) in der genannten Datei (oder in `extra_hay`, z. B. dem Befehl)."""
     if not isinstance(quote, str) or not quote.strip():
         return False, "no quote"
+    if not isinstance(file, str):
+        file = ""
     if file in files:
         if quote_in_text(quote, _norm(files[file])):
             return True, ""
@@ -386,32 +410,54 @@ def line_number(text: str, quote: str) -> int:
 
 
 def _intval(v) -> int | None:
-    try:
-        return int(v)
-    except (TypeError, ValueError):
+    """Ganzzahl aus int oder reiner Ziffernfolge ('128'); bool, Fliesskomma und alles andere gelten als nicht lesbar."""
+    if isinstance(v, bool):
         return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str) and re.fullmatch(r"\s*\d+\s*", v):
+        return int(v)
+    return None
+
+
+def _obj(x) -> dict:
+    """Objekt oder leer: String, Liste, Zahl, null und Co. gelten als fehlend (nie ein Absturz)."""
+    return x if isinstance(x, dict) else {}
+
+
+def _text(x) -> str:
+    return x if isinstance(x, str) else ""
 
 
 def verify_answer(ans: dict, files: dict[str, str], only: set[str] | None = None) -> dict:
     """Prueft jede Angabe einzeln. Rueckgabe: {item: {"belegt": bool, "reason": str, "value": ...}} fuer command_source, seed,
-    test_loader.drop_last, test_loader.batch_size, needs_time_features (nur `only`, falls gesetzt)."""
+    test_loader.drop_last, test_loader.batch_size, needs_time_features (nur `only`, falls gesetzt).
+    Jede Angabe mit falschem Typ oder falscher Form (String statt Objekt, Liste, null, fehlender Schluessel, nicht lesbare Zahl) gilt als nicht belegt
+    und geht in denselben Rueckfall wie ein nicht woertliches Zitat."""
+    ans = _obj(ans)
     out: dict[str, dict] = {}
     want = lambda k: only is None or k in only  # noqa: E731
-    cmd = sanitize_command(str(ans.get("command") or ""))
+    cmd = sanitize_command(_text(ans.get("command")))
 
     if want("command_source"):
-        src = ans.get("command_source") or {}
-        ok, why = _quote_ok(src.get("quote"), src.get("file"), files)
+        raw = ans.get("command_source")
+        src = _obj(raw)
+        ok, why = _quote_ok(src.get("quote"), src.get("file"), files) if src else (False, "command_source must be an object with file and quote")
         out["command_source"] = {"belegt": ok, "reason": why, "file": src.get("file"), "quote": src.get("quote")}
 
     if want("seed"):
-        seed = ans.get("seed") or {}
+        raw = ans.get("seed")
+        seed = _obj(raw)
         kind = seed.get("kind")
-        res: dict = {"belegt": False, "reason": "", "kind": kind}
-        if kind == "none":
+        res: dict = {"belegt": False, "reason": "", "kind": kind if isinstance(kind, str) else None}
+        if not seed:
+            res["reason"] = "seed must be an object with kind (flag, copy or none)"
+            if raw in ("none", "None"):      # gerettet: ausdruecklich "keine Seed-Methode"
+                res.update(belegt=True, kind="none", reason="")
+        elif kind == "none":
             res.update(belegt=True, kind="none")
         elif kind == "flag":
-            flag = str(seed.get("flag") or "")
+            flag = _text(seed.get("flag"))
             defs = [t for t in files.values() if "add_argument" in t or "DEFINE_" in t]
             hit = next((t for t in defs if re.search(rf"""['"]{re.escape(flag)}['"]""", t)), None) if flag.startswith("--") else None
             if hit:
@@ -420,11 +466,13 @@ def verify_answer(ans: dict, files: dict[str, str], only: set[str] | None = None
             else:
                 res["reason"] = "switch not found in an argument definition of the provided files"
         elif kind == "copy":
-            path, line = seed.get("file"), str(seed.get("line") or "")
-            text = files.get(path or "", "")
+            path, line = _text(seed.get("file")), _text(seed.get("line"))
+            text = files.get(path, "")
             matches = [l for l in text.splitlines() if l.strip() == line.strip() and line.strip()]
             ints = re.findall(r"(?<![\w.])-?\d+(?![\w.])", line)
-            if path != script_of(cmd):
+            if not line.strip():
+                res["reason"] = "kind copy needs the verbatim seed line"
+            elif path != script_of(cmd):
                 res["reason"] = "seed line is not in the entry script of the command"
             elif len(matches) != 1 or len(ints) != 1:
                 res["reason"] = f"seed line must occur exactly once and contain exactly one integer (found {len(matches)} lines, {len(ints)} integers)"
@@ -437,31 +485,34 @@ def verify_answer(ans: dict, files: dict[str, str], only: set[str] | None = None
             res["reason"] = "seed.kind must be flag, copy or none"
         out["seed"] = res
 
-    tl = (ans.get("test_loader") or {})
+    tl = _obj(ans.get("test_loader"))
     if want("test_loader.drop_last"):
-        d = tl.get("drop_last") or {}
-        ok, why = _quote_ok(d.get("quote"), d.get("file"), files)
+        d = _obj(tl.get("drop_last"))
+        ok, why = _quote_ok(d.get("quote"), d.get("file"), files) if d else (False, "drop_last must be an object with value, file and quote")
         if ok and "drop_last" not in str(d.get("quote")):
             ok, why = False, "quote does not mention drop_last"
         if ok and not isinstance(d.get("value"), bool):
             ok, why = False, "value must be true or false"
         out["test_loader.drop_last"] = {"belegt": ok, "reason": why, "value": d.get("value"), "file": d.get("file"), "quote": d.get("quote")}
     if want("test_loader.batch_size"):
-        d = tl.get("batch_size") or {}
-        v = _intval(d.get("value"))
-        ok, why = _quote_ok(d.get("quote"), d.get("file"), files, extra_hay=cmd)
+        d = _obj(tl.get("batch_size"))
+        v = _intval(d.get("value"))     # '128' als Ziffernfolge wird gerettet; das Zitat entscheidet
+        ok, why = _quote_ok(d.get("quote"), d.get("file"), files, extra_hay=cmd) if d else (False, "batch_size must be an object with value, file and quote")
         if ok and (v is None or v <= 0 or not re.search(rf"(?<![\d.]){v}(?![\d.])", str(d.get("quote")))):
             ok, why = False, "batch size value does not appear in the quote"
         out["test_loader.batch_size"] = {"belegt": ok, "reason": why, "value": v, "file": d.get("file"), "quote": d.get("quote")}
 
     if want("needs_time_features"):
-        d = ans.get("needs_time_features") or {}
-        val = d.get("value")
+        raw = ans.get("needs_time_features")
+        d = _obj(raw)
+        val = raw if isinstance(raw, bool) else d.get("value") if d else raw      # gerettet: nacktes true/false
         if val is False or val is None:
             out["needs_time_features"] = {"belegt": True, "reason": "", "value": False}
+        elif val is True or val == "true":
+            ok, why = _quote_ok(d.get("quote"), d.get("file"), files) if d else (False, "needs_time_features true needs file and quote")
+            out["needs_time_features"] = {"belegt": ok, "reason": why, "value": bool(ok), "file": d.get("file"), "quote": d.get("quote")}
         else:
-            ok, why = _quote_ok(d.get("quote"), d.get("file"), files)
-            out["needs_time_features"] = {"belegt": ok, "reason": why, "value": bool(val) and ok, "file": d.get("file"), "quote": d.get("quote")}
+            out["needs_time_features"] = {"belegt": False, "reason": "needs_time_features must be an object with value true or false", "value": False}
     return out
 
 
@@ -500,7 +551,7 @@ class NachlaufAgent:
         if self.out_dir:
             self.out_dir.mkdir(parents=True, exist_ok=True)
         self.events = EventLog(self.out_dir / "events.jsonl" if self.out_dir else None)
-        self.asker = Asker(llm, self.guard, self.events, log)
+        self.asker = Asker(llm, self.guard, self.events, log, self.out_dir)
         loader = public_loader or nl._load_public_local
         cache: dict = {}
 
@@ -535,13 +586,14 @@ class NachlaufAgent:
             again = self.asker.json("start_command_requote", COMMAND_SYSTEM, COMMAND_REASK.format(
                 claim=claim_text, dataset=dataset, items=detail, files=files_txt))
             merged = {**ans}
+            again = _obj(again)
             for k in bad:
                 top, _, sub = k.partition(".")
                 new = again.get(top)
                 if new is None:
                     continue
                 if sub:
-                    base = dict(merged.get(top) or {})
+                    base = dict(_obj(merged.get(top)))
                     base[sub] = new.get(sub) if isinstance(new, dict) else None
                     merged[top] = base
                 else:
@@ -556,10 +608,11 @@ class NachlaufAgent:
     def _spec(self, claim: Claim, paper_id: str, url: str, commit: str, ans: dict, ver: dict, reading: RepoReading,
               seed_override: dict | None = None) -> nl.UnitSpec:
         files = reading.files
-        cmd = sanitize_command(str(ans.get("command") or ""))
-        src = ans.get("command_source") or {}
-        src_file = src.get("file") if isinstance(src.get("file"), str) else ""
-        line = line_number(files.get(src_file, ""), str(src.get("quote") or "")) if ver.get("command_source", {}).get("belegt") else 0
+        ans = _obj(ans)
+        cmd = sanitize_command(_text(ans.get("command")))
+        src = _obj(ans.get("command_source"))
+        src_file = _text(src.get("file"))
+        line = line_number(files.get(src_file, ""), _text(src.get("quote"))) if ver.get("command_source", {}).get("belegt") else 0
         seed_v = ver.get("seed", {})
         if seed_v.get("belegt") and seed_v.get("kind") == "copy":
             seed = {"kind": "copy", "repo_seed": seed_v["repo_seed"], "regex": seed_v["regex"], "template": seed_v["template"]}
@@ -582,7 +635,7 @@ class NachlaufAgent:
             unit=re.sub(r"[^a-z0-9]+", "", paper_id.lower())[:24] or "unit", paper_id=f"nachlauf/{paper_id}", claim_text=claim.text, target=claim.target,
             tolerance=claim.tolerance, repo_url=url, commit=commit, command=cmd, command_source={"file": src_file, "line": line}, script=script,
             seed=seed, adapter_source="", test_loader=test_loader, argparse_files=argfiles, requirements_files=reqs, pip_packages=list(BASE_PIP),
-            checkpoint_glob=str(ans.get("checkpoint_glob") or "checkpoints/*/*.pth"),
+            checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or "checkpoints/*/*.pth",
             own_metric_pattern=rf"(?im)^\s*(?:test[ _-]*)?{re.escape(claim.metric)}\s*[:=]\s*([0-9.eE+-]+)", metric=claim.metric, claim_id=claim.id,
             seed_note={"copy": "copy of the entry script, only the seed line changed (diff checked in the branch)",
                        "flag": "command-line switch of the repository", "none": "no seed method: single measurement"}[seed["kind"]],
@@ -637,19 +690,20 @@ class NachlaufAgent:
                 break
             self.emit("nachlauf_repair", kind="command", round=k, reason=problem[:200])
             ans = self._repair_command(claim, dataset, spec, reading, problem)
-            installs = [str(x) for x in (ans.get("install") or []) if isinstance(x, str)]
+            ans = _obj(ans)
+            installs = [x for x in (ans.get("install") if isinstance(ans.get("install"), list) else []) if isinstance(x, str)]
             dep = _norm(self._dependency_text(reading))
             ok_pk, rejected_pk = [], []
             for pkg in installs:
                 named = PKG_NAME_RE.match(pkg) and re.search(rf"(?<![\w.-]){re.escape(_norm(pkg))}(?![\w.-])", dep)
                 (ok_pk if named else rejected_pk).append(pkg)
-            new_cmd = sanitize_command(str(ans.get("command") or spec.command))
+            new_cmd = sanitize_command(_text(ans.get("command"))) or spec.command
             ver = verify_answer({**ans, "command": new_cmd}, reading.files, only={"command_source"})
-            src = ans.get("command_source") or {}
-            sfile = src.get("file") if isinstance(src.get("file"), str) else spec.command_source.get("file", "")
-            ln = line_number(reading.files.get(sfile, ""), str(src.get("quote") or "")) if ver.get("command_source", {}).get("belegt") else 0
+            src = _obj(ans.get("command_source"))
+            sfile = _text(src.get("file")) or spec.command_source.get("file", "")
+            ln = line_number(reading.files.get(sfile, ""), _text(src.get("quote"))) if ver.get("command_source", {}).get("belegt") else 0
             spec = dataclasses.replace(
-                spec, command=new_cmd, script=script_of(new_cmd) or spec.script, checkpoint_glob=str(ans.get("checkpoint_glob") or spec.checkpoint_glob),
+                spec, command=new_cmd, script=script_of(new_cmd) or spec.script, checkpoint_glob=_text(ans.get("checkpoint_glob")).strip() or spec.checkpoint_glob,
                 command_source={"file": sfile, "line": ln} if ln else dict(spec.command_source),
                 pip_packages=[*spec.pip_packages, *[p for p in ok_pk if p not in spec.pip_packages]])
             if rejected_pk:       # Paket nicht in den Abhaengigkeitsdateien: fester Satz, der naechste Versuch ist verbraucht, es laeuft nichts
@@ -662,7 +716,7 @@ class NachlaufAgent:
 
     # -- Schritt 3b: Adapter
     def _adapter_context(self, reading: RepoReading, ans: dict, spec: nl.UnitSpec) -> dict:
-        files = reading.files
+        files, ans = reading.files, _obj(ans)
         models = pick_files(files, ans.get("model_file")) or [p for p in files if "model" in p.lower() and p.endswith(".py")][:3]
         training = pick_files(files, ans.get("training_file"))
         entry = files.get(spec.script, "")
@@ -736,6 +790,34 @@ class NachlaufAgent:
     # -- Einstieg
     def run(self, paper_id: str, claim: Claim, repo_url: str, commit: str, *, dataset: str = "ETTh1", seeds: list | None = None,
             offsets: int | list[int] = independence.N_OFFSETS) -> Dossier:
+        """Ein unerwarteter Fehler im Agenten-Teil (auch eine unbrauchbare Modell-Antwort nach den Wiederholungen) beendet den Lauf mit dem Urteil
+        "nicht reproduzierbar (Setup)", dem Grund im Dossier und der Traceback-Datei `error.txt`; kein Traceback nach aussen. Kosten-/Abrechnungsfehler
+        (BudgetStop, BillingBlocked, BudgetExceeded) laufen durch."""
+        self._spec_cur = None
+        try:
+            return self._run(paper_id, claim, repo_url, commit, dataset=dataset, seeds=seeds, offsets=offsets)
+        except (BudgetStop, BillingBlocked, BudgetExceeded):
+            raise
+        except Exception as exc:
+            import traceback
+            tb = traceback.format_exc()
+            self._save("error.txt", tb)
+            self.emit("nachlauf_repair", kind="crash", reason=f"{type(exc).__name__}: {str(exc)[:200]}")
+            spec = self._spec_cur or nl.UnitSpec(
+                unit=re.sub(r"[^a-z0-9]+", "", paper_id.lower())[:24] or "unit", paper_id=f"nachlauf/{paper_id}", claim_text=claim.text, target=claim.target,
+                tolerance=claim.tolerance, repo_url=repo_url, commit=commit, command="", command_source={}, script="",
+                seed={"kind": "none", "repo_seed": None}, adapter_source="", test_loader={}, claim_id=claim.id, metric=claim.metric, claim_source=claim.source)
+            claim_, dossier, info = nl.new_dossier(spec)
+            reason = f"unexpected error in the agent part: {type(exc).__name__}: {str(exc)[:300]}"
+            self.rec.outcome = "error"
+            from .loop import Orchestrator
+            dossier.verdicts.append(Orchestrator._verdict(None, claim_, [], len(seeds or [1]), [reason], None, {}))
+            info["agent"] = self._agent_info()
+            info["agent"]["error"] = {"type": type(exc).__name__, "message": str(exc)[:500], "traceback_tail": tb[-1500:]}
+            return dossier
+
+    def _run(self, paper_id: str, claim: Claim, repo_url: str, commit: str, *, dataset: str = "ETTh1", seeds: list | None = None,
+             offsets: int | list[int] = independence.N_OFFSETS) -> Dossier:
         self.guard.start_run()
         t0 = time.time()
         claim_text = claim.text
@@ -745,6 +827,7 @@ class NachlaufAgent:
         self.rec.command_answer, self.rec.verification = ans, ver
         self._save("command_answer.json", json.dumps({"answer": ans, "verification": ver, "discarded": self.rec.discarded}, indent=2, ensure_ascii=False, default=str))
         spec = self._spec(claim, paper_id, repo_url, commit, ans, ver, reading)
+        self._spec_cur = spec
         warnings = []
         if not ver.get("command_source", {}).get("belegt"):
             warnings.append("Startbefehl nicht belegt: kein woertliches Zitat in den Dateien des Repos")
