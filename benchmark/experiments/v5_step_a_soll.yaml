@@ -81,43 +81,43 @@ soll:
 
 patterns:
   kipf_gcn_2017:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     adj_norm: {topic: 'adjacen|laplacian|propagat|renormali|symmetric', value: 'D\^?\{?-?\s?(1/2|0\.5)|symmetric|\(\s*A\s*\+\s*I|self.?loop|renormali', wrong: 'row.?normali|D\^\{?-1\}?\s*A'}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
     weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '5e-?0?4|0?\.0005', wrong: '\d'}
     dropout: {topic: 'dropout', value: '(?<![\d.])0?\.5(?!\d)', wrong: '\d'}
     hidden: {topic: 'hidden|units|width|dimension', value: '(?<!\d)16(?!\d)', wrong: '\d'}
-    epochs: {topic: 'epoch|iteration', value: '(?<!\d)200(?!\d)', wrong: '\d'}
+    epochs: {topic: 'epoch|iteration', value: '(?<!\d)200(?!\d)', quote_value: '(?<!\d)200(?!\d)\s*(training\s+)?(epochs|iterations)|(epochs|iterations)[^.]{0,25}(?<!\d)200(?!\d)', wrong: '\d', wrong_unless: 'no early stopping|without early stopping|depth|layers'}
     early_stopping: {topic: 'early|patience|stopping|window', value: '(?<!\d)10(?!\d)', wrong: '\d'}
   wu_sgc_2019:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     adj_norm: {topic: 'adjacen|propagat|renormali|symmetric|\bK\b|hops|power|filter', value: 'symmetric|\(\s*A\s*\+\s*I|renormali|self.?loop|D\^?\{?-?\s?(1/2|0\.5)', wrong: 'row.?normali'}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.2(?!\d)', wrong: '\d'}
     epochs: {topic: 'epoch|iteration', value: '(?<!\d)100(?!\d)', wrong: '\d'}
     weight_decay: {topic: 'weight.?decay|l2|regulari[sz]|lambda|hyperopt|tun', value: 'hyperopt|tun|search|valid|select|chos|optimi[sz]', wrong: ''}
   velickovic_gat_2018:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.005(?!\d)|5e-?0?3', wrong: '\d'}
     weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '5e-?0?4|0?\.0005', wrong: '\d'}
     dropout: {topic: 'dropout', value: '(?<![\d.])0?\.6(?!\d)', wrong: '\d'}
     hidden: {topic: 'hidden|head|units|features|attention', value: '8\D{0,25}(head|attention)|(head|attention)\D{0,25}8|8\s*[x×*]\s*8|(?<!\d)8(?!\d).*(?<!\d)8(?!\d)', wrong: '\d'}
     early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)100(?!\d)', wrong: '\d'}
   velickovic_dgi_2019:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'row|sum[s]? to (one|1)|l1', wrong: 'standardi[sz]|zero.?mean|unit (std|var)|column|not normali|no normali', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     encoder: {topic: 'encoder|layer|activation|embedding|prelu|hidden|units', value: 'prelu|512', wrong: ''}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.001(?!\d)|1e-?0?3', wrong: '\d'}
     early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)20(?!\d)', wrong: '\d'}
     classifier: {topic: 'classif|logistic|evaluation|linear', value: 'logistic|linear', wrong: ''}
     applies_to: {topic: 'transductive|inductive|setting|applies', value: 'transductive|cora|citeseer|pubmed', wrong: 'inductive|reddit|\bppi\b'}
   shchur_pitfalls_2018:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean|(?<!not )(?<!un)(?<!non-)normali[sz]ed', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
     weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '1e-?0?3|0?\.001(?!\d)', wrong: '\d'}
     dropout: {topic: 'dropout', value: '(?<![\d.])0?\.8(?!\d)', wrong: '\d'}
     hidden: {topic: 'hidden|units|width|dimension|size', value: '(?<!\d)64(?!\d)', wrong: '\d'}
     early_stopping: {topic: 'early|patience|stopping', value: '(?<!\d)50(?!\d)', wrong: '\d'}
   shchur_gat_2018:
-    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean'}
+    feature_norm: {topic: 'normali[sz]|row.?norm|preprocess|standardi[sz]|feature (scal|prep)', value: 'not normali|no normali|without normali|un-?normali|raw|binary|no (feature )?preprocess|not (row.)?normali', wrong: 'row|sum[s]? to (one|1)|l1|standardi[sz]|zero.?mean|(?<!not )(?<!un)(?<!non-)normali[sz]ed', wrong_unless: 'graph|procedure|dataset_graph|hyperparameter|selection'}
     lr: {topic: 'learning.?rate|\blr\b', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
     weight_decay: {topic: 'weight.?decay|l2|regulari[sz]', value: '(?<![\d.])0?\.01(?!\d)|1e-?0?2\b', wrong: '\d'}
     dropout: {topic: 'dropout', value: '0?\.6.*0?\.3|0?\.3.*0?\.6', wrong: '\d'}

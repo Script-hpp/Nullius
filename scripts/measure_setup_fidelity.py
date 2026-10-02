@@ -149,21 +149,48 @@ def format_check(rows: list[dict]) -> str:
 
 
 # ---- Auswertung ----------------------------------------------------------------------------------------------------------------
+SUPERSCRIPTS = str.maketrans("\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079\u207b\u207a\u2212\u2013", "0123456789-+--")
+SCI_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:[\u00b7\u00d7x*\u22c5]|\\times|\\cdot)\s*10\s*\^?\s*\{?\s*([+-]?\d+)\s*\}?")
+E_RE = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)[eE]([+-]?\d+)(?![\w.])")
+FALSE_RE = re.compile(r"\s*(false|no|none|off)\s*", re.I)
+TRUE_RE = re.compile(r"\s*(true|yes|on)\s*", re.I)
+NORM_TOPIC_RE = re.compile(r"normali[sz]|standardi[sz]", re.I)
+
+
+def canonical_value(value: str, topic: str = "") -> str:
+    """Gleichwertige Wertformen auf eine Form bringen: 5e-4 = 5 \u00b7 10 \u22124 = 5\u00b710\u207b\u2074 = 0.0005 (die Dezimalform wird angehaengt),
+    Schalter normalize_features: false/False -> "not normalised", true -> "normalised"."""
+    t = value.translate(SUPERSCRIPTS)
+    forms = [f"{float(m.group(1)) * 10 ** int(m.group(2)):.10g}" for m in SCI_RE.finditer(t)]
+    forms += [f"{float(m.group(1)) * 10 ** int(m.group(2)):.10g}" for m in E_RE.finditer(t)]
+    if NORM_TOPIC_RE.search(topic):
+        if FALSE_RE.fullmatch(t):
+            forms.append("not normalised")
+        elif TRUE_RE.fullmatch(t):
+            forms.append("normalised")
+    return t + (" " + " ".join(forms) if forms else "")
+
+
 def score_point(details: list[dict], spec: dict) -> tuple[str, dict]:
-    """(korrekt | fehlt | falsch | unklar, Hinweise). Dossier-Angaben, deren Thema (topic + value) trifft, werden nach Wert beurteilt."""
+    """(korrekt | fehlt | falsch | unklar, Hinweise). Dossier-Angaben, deren Thema (topic + value) trifft, werden nach Wert beurteilt.
+    Werte werden vorher kanonisiert (canonical_value); `quote_value` (optional) erkennt den Wert auch im Zitat einer Angabe mit anderem
+    Thema; `wrong_unless` (optional) nimmt Werte von der falsch-Regel aus, die erkennbar ein anderes Protokoll beschreiben."""
     topic = re.compile(spec["topic"], re.I)
-    hits = [d for d in details if topic.search(f"{d.get('topic', '')} {d.get('value', '')}")]
-    if not hits:
+    val = lambda d: canonical_value(str(d.get("value", "")), str(d.get("topic", "")))
+    hits = [d for d in details if topic.search(f"{d.get('topic', '')} {val(d)}")]
+    quote_good = [d for d in details if spec.get("quote_value") and re.search(spec["quote_value"], str(d.get("quote", "")), re.I)]
+    if not hits and not quote_good:
         return "fehlt", {}
     value = re.compile(spec["value"], re.I)
     wrong = re.compile(spec["wrong"], re.I) if spec.get("wrong") else None
-    good = [d for d in hits if value.search(str(d.get("value", "")))]
-    bad = [d for d in hits if wrong and wrong.search(str(d.get("value", ""))) and not value.search(str(d.get("value", "")))]
+    unless = re.compile(spec["wrong_unless"], re.I) if spec.get("wrong_unless") else None
+    good = quote_good + [d for d in hits if value.search(val(d)) and d not in quote_good]
+    bad = [d for d in hits if wrong and wrong.search(val(d)) and not value.search(val(d)) and not (unless and unless.search(val(d)))]
     if good:
         return "korrekt", {"conflict": bool(bad), "evidence": good[0]}
     if bad:
         return "falsch", {"evidence": bad[0]}
-    return "unklar", {"evidence": hits[0]}
+    return "unklar", {"evidence": (hits or quote_good)[0]}
 
 
 CONFLICT_RE = re.compile(r"repository says|-> use the value|highest-ranked source", re.I)
@@ -310,6 +337,27 @@ def format_score(label: str, ev: dict, base: dict | None = None, base_label: str
     return "\n".join(out)
 
 
+def raw_trace(calls: list[dict], docs) -> list[dict]:
+    """Je LLM-Aufruf: Rohantwort, finish_reason, Dokument des Chunks, geparste Eintraege und Verwurfsgruende (deterministisch
+    nachgerechnet mit verify_raw; Aufrufe ohne Chunk-Dokument, z. B. Dateiauswahl, haben doc None)."""
+    from repro_agent.setup_details import _parse_list, verify_raw
+
+    by_doc = {d.name: d for d in docs}
+    out = []
+    for c in calls:
+        head = re.search(r"EXCERPT[^\n]*:\n", c["user"])   # "EXCERPT:" (v1) oder "EXCERPT from <Quelle>:" (setup_v2)
+        excerpt = c["user"][head.end():].strip() if head else ""
+        doc = next((d for d in docs if excerpt and excerpt[:200] in d.text), None)
+        items = _parse_list(c["response"]) if doc else []
+        dropped = []
+        if doc and items:
+            _, dropped = verify_raw([{"doc": doc.name, "item": i} for i in items], [by_doc[doc.name]])
+        out.append({"doc": doc.name if doc else None, "prompt_head": c["user"][:300], "response": c["response"],
+                    "finish_reason": c["finish_reason"], "completion_tokens": c["completion_tokens"], "status": c["status"],
+                    "n_items": len(items), "dropped": [{"reason": d["reason"], "item": d["item"]} for d in dropped]})
+    return out
+
+
 # ---- Messlauf (LLM) ------------------------------------------------------------------------------------------------------------
 def collect(label: str, units: list[str], reps: int, setup_v2: bool, max_gross: float, root: Path = OUT_ROOT) -> None:
     import dataclasses
@@ -335,6 +383,16 @@ def collect(label: str, units: list[str], reps: int, setup_v2: bool, max_gross: 
             if orch.spent_gross_usd >= max_gross:
                 print(f"ABBRUCH: {orch.spent_gross_usd:.2f} $ brutto >= Grenze {max_gross:.2f} $", flush=True)
                 return
+            calls: list[dict] = []
+            real_complete = orch.llm.complete
+
+            def recording(role, messages, **kw):   # Rohantwort je Chunk festhalten (Verwurfsgruende rechnet raw_trace nachtraeglich aus)
+                resp = real_complete(role, messages, **kw)
+                calls.append({"user": messages[-1]["content"], "response": resp.content, "finish_reason": resp.finish_reason,
+                              "completion_tokens": resp.completion_tokens, "status": resp.status})
+                return resp
+
+            orch.llm.complete = recording
             orch.paper_text = PaperText(**json.loads((FIXTURES / f"{arxiv_id}.json").read_text()))
             orch._paper_title, orch._sources, orch._repo_files, orch.details = paper.get("title"), [], {}, []
             before, before_gross = orch.llm.total_cost_usd, orch.spent_gross_usd
@@ -348,6 +406,10 @@ def collect(label: str, units: list[str], reps: int, setup_v2: bool, max_gross: 
             else:
                 details, dropped = extract_setup_details(orch.llm, docs, claim["text"], paper["dataset"])
             orch.details = details
+            orch.llm.complete = real_complete
+            raw_dir = out / "raw"
+            raw_dir.mkdir(exist_ok=True)
+            (raw_dir / f"{u}_{rep}.json").write_text(json.dumps(raw_trace(calls, docs), ensure_ascii=False, indent=1))
             plan_text = (orch._details_prompt() + "\n\n" + orch._conflicts_prompt()).strip()
             f.write_text(json.dumps({
                 "unit": u, "rep": rep, "label": label, "claim_id": claim["id"], "setup_v2": setup_v2, "repo": repo,
