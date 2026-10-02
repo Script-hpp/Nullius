@@ -155,7 +155,7 @@ def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, data
                 + ANSWER_FORMAT_V2 + f"EXCERPT from {excerpt_label(doc.name)}:\n{chunk}"
             )}
         ]
-        resp = llm.complete("extract", prompt, temperature=0.0, max_tokens=2000, timeout_s=120)
+        resp = llm.complete("extract", prompt, temperature=0.0, max_tokens=6000, timeout_s=120)
         return _parse_list(resp.content)
         
     from concurrent.futures import ThreadPoolExecutor
