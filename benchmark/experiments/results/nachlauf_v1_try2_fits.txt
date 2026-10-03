@@ -1,0 +1,3 @@
+[nachlauf_repair] {"kind": "more_candidates", "request": 1, "shown": 60}
+[nachlauf_repair] {"kind": "more_candidates", "request": 2, "shown": 90}
+ERGEBNIS {"paper": "fits_2023", "claim": "fits_etth1_96_mse", "unit": "FITS", "repo": "https://github.com/VEWOXIC/FITS", "commit": "d040bb015b6299da26d879b90dd19c80fb72c160", "code_commit": "39dbed3", "cost_usd_run": 0.03921, "cost_usd_run_gross": 0.04666, "n_llm_calls": 4, "urteil": "nicht reproduzierbar (Setup)", "mean": NaN, "std": NaN, "target": 0.372, "valid": false, "rejected_by": [], "outcome": "no_command", "warnings": [], "command": "", "command_documented": null, "run_dir": "runs/nachlauf/fits_2023/20261003-032421"}

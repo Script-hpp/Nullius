@@ -57,3 +57,41 @@ P2 und P3 bei allen zehn Seed-Läufen bestanden, Adapter jeweils im ersten Versu
 - Versionen: Bei einem Absturz in einer Bibliothek eine ältere Version erlauben, wenn die Abhängigkeitsdatei des Repos sie nennt; sonst als Setup-Urteil mit klarem Grund enden.
 - P1 verschärfen: Schalter, die Datensatz, Aufgabe oder Zahl der Kanäle ändern, dürfen in der Reparatur nicht geändert werden.
 - Diese Änderungen wären durch die Fehler an den vier neuen Einheiten veranlasst. Ein zweiter Versuch ist deshalb kein Test an unberührten Einheiten mehr und muss so beschriftet werden.
+
+---
+
+# Zweiter Versuch (2026-10-03, 01:16 bis 01:30 UTC)
+
+Vorab festgelegt im Nachtrag vom 2026-10-03 (`../nachlauf_v1.md`), vor jeder Code-Änderung; Code `4388a76` (Änderungen `7296b36`), im Nachtrag vor dem Lauf eingetragen. Bedingung vorher erfüllt: beide Entwicklungs-Einheiten mit dem neuen Code gültig (RLinear 0,3708 ± 0,0013, DLinear 0,3781 ± 0,0082). Store `nachlauf_v1_try2_store.jsonl`, Ausgaben `nachlauf_v1_try2_{sparsetsf,fits,patchtst,nlinear}.txt`. Unbeaufsichtigt, vom Nutzer freigegeben. **Diese vier Einheiten waren nicht mehr unberührt**: Die Änderungen sind durch ihre Fehler im ersten Versuch veranlasst.
+
+## Ergebnis: wieder 0 von 4 gültig
+
+| Einheit | Ausgang | LLM-Aufrufe | Kosten brutto | Was geschah |
+|---|---|---|---|---|
+| SparseTSF | nicht reproduzierbar (Setup), Absturz der Umgebung | 3 | 0,022 $ | Das Modell wählte diesmal den Kandidaten mit `--features S` (univariat). Training stürzte wie im ersten Versuch in `pandas` ab; die neue Repo-Zeile im Fehlertext zeigte die Ursache (`data_provider/data_loader.py`, Zeile 69, `df_stamp.date.apply(lambda row: row.month, 1)`). Das Modell verlangte `pandas==1.2.0`; die Prüfung ließ das zu (niedrigere Version, Paket im Traceback). Der Neubau des Snapshots scheiterte, weil sich pandas 1.2.0 unter Python 3.11 nicht installieren lässt. Lauf endete mit `SandboxSetupError`. |
+| FITS | kein Befehl | 4 | 0,047 $ | Drei Seiten mit zusammen 90 von 137 Kandidaten gezeigt; **keiner davon enthält ETTh1**. Die neue Ordnung hat die passenden Befehle nicht nach oben gebracht. Das Modell forderte zweimal weitere an und wählte keinen. |
+| PatchTST/42 | kein Befehl | 4 | 0,044 $ | 90 von 491 gezeigt; 22 enthalten ETTh1, aber alle für das Vergleichsmodell DLinear, keiner für PatchTST. Das Modell wählte keinen. |
+| NLinear | kein Befehl | 4 | 0,051 $ | 90 von 1209 gezeigt (die Schleifen-Auflösung vervielfacht die Kandidaten). Oben stehen Befehle für NLinear mit Eingabelänge 104 statt 336. Der Befehl für das Experiment des Claims steht auf Platz 37, aber mit `--model DLinear`: Das Repo dokumentiert NLinear auf ETTh1-336 nicht als eigene Zeile. Das Modell wählte keinen. |
+| **Summe** | **0 von 4** | 15 | **0,165 $** | |
+
+Kein Infrastruktur-Abbruch im Sinne des Nachtrags (der SparseTSF-Abbruch folgt aus der Reparatur des Agenten). Kein Lauf wiederholt. Kosten seit dem Stichtag 2026-10-02 19:43 UTC insgesamt 0,60 $ brutto.
+
+## Folge
+
+- Punkt 1 der Erfolgsregel ist auch im zweiten Versuch verfehlt. **Ein dritter Versuch ist laut Vorab-Festlegung ausgeschlossen.**
+- Der Modus „Nachlauf" gilt damit als: **funktioniert für die zwei Entwicklungs-Einheiten, nicht für fremde Repos.** README, Zeugnis und Video sagen das so.
+
+## Ursachen (post hoc, aus Prompts und Antworten)
+
+1. **Ordnung der Kandidaten trägt nicht.** Die Punktwerte heben Befehle des Claim-Modells nicht zuverlässig an (FITS: keiner mit ETTh1 unter 90; PatchTST: nur Vergleichsmodelle). Eine fehlende Eingabelänge wird nicht bestraft (NLinear: 104 vor 336). Ursache im Punktwert nicht untersucht.
+2. **Was die Autoren nicht als Zeile dokumentieren, kann der Agent nicht starten.** NLinear auf ETTh1 mit Eingabelänge 336 steht im Repo nur als DLinear-Zeile mit Modell als Variable. Die Regel „Befehl aus wörtlicher Zeile" ist hier strenger als die Praxis des Repos.
+3. **Versions-Rückgriff ohne Prüfung der Installierbarkeit.** Die Prüfung lässt jede niedrigere Version zu, auch eine, die es für die Python-Version des Snapshots nicht gibt.
+4. **Aufgabenart beim ersten Wählen nicht geprüft.** Der Schutz der Aufgabenart gilt für Reparaturen; bei der ersten Wahl nahm das Modell einen univariaten Befehl für einen multivariaten Claim.
+
+Das Modell selbst hat in allen vier Läufen nichts erfunden und nichts gemessen, was nicht gemessen wurde.
+
+## Gesamtbild Modus „Nachlauf" (für README und Video)
+
+- Gebaut und geprüft: Trennung von Training (nur Autorencode) und Vorhersage (ohne Rohdaten), Prüfungen P1 bis P4, drei Negativkontrollen abgelehnt.
+- Per Agent gültig an zwei Repos (RLinear, DLinear), je fünf Seeds, Werte identisch mit der Handarbeit, rund 0,02 $ je Lauf. Dort liefert er den belegten `drop_last`-Befund (RLinear: Autorencode 0,366 auf 2688 Fenstern, alle 2785 Fenster 0,370).
+- An vier fremden Repos in zwei vorab festgelegten Versuchen **0 von 4**. Der Engpass ist nicht das Training oder der Adapter, sondern das Finden des richtigen dokumentierten Befehls in großen Repos.

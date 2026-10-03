@@ -1,0 +1,3 @@
+[nachlauf_repair] {"kind": "more_candidates", "request": 1, "shown": 60}
+[nachlauf_repair] {"kind": "more_candidates", "request": 2, "shown": 90}
+ERGEBNIS {"paper": "zeng_nlinear_2023", "claim": "nlinear_etth1_96_mse", "unit": "LTSF-Linear", "repo": "https://github.com/cure-lab/LTSF-Linear", "commit": "0c113668a3b88c4c4ee586b8c5ec3e539c4de5a6", "code_commit": "39dbed3", "cost_usd_run": 0.04305, "cost_usd_run_gross": 0.05123, "n_llm_calls": 4, "urteil": "nicht reproduzierbar (Setup)", "mean": NaN, "std": NaN, "target": 0.374, "valid": false, "rejected_by": [], "outcome": "no_command", "warnings": [], "command": "", "command_documented": null, "run_dir": "runs/nachlauf/zeng_nlinear_2023/20261003-032749"}

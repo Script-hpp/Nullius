@@ -1,0 +1,3 @@
+[nachlauf_repair] {"kind": "more_candidates", "request": 1, "shown": 60}
+[nachlauf_repair] {"kind": "more_candidates", "request": 2, "shown": 90}
+ERGEBNIS {"paper": "patchtst_2023", "claim": "patchtst42_etth1_96_mse", "unit": "PatchTST", "repo": "https://github.com/yuqinie98/PatchTST", "commit": "204c21efe0b39603ad6e2ca640ef5896646ab1a9", "code_commit": "39dbed3", "cost_usd_run": 0.0373, "cost_usd_run_gross": 0.04439, "n_llm_calls": 4, "urteil": "nicht reproduzierbar (Setup)", "mean": NaN, "std": NaN, "target": 0.375, "valid": false, "rejected_by": [], "outcome": "no_command", "warnings": [], "command": "", "command_documented": null, "run_dir": "runs/nachlauf/patchtst_2023/20261003-032538"}
