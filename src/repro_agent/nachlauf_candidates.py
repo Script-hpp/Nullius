@@ -45,7 +45,8 @@ class Candidate:
     score: int = 0
 
     def line_text(self) -> str:
-        return f"[{self.k}] {self.file}:{self.line}: {self.text[:300]}" + (f"  (command with {self.note}: {self.command[:300]})" if self.note else "")
+        """Aufgeloeste Fassung (Variablen und Schleifenwerte eingesetzt), nicht der Rohtext; Schleifenwerte stehen dahinter."""
+        return f"[{self.k}] {self.file}:{self.line}: {self.command[:300]}" + (f"  (loop {self.note})" if self.note else "")
 
 
 def grep_cmd(ere: str) -> str:
@@ -97,40 +98,84 @@ def extract_candidates(files: dict[str, str], listing: list[str]) -> tuple[list[
     return out, skipped
 
 
+HORIZON_RE = re.compile(r"(?:horizont|horizon|prediction length|forecast(?:ing)? length|pred(?:iction)?[_ ]len)\D{0,15}(\d{1,4})", re.I)
+INPUT_RE = re.compile(r"(?:eingabefenster|eingabel[a\u00e4]nge|input (?:window|length)|look-?back(?: window| length)?|history)\D{0,15}(\d{1,4})", re.I)
+PAGE_SIZE = MAX_CANDIDATES_PROMPT
+MAX_MORE = 2     # das Modell darf zweimal die naechsten PAGE_SIZE Kandidaten anfordern
+
+
 def claim_words(claim_text: str, dataset: str) -> dict:
-    """Modell- und Datensatzname aus dem Claim-Text (nichts fest verdrahtet): erstes Wort des Claims, Datensatzname, ganze Zahlen des Claims."""
-    m = re.match(r"\s*([A-Za-z][\w.-]*)", claim_text or "")
-    model = m.group(1) if m and m.group(1).lower() not in STOPWORDS else ""
-    nums = re.findall(r"(?<![\d.,])\d{2,4}(?![\d.,])", claim_text or "")
-    return {"model": model, "dataset": dataset or "", "numbers": sorted(set(nums))}
+    """Aus dem Claim-Text (nichts fest verdrahtet): Modellname (Wort(e) vor \"erreicht\"/\"reaches\", sonst erstes Wort; Teile mit Buchstaben, z. B. \"Name/42\" ->
+    \"Name\"), Datensatzname, Horizont und Eingabelaenge (Zahl hinter dem Stichwort), alle ganzen Zahlen des Claims."""
+    text = claim_text or ""
+    m = re.match(r"\s*(.+?)\s+(?:erreicht|reaches|achieves|reach|achieve|erzielt|liefert)\b", text, re.I)
+    name = m.group(1).strip() if m else ((re.match(r"\s*([A-Za-z][\w./-]*)", text) or [None, ""])[1])
+    if name.lower() in STOPWORDS:
+        name = ""
+    parts = [p for p in re.split(r"[/\s]+", name) if re.search(r"[A-Za-z]{3,}", p) and p.lower() not in STOPWORDS]
+    first = lambda rx: (int(mm.group(1)) if (mm := rx.search(text)) else None)  # noqa: E731
+    nums = re.findall(r"(?<![\d.,])\d{2,4}(?![\d.,])", text)
+    return {"model": name, "model_parts": parts, "dataset": dataset or "", "horizon": first(HORIZON_RE), "input_len": first(INPUT_RE),
+            "numbers": sorted(set(nums))}
+
+
+def _switch_has_value(command: str, value: int) -> bool:
+    toks = nl._tokens(command)
+    v = str(value)
+    return any((t.startswith("-") and i + 1 < len(toks) and toks[i + 1] == v) or (t.startswith("-") and t.split("=", 1)[-1] == v and "=" in t)
+               for i, t in enumerate(toks))
+
+
+def _has_number(hay: str, value: int) -> bool:
+    return bool(re.search(rf"(?<![\d.]){value}(?![\d.])", hay))
 
 
 def score(c: Candidate, words: dict) -> int:
-    hay = f"{c.file} {c.text} {c.command}".lower()
+    """Passung eines aufgeloesten Kandidaten zum Claim: Modellname im Befehl oder Text (+4, im Pfad +1), Datensatz (+3, Pfad +1), Horizont als Wert eines
+    Schalters (+3, sonst als Zahl im Befehl +1), Eingabelaenge ebenso (+2/+1). Nennt der Claim weder Horizont noch Eingabelaenge, zaehlen seine ganzen Zahlen +1."""
+    path, cmd, text = c.file.lower(), c.command.lower(), c.text.lower()
     s = 0
-    if words["model"] and words["model"].lower() in hay:
-        s += 3
-    if words["dataset"] and words["dataset"].lower() in hay:
-        s += 2
-    s += sum(1 for n in words["numbers"] if re.search(rf"(?<![\d.]){n}(?![\d.])", hay))
+    parts = [p.lower() for p in words.get("model_parts") or ([words["model"]] if words.get("model") else [])]
+    if parts:
+        s += 4 if any(p in cmd or p in text for p in parts) else 0
+        s += 1 if any(p in path for p in parts) else 0
+    d = (words.get("dataset") or "").lower()
+    if d:
+        s += 3 if (d in cmd or d in text) else 0
+        s += 1 if d in path else 0
+    for key, strong in (("horizon", 3), ("input_len", 2)):
+        v = words.get(key)
+        if v is not None:
+            s += strong if _switch_has_value(c.command, v) else (1 if _has_number(cmd, v) else 0)
+    if words.get("horizon") is None and words.get("input_len") is None:
+        s += sum(1 for n in words.get("numbers", []) if _has_number(cmd + " " + text, int(n)))
     return s
 
 
-def narrow(cands: list[Candidate], words: dict, n: int = MAX_CANDIDATES_PROMPT) -> tuple[list[Candidate], dict]:
-    """Hoechstens n Kandidaten in den Prompt; bei mehr werden Zeilen mit Modell-, Datensatz- und Zahlenbezug des Claims bevorzugt. Nummern 1..m."""
+def order_candidates(cands: list[Candidate], words: dict) -> list[Candidate]:
+    """Punktwert je aufgeloestem Kandidaten, gruppiert nach Datei: Dateien absteigend nach dem besten Punktwert, darin absteigend nach Punktwert und Zeile.
+    Nummern 1..n ueber die ganze Liste (stabil, auch fuer spaeter angeforderte Seiten)."""
     for c in cands:
         c.score = score(c, words)
-    total = len(cands)
-    if total <= n:
-        chosen = list(cands)
-    else:
-        ranked = sorted(cands, key=lambda c: (-c.score, c.file, c.line))
-        chosen = ranked[:n]        # zuerst Zeilen mit Bezug zum Claim, danach in Dateireihenfolge aufgefuellt
-    for i, c in enumerate(chosen, 1):
+    best: dict[str, int] = {}
+    for c in cands:
+        best[c.file] = max(best.get(c.file, 0), c.score)
+    ordered = sorted(cands, key=lambda c: (-best[c.file], c.file, -c.score, c.line, c.command))      # Befehl als letzter Gleichstand: unabhaengig von der Eingabereihenfolge
+    for i, c in enumerate(ordered, 1):
         c.k = i
-    dropped = [c for c in cands if c not in chosen]
-    return chosen, {"n_total": total, "n_shown": len(chosen), "n_dropped": len(dropped), "words": words,
-                    "dropped_sample": [f"{c.file}:{c.line}" for c in dropped[:20]]}
+    return ordered
+
+
+def narrow(cands: list[Candidate], words: dict, n: int = PAGE_SIZE) -> tuple[list[Candidate], dict]:
+    """Geordnete Liste (`order_candidates`); die ersten n kommen in den Prompt, der Rest wird gezaehlt (weitere Seiten auf Anforderung des Modells)."""
+    ordered = order_candidates(cands, words)
+    shown = ordered[:n]
+    return shown, candidate_info(ordered, len(shown), words, pages=1)
+
+
+def candidate_info(ordered: list[Candidate], n_shown: int, words: dict, pages: int, more_requests: int = 0) -> dict:
+    return {"n_total": len(ordered), "n_shown": n_shown, "n_dropped": len(ordered) - n_shown, "words": words, "pages": pages, "more_requests": more_requests,
+            "top_scores": [f"{c.file}:{c.line}={c.score}" for c in ordered[:10]], "dropped_sample": [f"{c.file}:{c.line}" for c in ordered[n_shown:n_shown + 20]]}
 
 
 # ---- Seed ------------------------------------------------------------------------------------------------------------------------

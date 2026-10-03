@@ -118,8 +118,26 @@ class AgentSandbox(SeriesFake):
         self.snaps[label] = (kind, files)
         return label
 
+    def branch(self, snap):
+        b = super().branch(snap)
+        self.branch_snap = getattr(self, "branch_snap", {})
+        self.branch_snap[b] = snap
+        return b
+
+    def freeze_for(self, b):
+        """pip freeze des Branches: Standardliste, Pins der Snapshot-Befehle (`pandas<2`) ersetzen die Version durch eine aeltere."""
+        base = {"torch": "2.14.1+cpu", "numpy": "1.26.4", "pandas": "3.0.6"}
+        for cmd in self.snapshot_cmds.get(getattr(self, "branch_snap", {}).get(b), []):
+            for name, op, ver in re.findall(r"'?([A-Za-z][\w.-]*)(<|==)(\d+(?:\.\d+)*)", cmd):
+                if name in base and "pip install" in cmd:
+                    base[name] = f"{int(ver.split('.')[0]) - 1}.5.3" if op == "<" else ver
+        return "".join(f"{k}=={v}\n" for k, v in base.items())
+
     def run(self, b, cmd, timeout_s):
         f, kind = self.branches[b], self.kind[b]
+        if cmd == "pip freeze":
+            self.ops.append(("run", b, cmd, timeout_s))
+            return RunResult(0, self.freeze_for(b), "", False)
         if cmd.startswith("cd /repo && git grep -lIE"):
             self.ops.append(("run", b, cmd, timeout_s))
             import shlex as _sh
@@ -139,7 +157,7 @@ class AgentSandbox(SeriesFake):
             pat = cmd.split()[2]
             hits = [p for p in f if fnmatch.fnmatch(p, pat)]
             return RunResult(0 if hits else 2, "".join(h + "\n" for h in hits), "", False)
-        if "unshare -n" in cmd and "train_gizmo" in cmd:
+        if "unshare -n" in cmd and ("train_gizmo" in cmd or "_main.py" in cmd):
             self.ops.append(("run", b, cmd, timeout_s))
             assert kind == "train" and "/opt/nachlauf/predict.py" not in f
             self.train_calls += 1
@@ -266,7 +284,7 @@ def test_candidates_are_found_although_the_model_does_not_select_the_command_fil
     llm = FakeLLM(base_script(select_files=[sel]))
     d, agent = go(sb, llm, tmp_path)
     prompt = next(c[2] for c in llm.calls if c[0] == "start_command")
-    assert "scripts/run_demo.sh:4:" in prompt and "(command with h=96:" in prompt
+    assert "scripts/run_demo.sh:4: python -u train_gizmo.py --task demo --model gizmonet --horizon 96" in prompt and "(loop h=96)" in prompt   # aufgeloeste Fassung
     assert "scripts/run_demo.sh" in info_of(d)["agent"]["reading"]["files"]                  # Dateien mit Kandidaten gehoeren immer zu den gelesenen
     assert info_of(d)["command_source"] == {"file": "scripts/run_demo.sh", "line": 4} and info_of(d)["command"] == CMD
     assert "gizmo/loader.py" in info_of(d)["agent"]["reading"]["files"]                       # Loader-Dateien ebenso (DataLoader/drop_last per grep)
@@ -343,7 +361,8 @@ def test_narrowing_is_recorded_in_the_dossier_and_prompt(tmp_path):
     d, _ = go(sb, llm, tmp_path)
     ci = info_of(d)["agent"]["candidates"]
     assert ci["n_total"] >= 63 and ci["n_shown"] == 30 and ci["n_dropped"] == ci["n_total"] - 30 and len(ci["shown"]) == 30
-    assert "30 of" in next(c[2] for c in llm.calls if c[0] == "start_command") and "more not shown" in next(c[2] for c in llm.calls if c[0] == "start_command")
+    prompt = next(c[2] for c in llm.calls if c[0] == "start_command")
+    assert "1-30 of" in prompt and "more exist" in prompt and '{"more": true}' in prompt
 
 
 # ---- Test-Loader und Seed aus dem Code (38c) ---------------------------------------------------------------------------------------
@@ -502,12 +521,22 @@ def test_repair_may_modify_the_chosen_command_and_p1_lists_the_deviation(tmp_pat
 
 
 def test_repair_may_choose_another_candidate_by_number(tmp_path):
-    other = lambda user: jx({"command_candidate": pick(user, "--task other"), "checkpoint_glob": "out/*/weights.bin", "install": []})  # noqa: E731
-    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    alt = CMD.replace("--lr 0.01", "--lr 0.05")                      # zweiter dokumentierter Befehl, nur in einem freien Schalter anders
+    repo = {**REPO, "scripts/alt.sh": alt + "\n"}
+    other = lambda user: jx({"command_candidate": pick(user, "--lr 0.05"), "checkpoint_glob": "out/*/weights.bin", "install": []})  # noqa: E731
+    sb = AgentSandbox(repo=repo, train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
     d, _ = go(sb, FakeLLM(base_script(repair_command=[other])), tmp_path)
     info = info_of(d)
-    assert info["command"] == "python -u train_gizmo.py --task other --horizon 24" and info["command_source"] == {"file": "scripts/run_demo.sh", "line": 8}
-    assert info["command_documented"] is True
+    assert info["command"] == alt and info["command_source"] == {"file": "scripts/alt.sh", "line": 1} and info["command_documented"] is True
+
+
+def test_repair_cannot_switch_to_a_candidate_of_another_experiment(tmp_path):
+    other = lambda user: jx({"command_candidate": pick(user, "--task other"), "checkpoint_glob": "out/*/weights.bin", "install": []})  # noqa: E731
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[other, repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    assert not any(o[0] == "run" and "--task other" in o[2] and "unshare" in o[2] for o in sb.ops)           # --task und --horizon sind geschuetzt
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--task") in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
 
 
 def test_repair_command_without_candidate_number_is_rejected(tmp_path):
@@ -1135,3 +1164,391 @@ def test_hand_written_adapters_use_an_equivalent_format():
     p = Path(tempfile.mkdtemp()) / "p.csv"
     ns["write_predictions"](pred, str(p))
     assert np.allclose(ind.parse_predictions(p.read_bytes()), pred, rtol=1e-7)
+
+
+# ======================================================================================================================================
+# Zweiter Versuch (Auftrag 39): Ordnung der Kandidaten, Downgrade, geschuetzte Schalter, Repo-Zeile im Fehlertext
+# ======================================================================================================================================
+
+BIG_CLAIM = "PatchGizmo/42 erreicht MSE 0,375 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+
+
+def big_repo(n_projects=16, target_proj="zz_target"):
+    """Erfundenes Repo mit mehreren Unterprojekten (eigene Skripte), Schleifen ueber Modelle und Horizonte; der passende Befehl liegt im alphabetisch letzten."""
+    repo = {"README.md": "# Big\n"}
+    for i in range(n_projects):
+        p = f"proj_{chr(97 + i)}"
+        repo[f"{p}/{p}_main.py"] = "import argparse\nseed = 1\n"
+        repo[f"{p}/scripts/run_all.sh"] = (
+            "for model_name in M1 M2 M3 M4 M5; do\nfor pred_len in 96 192 336 720; do\n"
+            f"python -u {p}_main.py --task_name long_term_forecast --model $model_name --data ETTh1 --seq_len 336 --pred_len $pred_len --batch_size 32\n"
+            "done\ndone\n")
+    repo[f"{target_proj}/{target_proj}_main.py"] = "import argparse\nseed = 2\n"
+    repo[f"{target_proj}/scripts/run_patch.sh"] = (
+        "for model_name in PatchGizmo OtherNet; do\nfor pred_len in 96 192; do\n"
+        f"python -u {target_proj}_main.py --task_name long_term_forecast --model $model_name --data ETTh1 --seq_len 336 --pred_len $pred_len --batch_size 128\n"
+        "done\ndone\n")
+    return repo
+
+
+def legacy_narrow(cands, words, n=30):
+    """Die alte Ordnung (Stand vor dem zweiten Versuch): Modellname als ganzes erstes Wort des Claims (\"PatchGizmo/42\" kommt nie vor), Datensatz, ganze Zahlen; Gleichstand
+    nach Dateipfad und Zeile."""
+    def old_score(c):
+        hay = f"{c.file} {c.text} {c.command}".lower()
+        s_ = 3 if words["model"] and words["model"].lower() in hay else 0
+        s_ += 2 if words["dataset"] and words["dataset"].lower() in hay else 0
+        return s_ + sum(1 for n_ in words["numbers"] if re.search(rf"(?<![\d.]){n_}(?![\d.])", hay))
+    return sorted(cands, key=lambda c: (-old_score(c), c.file, c.line))[:n]
+
+
+def big_candidates():
+    repo = big_repo()
+    listing = sorted(repo)
+    cs, _ = cand.extract_candidates({p: t for p, t in repo.items() if p.endswith(".sh")}, listing)
+    return cs, cand.claim_words(BIG_CLAIM, "ETTh1")
+
+
+def is_target(c):
+    return c.file.startswith("zz_target") and "--model PatchGizmo" in c.command and "--pred_len 96" in c.command
+
+
+def test_claim_words_parse_model_parts_horizon_and_input_length():
+    w = cand.claim_words(BIG_CLAIM, "ETTh1")
+    assert w["model"] == "PatchGizmo/42" and w["model_parts"] == ["PatchGizmo"] and w["horizon"] == 96 and w["input_len"] == 336
+    w = cand.claim_words("GizmoNet reaches MSE 0.40 on ETTh1 at horizon 192 (input window 720)", "ETTh1")
+    assert w["model_parts"] == ["GizmoNet"] and w["horizon"] == 192 and w["input_len"] == 720
+    assert cand.claim_words("No numbers here", "X")["horizon"] is None
+
+
+def test_over_300_candidates_from_several_subprojects_with_loops():
+    cs, words = big_candidates()
+    assert len(cs) == 16 * 5 * 4 + 4 and len(cs) > 300
+    assert sum(1 for c in cs if c.file.startswith("zz_target")) == 4 and all(c.script for c in cs)           # Schleifen ueber Listen: je Wert ein aufgeloester Kandidat
+
+
+def test_new_order_puts_the_matching_candidate_first_old_order_does_not():
+    cs, words = big_candidates()
+    ordered = cand.order_candidates(cs, words)
+    pos = next(i for i, c in enumerate(ordered) if is_target(c))
+    assert pos == 0 and ordered[0].k == 1                                                                   # nur ueber den Punktwert unter die ersten 30
+    old = legacy_narrow(cs, words)
+    assert not any(is_target(c) for c in old)                                                               # Gegenprobe: alte Ordnung zeigt ihn nicht
+    # gruppiert nach Datei: die ersten 4 stammen aus der besten Datei, darin absteigend nach Punktwert
+    assert [c.file for c in ordered[:4]] == ["zz_target/scripts/run_patch.sh"] * 4
+    assert ordered[0].score >= ordered[1].score >= ordered[2].score >= ordered[3].score
+    files_in_order = list(dict.fromkeys(c.file for c in ordered))
+    assert files_in_order[0].startswith("zz_target") and len(files_in_order) == 17
+
+
+def test_score_uses_switch_values_and_path():
+    c1 = cand.Candidate(1, "a/run.sh", 1, "x", "python m.py --pred_len 96 --seq_len 336 --data ETTh1 --model PatchGizmo", "m.py")
+    c2 = cand.Candidate(2, "a/run.sh", 2, "x", "python m.py --pred_len 192 --seq_len 336 --data ETTh1 --model PatchGizmo", "m.py")
+    c3 = cand.Candidate(3, "gizmo_etth1/run.sh", 3, "x", "python m.py --model_id ETTh1_336_96 --model PatchGizmo --data ETTh1", "m.py")
+    w = cand.claim_words(BIG_CLAIM, "ETTh1")
+    assert cand.score(c1, w) > cand.score(c2, w) and cand.score(c1, w) > cand.score(c3, w)       # Horizont als Schalterwert zaehlt mehr als als Zahl im Text
+    assert cand.score(c3, w) > cand.score(cand.Candidate(4, "other/run.sh", 4, "x", "python m.py --model_id ETTh1_336_96 --model Foo --data Bar", "m.py"), w)
+
+
+def paging_repo(n=45, target_line=45):
+    lines = [f"python -u alpha_main.py --model Alpha --data ETTh1 --pred_len 96 --seq_len 336 --lr 0.0{i:02d}" for i in range(1, n + 1)]
+    lines[target_line - 1] = "python -u alpha_main.py --model Alpha --data ETTh1 --pred_len 96 --seq_len 336 --lr 0.5"
+    return {**{k: v for k, v in REPO.items() if k != "scripts/run_demo.sh"}, "alpha_main.py": "seed = 3\n", "scripts/alpha.sh": "\n".join(lines) + "\n"}
+
+
+def alpha_claim(sb):
+    return Claim(id="alpha_mse", text="Alpha erreicht MSE 0,4 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)", metric="mse", target=round(sb.own_value, 4),
+                 tolerance=0.01, source="Table 2", origin="paper")
+
+
+def go_alpha(sb, llm, tmp_path, **kw):
+    agent = na.NachlaufAgent(sb, llm, out_dir=tmp_path, public_loader=lambda: sb.pub, np_rng=np.random.default_rng(0), log=lambda *_: None, explore_offsets=[5, 100], **kw)
+    d = agent.run("alpha_2024", alpha_claim(sb), "https://example.invalid/alpha.git", COMMIT, seeds=["repo"], offsets=[5, 100])
+    return d, agent
+
+
+def more_or_pick(needle):
+    def answer(user):
+        k = pick(user, needle)
+        base = {"checkpoint_glob": "out/*/weights.bin", "test_loader": {"drop_last": {"candidate": pick(user, "drop_last = True"), "value": True},
+                                                                        "batch_size": {"switch": "--batch_size"}}}
+        return jx({"command_candidate": k, **base}) if k else jx({"more": True})
+    return answer
+
+
+def test_model_may_ask_for_more_candidates_up_to_twice(tmp_path):
+    sb = AgentSandbox(repo=paging_repo())
+    llm = FakeLLM(base_script(start_command=[more_or_pick("--lr 0.5")] * 3, choose_seed=[seed_answer("seed = 3")]))
+    d, agent = go_alpha(sb, llm, tmp_path)
+    assert llm.purposes().count("start_command") == 2                                                       # Seite 1 ohne Treffer, Seite 2 mit Treffer
+    first, second = [c[2] for c in llm.calls if c[0] == "start_command"]
+    list1, list2 = first.split("Repository file list")[0], second.split("Repository file list")[0]       # nur die Kandidatenliste (die Datei selbst steht im Prompt)
+    assert "--lr 0.5" not in list1 and "--lr 0.5" in list2 and '{"more": true}' in first
+    ci = info_of(d)["agent"]["candidates"]
+    assert ci["more_requests"] == 1 and ci["pages"] == 2 and ci["n_shown"] == 45 and ci["n_total"] == 45
+    assert info_of(d)["command"].endswith("--lr 0.5") and info_of(d)["agent"]["outcome"] == "ok"
+
+
+def test_more_is_limited_to_two_requests_then_setup_verdict(tmp_path):
+    sb = AgentSandbox(repo=paging_repo(n=100, target_line=100))
+    llm = FakeLLM(base_script(start_command=[more_or_pick("--lr 0.5")] * 5))
+    d, _ = go_alpha(sb, llm, tmp_path)
+    assert llm.purposes().count("start_command") == 3                                                       # erste Seite + zwei Anforderungen, dann Schluss
+    ci = info_of(d)["agent"]["candidates"]
+    assert ci["more_requests"] == 2 and ci["n_shown"] == 90 and ci["n_total"] == 100
+    assert d.verdicts[0].urteil == "nicht reproduzierbar (Setup)" and na.NO_COMMAND_REASON in d.verdicts[0].explanation
+    assert not any(o[0] == "run" and "unshare" in o[2] for o in sb.ops)
+    last = [c[2] for c in llm.calls if c[0] == "start_command"][-1]
+    assert "no further request is possible" in last
+
+
+def test_more_is_ignored_when_a_candidate_is_chosen(tmp_path):
+    both = lambda user: jx({"more": True, "command_candidate": pick(user, "h=96"), "checkpoint_glob": "out/*/weights.bin"})  # noqa: E731
+    d, _ = go(AgentSandbox(), FakeLLM(base_script(start_command=[both])), tmp_path)
+    assert info_of(d)["agent"]["candidates"]["more_requests"] == 0
+
+
+def test_candidate_ordering_is_deterministic_and_needs_no_llm():
+    cs, words = big_candidates()
+    a = [(c.file, c.line, c.command) for c in cand.order_candidates(list(cs), words)]
+    b = [(c.file, c.line, c.command) for c in cand.order_candidates(list(reversed(cs)), words)]
+    assert a == b
+
+
+# ---- 2. Downgrade --------------------------------------------------------------------------------------------------------------
+
+LIB_TB = ("Traceback (most recent call last):\n"
+          '  File "/work/repo/train_gizmo.py", line 12, in <module>\n    df = load()\n'
+          '  File "/usr/local/lib/python3.11/site-packages/pandas/core/frame.py", line 99, in read\n    raise TypeError("removed argument")\n'
+          "TypeError: removed argument\n")
+FREEZE = {"pandas": "3.0.6", "numpy": "1.26.4", "torch": "2.14.1+cpu"}
+
+
+def dg(item, stderr=LIB_TB, dep=""):
+    return na.check_downgrade(item, FREEZE, stderr, dep)
+
+
+def test_downgrade_allowed_for_installed_package_in_the_last_traceback():
+    assert dg("pandas<2") == ("pandas<2", None)
+    assert dg("pandas==1.5.3") == ("pandas==1.5.3", None)
+    assert dg("Pandas < 2")[0] == "Pandas<2"
+
+
+def test_downgrade_rejected_when_not_in_traceback_not_installed_or_not_lower():
+    pin, why = dg("numpy<1.25")
+    assert pin is None and na.DOWNGRADE_TRACEBACK_SENTENCE.format(pkg="numpy") == why                       # installiert, aber nicht im Traceback
+    assert dg("ghostlib<2")[1] == na.DOWNGRADE_TRACEBACK_SENTENCE.format(pkg="ghostlib")                    # nicht installiert
+    assert dg("pandas<4")[1] == na.DOWNGRADE_LOWER_SENTENCE.format(pkg="pandas")                            # installiert 3.0.6 erfuellt <4: kein Downgrade
+    assert dg("pandas==4.0.0")[1] == na.DOWNGRADE_LOWER_SENTENCE.format(pkg="pandas")                       # Upgrade
+    assert dg("pandas==3.0.6")[1] == na.DOWNGRADE_LOWER_SENTENCE.format(pkg="pandas")                       # gleiche Version
+    for bad in ("pandas>=1", "pandas", "pandas<=2", "pandas<2 && pip", "", None, 5, ["pandas<2"]):
+        assert dg(bad)[0] is None and "must be written as" in dg(bad)[1]
+
+
+def test_downgrade_only_counts_site_packages_of_the_last_traceback():
+    first_only = LIB_TB + "\n\nTraceback (most recent call last):\n" + '  File "/work/repo/x.py", line 1, in <module>\nValueError: other\n'
+    assert dg("pandas<2", first_only)[0] is None                                                            # im letzten Traceback kommt pandas nicht vor
+    assert dg("pandas<2", LIB_TB.replace("site-packages", "dist-packages"))[0] == "pandas<2"
+    assert dg("pandas<2", 'File "/work/repo/pandas/mine.py", line 1')[0] is None                           # Pfad im Repo ist kein site-packages
+
+
+def test_repo_dependency_file_has_priority_when_it_names_a_version():
+    assert dg("pandas<2", dep="numpy\npandas==1.4.0\n") == ("pandas==1.4.0", None)
+    assert dg("pandas==1.5.3", dep="pandas<1.3\n") == ("pandas<1.3", None)
+    assert dg("pandas<2", dep="pandas>=1.0\n") == ("pandas<2", None)                                       # keine Versionsangabe im Sinn von == oder <: Wunsch des Modells
+    assert dg("pandas<2", dep="pandas==3.0.6\n")[0] == "pandas<2"                                          # Repo nennt die installierte Version: kein Vorrang (schliesst sie nicht aus)
+
+
+def pandas_fail(n, cmd):
+    return (1, "", "x" * 2500 + "\n" + LIB_TB) if n == 1 else None
+
+
+def test_downgrade_in_the_flow_rebuilds_both_snapshots_and_is_recorded(tmp_path):
+    sb = AgentSandbox(train_script=pandas_fail)
+    llm = FakeLLM(base_script(repair_command=[repair(downgrade=["pandas<2"])]))
+    d, _ = go(sb, llm, tmp_path)
+    assert d.verdicts[0].urteil == "reproduziert"
+    for kind in ("train", "predict"):                                                                       # Training und Adapter dieselbe Umgebung
+        cmds = " ".join(next(c for lbl, c in sb.snapshot_cmds.items() if "-r1-" in lbl and lbl.endswith(kind)))
+        assert "'pandas<2'" in cmds or "pandas<2" in cmds
+    pip_cmds = [c for lbl, cmds in sb.snapshot_cmds.items() if "-r1-" in lbl for c in cmds if c.startswith("pip install -q 'numpy<2'")]
+    assert pip_cmds and all(" pandas " not in c and c.count("pandas") == 1 for c in pip_cmds)               # der Pin ersetzt den freien Eintrag
+    info = info_of(d)
+    assert info["env_changes"] == [{"package": "pandas", "spec": "pandas<2", "from": "3.0.6", "to": "1.5.3", "round": 1,
+                                    "reason": "older version after a traceback inside the library"}]
+    assert "Umgebung geändert: pandas<2 statt 3.0.6 (installiert: 1.5.3)" in d.warnings
+    assert [a["status"] for a in info["agent"]["attempts"]] == ["fehler", "ok"] and info["agent"]["repairs"][0]["kind"] == "downgrade"
+    prompt = next(c[2] for c in llm.calls if c[0] == "repair_command")
+    assert "Installed versions of the libraries that appear in the last traceback: pandas 3.0.6" in prompt and '"downgrade"' in prompt
+
+
+def test_downgrade_of_a_package_not_in_the_traceback_is_rejected_without_a_run(tmp_path):
+    sb = AgentSandbox(train_script=pandas_fail)
+    llm = FakeLLM(base_script(repair_command=[repair(downgrade=["numpy<1.25"]), repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    prompts = [c[2] for c in llm.calls if c[0] == "repair_command"]
+    assert na.DOWNGRADE_TRACEBACK_SENTENCE.format(pkg="numpy") in prompts[1]
+    assert not any("numpy<1.25" in " ".join(c) for c in sb.snapshot_cmds.values())
+    assert [a["status"] for a in info_of(d)["agent"]["attempts"]] == ["fehler", "ungueltig", "ok"] and info_of(d)["env_changes"] == []
+
+
+def test_upgrade_wish_is_rejected_and_counts_as_an_attempt(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", LIB_TB))
+    llm = FakeLLM(base_script(repair_command=[repair(downgrade=["pandas==4.0.0"]), repair(downgrade=["pandas<2"]), repair()]))
+    d, _ = go(sb, llm, tmp_path, max_attempts=3)
+    atts = info_of(d)["agent"]["attempts"]
+    assert [a["status"] for a in atts] == ["fehler", "ungueltig", "fehler"] and len(atts) == 3                 # Ablehnung und Downgrade zaehlen als Versuche
+    assert na.DOWNGRADE_LOWER_SENTENCE.format(pkg="pandas") in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
+    assert d.verdicts[0].urteil == "nicht reproduzierbar (Setup)"
+
+
+def test_downgrade_pin_survives_later_repairs(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", LIB_TB) if n <= 2 else None)
+    llm = FakeLLM(base_script(repair_command=[repair(downgrade=["pandas<2"]), repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    assert d.verdicts[0].urteil == "reproduziert" and len(info_of(d)["env_changes"]) == 1
+    last_rebuild = [c for lbl, c in sb.snapshot_cmds.items() if lbl.endswith("train") and "-r" in lbl][-1]
+    assert any("pandas<2" in c for c in last_rebuild)
+
+
+# ---- 3. P1 streng ---------------------------------------------------------------------------------------------------------------
+
+PBASE = ("python -u run_x.py --task_name long_term_forecast --model Linear --data ETTh1 --features M --enc_in 7 --seq_len 336 --pred_len 96 --label_len 48 "
+         "--lr 0.005 --batch_size 128 --data_path ETTh1.csv --gpu 3")
+PWORDS = cand.claim_words("GizmoNet erreicht MSE 0,375 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)", "ETTh1")
+
+
+def viol(new, base=PBASE, words=PWORDS):
+    return na.protected_violations(base, new, words)
+
+
+@pytest.mark.parametrize("old,new,flag", [
+    ("--features M", "--features S", "--features"),                      # Art der Aufgabe umgestellt
+    ("--task_name long_term_forecast", "--task_name short_term_forecast", "--task_name"),
+    ("--enc_in 7", "--enc_in 1", "--enc_in"),                           # Kanalzahl geaendert
+    ("--pred_len 96", "--pred_len 192", "--pred_len"),                  # Horizont geaendert
+    ("--seq_len 336", "--seq_len 96", "--seq_len"),                     # Eingabelaenge geaendert
+    ("--data ETTh1", "--data ETTm1", "--data"),                         # Datensatz geaendert
+    ("--seq_len 336 ", "", "--seq_len"),                                # entfernt
+    ("--lr 0.005", "--lr 0.005 --c_out 1", "--c_out"),                  # hinzugefuegt (Name in der Liste)
+])
+def test_protected_switch_changes_are_rejected(old, new, flag):
+    v = viol(PBASE.replace(old, new))
+    assert na.P1_PROTECTED_SENTENCE.format(flag=flag) in v
+
+
+def test_protected_by_value_even_when_the_switch_name_is_unknown():
+    base = PBASE + " --ahead 96 --win 336 --ds ETTh1"
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--ahead") in viol(base.replace("--ahead 96", "--ahead 24"), base)       # Wert gleich Horizont
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--win") in viol(base.replace("--win 336", "--win 96"), base)          # Wert gleich Eingabelaenge
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--ds") in viol(base.replace("--ds ETTh1", "--ds Weather"), base)      # Wert gleich Datensatzname
+    assert viol(base.replace("--ahead 96", "--ahead 96"), base) == []
+
+
+def test_free_switches_may_change_and_are_not_violations():
+    assert viol(PBASE.replace("--lr 0.005", "--lr 0.01")) == []
+    assert viol(PBASE.replace("--batch_size 128", "--batch_size 64")) == []
+    assert viol(PBASE.replace("--gpu 3", "--gpu 0").replace("ETTh1.csv", "/x/ETTh1.csv")) == []
+    assert viol(PBASE + " --dropout 0.2") == []
+
+
+def test_model_switch_only_to_a_value_containing_the_claim_model():
+    assert viol(PBASE.replace("--model Linear", "--model GizmoNet")) == []                                  # Name aus dem Claim: erlaubt
+    assert viol(PBASE.replace("--model Linear", "--model gizmonet_v2")) == []                               # enthaelt, Gross/Klein egal
+    assert viol(PBASE.replace("--model Linear", "--model Transformer")) == [na.P1_MODEL_SENTENCE.format(flag="--model")]
+    assert viol(PBASE.replace("--model Linear ", "")) == [na.P1_MODEL_SENTENCE.format(flag="--model")]      # entfernt
+
+
+def test_repair_variants_are_rejected_or_listed_in_the_flow(tmp_path):
+    def fail_first(n, cmd):
+        return (1, "", "RuntimeError: boom\n") if n == 1 else None
+    # (a) Aufgabenart umgestellt -> abgelehnt, kein Training mit diesem Befehl, fester Satz in der naechsten Reparatur
+    sb = AgentSandbox(train_script=fail_first)
+    mod = CMD + " --features S"
+    llm = FakeLLM(base_script(repair_command=[repair(command=mod), repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    assert not any(o[0] == "run" and "--features S" in o[2] and "unshare" in o[2] for o in sb.ops)
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--features") in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
+    assert [a["status"] for a in info_of(d)["agent"]["attempts"]] == ["fehler", "ungueltig", "ok"]
+    assert info_of(d)["agent"]["repairs"][0]["reason"] == "protected switch"
+    # (b) Horizont geaendert
+    sb = AgentSandbox(train_script=fail_first)
+    llm = FakeLLM(base_script(repair_command=[repair(command=CMD.replace("--horizon 96", "--horizon 192")), repair()]))
+    go(sb, llm, tmp_path / "b")
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--horizon") in [c[2] for c in llm.calls if c[0] == "repair_command"][1]
+    # (c) Lernrate geaendert -> erlaubt und von P1 gelistet
+    sb = AgentSandbox(train_script=fail_first)
+    llm = FakeLLM(base_script(repair_command=[repair(command=CMD.replace("--lr 0.01", "--lr 0.02"))]))
+    d, _ = go(sb, llm, tmp_path / "c")
+    info = info_of(d)
+    assert info["command_diff"] == [{"kind": "changed", "flag": "--lr", "doc": "0.01", "command": "0.02"}] and info["command_documented"] is False
+    assert [a["status"] for a in info["agent"]["attempts"]] == ["fehler", "ok"]
+    # (d) Modellname auf den Claim-Namen -> erlaubt und gelistet
+    sb = AgentSandbox(train_script=fail_first)
+    llm = FakeLLM(base_script(repair_command=[repair(command=CMD.replace("--model gizmonet", "--model GizmoNet"))]))
+    d, _ = go(sb, llm, tmp_path / "d")
+    assert {"kind": "changed", "flag": "--model", "doc": "gizmonet", "command": "GizmoNet"} in info_of(d)["command_diff"]
+
+
+def test_protected_check_compares_with_the_first_chosen_command_across_repairs(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "RuntimeError: boom\n") if n <= 2 else None)
+    step1 = CMD.replace("--lr 0.01", "--lr 0.02")
+    step2 = step1.replace("--horizon 96", "--horizon 24")                 # zweite Reparatur versucht den Horizont
+    llm = FakeLLM(base_script(repair_command=[repair(command=step1), repair(command=step2), repair()]))
+    go(sb, llm, tmp_path)
+    assert na.P1_PROTECTED_SENTENCE.format(flag="--horizon") in [c[2] for c in llm.calls if c[0] == "repair_command"][2]
+
+
+# ---- 4. Fehlertext mit Repo-Zeile ------------------------------------------------------------------------------------------------
+
+REPO_TB = ("Traceback (most recent call last):\n"
+           '  File "/work/repo/train_gizmo.py", line 40, in <module>\n    main()\n'
+           '  File "/work/repo/gizmo/data.py", line 7, in load\n    df = pd.read_csv(path, parse_dates=True, date_parser=f)\n'
+           '  File "/usr/local/lib/python3.11/site-packages/pandas/io/parsers.py", line 600, in read_csv\n    return _read(filepath, kwds)\n'
+           '  File "/usr/local/lib/python3.11/site-packages/pandas/io/parsers.py", line 300, in _read\n    raise TypeError("unexpected keyword")\n'
+           "TypeError: unexpected keyword\n")
+
+
+def test_repo_frame_is_the_last_frame_inside_the_repository_with_its_code_line():
+    assert na.repo_frame(REPO_TB) == "gizmo/data.py, line 7, in load: df = pd.read_csv(path, parse_dates=True, date_parser=f)"
+    assert na.repo_frame("no traceback at all") is None
+    only_lib = REPO_TB.split("  File \"/work/repo/train_gizmo.py\"")[0] + '  File "/usr/lib/python3.11/site-packages/x/y.py", line 1, in f\n    z\nValueError: v\n'
+    assert na.repo_frame(only_lib) is None
+    seed_copy = 'Traceback (most recent call last):\n  File "/opt/seed/train_gizmo.py", line 5, in <module>\n    run()\nKeyError: 1\n'
+    assert na.repo_frame(seed_copy) == "/opt/seed/train_gizmo.py, line 5, in <module>: run()"
+    no_code = 'Traceback (most recent call last):\n  File "/work/repo/a.py", line 2, in g\n  File "/usr/lib/site-packages/q.py", line 1, in h\n    boom\nError: x\n'
+    assert na.repo_frame(no_code) == "a.py, line 2, in g"
+
+
+def test_problem_text_puts_the_repo_frame_before_the_stderr_tail():
+    tail = REPO_TB[-300:]
+    t = na.problem_text({"reason": tail, "stderr_full": REPO_TB})
+    assert t.startswith(na.REPO_FRAME_LABEL + "gizmo/data.py, line 7, in load: df = pd.read_csv") and t.endswith(tail)
+    assert "date_parser=f" not in tail                                       # die Zeile steht nur ueber den Frame im Text
+    assert na.problem_text({"reason": "plain failure", "stderr_full": ""}) == "plain failure"
+    assert na.problem_text({"status": "timeout"}) == "timeout"
+
+
+def test_repair_prompt_contains_the_repo_line_even_when_the_tail_shows_only_the_library(tmp_path):
+    long_lib = "".join(f'  File "/usr/local/lib/python3.11/site-packages/pandas/mod{i}.py", line {i}, in f{i}\n    call{i}()\n' for i in range(40))
+    stderr = REPO_TB.split("  File \"/usr/local/lib/python3.11/site-packages/pandas/io/parsers.py\", line 600")[0] + long_lib + "TypeError: unexpected keyword\n"
+    assert "date_parser" not in stderr[-1500:]
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "stdout-marker", stderr) if n == 1 else None)
+    llm = FakeLLM(base_script(repair_command=[repair()]))
+    d, _ = go(sb, llm, tmp_path)
+    prompt = next(c[2] for c in llm.calls if c[0] == "repair_command")
+    frame_at = prompt.index(na.REPO_FRAME_LABEL + "gizmo/data.py, line 7, in load: df = pd.read_csv(path, parse_dates=True, date_parser=f)")
+    tail_at = prompt.index("TypeError: unexpected keyword")
+    assert frame_at < tail_at and "stdout-marker" not in prompt                                      # vor dem stderr-Ende, keine Zusammenfassung
+    assert d.verdicts[0].urteil == "reproduziert"
+
+
+def test_train_result_keeps_the_full_stderr_for_the_frame_search(tmp_path):
+    sb = AgentSandbox(train_script=lambda n, cmd: (1, "", "y" * 30000 + REPO_TB))
+    spec = nl.UnitSpec(unit="u", paper_id="p", claim_text="c", target=0.4, tolerance=0.01, repo_url="u", commit=COMMIT, command=CMD, command_source={}, script="train_gizmo.py",
+                       seed={"kind": "none", "repo_seed": 1}, adapter_source="x", test_loader={})
+    run = nl._Run(sb, spec, nl.EventLog(None), lambda *_: None, lambda: sb.pub, None, np.random.default_rng(0))
+    run.train_snap = sb.base_snapshot("img", [], label="nachlauf-u-train")
+    res = run.train(1)
+    assert res["status"] == "fehler" and len(res["stderr_full"]) == 20000 and na.repo_frame(res["stderr_full"]).startswith("gizmo/data.py, line 7")
+    assert len(res["reason"]) <= 1500
