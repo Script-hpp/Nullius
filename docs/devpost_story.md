@@ -50,7 +50,7 @@ The product has five pages: Overview, **Discover** (Tavily finds new papers on s
 
 ## What's next for Nullius in verba
 
-- **A second mode, "re-run":** run the authors' own code in the sandbox and measure it with the same harness, next to the agent's rebuild. Together the two answer a new question: does the number hold, and does the paper describe enough to get it? A manual pre-study on two repositories passed its pre-registered criteria; the agent version is in progress.
+- **A second mode, "re-run":** run the authors' own code in the sandbox and measure it with the same harness, next to the agent's rebuild. A prototype works on two repositories (RLinear, DLinear; values identical to our manual check), but on four unseen repositories it found no valid run in two pre-registered attempts (0 of 4): finding the right documented command in a large repository is the bottleneck (`benchmark/experiments/results/nachlauf_v1.md`). It is not part of the product or the benchmark.
 - A method-fidelity check that passes calibration.
 - More datasets and a real negative case in the benchmark.
 - Notifying paper authors with the certificate (the README badge for authors already exists).
