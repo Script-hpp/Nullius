@@ -58,5 +58,21 @@
   "paper_id": "kipf_gcn_2017",
   "title": "Semi-Supervised Classification with Graph Convolutional Networks",
   "timestamp": "20261002-110746"
+ },
+ {
+  "id": "disc_1609_02907--20261004-211550",
+  "paper_id": "disc_1609_02907",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20261004-211550",
+  "catalog_id": "disc_1609_02907",
+  "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_1811_05868--20261004-212533",
+  "paper_id": "disc_1811_05868",
+  "title": "Pitfalls of Graph Neural Network Evaluation",
+  "timestamp": "20261004-212533",
+  "catalog_id": "disc_1811_05868",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

@@ -49,7 +49,7 @@ def overview(entries: list[dict]) -> str:
     for e in entries:
         v = e.get("verdict") or {}
         ready, why = cat.jury_ready(e)
-        lines.append(f"{e['arxiv_id']}  {e['status']:<19} urteil={v.get('urteil', '-')}  gesamt={v.get('gesamtaussage', '-')}  "
+        lines.append(f"{e['arxiv_id']}  {cat.origin_of(e):<9} {e['status']:<19} urteil={v.get('urteil', '-')}  gesamt={v.get('gesamtaussage', '-')}  "
                      f"jury={'ja' if ready else 'nein'} ({why})")
     return "\n".join(lines)
 

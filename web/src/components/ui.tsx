@@ -18,11 +18,11 @@ export function toPercent(val: string | number | null | undefined): string {
   return n.toFixed(1) + '%'
 }
 
-export function Badge({ children, tone = 'gray', title }: { children: ReactNode; tone?: Tone; title?: string }) {
+export function Badge({ children, tone = 'gray', title, icon }: { children: ReactNode; tone?: Tone; title?: string; icon?: ReactNode }) {
   const cfg = toneConfig[tone] || toneConfig.gray
   return (
     <span title={title} className={`inline-flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase ${cfg.color}`}>
-      {cfg.icon}
+      {icon ?? cfg.icon}
       {children}
     </span>
   )

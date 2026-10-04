@@ -20,6 +20,7 @@ CATALOG_YAML = REPO_ROOT / "benchmark" / "catalog.yaml"
 DISCOVERY_CACHE = REPO_ROOT / "logs" / "discovery_cache.json"
 ACCEPTED_CACHE_VERSIONS = (2, 3)   # Discovery schreibt 3; 2 hat kein Feld input_length (= null)
 
+DISCOVERY, REFERENCE = "discovery", "reference"   # Feld `origin` eines Eintrags; fehlendes Feld = discovery
 UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlgeschlagen", "nicht_laufbar"
 TOLERANCE = 0.01   # fest, vorab: +-1 Prozentpunkt (Accuracy), +-0.01 absolut (MSE/MAE). Paper-Streuung aendert sie nicht.
 ETTH1_HORIZON = 96
@@ -60,6 +61,10 @@ def save_catalog(entries: list[dict], path: Path = CATALOG_YAML) -> None:
         "# Discovery-Kandidaten und ihr Pruefstatus (scripts/curate_catalog.py). papers.yaml bleibt unberuehrt.\n" + text)
 
 
+def origin_of(entry: dict) -> str:
+    return entry.get("origin") or DISCOVERY
+
+
 def find_entry(entries: list[dict], paper_id: str) -> dict:
     for e in entries:
         if e["id"] == paper_id:
@@ -98,12 +103,14 @@ def entry_from_candidate(c: dict, source: str) -> dict:
 
 
 def import_candidates(entries: list[dict], candidates: list[tuple[dict, str]]) -> int:
-    """Idempotent: bekannte IDs bleiben unveraendert (Status, Urteil, Quelle). Gibt Anzahl neuer Eintraege zurueck."""
+    """Idempotent: bekannte IDs bleiben unveraendert (Status, Urteil, Quelle). Gibt Anzahl neuer Eintraege zurueck.
+    Referenz-Eintraege (origin reference) blockieren ihre arXiv-ID: ein Kandidat desselben Papers wird nie daneben angelegt."""
     known = {e["id"] for e in entries}
+    reference_arxiv = {e["arxiv_id"] for e in entries if origin_of(e) == REFERENCE}
     added = 0
     for cand, source in candidates:
         entry = entry_from_candidate(cand, source)
-        if entry["id"] not in known:
+        if entry["id"] not in known and entry["arxiv_id"] not in reference_arxiv:
             entries.append(entry)
             known.add(entry["id"])
             added += 1
@@ -180,8 +187,9 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
                     "extract": {"method": method, "dataset": entry["candidate"]["dataset"], "metric": extract_metric,
                                 "percent": metric == "accuracy"}}],
     }
+    kind = "reference (benchmark papers.yaml)" if origin_of(entry) == REFERENCE else "discovery"
     claims = [Claim(id=claim_id, text=text, metric=metric, target=target, tolerance=TOLERANCE,
-                    source=f"discovery: {url}, Zitat: {quote}", origin="paper", evidence_urls=[url])]
+                    source=f"{kind}: {url}, Zitat: {quote}", origin="paper", evidence_urls=[url])]
     return paper, claims
 
 
