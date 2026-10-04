@@ -134,7 +134,7 @@ function ClaimVsMeasurement() {
           </div>
           <div className="mt-6 font-mono text-6xl font-light tracking-tight text-tone-green sm:text-7xl">82.1%</div>
           <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
-            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Target reached with our setup; method fidelity not checked.
+            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Reproduced with our setup (target value reached); method fidelity not checked.
           </p>
         </div>
       </div>

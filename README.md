@@ -14,7 +14,7 @@ Nullius is a **high-precision checker**: when it says a target value was reached
 |---|---|---|
 | **Precision** | **0 of 48** deliberately wrong claims reported as "reproduced" (also 0 of 48 in each of v2 and v3, three versions with different code) | pre-registered negative control |
 | **Precision** | **7 of 7** "reproduced" verdicts agree with the reference solution | post hoc, small sample |
-| **Recall** | target reached for **2 of 8** paper-claim units with Tavily, **1 of 8** without | pre-registered primary metric |
+| **Recall** | **2 of 8** paper-claim units matched the reference verdict with Tavily, **1 of 8** without | pre-registered primary metric |
 
 The misses are mostly near misses: 20 of 48 single real-claim verdicts are "partially reproduced" (within three times the tolerance). **Method fidelity was not checked**: "reproduced" means "target value reached according to the harness", not "method reproduced". Details: [Benchmark](#benchmark).
 

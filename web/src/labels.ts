@@ -2,7 +2,7 @@ export type Tone = 'green' | 'amber' | 'red' | 'gray' | 'violet'
 
 // Discovery candidates that ran once through the loop: never a verdict on the paper, always "with our setup".
 export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
-  'reproduziert': { label: 'TARGET REACHED', tone: 'green' },
+  'reproduziert': { label: 'REPRODUCED', tone: 'green' },
   'teilweise': { label: 'PARTIALLY REPRODUCED', tone: 'amber' },
   'nicht reproduziert': { label: 'NOT REPRODUCED', tone: 'red' },
   'nicht reproduzierbar (Setup)': { label: 'SETUP NOT REPRODUCIBLE', tone: 'gray' },
@@ -127,7 +127,7 @@ export function translateClaim(text: string) {
 }
 
 export const VERDICT_SENTENCE: Record<string, string> = {
-  'reproduziert': 'Target reached with our setup',
+  'reproduziert': 'Reproduced with our setup',
   'teilweise': 'Partially reproduced with our setup',
   'nicht reproduziert': 'Not reproduced with our setup',
   'nicht reproduzierbar (Setup)': 'No valid run with our setup',

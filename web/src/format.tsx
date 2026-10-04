@@ -53,7 +53,7 @@ export function getDelta(measured: any, target: any, metric?: string) {
 // All runs: always "with our setup", never a verdict on the paper (method fidelity is not checked).
 export function getCatalogStatement(claimed: string, measured: string, urteil: string, gesamt?: string) {
   if (gesamt === NOT_ASSESSABLE) return `The code did not implement the method, so the measurement (${measured}) says nothing about the reported ${claimed}.`
-  if (urteil === 'reproduziert') return `Target reached with our setup: measured ${measured} against the reported ${claimed}. Method fidelity not checked.`
+  if (urteil === 'reproduziert') return `Reproduced with our setup (target value reached): measured ${measured} against the reported ${claimed}. Method fidelity not checked.`
   if (urteil === 'teilweise') return `Partially reproduced with our setup: measured ${measured} against the reported ${claimed}.`
   if (urteil === 'nicht reproduziert') return `Not reproduced with our setup: measured ${measured} against the reported ${claimed}. This is not a finding about the paper.`
   return `No valid measurement with our setup against the reported ${claimed}.`

@@ -56,7 +56,7 @@ function Home({ runs }: { runs: RunRef[] }) {
         what="Nullius is a high-precision checker: when it reports a target reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses, usually narrowly. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
-        { label: 'Runs', value: runs.length }, { label: 'Target reached', value: reproduced.length, tone: 'green' },
+        { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: reproduced.length, tone: 'green' },
         { label: 'Partially', value: partial, tone: 'amber' }, { label: 'Papers', value: papers },
       ]} />
 
