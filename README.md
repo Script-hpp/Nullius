@@ -22,9 +22,7 @@ The misses are mostly near misses: 20 of 48 single real-claim verdicts are "part
 
 ![Live run of a reproduction](docs/img/live-running.jpg)
 
-**Who it is for:** reviewers who want a quick check of a headline number, PhD students who want to build on a paper, ML teams that depend on published results.
-
-**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes.
+**For** reviewers who want a quick check of a headline number, PhD students who want to build on a paper and ML teams that depend on published results. **Honest scope:** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes.
 
 ## How we use NVIDIA Nemotron
 
@@ -76,11 +74,7 @@ Tavily's effect on the benchmark is small (see below); its main role in the prod
 
 ## Product tour
 
-| | |
-|---|---|
-| **Discover.** Tavily searches for new papers on supported benchmarks and proposes checkable claims. ![Discover](docs/img/discover.jpg) | **Catalog.** Candidates that ran once through the full loop, with claimed and measured value, seeds, tolerance, cost. A live run needs an access code (one run at a time, daily limits). ![Catalog](docs/img/catalog.jpg) |
-
-**Live run.** A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence.** The certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
+**Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; a live run needs an access code, one run at a time, daily limits), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
 
 ![Evidence view](docs/img/evidence.jpg)
 
@@ -132,7 +126,6 @@ Nemotron is the brain, the sandbox is the lab, Tavily is the researcher, the orc
 | Units agreeing with the reference, without / with Tavily | 2 / 2 of 8 | 2 / 2 of 8 | 1 / 2 of 8 |
 | Placebo verdicts "reproduced", of 48 | 0 | 0 | 0 |
 | Placebo majorities "not reproduced", of 16 | 13 | 14 | 16 |
-| Failed real-claim verdicts (no measurement), of 48 | 11 | 9 | 1 |
 
 Each version ran different code; v2 and v3 in full: [`docs/benchmark_history.md`](docs/benchmark_history.md). Every v4 miss is traced to its cause in [`failure_analysis_v4.md`](benchmark/experiments/failure_analysis_v4.md) and [`results/failure_log_v4.md`](benchmark/experiments/results/failure_log_v4.md). One v4 process died on a sandbox connection error and was restarted with unchanged code ([`benchmark_v4_incidents.md`](benchmark/experiments/results/benchmark_v4_incidents.md)).
 
@@ -163,12 +156,6 @@ uv sync
 LLM_PROVIDER=tokenfactory uv run repro-agent kipf_gcn_2017
 #   --no-tavily  no Tavily at all   --offline  stored Tavily results   --fresh  no LLM cache
 
-# discover candidates with Tavily and run them through the loop (catalog)
-LLM_PROVIDER=tokenfactory uv run python scripts/curate_catalog.py --max-usd 0.50 [--only 2511.08094]
-
-# benchmark: list the runs and the estimated cost first, then run
-uv run python scripts/run_benchmark.py --v2 --dry-run
-
 # web app (development) and API (live runs, SSE)
 cd web && npm ci && npm run dev
 ACCESS_CODE=change-me uv run uvicorn repro_agent.api:app --port 8000
@@ -180,14 +167,11 @@ cd web && npm run build && npm run lint && npm test
 
 Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate, `TAVILY_MODE`). Runs are written to `runs/<paper>/<timestamp>/`; `scripts/export_site_data.py` copies selected runs to `web/public/data` (publish only production runs). The API needs `ACCESS_CODE`, limits live runs to one at a time and per day, and keeps all keys on the server. `Dockerfile` builds API and web app into one container; hosting steps are in [`docs/deploy.md`](docs/deploy.md).
 
-**Repository map.** `src/repro_agent/` loop, LLM client, sandbox adapter, Tavily tools, harness, API; `benchmark/` papers, fixtures, catalog, pre-registered experiments and results; `web/` React app; `tests/` unit tests with fakes and reference solutions; `docs/` plans, deployment, research log, feedback.
-
 ## Limitations and roadmap
 
-- CPU only, claims that run in under ten minutes; no LLM papers, no PDF image analysis.
+- CPU only, claims under ten minutes; no LLM papers, no PDF image analysis. Each new dataset needs a task and a harness once.
 - Mode "rebuild" only: the agent writes its own code and takes only cited details from paper and repository. Running the authors' code ("re-run") tests something different and is not built.
 - The graph ablation covers graph models only; DLinear and NLinear would need a decomposition or normalisation ablation.
-- Supported tasks: Cora (Planetoid split), Cora-LCC (random splits), ETTh1 (horizon 96). Each new dataset needs a task and a harness once.
 - **Roadmap:** a method-fidelity checker that passes calibration; more tasks and datasets; findings from the community check turned into their own experiments; a real negative case; notifying paper authors with the certificate ([`docs/idea_author_notification.md`](docs/idea_author_notification.md)).
 
 ## Licence
