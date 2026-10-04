@@ -10,6 +10,9 @@ export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
 }
 // Same wording for every run: "reproduced" means the target value was reached with our setup; method fidelity is not checked.
 export const RESULT = RESULT_CATALOG
+// Tooltip for the green badge: the badge says "target reached", never "method reproduced".
+export const TARGET_HINT = 'The independent harness measured the target value. Method fidelity not checked.'
+export const resultHint = (urteil: string | undefined) => (urteil === 'reproduziert' ? TARGET_HINT : undefined)
 export const PRELIMINARY = 'Preliminary: method fidelity not checked'
 export const isPreliminary = (gesamt: string | undefined) => gesamt === 'vorlaeufig'
 export const NOT_ASSESSABLE = 'nicht bewertbar (Methode nicht umgesetzt)'

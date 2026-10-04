@@ -13,8 +13,9 @@ import { Benchmark } from './components/Benchmark'
 import { colorForTone, getDelta, parseDate, showValue } from './format'
 import { Badge } from './components/ui'
 import { loadIndex, loadRun, type RunData, type RunRef } from './data'
-import { RESULT, catalogLabel, de2en, isPreliminary, translateClaim, type Tone } from './labels'
-import { BookOpen, Activity } from 'lucide-react'
+import { RESULT, catalogLabel, de2en, isPreliminary, resultHint, translateClaim, type Tone } from './labels'
+import { BookOpen, Activity, ChevronDown } from 'lucide-react'
+import { groupRuns } from './group'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -44,20 +45,18 @@ function Home({ runs }: { runs: RunRef[] }) {
   const [data, setData] = useState<Record<string, RunData>>({})
   useEffect(() => { runs.forEach((r) => loadRun(r).then((d) => setData((x) => ({ ...x, [r.id]: d })))) }, [runs])
   const urteil = (r: RunRef) => data[r.id]?.dossier?.verdicts?.[0]?.urteil
-  const reproduced = runs.filter((r) => urteil(r) === 'reproduziert')
-  const partial = runs.filter((r) => urteil(r) === 'teilweise').length
+  const groups = groupRuns(runs, (r) => data[r.id]?.dossier?.claims?.[0]?.id)   // one card per paper claim, newest run on top
+  const reproduced = groups.filter((g) => urteil(g.latest) === 'reproduziert')
+  const partial = groups.filter((g) => urteil(g.latest) === 'teilweise').length
   const papers = new Set(runs.map((r) => r.paper_id)).size
-  const example = reproduced[0] ?? runs[0]
-  // several runs of one paper: say which one a card is ("Run 2 of 3 for this paper"), oldest first
-  const sameCount = (r: RunRef) => runs.filter((x) => x.paper_id === r.paper_id).length
-  const runNo = (r: RunRef) => runs.filter((x) => x.paper_id === r.paper_id).sort((a, b) => a.timestamp.localeCompare(b.timestamp)).findIndex((x) => x.id === r.id) + 1
+  const example = reproduced[0]?.latest ?? groups[0]?.latest
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Runs" title="Finished checks"
-        what="Each card is one finished check. A paper reported a number, Nullius rebuilt the experiment and measured it again. Reproduced means our number landed within the allowed tolerance of the claim."
+        what="Nullius is a high-precision checker: when it reports a target reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses, usually narrowly. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
-        { label: 'Checks', value: runs.length }, { label: 'Reproduced', value: reproduced.length, tone: 'green' },
+        { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: reproduced.length, tone: 'green' },
         { label: 'Partially', value: partial, tone: 'amber' }, { label: 'Papers', value: papers },
       ]} />
 
@@ -67,7 +66,7 @@ function Home({ runs }: { runs: RunRef[] }) {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {runs.map((r, i) => {
+        {groups.map(({ key, latest: r, earlier }, i) => {
           const d = data[r.id]
           const v = d?.dossier?.verdicts?.[0]
           const claim = d?.dossier?.claims?.[0]
@@ -75,12 +74,13 @@ function Home({ runs }: { runs: RunRef[] }) {
           let delta = null
           if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
           return (
-            <motion.a key={r.id} href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="group flex cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline transition-colors duration-200 hover:border-line-strong">
+            <div key={key} className="flex flex-col">
+            <motion.a href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              className="group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline transition-colors duration-200 hover:border-line-strong">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>
-                    <Badge tone={res!.tone}>{res!.label}</Badge>
+                    <Badge tone={res!.tone} title={resultHint(v.urteil)}>{res!.label}</Badge>
                     {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
                   </>
                 ) : <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Evaluating...</span>}
@@ -104,11 +104,32 @@ function Home({ runs }: { runs: RunRef[] }) {
                   </>
                 ) : <span className="font-mono text-xs text-subtle">Running sandbox...</span>}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
-                  <span className="inline-flex items-center gap-1.5"><BookOpen className="h-3 w-3" />{sameCount(r) > 1 ? `Run ${runNo(r)} of ${sameCount(r)} for this paper` : 'One run for this paper'}</span>
+                  <span className="inline-flex items-center gap-1.5"><BookOpen className="h-3 w-3" />{earlier.length ? 'Latest of ' + (earlier.length + 1) + ' runs' : 'One run'}</span>
                   <span>{parseDate(r.timestamp)}</span>
                 </div>
               </div>
             </motion.a>
+            {earlier.length > 0 && (
+              <details className="group/earlier mt-2 rounded-lg border border-line/60 px-4 py-2 text-[12px] text-muted">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+                  <span>{earlier.length} earlier {earlier.length === 1 ? 'run' : 'runs'} of this claim</span>
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/earlier:rotate-180" />
+                </summary>
+                <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0">
+                  {earlier.map((e) => {
+                    const ev = data[e.id]?.dossier?.verdicts?.[0]
+                    const er = ev ? (e.catalog_id ? catalogLabel(ev.urteil, e.gesamtaussage) : de2en(RESULT, ev.urteil)) : null
+                    return (
+                      <li key={e.id} className="flex items-center justify-between gap-3">
+                        <a href={`#/run/${e.id}`} className="text-fg-3 no-underline hover:text-fg">{parseDate(e.timestamp)}</a>
+                        {er && <Badge tone={er.tone} title={resultHint(ev.urteil)}>{er.label}</Badge>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </details>
+            )}
+            </div>
           )
         })}
       </div>

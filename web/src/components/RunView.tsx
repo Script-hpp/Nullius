@@ -22,7 +22,7 @@ import { useHead } from '../useHead'
 import { headFromSummary } from '../paperhead'
 import { colorForTone, getCatalogStatement, getDelta, iconForTone, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
-import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, translateClaim } from '../labels'
+import { OVERALL, RESULT, TONE_VAR, catalogLabel, de2en, resultHint, translateClaim } from '../labels'
 
 type Tab = 'graph' | 'evidence' | 'tree' | 'log' | 'files'
 
@@ -119,7 +119,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
         <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">{sentence}</p>
         <div className="mt-10 grid items-start gap-10 lg:grid-cols-3">
           <div className="min-w-0">
-            <h2 className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] ${resColor}`}>{res.label}</h2>
+            <h2 title={resultHint(v?.urteil)} className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] ${resColor}`}>{res.label}</h2>
             <dl className="m-0 mt-8 space-y-4">
               <div className="flex items-center justify-between border-b border-line pb-4">
                 <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted">Claimed</dt>

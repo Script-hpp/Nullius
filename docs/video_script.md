@@ -1,5 +1,7 @@
 # Demo video script (draft, under 3 minutes)
 
+Superseded by the rendered film (reviewer worktree, `video/`); this script is historical.
+
 Status: draft for the reviewer. Open decisions are marked `<!-- REVIEW: ... -->`. Every number marked `TBD` depends on Benchmark v2 (`benchmark/experiments/benchmark_v2.md`) and must be filled from `benchmark/experiments/results/benchmark_v2.md` after the run, never from partial results.
 
 Rules that apply (Official Rules, summarised in `CLAUDE.md`, section "Hackathon-Regeln"): public on YouTube, under 3 minutes, shows the project working, no protected music, no third-party marks without permission, English or English subtitles. Total runtime here: **2:45**.
@@ -36,7 +38,7 @@ Timings are start times. Narration is written to be spoken at a normal pace: abo
 | 4 | 0:44-1:22 | **Live run** (`#/live/<job>`): phase timeline. Tavily badges "live" for role 2 (paper text) and role 4 (README); plan; code; branch tree growing seed by seed; measurements arriving. | "Now it runs live. Tavily extracts the paper and the repository README, and every call is marked live with a hash. Nemotron Ultra writes the plan. Nemotron Super writes the code. Nemotron Lightning reads the tables. The code never runs on our server: each seed is a branch of one Nebius Sandbox snapshot, without network access. A failed attempt is rolled back and repaired." | Screen recording of one real live quick check (3 seeds) on Token Factory. Cut the waiting time, keep the timer visible and say so on screen ("sped up"). Needs the API on `:8000` with `LLM_PROVIDER=tokenfactory`, `LLM_CACHE` off (the API sets it). |
 | 5 | 1:22-1:42 | **Evidence** (`#/run/<id>`) for GCN on Cora: target value with Tavily source on the left, sandbox measurement with spread on the right, branch tree. | "The agent never reports a number. It delivers predictions. A harness we own loads the test labels itself, checks the predictions, and computes the metric. The verdict uses the mean over all seeds against a tolerance fixed before the run: here reproduced, with mean and spread." | Recording of `#/run/kipf_gcn_2017--20260929-130133` (measured 0.8211 ± 0.0072, target 0.815, verdict "reproduced"; Tavily role 4 call on `github.com/tkipf/gcn` in its event log). Or a newer production run, reviewer decides. |
 | 6 | 1:42-2:02 | **Evidence** of the negative control (candidate A) or the agent-fault case (B). Verdict badge "not reproduced" with target 0.88 against measured 0.796. | "A control: we gave it a wrong target value, 88 percent on Cora. The harness measures about 80 and says not reproduced. A wrong claim does not pass. When a result is far below a trivial baseline, Nullius says agent fault suspected, not paper wrong." | Recording of the chosen page. For candidate A the placebo run from Benchmark v2 (or the fallback run) must be exported to `web/public/data` first. |
-| 7 | 2:02-2:25 | **Benchmark section** of the README or a slide with the table. Number shown as `TBD`. | "We tested Nullius against known results: six papers, eight claims, each with and without Tavily, three fresh generations each. With Tavily, TBD of 8 claims matched the reference verdict. Without Tavily, TBD of 8. Wrong control claims detected: TBD of 8." | Screenshot of the final table from README after Benchmark v2 (`benchmark/experiments/results/benchmark_v2.md`). Must not be recorded before the evaluation script ran on all 48 runs. |
+| 7 | 2:02-2:25 | **Benchmark section** of the README or a slide with the table. Numbers from Benchmark v4 (`benchmark/experiments/results/benchmark_v4.md`). | "We tested Nullius against known results: six papers, eight claims, each with and without Tavily, three fresh generations each. With Tavily, 2 of 8 claims matched the reference verdict. Without Tavily, 1 of 8. Wrong control claims reported as reproduced: none of 48." | Screenshot of the final table from README after Benchmark v2 (`benchmark/experiments/results/benchmark_v2.md`). Must not be recorded before the evaluation script ran on all 48 runs. |
 | 8 | 2:25-2:45 | Closing slide: honest limits, then the repository URL and the licence. List: "Method fidelity: not checked", "Supported: Cora, Cora with random splits, ETTh1", "CPU only". | "Limits, stated up front. Method fidelity is not checked: our checker failed calibration three times, so a reproduced verdict means the target value was reached, not that the method was reproduced. Nullius supports Cora and ETTh1 today. Code is MIT licensed. Nemotron on Token Factory, Nebius Sandboxes, Tavily." | Static slide (text only, no third-party logos unless permission is confirmed; the plain names are enough). |
 
 Sum: 2:45. The last 5 seconds to 2:50 stay free as a safety margin.
@@ -49,7 +51,7 @@ Sum: 2:45. The last 5 seconds to 2:50 stay free as a safety margin.
 | Nebius Sandbox branches | 4 (branch tree, one branch per seed) |
 | Tavily live calls at run time (required for the Tavily prize) | 2 (discovery), 4 (role 2 and 4 badges "live"), evidence page event log in 5 |
 | Independent harness: agent delivers only predictions | 5 |
-| Benchmark number | 7 (`TBD`) |
+| Benchmark number (v4) | 7 |
 | Honest limits (axis 2 "method fidelity not checked", supported datasets only) | 7 (caveat line), 8 |
 
 Wording rule from `benchmark/experiments/benchmark_v2.md`: the word "reproduced" never stands without "method fidelity not checked" in written material. In the voice-over, scene 5 says "target value reached" once and scene 8 carries the caveat; the on-screen caption of scene 5 must read "reproduced (target value reached; method fidelity not checked)".
@@ -81,7 +83,7 @@ Post-production:
 - [ ] Captions in English (the voice-over is English; captions help the jury read the numbers).
 - [ ] Music: none, or a track with a licence that allows use; no protected music.
 - [ ] Length below 3:00 in the upload (check the file, not the plan), public on YouTube, link in the Devpost form (`docs/devpost_submission.md`).
-- [ ] Numbers in scene 7 copied from `benchmark/experiments/results/benchmark_v2.md`, nothing from prototype runs on free endpoints (`CLAUDE.md`: prototype numbers are never published).
+- [ ] Numbers in scene 7 copied from `benchmark/experiments/results/benchmark_v4.md`, nothing from prototype runs on free endpoints (`CLAUDE.md`: prototype numbers are never published).
 
 ## Decisions (reviewer, 2026-10-01; the user decides finally)
 

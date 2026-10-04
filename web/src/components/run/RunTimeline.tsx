@@ -7,7 +7,7 @@ import { Badge, Section } from '../ui'
 import { PreliminaryChip } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
 import { ACTOR_LABEL, buildRunModel, fmtClock, fmtValue, planMapping, type Actor, type Expand, type Phase, type PhaseId, type Row } from './phases'
-import { TONE_TEXT, catalogLabel, isPreliminary, translateClaim, translateWarning, PRELIMINARY } from '../../labels'
+import { TONE_TEXT, catalogLabel, isPreliminary, resultHint, translateClaim, translateWarning, PRELIMINARY } from '../../labels'
 import type { Event } from '../../data'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
@@ -325,7 +325,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
               <div className="rounded-xl border border-line bg-panel/50 p-5">
                 <div className={label}>Result</div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <Badge tone={label_.tone}>{label_.label}</Badge>
+                  <Badge tone={label_.tone} title={resultHint(String(verdict.urteil))}>{label_.label}</Badge>
                   {isPreliminary(String(verdict.gesamt)) && <PreliminaryChip />}
                 </div>
                 <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
