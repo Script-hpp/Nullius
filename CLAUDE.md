@@ -172,7 +172,9 @@ Jeder Aufruf muss Frage beantworten, die Agent sonst nicht beantworten könnte.
 | 6 | Abweichung klären | Search: neuere arXiv-Version, Errata, Issues | bei Abweichung | neue Hypothese |
 | 7 | Quellen belegen | Extract; Research max 1× pro Paper | beim Urteil | zitierfähige Quellen im Bericht |
 
-Kernidee für Tavily-Preis: Tavily-Funde werden zu Experimenten. Beispiel: Issue meldet Seed-Abhängigkeit → 5 Branches mit verschiedenen Seeds.
+Kernidee für Tavily-Preis (ursprünglich): Tavily-Funde werden zu Experimenten. Beispiel: Issue meldet Seed-Abhängigkeit → 5 Branches mit verschiedenen Seeds.
+
+**Stand Tavily (2026-10-04):** Gebaut und im Produktlauf live: Rolle 1 (Repo-Suche, Discovery neuer Papers auf unterstützten Datensätzen), 2 (Zielwert mit Zitat- und Spaltenprüfung), 4 (Setup-Details mit Zitat), 5 (Fehlertext-Suche, seit v3), 3/7 und 6 als **reine Berichtsfunktion** „What others found“ / „Possible explanations“ (`community.py`, nach dem Urteil, ändert nie Plan, Code oder Urteil). **Nicht gebaut:** Funde als eigene Branches (Rolle 3 Stufe 2, Rolle 6 als Hypothese). **Entscheidung: kein weiterer Ausbau vor der Abgabe.** Alle vorab festgelegten Versuche, mit Tavily die Trefferquote messbar zu heben, sind gescheitert oder blieben unter der Schwelle: Rolle 3 Stufe 1 (`results/role3_dlinear_stage1.md`, kein Protokoll-Einwand gefunden), Rolle 4 DLinear und Shchur (`results/role4_*.md`, Shchur um 0,0004 verfehlt), v5 Schritt A und C (`results/v5_step_a.md`, `v5_step_c.md`), Benchmark v2–v4 ohne messbaren Unterschied der Arme (v4: 2 vs. 1 von 8; Median-Abstand post hoc 0,017 vs. 0,029). Tavily wird deshalb als Produkt-Fähigkeit dargestellt (Discovery, Belege mit Hash, „Worte vs. Messung“), nicht als Genauigkeitsgewinn.
 
 > **Standard ist live** (`TAVILY_MODE=live`): ein normaler Lauf ruft Tavily zur Laufzeit auf (Paper-Text, README), gespeichert mit Modus, Zeitstempel und Hash (`Dossier.sources`, `events.jsonl`, `paper_text.json`). Fixtures nur mit `--offline` oder `TAVILY_MODE=fixture` (Tests, vorab festgelegte Experimente, Benchmark: `tavily_mode="fixture"` in den Skripten). Der Tavily-Preis verlangt einen echten Aufruf zur Laufzeit.
 
@@ -180,7 +182,7 @@ Kernidee für Tavily-Preis: Tavily-Funde werden zu Experimenten. Beispiel: Issue
 
 ## Modus und Rolle 4 (Stand Meilenstein 2)
 
-**Modus „Nachbau“** (einziger gebauter Modus): Der Agent schreibt eigenen Code und übernimmt nur belegte Angaben aus Paper und Repo. Das Original-Repo liegt nie in einem Agenten-Branch, es wird nur in einem eigenen Lese-Snapshot des Orchestrators geklont (Commit im Dossier). „Nachlauf“ (Original-Code ausführen) prüft etwas anderes und ist nicht gebaut. Modus steht im Dossier und im Zeugnis.
+**Modus „Nachbau“** (einziger gebauter Modus): Der Agent schreibt eigenen Code und übernimmt nur belegte Angaben aus Paper und Repo. Das Original-Repo liegt nie in einem Agenten-Branch, es wird nur in einem eigenen Lese-Snapshot des Orchestrators geklont (Commit im Dossier). „Nachlauf“ (Original-Code ausführen) prüft etwas anderes; er ist als Experiment gebaut (`nachlauf*.py`, `scripts/run_nachlauf.py`), trägt aber nur an den zwei Entwicklungs-Einheiten (RLinear, DLinear) und scheiterte an vier neuen Einheiten zweimal mit 0 von 4 (`results/nachlauf_v1.md`). Nicht im Produkt, nicht in der API, nicht bewerben; kein dritter Versuch. Modus steht im Dossier und im Zeugnis.
 
 **Rolle 4 (Setup-Details):** Quellen sind Paper-Text, README (Tavily Extract) und vom LLM gewählte Repo-Dateien (Sandbox-`git clone`). Extraktion abschnittsweise mit Rolle `extract` (= Modell von `code`, Super; Ultra nur für Plan und Endurteil). Jede Angabe braucht ein wörtliches Zitat, das im jeweiligen Dokument vorkommt, sonst wird sie verworfen. Jede Angabe trägt ihre Quelle.
 
@@ -289,7 +291,7 @@ Verfügbar: Token Factory laut Konsole 30,74 $ (Stand 2026-10-02, Builders-Gutha
 
 ## Benchmark
 
-**Stand: Benchmark v2** (Vorab-Festlegung `benchmark/experiments/benchmark_v2.md`, final; `src/` eingefroren, bis alle Läufe fertig sind). Die ursprüngliche Planung (8–10 Papers, Vergleich mit menschlichen Reproduktionsstudien) gilt nicht mehr.
+**Stand: Benchmark v4 ist das maßgebliche Ergebnis** (Vorab-Festlegungen `benchmark/experiments/benchmark_v2.md`, `_v3.md`, `_v4.md`; Ergebnisse `results/benchmark_v2.md`, `_v3.md`, `_v4.md`; alle Läufe fertig, `src/` nicht mehr eingefroren). Kein v5 (Bedingungen in `results/v5_step_c.md` verfehlt). Die ursprüngliche Planung (8–10 Papers, Vergleich mit menschlichen Reproduktionsstudien) gilt nicht mehr. Aufbau unten wie in v2, v3 und v4 gleich.
 - **6 Papers, 8 Paper-Claim-Einheiten** (Kipf, Wu/SGC, Zeng DLinear und NLinear, Shchur GCN und GAT, Veličković GAT, DGI), jede Einheit **mit und ohne Tavily** (beide Arme mit gespeicherten Tavily-Ergebnissen, `tavily_mode="fixture"`), je 3 frische Generierungen, dazu je Lauf ein **Placebo-Claim** (bewusst falscher Zielwert) als Negativkontrolle. 48 Läufe, Store `runs/benchmark_v2.jsonl`, Skripte `scripts/run_benchmark.py --v2` und `scripts/eval_benchmark_v2.py`.
 - **Produktkonfiguration** (`graph_repair=True`) in beiden Armen.
 - **Kennzahl = Zahl-Urteil (Achse 1), Mehrheit je Paper-Claim-Einheit über 3 Generierungen** (mindestens 2 gleiche Klassen), Übereinstimmung mit dem Referenzurteil; Rohzählung sekundär. Das ersetzt die frühere Regel „nur Paper reproduziert/nicht reproduziert“ (siehe „Zweidimensionales Urteil“). Die Kennzahl misst „Zielwert laut Harness erreicht“, nicht „Methode reproduziert“; im README steht immer „method fidelity not checked“.
@@ -297,7 +299,7 @@ Verfügbar: Token Factory laut Konsole 30,74 $ (Stand 2026-10-02, Builders-Gutha
 - **Dacrema nicht gebaut** (MovieLens-1M: NeuMF reproduziert, kein Negativfall); Shwartz-Ziv zugeschnitten und verworfen (`benchmark/experiments/shwartz_ziv_scoping.md`). Es gibt keinen echten Negativfall, die Placebos ersetzen ihn nicht.
 - **v1 ist eingefroren** (`benchmark/experiments/benchmark_protocol.md`, vier Papers, Produktkonfiguration aus); Verlauf in `docs/research_log.md`.
 
-Ziel-Satz fürs README (Zahlen erst aus `benchmark/experiments/results/benchmark_v2.md`): „With Tavily, X of 8 paper-claim units matched the reference verdict, without Tavily Y. Method fidelity was not checked."
+**Ergebnis v4 (im README, Erzählung „hohe Präzision“):** 0 von 48 Placebos „reproduziert“ (auch in v2 und v3 je 0 von 48); 7 von 7 „reproduziert“-Urteilen stimmen mit der Referenz (post hoc); Primärkennzahl: mit Tavily 2 von 8 Einheiten (Kipf-GCN, Shchur-GCN) stimmen mit dem Referenzurteil, ohne Tavily 1 von 8 (DLinear). Wortlaut: „matched the reference verdict“, nicht „target reached“; immer „method fidelity not checked“. Ältere Versionen: `docs/benchmark_history.md`.
 
 **Task Shchur (Cora, zufällige Splits, gebaut):** GCN-Claim 81,5 % (Tabelle 1, belegt per Tavily Extract + Spaltenprüfung), größte Komponente, 20/30/Rest, 30 Splits × 1 Initialisierung statt 100 × 20 (Details, Toleranz und Harness-Validierung: `benchmark/experiments/shchur_task.md`; menschliche Referenz 81,1 ± 1,2 %). Der Task prüft nur die GCN-Zahl, nicht die Rangfolge der Modelle. Abgeschnittene LLM-Antworten (`finish_reason: length`) werden nie gecacht, Wiederholungen der Extraktion nutzen andere Temperatur und doppelte Grenze (sonst kam die abgeschnittene Antwort aus dem Cache).
 
@@ -311,16 +313,11 @@ Kandidaten (Zielwerte direkt aus Papers übernehmen, nicht aus Gedächtnis):
 | Ferrari Dacrema et al. 2019, Are We Really Making Much Progress? | Baselines schlagen neuronale Modelle | MovieLens |
 | Shwartz-Ziv & Armon 2021, Tabular Data: DL Is Not All You Need | XGBoost vorn | kleine Tabellen-Datensätze |
 
-Stand der Kandidaten: Kipf, Shchur (GCN und GAT) und Zeng (DLinear, NLinear) sind im Benchmark v2; dazu Wu/SGC, Veličković GAT und DGI. **Dacrema und Shwartz-Ziv sind nicht gebaut** (Gründe im Abschnitt „Benchmark“). Die Spalte „Erwartung“ ist die ursprüngliche Planung, maßgeblich sind die Referenzurteile in `benchmark/experiments/benchmark_v2.md`.
+Stand der Kandidaten: Kipf, Shchur (GCN und GAT) und Zeng (DLinear, NLinear) sind im Benchmark (v2–v4); dazu Wu/SGC, Veličković GAT und DGI. **Dacrema und Shwartz-Ziv sind nicht gebaut** (Gründe im Abschnitt „Benchmark“). Die Spalte „Erwartung“ ist die ursprüngliche Planung, maßgeblich sind die Referenzurteile in `benchmark/experiments/benchmark_v2.md`.
 
 ## Demo und Einreichung
 
-Drei Akte im 3-Minuten-Video (an den gebauten Stand angepasst, Szenenliste und Aufnahme-Checkliste: `docs/video_script.md`; Devpost-Texte: `docs/devpost_submission.md`):
-1. Live-Lauf eines Katalog-Papers mit Tavily-Live-Aufrufen, Branches und Harness
-2. GCN auf Cora → Zeugnis „Zielwert erreicht“ (Methodentreue nicht geprüft)
-3. Negativkontrolle: Placebo-Claim (falscher Zielwert) wird abgelehnt, dazu die ehrlichen Grenzen
-
-Die ursprünglichen Akte „DLinear schlägt Transformer“ (der Task prüft nur einen MSE-Wert, keine Rangfolge) und „Recsys-Paper fällt durch“ (Dacrema nicht gebaut) entfallen.
+**Video (Stand 2026-10-04): Film v8 fertig gerendert**, 2:38, ohne Sprecher, nur synthetische Musik und Einblendungen. Quelle und Render: Worktree `reviewer`, Branch `video-stage`, `video/` (Ausgabe `video/out/film.mp4`, Regie `docs/video_director.md`); gerendert aus der App auf `main` `ceb3ea3`. Zuständig: Reviewer-Session. `docs/video_script.md` ist nur noch historisch. Ablauf: Hook (Nature-Umfrage 70 %) → ein Claim („GCN achieves 81.5 % on Cora“) → Discovery (aufgezeichneter Live-Lauf, beschriftet) → Katalog → Live-Seite (Kipf-Katalog-Lauf vom 4. Okt als Replay, beschriftet) → „Read. Write. Run. Measure.“ (Tavily, Nemotron auf Token Factory mit Ultra/Super/Lightning, Nebius Sandboxes, Harness) → 10 Seeds, „Reproduced“ → Placebo 88 % „Not reproduced“ → Beleg (10 min, 0,14 $) → Evidence, What-if, Branch-Baum → „48 of 48 caught“ → ehrliche Grenze (2 von 8, nur Graph/Zeitreihe, CPU) → Namen statt Logos. Offen: Upload auf YouTube (öffentlich), Link ins Devpost-Formular. Jede neue UI-Änderung auf `main` heißt: neu rendern lassen, bevor hochgeladen wird.
 
 Evidence-Ansicht in UI: links, was Tavily gefunden hat, rechts, was Sandbox gemessen hat.
 
@@ -393,6 +390,8 @@ Um dieses Produkterlebnis bereitzustellen, wird die Architektur wie folgt aufgeb
     * **Seite 3: Zeugnis / Evidence** (Das Endresultat, die bestehende Evidence-Ansicht).
 
 ## 5. Nächste Schritte (Roadmap für die nächsten 1-1,5 Wochen)
+
+**Stand 2026-10-04:** Schritte 1–5 erledigt (Backend, Live-Streaming, Katalog-Pipeline, Design, Katalog mit Referenz-Papers). Offen nur Schritt 6 (Deployment, Upload, Abgabe), siehe „Offene Punkte“.
 1. **Tavily v2 (vorerst) stoppen:** Die bisherigen Verbesserungen (Zitat-Fix) sind super und bleiben. Weitere tiefe Optimierungen werden gestoppt, um Zeit für das Produkt zu haben.
 2. **Frontend & Backend Bootstrap:** FastAPI-Gerüst und React-App aufsetzen.
 3. **Katalog-Generierung:** Das Skript schreiben, in dem Tavily nach neuen Papers sucht und diese in eine `catalog.yaml` oder Datenbank ablegt.
@@ -479,7 +478,8 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - `POST /api/discover`, Stream `GET /api/discover/{job_id}/stream`: Tavily-Discovery auf unterstützten Datensätzen.
 - `POST /api/reproduce` (Katalogeintrag, Default Schnellprüfung mit `QUICK_SEEDS = 3`), Stream `GET /api/reproduce/{job_id}/stream?from=<n>` (SSE, Reconnect liefert Events erneut), `GET /api/jobs/current`. Der Orchestrator läuft mit `graph_repair=True` und **ohne LLM-Cache**; die API **schreibt nie `benchmark/catalog.yaml`**. Der fertige Lauf wird nach `REPRO_EXPORT_DIR` exportiert (`site_export.export_live_run`) und erscheint in der Evidence-Ansicht.
 - Web: Live-Lauf `#/live/<job>` (Phasen-Timeline `web/src/components/run/`), Evidence `#/run/<id>` mit Replay, Katalog `#/catalog`, Discover `#/discover`. Die Steuerung erscheint nur, wenn die API erreichbar ist; sonst Replay des letzten Laufs. Statischer Spiegel: `.github/workflows/pages.yml`.
-- Katalog: `benchmark/catalog.yaml` (gepflegt von `scripts/curate_catalog.py`, Logik `src/repro_agent/catalog.py`), Jury-Filter `jury_ready` (Gesamtaussagen „nicht bewertbar (Methode nicht umgesetzt)“, „Agenten-Fehler vermutet“, „nicht reproduzierbar (Setup)“ sind nicht jury-tauglich).
+- Katalog: `benchmark/catalog.yaml` (gepflegt von `scripts/curate_catalog.py`, Logik `src/repro_agent/catalog.py`), Jury-Filter `jury_ready` (Gesamtaussagen „nicht bewertbar (Methode nicht umgesetzt)“, „Agenten-Fehler vermutet“, „nicht reproduzierbar (Setup)“ sind nicht jury-tauglich). Feld `origin`: `discovery` (Default) oder `reference` (Benchmark-Papers, UI-Badge „Reference paper“ mit ihrer v4-Zahl, berechnet aus `benchmark.json`). Stand 2026-10-04, jury-tauglich: Kipf GCN (reference, reproduziert 0,8153 ± 0,0106, 10 Seeds, 0,074 $), Shchur GCN (reference, teilweise 0,8049 ± 0,0158, 30 Splits, 0,113 $), SL-GCN (discovery, nicht reproduziert, vorläufig).
+- Overview gruppiert Läufe je Paper-Claim (neuester Lauf als Karte, ältere eingeklappt); Badge bleibt „REPRODUCED“ mit Zusatz „target value reached; method fidelity not checked“ (Entscheidung des Nutzers); Live-Lauf zeigt geschätzte Dauer aus Event-Zeitstempeln.
 
 ## Offene Punkte
 
@@ -488,11 +488,15 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [x] Exakte Modell-IDs auf OpenRouter und Token Factory eintragen (TF geprüft 2026-09-28: Lightning 0,06/0,24 $, Super 0,30/0,90 $, Ultra 1/3 $ pro Mio. Tokens)
 - [x] Builders-Program-Codes eingelöst (Token Factory und Tavily; Stand und Planung in `docs/budget_plan.md`)
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren
-- [x] Benchmark-Liste festgelegt: 6 Papers, 8 Paper-Claim-Einheiten statt 8–10 Papers (`benchmark/experiments/benchmark_v2.md`); Läufe und Auswertung laufen noch, Zahlen `TBD`
+- [x] Benchmark-Liste festgelegt: 6 Papers, 8 Paper-Claim-Einheiten statt 8–10 Papers (`benchmark/experiments/benchmark_v2.md`); v2, v3, v4 gelaufen und ausgewertet
 - [x] Live-Modus (FastAPI + SSE) gebaut (`src/repro_agent/api.py`)
 - [x] Hosting-Optionen verglichen, Empfehlung Coolify (`docs/deploy.md`); **Deployment und Demo-URL stehen aus**
-- [ ] Benchmark v2 auswerten, Zahlen ins README
-- [ ] Demo-Video aufnehmen (Skript `docs/video_script.md`), Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`)
+- [x] Benchmark auswerten, Zahlen ins README (v4, präzisionsorientiert; Devpost-Texte auf v4)
+- [x] Katalog: Referenz-Papers Kipf und Shchur mit echten Läufen (2026-10-04)
+- [x] Demo-Video gerendert (Film v8, siehe „Demo und Einreichung“)
+- [ ] Live-Läufe überschreiben `benchmark/fixtures/` (Fehler, gefunden 2026-10-04; Worker auf Branch `fix-live-fixtures`). Bis zum Fix: nach echten Läufen `git status benchmark/fixtures` prüfen, Änderungen nie committen
+- [ ] Deployment und Demo-URL (Nutzer), Repo öffentlich (Nutzer)
+- [ ] Video auf YouTube hochladen, Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`; Demo-URL, Video-Link, Zugangscode noch `TBD`), Feedback-Feld aus `docs/nebius_feedback.md`
 
 ## Projektstruktur (tatsächlich)
 
@@ -500,7 +504,9 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 .
 ├── CLAUDE.md, README.md, LICENSE (MIT), Dockerfile, pyproject.toml, uv.lock
 ├── src/repro_agent/
-│   ├── loop.py            # Orchestrator (Rollen 2 und 4, Plan, Code, Branches, Urteil)
+│   ├── loop.py            # Orchestrator (Rollen 2, 4, 5, Plan, Code, Branches, Urteil)
+│   ├── community.py       # Rollen 3/7 und 6 als Berichtsfunktion nach dem Urteil
+│   ├── nachlauf*.py       # Experiment „Nachlauf“, nicht im Produkt
 │   ├── llm.py, costs.py, config.py   # LLM-Client (Retry, Cache, Kosten, Budget), .env
 │   ├── tavily_tools.py, claims_source.py, repo_source.py, setup_details.py, table_check.py
 │   ├── tasks.py           # Cora, Cora-LCC, ETTh1
