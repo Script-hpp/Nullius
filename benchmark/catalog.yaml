@@ -4,10 +4,13 @@ candidates:
   arxiv_id: '1609.02907'
   title: Semi-Supervised Classification with Graph Convolutional Networks
   origin: reference
-  status: ungeprueft
+  status: geprueft
   seeds: 10
   imported_from: benchmark/papers.yaml:kipf_gcn_2017
-  benchmark_unit: {version: v4, paper: kipf_gcn_2017, claim: gcn_cora_acc}
+  benchmark_unit:
+    version: v4
+    paper: kipf_gcn_2017
+    claim: gcn_cora_acc
   candidate:
     dataset: Cora
     claim:
@@ -27,14 +30,33 @@ candidates:
     found_by: benchmark
     reason: Referenz-Paper aus dem Benchmark (Kipf, Planetoid-Split)
     community: []
+  checked_at: '2026-10-04T19:25:23Z'
+  cost_gross_usd: 0.0743
+  verdict:
+    urteil: reproduziert
+    measured_mean: 0.8153
+    measured_std: 0.010646
+    seeds: 10
+    target: 0.815
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_1609_02907/20261004-211550
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
 - id: disc_1811_05868
   arxiv_id: '1811.05868'
   title: Pitfalls of Graph Neural Network Evaluation
   origin: reference
-  status: ungeprueft
+  status: geprueft
   seeds: 30
   imported_from: benchmark/papers.yaml:shchur_pitfalls_2018
-  benchmark_unit: {version: v4, paper: shchur_pitfalls_2018, claim: shchur_gcn_cora_acc}
+  benchmark_unit:
+    version: v4
+    paper: shchur_pitfalls_2018
+    claim: shchur_gcn_cora_acc
   candidate:
     dataset: Cora
     claim:
@@ -54,6 +76,22 @@ candidates:
     found_by: benchmark
     reason: Referenz-Paper aus dem Benchmark (Shchur, zufaellige Splits, groesste Komponente)
     community: []
+  checked_at: '2026-10-04T19:35:09Z'
+  cost_gross_usd: 0.1129
+  verdict:
+    urteil: teilweise
+    measured_mean: 0.804934
+    measured_std: 0.015829
+    seeds: 30
+    target: 0.815
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_1811_05868/20261004-212533
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
 - id: disc_2601_18837
   arxiv_id: '2601.18837'
   title: Time series forecasting with Hahn Kolmogorov-Arnold networks

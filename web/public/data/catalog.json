@@ -26,13 +26,27 @@
    "units_matched": 2,
    "units": 8
   },
-  "status": "ungeprueft",
+  "status": "geprueft",
   "reason": null,
-  "checked_at": null,
-  "cost_gross_usd": null,
-  "verdict": null,
-  "run_id": null,
-  "jury": null
+  "checked_at": "2026-10-04T19:25:23Z",
+  "cost_gross_usd": 0.0743,
+  "verdict": {
+   "urteil": "reproduziert",
+   "measured_mean": 0.8153,
+   "measured_std": 0.010646,
+   "seeds": 10,
+   "target": 0.815,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_1609_02907/20261004-211550"
+  },
+  "run_id": "disc_1609_02907--20261004-211550",
+  "jury": {
+   "ready": true,
+   "reason": "Gesamtaussage: vorlaeufig"
+  }
  },
  {
   "id": "disc_1811_05868",
@@ -61,13 +75,27 @@
    "units_matched": 2,
    "units": 8
   },
-  "status": "ungeprueft",
+  "status": "geprueft",
   "reason": null,
-  "checked_at": null,
-  "cost_gross_usd": null,
-  "verdict": null,
-  "run_id": null,
-  "jury": null
+  "checked_at": "2026-10-04T19:35:09Z",
+  "cost_gross_usd": 0.1129,
+  "verdict": {
+   "urteil": "teilweise",
+   "measured_mean": 0.804934,
+   "measured_std": 0.015829,
+   "seeds": 30,
+   "target": 0.815,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_1811_05868/20261004-212533"
+  },
+  "run_id": "disc_1811_05868--20261004-212533",
+  "jury": {
+   "ready": true,
+   "reason": "Gesamtaussage: vorlaeufig"
+  }
  },
  {
   "id": "disc_2601_18837",
