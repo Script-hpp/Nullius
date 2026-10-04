@@ -494,7 +494,7 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [x] Benchmark auswerten, Zahlen ins README (v4, präzisionsorientiert; Devpost-Texte auf v4)
 - [x] Katalog: Referenz-Papers Kipf und Shchur mit echten Läufen (2026-10-04)
 - [x] Demo-Video gerendert (Film v8, siehe „Demo und Einreichung“)
-- [ ] Live-Läufe überschreiben `benchmark/fixtures/` (Fehler, gefunden 2026-10-04; Worker auf Branch `fix-live-fixtures`). Bis zum Fix: nach echten Läufen `git status benchmark/fixtures` prüfen, Änderungen nie committen
+- [x] Live-Läufe überschrieben `benchmark/fixtures/` (gefunden und behoben 2026-10-04, Merge `fix-live-fixtures`): `TAVILY_MODE=live` schreibt nie mehr nach `benchmark/fixtures/`, Tests arbeiten auf einer Kopie mit Wächter. Bekannte Grenze: Repo-Suche, Repo-Dateien und Zielwert-Extraktion **lesen** im Live-Modus weiter vorhandene Fixtures (kein neuer Tavily-/LLM-Aufruf, wenn eine Fixture existiert)
 - [ ] Deployment und Demo-URL (Nutzer), Repo öffentlich (Nutzer)
 - [ ] Video auf YouTube hochladen, Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`; Demo-URL, Video-Link, Zugangscode noch `TBD`), Feedback-Feld aus `docs/nebius_feedback.md`
 
