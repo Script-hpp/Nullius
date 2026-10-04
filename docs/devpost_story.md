@@ -14,6 +14,11 @@ You give Nullius a machine learning paper (an arXiv link or a catalog entry). It
 
 The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks), **Catalog**, **Live run** (plan, code, branches, measurements and repairs stream in live) and **Evidence** (the certificate with a step-by-step replay).
 
+**Who uses it, and how.**
+- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
+- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
+- *A PhD student or ML team* checks the number before building on a paper.
+
 **Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (fixed and random splits) and ETTh1 (horizon 96). CPU only, claims that run in minutes. "Reproduced" means the target value was reached according to the harness; **method fidelity is not checked**.
 
 ## How we built it
