@@ -89,10 +89,12 @@ def latest_arxiv_version(arxiv_id: str) -> str | None:
 
 
 def fetch_paper_text(
-    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture"
+    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path | None = None, mode: str = "fixture"
 ) -> PaperText:
-    """mode="fixture": Fixture zuerst, `get_tavily` nur bei Fixture-Miss (spart Credits; Tests, vorab festgelegte Experimente).
-    mode="live": immer Tavily-Aufruf (Standard des Orchestrators); das Ergebnis ersetzt die Fixture."""
+    """mode="fixture": Fixture zuerst, `get_tavily` nur bei Fixture-Miss (spart Credits); bei Miss wird die Fixture angelegt.
+    mode="live": immer Tavily-Aufruf (Standard des Orchestrators); schreibt nie nach `fixture_dir`
+    (das Ergebnis steht im Lauf: paper_text.json, Dossier.sources)."""
+    fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"{arxiv_id}.json"
     if mode == "fixture" and fixture.exists():
         return PaperText(**json.loads(fixture.read_text()))
@@ -110,8 +112,9 @@ def fetch_paper_text(
                     sha256=hashlib.sha256(text.encode()).hexdigest(),
                     arxiv_version=version if kind != "ar5iv" else None, text=text,
                 )
-                fixture_dir.mkdir(parents=True, exist_ok=True)
-                fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
+                if mode != "live":
+                    fixture_dir.mkdir(parents=True, exist_ok=True)
+                    fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
                 return paper
     raise ExtractionInvalid(f"Kein Volltext fuer {arxiv_id} ueber {[k for k, _ in _source_urls(arxiv_id, version)]}")
 
@@ -269,13 +272,15 @@ def extract_target(
 
 def extract_target_cached(
     llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str,
-    fixture_dir: Path = FIXTURE_DIR, percent: bool = True,
+    fixture_dir: Path | None = None, percent: bool = True, mode: str = "fixture",
 ) -> TargetEvidence:
     """Verifizierten Zielwert pro (Paper-Text, Methode, Datensatz, Metrik) einmal speichern.
 
     Der Wert wird bei jedem Laden erneut gegen den Quelltext geprueft (Zitat + Zahl), der Cache
     ersetzt also nur den LLM-Aufruf, nicht die Pruefung. Spart Anfragen auf Free-Endpunkten.
+    mode="live": liest vorhandene Eintraege, schreibt aber nie nach `fixture_dir`.
     """
+    fixture_dir = fixture_dir or FIXTURE_DIR
     raw = f"{paper.sha256}|{method}|{dataset}|{metric}" + ("" if percent else "|raw")
     key = hashlib.sha256(raw.encode()).hexdigest()[:16]
     path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
@@ -289,5 +294,8 @@ def extract_target_cached(
         )
         return ev
     ev = extract_target(llm, paper, method, dataset, metric, percent)
+    if mode == "live":
+        return ev
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(asdict(ev), ensure_ascii=False, indent=1))
     return ev

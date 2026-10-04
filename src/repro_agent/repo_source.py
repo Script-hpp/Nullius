@@ -63,9 +63,11 @@ def find_repo_url(paper_text: str) -> str | None:
     return None
 
 
-def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture") -> str | None:
+def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path | None = None, mode: str = "fixture") -> str | None:
     """Rolle 1, wenn das Paper keinen Code-Link hat: Tavily-Suche auf github.com. Ein Treffer zaehlt nur, wenn sein
-    Text die arXiv-ID oder den vollen Titel nennt. Ergebnis wird als Fixture gespeichert (gleicher Treffer fuer jede Generierung)."""
+    Text die arXiv-ID oder den vollen Titel nennt. Ergebnis wird als Fixture gespeichert (gleicher Treffer fuer jede Generierung);
+    mode="live" schreibt nie nach `fixture_dir`."""
+    fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"search_{arxiv_id}.json"
     if fixture.exists():
         return json.loads(fixture.read_text()).get("url")
@@ -78,6 +80,8 @@ def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path = F
         if m and (arxiv_id in (r.get("content", "") + r.get("url", "")) or norm(title) in text):
             url = f"https://github.com/{m.group(1)}/{m.group(2)}"
             break
+    if mode == "live":
+        return url
     fixture_dir.mkdir(parents=True, exist_ok=True)
     fixture.write_text(json.dumps({"title": title, "arxiv_id": arxiv_id, "url": url, "mode": mode,
                                    "candidates": [r.get("url") for r in (res or {}).get("results", [])]}, indent=1))
@@ -142,9 +146,10 @@ def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: s
 
 def read_repo(
     sandbox: Sandbox, llm: LLMClient, url: str, claim_text: str, dataset: str,
-    fixture_dir: Path = FIXTURE_DIR, focus_model: bool = False,
+    fixture_dir: Path | None = None, focus_model: bool = False, mode: str = "fixture",
 ) -> RepoDump:
-    """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern."""
+    """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern (nicht bei mode="live")."""
+    fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"{_repo_key(url)}.json"
     if fixture.exists():
         return RepoDump(**json.loads(fixture.read_text()))
@@ -173,18 +178,23 @@ def read_repo(
     read(chosen)
     read(imported_files(files, listing)[:MAX_IMPORTED])
     dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing))
+    if mode == "live":
+        return dump
     fixture_dir.mkdir(parents=True, exist_ok=True)
     fixture.write_text(json.dumps(asdict(dump), ensure_ascii=False, indent=1))
     return dump
 
 
-def fetch_readme(url: str, get_tavily, fixture_dir: Path = FIXTURE_DIR, mode: str = "fixture") -> str:
-    """README ueber Tavily Extract (Rolle 4). mode="fixture": Fixture zuerst, spart Credits; mode="live": immer Aufruf."""
+def fetch_readme(url: str, get_tavily, fixture_dir: Path | None = None, mode: str = "fixture") -> str:
+    """README ueber Tavily Extract (Rolle 4). mode="fixture": Fixture zuerst, spart Credits; mode="live": immer Aufruf, schreibt nie nach `fixture_dir`."""
+    fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"{_repo_key(url)}_readme.json"
     if mode == "fixture" and fixture.exists():
         return json.loads(fixture.read_text())["text"]
     result = get_tavily().get_setup_details(url)
     text = next((r.get("raw_content") or "" for r in result.get("results", [])), "")
+    if mode == "live":
+        return text
     fixture_dir.mkdir(parents=True, exist_ok=True)
     fixture.write_text(json.dumps({"url": url, "text": text}, ensure_ascii=False, indent=1))
     return text
