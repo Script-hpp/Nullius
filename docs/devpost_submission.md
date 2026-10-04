@@ -112,7 +112,7 @@ What to try in five minutes:
 
 Notes for reading results:
 
-- The green badge reads "Target reached": the target value was reached according to the harness; **method fidelity is not checked**. Runs of the same claim are grouped under one card on the Overview.
+- The green badge reads "Reproduced": the target value was reached according to the harness; **method fidelity is not checked**. Runs of the same claim are grouped under one card on the Overview.
 - "Agent fault suspected" means the result is far below a trivial baseline; it says nothing about the paper.
 - "Not reproducible (setup)" means our setup could not produce a valid run within the attempt limit.
 - Overall statements in live runs are "provisional" because axis 2 is not checked.
