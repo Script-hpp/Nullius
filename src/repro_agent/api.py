@@ -206,7 +206,8 @@ def refusal(kind: str, ip: str) -> Refused | None:
         return Refused(503, reason)
     today = datetime.date.today()
     daily, cap = (repro_daily, MAX_DAILY_REPRO_JOBS) if kind == "reproduction" else (daily_limit, MAX_DAILY_JOBS)
-    if (daily["date"] == today and daily["count"] >= cap) or ip_limits.used_up(kind, ip):
+    used = daily["count"] if daily["date"] == today else 0
+    if used >= cap or ip_limits.used_up(kind, ip):
         return Refused(429, "daily_limit", live_gate.next_reset_iso())
     if job_semaphore.locked():
         return Refused(429, "busy")

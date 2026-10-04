@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from repro_agent import api, site_export
+from repro_agent import api, live_gate, site_export
 from repro_agent import catalog as cat
 from repro_agent.dossier import REPO_ROOT, Attempt
 from repro_agent.llm import BillingBlocked
@@ -61,7 +61,12 @@ class FakeOrch:
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
-    monkeypatch.setenv("ACCESS_CODE", "secret")
+    monkeypatch.setattr("repro_agent.llm.COST_LOG_PATH", tmp_path / "costs.jsonl")
+    monkeypatch.setattr("repro_agent.tavily_usage.TAVILY_LOG_PATH", tmp_path / "tavily_usage.jsonl")
+    monkeypatch.setenv("BUDGET_TOTAL_USD", "30")
+    monkeypatch.setenv("TAVILY_CREDITS_TOTAL", "1000")
+    monkeypatch.setenv("MAX_DAILY_REPRO_PER_IP", "100")       # TestClient ist immer dieselbe IP
+    monkeypatch.setattr(api, "ip_limits", live_gate.IpLimits())
     e = entry(cand())
     etth = entry(cand("2601.21866", "ETTh1", claim={"method": "M", "metric": "mse", "target": 0.35, "horizon": 192, "protocol": "unklar"}, protocol="unklar"))
     f = tmp_path / "catalog.yaml"
@@ -85,7 +90,7 @@ def env(tmp_path, monkeypatch):
 
 
 def start(env, **over):
-    body = {"catalog_id": env.id, "access_code": "secret", "quick": True, **over}
+    body = {"catalog_id": env.id, "quick": True, **over}
     return env.client.post("/api/reproduce", json=body)
 
 
@@ -99,9 +104,7 @@ def read_stream(env, job_id, **params):
     return events
 
 
-def test_access_code_and_unknown_id(env):
-    assert start(env, access_code="").status_code == 403
-    assert start(env, access_code="wrong").status_code == 403
+def test_no_access_code_needed_and_unknown_id(env):
     r = start(env, catalog_id="disc_nope")
     assert r.status_code == 404
     assert FakeOrch.instances == []
@@ -173,7 +176,7 @@ def test_daily_limit(env, monkeypatch):
     for _ in range(2):
         read_stream(env, start(env).json()["job_id"])
     r = start(env)
-    assert r.status_code == 429 and "Daily" in r.json()["detail"]
+    assert r.status_code == 429 and r.json()["reason"] == "daily_limit"
 
 
 def test_crash_becomes_error_event_with_short_sanitized_message(env):
@@ -209,3 +212,17 @@ def test_stream_unknown_job_404(env):
 
 def test_current_when_idle(env):
     assert env.client.get("/api/jobs/current").json() == {"busy": False}
+
+
+def test_budget_floor_blocks_reproduction_before_any_orchestrator(env, monkeypatch):
+    monkeypatch.setenv("LIVE_MIN_BUDGET_USD", "31")
+    r = start(env)
+    assert r.status_code == 503 and r.json()["reason"] == "budget_floor"
+    assert FakeOrch.instances == [] and not api.repro_jobs and api.repro_daily["count"] == 0
+
+
+def test_ip_limit_one_reproduction_per_day(env, monkeypatch):
+    monkeypatch.setenv("MAX_DAILY_REPRO_PER_IP", "1")
+    read_stream(env, start(env).json()["job_id"])
+    r = start(env)
+    assert r.status_code == 429 and r.json()["reason"] == "daily_limit"

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Event, RunRef } from './data'
 import type { CatalogEntry } from './catalog'
+import { StartRefused, startErrorText, type LiveStatusInfo } from './livestatus'
 
 // Live reproduction: the browser only talks to /api (keys stay on the server). Static mirrors have no API: available = false.
 export type JobInfo = { busy: boolean; kind?: 'discovery' | 'reproduction'; job_id?: string; catalog_id?: string | null; started_at?: number }
@@ -30,25 +31,43 @@ export function useJobInfo(everyMs = 10000): { available: boolean; info: JobInfo
   return { available: ready && info !== null, info, refresh }
 }
 
-export async function startReproduction(catalogId: string, accessCode: string, quick = true): Promise<string> {
+// null = no answer (static mirror or API down): the UI then shows no notice and the start call reports what happens.
+export async function fetchLiveStatus(): Promise<LiveStatusInfo | null> {
+  try {
+    const r = await fetch('/api/status', { cache: 'no-store' })
+    if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return null
+    return (await r.json()) as LiveStatusInfo
+  } catch {
+    return null
+  }
+}
+
+export function useLiveStatus(everyMs = 30000): { status: LiveStatusInfo | null; refresh: () => void } {
+  const [status, setStatus] = useState<LiveStatusInfo | null>(null)
+  const refresh = useCallback(() => { fetchLiveStatus().then(setStatus) }, [])
+  useEffect(() => {
+    refresh()
+    const t = window.setInterval(refresh, everyMs)
+    return () => window.clearInterval(t)
+  }, [refresh, everyMs])
+  return { status, refresh }
+}
+
+export async function startReproduction(catalogId: string, quick = true): Promise<string> {
   let r: Response
   try {
     r = await fetch('/api/reproduce', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ catalog_id: catalogId, access_code: accessCode, quick }),
+      body: JSON.stringify({ catalog_id: catalogId, quick }),
     })
   } catch {
     throw new Error('The live backend is not reachable.')
   }
   if (!r.ok) {
-    let detail = ''
-    try { detail = (await r.json()).detail ?? '' } catch { /* no body */ }
-    throw new Error(
-      r.status === 403 ? 'Wrong access code.'
-        : r.status === 429 ? (detail.includes('Daily') ? 'The daily limit for live runs is reached.' : 'Another run is active. Try again in a few minutes.')
-          : r.status === 400 ? (detail || 'This entry cannot be run.')
-            : r.status === 404 ? 'The live backend does not know this entry.'
-              : `The live backend answered with an error (${r.status}).`)
+    let body: unknown = null
+    try { body = await r.json() } catch { /* no body */ }
+    const { text, reason } = startErrorText(r.status, body)
+    throw new StartRefused(text, reason)
   }
   return (await r.json()).job_id as string
 }
