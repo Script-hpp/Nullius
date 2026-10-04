@@ -41,7 +41,50 @@ def test_paper_text_live_mode_calls_tavily_even_with_fixture(tmp_path, monkeypat
     tv = FakeTavily()
     p = fetch_paper_text("1234.5678", lambda: tv, tmp_path, mode="live")
     assert p.text == TEXT and tv.calls >= 1
-    assert json.loads((tmp_path / "1234.5678.json").read_text())["text"] == TEXT    # Fixture wird aktualisiert
+    assert json.loads((tmp_path / "1234.5678.json").read_text())["text"] == "FIXTURE TEXT"    # live schreibt nie in fixture_dir
+
+
+def test_paper_text_fixture_miss_creates_fixture_live_does_not(tmp_path, monkeypatch):
+    monkeypatch.setattr("repro_agent.claims_source.latest_arxiv_version", lambda i: None)
+    tv = FakeTavily()
+    live_dir, fx_dir = tmp_path / "live", tmp_path / "fx"
+    assert fetch_paper_text("1234.5678", lambda: tv, live_dir, mode="live").text == TEXT
+    assert not live_dir.exists()
+    assert fetch_paper_text("1234.5678", lambda: tv, fx_dir, mode="fixture").text == TEXT
+    assert json.loads((fx_dir / "1234.5678.json").read_text())["text"] == TEXT
+    calls = tv.calls
+    assert fetch_paper_text("1234.5678", lambda: tv, fx_dir, mode="fixture").text == TEXT and tv.calls == calls
+
+
+def test_live_mode_writes_nothing_in_repo_functions(tmp_path):
+    from types import SimpleNamespace
+
+    from repro_agent.claims_source import PaperText, TargetEvidence, extract_target_cached
+    from repro_agent import claims_source, repo_source
+
+    tv = SimpleNamespace(
+        get_setup_details=lambda url: {"results": [{"raw_content": "README live"}]},
+        find_material=lambda title, domains: {"results": [{"url": "https://github.com/a/b", "content": "1234.5678"}]},
+    )
+    url = "https://github.com/a/b"
+    live, fx = tmp_path / "live", tmp_path / "fx"
+    assert repo_source.fetch_readme(url, lambda: tv, live, mode="live") == "README live"
+    assert repo_source.search_repo_url("T", "1234.5678", lambda: tv, live, mode="live") == url
+    ev = TargetEvidence(value=0.8, quote="q", table="t", url="u", source_kind="k", retrieved_at="r", sha256="h", arxiv_version=None)
+    monkey = pytest.MonkeyPatch()
+    monkey.setattr(claims_source, "extract_target", lambda *a, **k: ev)
+    try:
+        paper = PaperText("1234.5678", "u", "k", "r", "h" * 64, None, "text")
+        assert extract_target_cached(None, paper, "m", "d", "acc", live, mode="live") is ev
+        assert not live.exists()
+        extract_target_cached(None, paper, "m", "d", "acc", fx)       # fixture mode: legt an
+        assert len(list(fx.glob("*_target_*.json"))) == 1
+    finally:
+        monkey.undo()
+    assert repo_source.fetch_readme(url, lambda: tv, fx, mode="fixture") == "README live"
+    assert (fx / "a_b_readme.json").exists()
+    assert repo_source.search_repo_url("T", "1234.5678", lambda: tv, fx, mode="fixture") == url
+    assert (fx / "search_1234.5678.json").exists()
 
 
 def test_readme_modes(tmp_path):
