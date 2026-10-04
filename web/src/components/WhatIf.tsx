@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { ResultBand } from './ResultChart'
 import { Badge } from './ui'
-import { RESULT, TONE_VAR, de2en } from '../labels'
+import { RESULT, TONE_VAR, de2en, resultHint } from '../labels'
 import { fromUnits, sliderRange, toUnits, verdictForSlider, whatIfEligible } from '../whatif'
 import type { Json } from '../data'
 
@@ -55,7 +55,7 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
         </div>
         <div className="min-w-0 lg:col-span-2">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2" aria-live="polite">
-            <Badge tone={res.tone}>{res.label}</Badge>
+            <Badge tone={res.tone} title={resultHint(v)}>{res.label}</Badge>
             <span className="text-[14px] leading-relaxed text-fg-3">
               {real ? 'The paper’s own claim. ' : ''}A claim of {fmt(claimed)} would be {verdictWord[v]}: our mean is {fmt(mean)}, {away} away, {k.toFixed(1)} × the tolerance of ±{fmt(tol)}.
             </span>

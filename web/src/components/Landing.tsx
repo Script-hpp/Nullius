@@ -51,7 +51,7 @@ function Hero() {
               <span className="block text-fg">we measure them.</span>
             </h1>
             <p className="mx-auto mb-0 mt-7 max-w-xl text-base leading-relaxed text-fg-4 sm:text-lg">
-              We check machine-learning papers by rebuilding their experiments. A paper reports a number; Nullius builds the experiment again, measures it independently and tells you whether it can be reproduced.
+              Nullius is a high-precision paper checker: when it says a target was reached, an independent harness measured it, and it has never confirmed a wrong claim. It rebuilds a paper&rsquo;s experiment from the text and often misses the target, usually by a small margin.
             </p>
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4" {...fade(150)}>
@@ -134,7 +134,7 @@ function ClaimVsMeasurement() {
           </div>
           <div className="mt-6 font-mono text-6xl font-light tracking-tight text-tone-green sm:text-7xl">82.1%</div>
           <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
-            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Reproduced with our setup.
+            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Target reached with our setup; method fidelity not checked.
           </p>
         </div>
       </div>

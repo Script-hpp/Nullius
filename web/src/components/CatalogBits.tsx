@@ -1,6 +1,6 @@
 import { AlertCircle, ArrowRight, Info } from 'lucide-react'
 import { Badge, toPercent } from './ui'
-import { NOT_ASSESSABLE, OVERALL, PRELIMINARY, TONE_TEXT, catalogLabel, isPreliminary, translateWarning } from '../labels'
+import { NOT_ASSESSABLE, OVERALL, PRELIMINARY, TONE_TEXT, catalogLabel, isPreliminary, resultHint, translateWarning } from '../labels'
 import { evidenceHref, fmtClaimed, fmtDelta, fmtMeasured, type CatalogEntry } from '../catalog'
 import type { Json, RunData } from '../data'
 
@@ -23,7 +23,7 @@ export function CatalogVerdict({ entry }: { entry: CatalogEntry }) {
   const redundant = v.gesamtaussage === v.urteil || v.gesamtaussage === NOT_ASSESSABLE   // the badge already says it
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <Badge tone={r.tone}>{r.label}</Badge>
+      <Badge tone={r.tone} title={resultHint(v.urteil)}>{r.label}</Badge>
       {isPreliminary(v.gesamtaussage) ? <PreliminaryChip /> : !redundant && <span className="text-[11px] text-muted">{OVERALL[v.gesamtaussage] ?? v.gesamtaussage}</span>}
     </div>
   )

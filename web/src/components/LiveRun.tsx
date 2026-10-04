@@ -1,18 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertCircle, ArrowRight, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import { RunTimeline } from './run/RunTimeline'
 import { NextStep, PageIntro } from './page'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { StepGraph } from './run/StepGraph'
 import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
 import { translateClaim } from '../labels'
-import { loadIndex, type RunRef } from '../data'
+import { getText, loadIndex, runDir, type Event, type RunRef } from '../data'
+import { etaFromRuns, minutes, type Eta } from '../eta'
 import { useCatalog } from '../catalog'
 import { PaperHead } from './PaperHead'
 import { useHead } from '../useHead'
 import { headFromSummary } from '../paperhead'
 
 const STATUS_TEXT = { connecting: 'Connecting', running: 'Running', finished: 'Finished', error: 'Failed', lost: 'Connection lost', unknown: 'Not found' } as const
+
+// Typical duration from the event timestamps of the finished runs shipped with the app (no estimate if there are none).
+function useEta(runs: RunRef[]): Eta | null {
+  const [eta, setEta] = useState<Eta | null>(null)
+  useEffect(() => {
+    let alive = true
+    Promise.all(runs.map((r) => getText(runDir(r) + 'events.jsonl')))
+      .then((texts) => { if (alive) setEta(etaFromRuns(texts.flatMap((t) => (t ? [t.split('\n').filter(Boolean).map((l) => JSON.parse(l) as Event)] : [])))) })
+      .catch(() => { if (alive) setEta(null) })
+    return () => { alive = false }
+  }, [runs])
+  return eta
+}
 
 export function LiveRun({ jobId }: { jobId: string }) {
   const { events, status, runId, error, lastReceived } = useLiveRun(jobId)
@@ -31,6 +45,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
     return cs?.text ? translateClaim(String(cs.text)) : null
   }, [events])
   const fallback = lastFinishedRun(entry, runs)
+  const eta = useEta(runs)
   const ended = status === 'finished' || status === 'error' || status === 'lost' || status === 'unknown'
   const shownStatus = status === 'running' && !events.some((e) => e.type === 'started') ? 'connecting' : status
   const bad = status === 'error' || status === 'lost' || status === 'unknown'
@@ -60,6 +75,16 @@ export function LiveRun({ jobId }: { jobId: string }) {
           {claimText ? <span>Claim: {claimText}</span> : null}
         </p>
       </PageIntro>
+
+      {!ended && (eta || fallback) && (
+        <p className="mb-6 flex items-start gap-2 text-[13px] leading-relaxed text-fg-4" data-testid="live-eta">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+          <span>
+            {eta && <>Usually about {eta.seed0 != null ? `${minutes(eta.seed0)} until seed 0 is scored and ` : ''}{minutes(eta.total ?? 0)} in total (median of {eta.n} finished runs, from {minutes(eta.totalMin ?? 0)} to {minutes(eta.totalMax ?? 0)}). </>}
+            {fallback && <>While you wait: <a href={`#/run/${fallback}`} className="text-fg-3 underline underline-offset-4 hover:text-fg">the pre-computed result of this entry</a>.</>}
+          </span>
+        </p>
+      )}
 
       {bad && (
         <div className="mb-6 rounded-xl border border-line bg-panel/50 p-5">

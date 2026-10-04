@@ -2,7 +2,7 @@ export type Tone = 'green' | 'amber' | 'red' | 'gray' | 'violet'
 
 // Discovery candidates that ran once through the loop: never a verdict on the paper, always "with our setup".
 export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
-  'reproduziert': { label: 'REPRODUCED', tone: 'green' },
+  'reproduziert': { label: 'TARGET REACHED', tone: 'green' },
   'teilweise': { label: 'PARTIALLY REPRODUCED', tone: 'amber' },
   'nicht reproduziert': { label: 'NOT REPRODUCED', tone: 'red' },
   'nicht reproduzierbar (Setup)': { label: 'SETUP NOT REPRODUCIBLE', tone: 'gray' },
@@ -10,6 +10,9 @@ export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
 }
 // Same wording for every run: "reproduced" means the target value was reached with our setup; method fidelity is not checked.
 export const RESULT = RESULT_CATALOG
+// Tooltip for the green badge: the badge says "target reached", never "method reproduced".
+export const TARGET_HINT = 'The independent harness measured the target value. Method fidelity not checked.'
+export const resultHint = (urteil: string | undefined) => (urteil === 'reproduziert' ? TARGET_HINT : undefined)
 export const PRELIMINARY = 'Preliminary: method fidelity not checked'
 export const isPreliminary = (gesamt: string | undefined) => gesamt === 'vorlaeufig'
 export const NOT_ASSESSABLE = 'nicht bewertbar (Methode nicht umgesetzt)'
@@ -124,7 +127,7 @@ export function translateClaim(text: string) {
 }
 
 export const VERDICT_SENTENCE: Record<string, string> = {
-  'reproduziert': 'Reproduced with our setup',
+  'reproduziert': 'Target reached with our setup',
   'teilweise': 'Partially reproduced with our setup',
   'nicht reproduziert': 'Not reproduced with our setup',
   'nicht reproduzierbar (Setup)': 'No valid run with our setup',
