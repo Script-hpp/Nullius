@@ -1,5 +1,59 @@
 # Discovery-Kandidaten und ihr Pruefstatus (scripts/curate_catalog.py). papers.yaml bleibt unberuehrt.
 candidates:
+- id: disc_1609_02907
+  arxiv_id: '1609.02907'
+  title: Semi-Supervised Classification with Graph Convolutional Networks
+  origin: reference
+  status: ungeprueft
+  seeds: 10
+  imported_from: benchmark/papers.yaml:kipf_gcn_2017
+  benchmark_unit: {version: v4, paper: kipf_gcn_2017, claim: gcn_cora_acc}
+  candidate:
+    dataset: Cora
+    claim:
+      method: GCN (this paper)
+      quote: GCN (this paper) 70 .3 (7s) 81 .5 (4s) 79 .0 (38s) 66 .0 (48s)
+      metric: accuracy
+      target: 0.815
+      protocol: passt
+      matched_task: Cora
+      protocol_quote: We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500
+        labeled examples for hyperparameter optimization
+      column_check: ok
+      protocol_evidence: 'Protokoll: Zitat im Text belegt (Fixture 1609.02907.json)'
+    github_url: https://github.com/tkipf/gcn
+    source_url: https://arxiv.org/pdf/1609.02907
+    protocol: passt
+    found_by: benchmark
+    reason: Referenz-Paper aus dem Benchmark (Kipf, Planetoid-Split)
+    community: []
+- id: disc_1811_05868
+  arxiv_id: '1811.05868'
+  title: Pitfalls of Graph Neural Network Evaluation
+  origin: reference
+  status: ungeprueft
+  seeds: 30
+  imported_from: benchmark/papers.yaml:shchur_pitfalls_2018
+  benchmark_unit: {version: v4, paper: shchur_pitfalls_2018, claim: shchur_gcn_cora_acc}
+  candidate:
+    dataset: Cora
+    claim:
+      method: GCN
+      quote: GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6
+      metric: accuracy
+      target: 0.815
+      protocol: passt
+      matched_task: Cora-LCC
+      protocol_quote: In all cases, we use 20 labeled nodes per class as the training set, 30 nodes per class as the validation
+        set, and the rest as the test set.
+      column_check: ok
+      protocol_evidence: 'Protokoll: Zitat im Text belegt (Fixture 1811.05868.json)'
+    github_url: https://github.com/shchur/gnn-benchmark
+    source_url: https://arxiv.org/pdf/1811.05868v2
+    protocol: passt
+    found_by: benchmark
+    reason: Referenz-Paper aus dem Benchmark (Shchur, zufaellige Splits, groesste Komponente)
+    community: []
 - id: disc_2601_18837
   arxiv_id: '2601.18837'
   title: Time series forecasting with Hahn Kolmogorov-Arnold networks

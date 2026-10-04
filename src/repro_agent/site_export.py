@@ -19,6 +19,8 @@ from .dossier import REPO_ROOT, Dossier
 
 OUT = Path(os.environ.get("REPRO_EXPORT_DIR") or REPO_ROOT / "web" / "public" / "data")
 CATALOG_YAML = REPO_ROOT / "benchmark" / "catalog.yaml"
+BENCHMARK_JSON = REPO_ROOT / "web" / "public" / "data" / "benchmark.json"
+BENCHMARK_ARM = "B"   # Arm mit Tavily
 _index_lock = threading.Lock()
 
 
@@ -43,7 +45,36 @@ def run_id_of(run_dir: str | None) -> str | None:
     return f"{p.parent.name}--{p.name}"
 
 
-def catalog_json(entries: list[dict]) -> list[dict]:
+def read_benchmark(out: Path | None = None) -> dict | None:
+    """benchmark.json aus dem Exportordner, sonst die eingecheckte Datei. None, wenn keine lesbar ist."""
+    for path in ([Path(out) / "benchmark.json"] if out else []) + [BENCHMARK_JSON]:
+        try:
+            return json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def reference_benchmark(entry: dict, benchmark: dict | None) -> dict | None:
+    """Kennzahl eines Referenz-Eintrags im Benchmark (Arm mit Tavily), berechnet aus den Einzelurteilen in benchmark.json.
+    None, wenn der Eintrag keine benchmark_unit nennt oder die Quelle Version/Einheit/Arm nicht enthaelt (nichts erfunden)."""
+    ref = entry.get("benchmark_unit")
+    if not ref or not benchmark:
+        return None
+    version = next((v for v in benchmark.get("versions") or [] if v.get("id") == ref.get("version")), None)
+    if not version:
+        return None
+    units = version.get("units") or []
+    unit = next((u for u in units if u.get("paper") == ref.get("paper") and u.get("claim") == ref.get("claim")), None)
+    verdicts = ((unit or {}).get("arms", {}).get(BENCHMARK_ARM) or {}).get("verdicts")
+    if not verdicts:
+        return None
+    matched = sum(1 for u in units if (u.get("arms", {}).get(BENCHMARK_ARM) or {}).get("majority") == u.get("reference_verdict"))
+    return {"version": version["id"], "arm": "with Tavily", "reached": sum(1 for v in verdicts if v == "reproduziert"),
+            "runs": len(verdicts), "units_matched": matched, "units": len(units)}
+
+
+def catalog_json(entries: list[dict], benchmark: dict | None = None) -> list[dict]:
     """Nur Felder, die die UI braucht."""
     out = []
     for e in entries:
@@ -56,6 +87,7 @@ def catalog_json(entries: list[dict]) -> list[dict]:
             "claim": {k: claim.get(k) for k in ("method", "metric", "target", "horizon", "quote", "input_length")},
             "protocol": cand.get("protocol"), "column_check": claim.get("column_check"),
             "github_url": cand.get("github_url"), "source_url": cand.get("source_url"),
+            "origin": e.get("origin") or "discovery", "benchmark": reference_benchmark(e, benchmark),
             "status": e.get("status"), "reason": e.get("reason"), "checked_at": e.get("checked_at"),
             "cost_gross_usd": e.get("cost_gross_usd"),
             "verdict": verdict, "run_id": run_id_of((verdict or {}).get("run_dir")), "jury": e.get("jury"),
@@ -64,7 +96,7 @@ def catalog_json(entries: list[dict]) -> list[dict]:
 
 
 def write_catalog(catalog_yaml: Path, out: Path) -> int:
-    data = catalog_json(catalog_entries(catalog_yaml))
+    data = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out))
     write_json_atomic(out / "catalog.json", data)
     return len(data)
 
