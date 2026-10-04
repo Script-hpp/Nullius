@@ -746,7 +746,7 @@ class Orchestrator:
             try:
                 ev = extract_target_cached(
                     self.llm, text, spec["method"], spec["dataset"], spec["metric"],
-                    percent=spec.get("percent", True),
+                    percent=spec.get("percent", True), mode=self.tavily_mode,
                 )
             except ExtractionInvalid as exc:
                 if not keep:
@@ -842,7 +842,8 @@ class Orchestrator:
             docs.append(Doc("repo-readme", readme))
             self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         try:
-            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False))
+            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False),
+                                 mode=self.tavily_mode)
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None
