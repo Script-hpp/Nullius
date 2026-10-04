@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getText } from './data'
+import type { ReferenceBenchmark } from './referenceBench'
 
 export type CatalogVerdict = {
   urteil: string
@@ -17,6 +18,8 @@ export type CatalogEntry = {
   id: string
   arxiv_id: string
   title: string
+  origin?: 'discovery' | 'reference'   // missing in older exports = discovery
+  benchmark?: ReferenceBenchmark | null
   dataset?: string
   task?: string
   claim: { method?: string; metric?: string; target?: number; horizon?: number; quote?: string; input_length?: number | null }

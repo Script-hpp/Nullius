@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2 } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -9,6 +9,7 @@ import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { translateJuryReason, translateReason } from '../labels'
 import { startReproduction, useJobInfo } from '../live'
+import { referenceSentence } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
@@ -31,6 +32,14 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
         <span>Claim <span className="text-fg-3">{e.claim.method ?? '–'}</span></span>
         <span>{STATUS_TEXT[e.status]}</span>
       </div>
+      {e.origin === 'reference' && (
+        <div className="mt-3 space-y-1">
+          <Badge tone="gray" icon={<Library className="w-4 h-4" />} title="A paper from our benchmark with a known reference result">Reference paper</Badge>
+          <p className="m-0 text-[12px] leading-relaxed text-muted">
+            {referenceSentence(e.benchmark)} <a href="#benchmark" className="text-fg-3 hover:text-fg-max">Benchmark results</a>
+          </p>
+        </div>
+      )}
       <PaperHead head={head} compact />
 
       {v ? (
@@ -46,7 +55,7 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
         </div>
       ) : (
         <p className="mt-4 text-[12px] leading-relaxed text-muted">
-          {e.status === 'ungeprueft' ? 'Unverified candidate: the claim was read from the paper, not re-run.' : `${STATUS_TEXT[e.status]}${e.reason ? `: ${translateReason(e.reason)}` : ''}`}
+          {e.status === 'ungeprueft' ? (e.origin === 'reference' ? 'Not run through the catalog loop yet: a full run has to finish before this entry can show a result here.' : 'Unverified candidate: the claim was read from the paper, not re-run.') : `${STATUS_TEXT[e.status]}${e.reason ? `: ${translateReason(e.reason)}` : ''}`}
         </p>
       )}
 
@@ -113,10 +122,11 @@ export function Catalog() {
         <div className="md:pr-12">
           <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How this catalog is made</h2>
           <ol className="m-0 mt-5 list-none space-y-4 p-0 text-[15px] leading-relaxed text-fg-4">
-            <li><span className="mr-3 font-mono text-fg-3">01</span><span className="font-medium text-fg">Discover.</span> Tavily searches the web for new papers that report a result on a benchmark we can rebuild, and keeps only claims it can quote.</li>
+            <li><span className="mr-3 font-mono text-fg-3">01</span><span className="font-medium text-fg">Collect.</span> The catalog holds reference papers from our benchmark and papers Tavily found on the web, which report a result on a benchmark we can rebuild; only claims that can be quoted are kept.</li>
             <li><span className="mr-3 font-mono text-fg-3">02</span><span className="font-medium text-fg">One full run.</span> The agent rebuilds the experiment; the harness measures it over several seeds.</li>
             <li><span className="mr-3 font-mono text-fg-3">03</span><span className="font-medium text-fg">Listed here.</span> An entry is Jury ready when its run finished cleanly and the method was implemented.</li>
           </ol>
+          <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A live check can still differ from the stored result, because the agent writes new code each time. The precomputed full result stays next to it.</p>
         </div>
         <div className="border-line md:border-l md:pl-12">
           <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Supported datasets</h2>
