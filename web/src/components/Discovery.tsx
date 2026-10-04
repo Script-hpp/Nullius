@@ -296,8 +296,8 @@ function Timeline({ view }: { view: DiscoveryView }) {
 
 export function Discovery() {
   const [datasets, setDatasets] = useState<string[]>(DATASETS)
-  const { status, refresh: refreshStatus } = useLiveStatus()
-  const disc = statusFor(status, 'discovery')
+  const { status: liveStatus, refresh: refreshStatus } = useLiveStatus()
+  const disc = statusFor(liveStatus, 'discovery')
   const paused = isPaused(disc)
   const [mode, setMode] = useState<Mode>('idle')
   const [events, setEvents] = useState<DEvent[]>([])

@@ -74,7 +74,7 @@ Tavily's effect on the benchmark is small (see below); its main role in the prod
 
 ## Product tour
 
-**Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; a live run needs an access code, one run at a time, daily limits), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
+**Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; live runs need no sign-in; one run at a time, daily and per-IP limits, and they pause when the budget floor is reached, then the recorded run is shown), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
 
 ![Evidence view](docs/img/evidence.jpg)
 
@@ -158,14 +158,14 @@ LLM_PROVIDER=tokenfactory uv run repro-agent kipf_gcn_2017
 
 # web app (development) and API (live runs, SSE)
 cd web && npm ci && npm run dev
-ACCESS_CODE=change-me uv run uvicorn repro_agent.api:app --port 8000
+uv run uvicorn repro_agent.api:app --port 8000
 
 # tests (no network, no cost)
 uv run python -m pytest -m "not integration"
 cd web && npm run build && npm run lint && npm test
 ```
 
-Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate, `TAVILY_MODE`). Runs are written to `runs/<paper>/<timestamp>/`; `scripts/export_site_data.py` copies selected runs to `web/public/data` (publish only production runs). The API needs `ACCESS_CODE`, limits live runs to one at a time and per day, and keeps all keys on the server. `Dockerfile` builds API and web app into one container; hosting steps are in [`docs/deploy.md`](docs/deploy.md).
+Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate, `TAVILY_MODE`). Runs are written to `runs/<paper>/<timestamp>/`; `scripts/export_site_data.py` copies selected runs to `web/public/data` (publish only production runs). The API needs no access code. It limits live runs to one at a time, per day and per IP, pauses them when the remaining model budget or Tavily credits fall below a floor (`LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`; status at `GET /api/status`), and keeps all keys on the server. `Dockerfile` builds API and web app into one container; hosting steps are in [`docs/deploy.md`](docs/deploy.md).
 
 ## Limitations and roadmap
 
