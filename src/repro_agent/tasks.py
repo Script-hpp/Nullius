@@ -174,72 +174,119 @@ def pubmed_task() -> Task:
     return planetoid_task("pubmed")
 
 
-ETTH1_DATA_DESCRIPTION = """\
-Dataset: ETTh1 (electricity transformer temperature, hourly), 7 channels, multivariate forecasting.
-File /data/etth1_public.npz (numpy.load), all values already z-score standardised with the
+# ETT (Horizont 96): eine Task-Fabrik, parametrisiert ueber ETT (harness/ett_data.py SPECS).
+# name: (Anzeigename, Takt, Einheit eines Schritts, Zeilen Train, Zeilen Val, Testfenster, Val-Fenster, Val-Schrittweite)
+ETT = {
+    "etth1": ("ETTh1", "hourly", "hours", 8640, 2880, 2785, 117, 24),
+    "etth2": ("ETTh2", "hourly", "hours", 8640, 2880, 2785, 117, 24),
+    "ettm1": ("ETTm1", "15-minute", "15-minute steps", 34560, 11520, 11425, 120, 96),
+    "ettm2": ("ETTm2", "15-minute", "15-minute steps", 34560, 11520, 11425, 120, 96),
+}
+ETTH1_VAL_WINDOWS = 117   # = etth1_data.n_val_windows(96): Schrittweite 24 in den 2880 Val-Zeilen
+ETTH1_SMOKE_WINDOWS = 8
+
+
+def ett_data_description(name: str) -> str:
+    label, gran, unit, n_train, n_val, n_win, _, _ = ETT[name]
+    kind = "hourly" if gran == "hourly" else "15-minute"
+    return f"""\
+Dataset: {label} (electricity transformer temperature, {gran}), 7 channels, multivariate forecasting.
+File /data/{name}_public.npz (numpy.load), all values already z-score standardised with the
 mean/std of the training rows:
-- train: float32 [8640, 7] (first 12 months)
-- val: float32 [2880, 7] (next 4 months)
-- test_inputs: float32 [2785, 720, 7]; test_inputs[i] is the 720 hourly steps just before the
-  forecast start of test window i (window i forecasts hours i .. i+95 of the 4-month test period).
-Task: for every test window i in 0..2784 forecast the next 96 hours of all 7 channels. You may
+- train: float32 [{n_train}, 7] (first 12 months)
+- val: float32 [{n_val}, 7] (next 4 months)
+- test_inputs: float32 [{n_win}, 720, 7]; test_inputs[i] is the 720 {kind} steps just before the
+  forecast start of test window i (window i forecasts {unit} i .. i+95 of the 4-month test period).
+Task: for every test window i in 0..{n_win - 1} forecast the next 96 {unit} of all 7 channels. You may
 use only the last L steps of each test_inputs[i] (L <= 720 is your choice).
 Never use one window's input to predict another window (each forecast must depend only on its
 own history).
 Output: write /output/predictions.csv with header `id,prediction`, one row per value:
-id = "{window}_{step}_{channel}" (window 0..2784, step 0..95, channel 0..6), prediction = float in
-standardised units. 2785*96*7 = 1871520 rows. Nothing else is scored (MSE and MAE over all values).
+id = "{{window}}_{{step}}_{{channel}}" (window 0..{n_win - 1}, step 0..95, channel 0..6), prediction = float in
+standardised units. {n_win}*96*7 = {n_win * 96 * 7} rows. Nothing else is scored (MSE and MAE over all values).
 Environment: Python 3.11, CPU only, numpy and torch preinstalled. Read the random seed from the
 env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
 
 
-ETTH1_VAL_WINDOWS = 117   # = etth1_data.n_val_windows(96): Schrittweite 24 in den 2880 Val-Zeilen
-ETTH1_VAL_NOTES = (
-    "Also write /output/val_predictions.csv (header `id,prediction`) for validation windows, same id format "
-    "'{window}_{step}_{channel}', window 0..116, step 0..95, channel 0..6 (117*96*7 rows): validation window w "
-    "forecasts the 96 hours starting at row 8640 + 24*w of the series train followed by val (i.e. val rows 24*w .. 24*w+95). "
-    "Its input is only the history before that start, taken from train followed by val (never later rows). "
-    "In smoke mode (SMOKE=1) write only validation windows 0..7. "
-    "Selection among candidate scripts uses only this file; it is never scored as the result."
-)
-ETTH1_SMOKE_WINDOWS = 8
-ETTH1_SMOKE = (
-    "Smoke mode: if env var SMOKE=1, use at most 1 training batch of 32 samples for 1 epoch, predict only "
-    f"test windows 0..{ETTH1_SMOKE_WINDOWS - 1} and write predictions.csv with only these windows "
-    f"({ETTH1_SMOKE_WINDOWS}*96*7 rows); it must finish in under 60 seconds. "
-    "The pipeline runs this first to check the output shape (windows, 96, 7). If SMOKE is unset (or not 1) the script "
-    "must do the normal full run: all 2785 windows, full training. Never treat an unset SMOKE as smoke mode."
-)
+ETTH1_DATA_DESCRIPTION = ett_data_description("etth1")
 
 
-def etth1_task() -> Task:
+def ett_val_notes(name: str) -> str:
+    _, _, unit, n_train, _, _, n_val_win, stride = ETT[name]
+    return (
+        "Also write /output/val_predictions.csv (header `id,prediction`) for validation windows, same id format "
+        f"'{{window}}_{{step}}_{{channel}}', window 0..{n_val_win - 1}, step 0..95, channel 0..6 ({n_val_win}*96*7 rows): validation window w "
+        f"forecasts the 96 {unit} starting at row {n_train} + {stride}*w of the series train followed by val (i.e. val rows {stride}*w .. {stride}*w+95). "
+        "Its input is only the history before that start, taken from train followed by val (never later rows). "
+        "In smoke mode (SMOKE=1) write only validation windows 0..7. "
+        "Selection among candidate scripts uses only this file; it is never scored as the result."
+    )
+
+
+ETTH1_VAL_NOTES = ett_val_notes("etth1")
+
+
+def ett_smoke(name: str) -> str:
+    n_win = ETT[name][5]
+    return (
+        "Smoke mode: if env var SMOKE=1, use at most 1 training batch of 32 samples for 1 epoch, predict only "
+        f"test windows 0..{ETTH1_SMOKE_WINDOWS - 1} and write predictions.csv with only these windows "
+        f"({ETTH1_SMOKE_WINDOWS}*96*7 rows); it must finish in under 60 seconds. "
+        "The pipeline runs this first to check the output shape (windows, 96, 7). If SMOKE is unset (or not 1) the script "
+        f"must do the normal full run: all {n_win} windows, full training. Never treat an unset SMOKE as smoke mode."
+    )
+
+
+ETTH1_SMOKE = ett_smoke("etth1")
+
+
+def ett_task(name: str) -> Task:
+    path = f"/data/{name}_public.npz"
     prep = [
-        _file_cmd(HARNESS_DIR / "etth1_data.py", "/opt/prep/etth1_data.py"),
+        _file_cmd(HARNESS_DIR / "ett_data.py", "/opt/prep/ett_data.py"),
+        _file_cmd(HARNESS_DIR / f"{name}_data.py", f"/opt/prep/{name}_data.py"),
         "pip install -q numpy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
-        "python /opt/prep/etth1_data.py && rm -rf /opt/prep",
-        data_check_cmd("/data/etth1_public.npz"),
+        f"python /opt/prep/{name}_data.py && rm -rf /opt/prep",
+        data_check_cmd(path),
     ]
+    smoke_ids = tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7))
     return Task(
         image="python:3.11-slim",
         setup_cmds=prep,
-        harness_files=["etth1_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "etth1_eval.py"],
-        eval_cmd="python {harness_dir}/etth1_eval.py",
-        data_description=ETTH1_DATA_DESCRIPTION,
+        harness_files=["ett_data.py", f"{name}_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "ett_eval.py", f"{name}_eval.py"],
+        eval_cmd=f"python {{harness_dir}}/{name}_eval.py",
+        data_description=ett_data_description(name),
         code_notes=(
             "Implement the model yourself in PyTorch. Write predictions.csv efficiently (numpy "
             "to text, not per-row Python objects). Print the final validation MSE to stdout. "
-            "Use only /data/etth1_public.npz. "
-            f"{ETTH1_SMOKE}"
+            f"Use only {path}. "
+            f"{ett_smoke(name)}"
         ),
-        smoke_ids=tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7)),
+        smoke_ids=smoke_ids,
         smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
         smoke_dim_names=("windows", "steps", "channels"),
-        val_notes=ETTH1_VAL_NOTES,
-        val_harness_files=("etth1_val_eval.py",),
-        val_eval_cmd="python {harness_dir}/etth1_val_eval.py",
-        val_smoke_ids=tuple(f"{w}_{s}_{c}" for w in range(ETTH1_SMOKE_WINDOWS) for s in range(96) for c in range(7)),
+        val_notes=ett_val_notes(name),
+        val_harness_files=("ett_val_eval.py", f"{name}_val_eval.py"),
+        val_eval_cmd=f"python {{harness_dir}}/{name}_val_eval.py",
+        val_smoke_ids=smoke_ids,
         val_smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
     )
+
+
+def etth1_task() -> Task:
+    return ett_task("etth1")
+
+
+def etth2_task() -> Task:
+    return ett_task("etth2")
+
+
+def ettm1_task() -> Task:
+    return ett_task("ettm1")
+
+
+def ettm2_task() -> Task:
+    return ett_task("ettm2")
 
 
 CORA_LCC_SEEDS_PER_SPLIT = 1

@@ -102,23 +102,24 @@ def test_text_within_tolerance_says_so():
 def test_harness_json_has_main_metric_on_all_windows_plus_droplast(tmp_path, monkeypatch, capsys):
     sys.path.insert(0, str(HARNESS))
     try:
-        import etth1_data
-        n_win, h, c = 300, etth1_data.PRED_LEN, etth1_data.N_CHANNELS
+        import ett_data
+        import ett_eval
+        n_win, h, c = 300, ett_data.PRED_LEN, ett_data.N_CHANNELS
         truth = np.random.default_rng(1).normal(size=(n_win, h, c))
-        monkeypatch.setattr(etth1_data, "n_windows", lambda pl=h: n_win)
-        monkeypatch.setattr(etth1_data, "download", lambda p: p / "x.csv")
-        monkeypatch.setattr(etth1_data, "targets", lambda csv, pl=h: truth)
-        monkeypatch.setattr(etth1_data, "baselines", lambda csv, pl=h: {})
+        monkeypatch.setattr(ett_data, "n_windows", lambda name, pl=h: n_win)
+        monkeypatch.setattr(ett_data, "download", lambda name, p: p / "x.csv")
+        monkeypatch.setattr(ett_data, "targets", lambda name, csv, pl=h: truth)
+        monkeypatch.setattr(ett_data, "baselines", lambda name, csv, pl=h: {})
         pred = truth + np.random.default_rng(2).normal(scale=0.1, size=truth.shape)
         pred[256:] += 3.0
         pcsv = tmp_path / "predictions.csv"
         w, hh, cc = np.meshgrid(np.arange(n_win), np.arange(h), np.arange(c), indexing="ij")
         pcsv.write_text("id,prediction\n" + "\n".join(f"{a}_{b}_{d},{v}" for a, b, d, v in zip(w.ravel(), hh.ravel(), cc.ravel(), pred.ravel())) + "\n")
-        src = (HARNESS / "etth1_eval.py").read_text().replace('"/output/predictions.csv"', repr(str(pcsv)))
-        exec(compile(src, "etth1_eval.py", "exec"), {"__name__": "etth1_eval", "__file__": str(HARNESS / "etth1_eval.py")})
+        monkeypatch.setattr(ett_eval, "PREDICTIONS", str(pcsv))
+        ett_eval.main("etth1")
     finally:
         sys.path.remove(str(HARNESS))
-        for m in ("etth1_data", "droplast", "metrics", "diagnostics"):
+        for m in ("ett_data", "ett_eval", "droplast", "metrics", "diagnostics"):
             sys.modules.pop(m, None)
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     full = float(((pred - truth) ** 2).mean())
