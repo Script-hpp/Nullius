@@ -5,6 +5,7 @@ from __future__ import annotations
 from tavily import TavilyClient
 
 from .config import Settings, load_settings
+from .tavily_usage import CountedClient
 
 RESEARCH_DOMAINS = ["github.com", "arxiv.org", "openreview.net"]
 ERROR_DOMAINS = ["stackoverflow.com", "github.com", "discuss.pytorch.org", "pytorch.org", "numpy.org"]
@@ -13,7 +14,7 @@ ERROR_DOMAINS = ["stackoverflow.com", "github.com", "discuss.pytorch.org", "pyto
 class TavilyTools:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or load_settings()
-        self._client = TavilyClient(api_key=self.settings.tavily_api_key)
+        self._client = CountedClient(TavilyClient(api_key=self.settings.tavily_api_key))   # zaehlt Credits je Aufruf (tavily_usage.py)
         self._research_calls = 0  # max 1x pro Paper
         self.on_call = None       # Rueckruf (role, endpoint, target, result) fuers Ereignisprotokoll
 
