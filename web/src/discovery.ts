@@ -305,9 +305,13 @@ export function stageLabel(stage: string | undefined, reason: string | undefined
   return STAGE_LABEL[stage ?? ''] ?? stage ?? ''
 }
 
+const ETT_TASKS = ['ETTh1', 'ETTh2', 'ETTm1', 'ETTm2']
+
 const TASK_TEXT: Record<string, string> = {
   Cora: 'Cora · Planetoid split',
   'Cora-LCC': 'Cora · random splits, largest component',
+  CiteSeer: 'CiteSeer · Planetoid split',
+  PubMed: 'PubMed · Planetoid split',
 }
 
 export function benchmarkText(p: DPaper): string {
@@ -315,6 +319,6 @@ export function benchmarkText(p: DPaper): string {
   const proto = p.protocol ?? c?.protocol
   const ds = p.dataset ?? c?.matched_task ?? '–'
   if (proto === 'unklar' || !c?.matched_task) return `${ds} (split not stated)`
-  if (c.matched_task === 'ETTh1') return `ETTh1 · horizon ${c.horizon ?? 96}`
+  if (c.matched_task && ETT_TASKS.includes(c.matched_task)) return `${c.matched_task} · horizon ${c.horizon ?? 96}`
   return TASK_TEXT[c.matched_task] ?? c.matched_task
 }

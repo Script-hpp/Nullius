@@ -16,7 +16,8 @@ import { useSummary } from '../summaries'
 
 type Mode = 'idle' | 'live' | 'replay' | 'done'
 
-const DATASETS = ['Cora', 'ETTh1']
+const DATASETS = ['Cora', 'CiteSeer', 'PubMed', 'ETTh1', 'ETTh2', 'ETTm1', 'ETTm2']
+const DEFAULT_DATASETS = ['Cora', 'ETTh1']   // each ticked benchmark costs Tavily credits, so the default stays at two
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 const btn = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
 
@@ -293,7 +294,7 @@ function Timeline({ view }: { view: DiscoveryView }) {
 }
 
 export function Discovery() {
-  const [datasets, setDatasets] = useState<string[]>(DATASETS)
+  const [datasets, setDatasets] = useState<string[]>(DEFAULT_DATASETS)
   const [code, setCode] = useState('')
   const [mode, setMode] = useState<Mode>('idle')
   const [events, setEvents] = useState<DEvent[]>([])
@@ -388,7 +389,7 @@ export function Discovery() {
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div>
             <div className={label}>Benchmarks</div>
-            <div className="mt-2 flex gap-4">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               {DATASETS.map((d) => (
                 <label key={d} className="inline-flex items-center gap-2 text-sm text-fg-3 cursor-pointer">
                   <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="accent-fg-3" />

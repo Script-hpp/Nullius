@@ -25,12 +25,18 @@ UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlg
 TOLERANCE = 0.01   # fest, vorab: +-1 Prozentpunkt (Accuracy), +-0.01 absolut (MSE/MAE). Paper-Streuung aendert sie nicht.
 ETTH1_HORIZON = 96
 # Seeds je Task, wenn der Eintrag keine nennt (Kosten: GCN ~25 s pro Seed, siehe docs/next_step_catalog_pipeline.md)
-TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "ETTh1": 3}
-TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "ETTh1": {"mse", "mae"}}
+ETT_TASKS = ("ETTh1", "ETTh2", "ETTm1", "ETTm2")   # Horizont 96
+PLANETOID_TASKS = ("Cora", "CiteSeer", "PubMed")    # Standard-Split
+# Seeds: PubMed ~ Minuten je Seed auf CPU (siehe benchmark/experiments/results/datasets_v2_validation.md), ETTm Testfenster x4
+TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "CiteSeer": 5, "PubMed": 3, **{t: 3 for t in ETT_TASKS}}
+TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "CiteSeer": {"accuracy"}, "PubMed": {"accuracy"},
+                **{t: {"mse", "mae"} for t in ETT_TASKS}}
 TASK_SUFFIX = {
     "Cora": "Standard-Split",
     "Cora-LCC": "groesste Komponente, zufaellige 20/30/Rest-Splits",
-    "ETTh1": "Horizont 96",
+    "CiteSeer": "Standard-Split",
+    "PubMed": "Standard-Split",
+    **{t: "Horizont 96" for t in ETT_TASKS},
 }
 METRIC_LABEL = {"accuracy": "Accuracy", "mse": "MSE", "mae": "MAE"}
 STD_RE = re.compile(r"(?:±|\\pm|\+-|\+/-)\s*(\d+(?:\.\d+)?)")
@@ -125,14 +131,16 @@ def _task_of(cand: dict) -> str:
         if task not in ("Cora", "Cora-LCC"):
             raise NotRunnable("Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)")
         return task
-    if ds == "ETTh1":
+    if ds in ("CiteSeer", "PubMed"):
+        return ds   # nur ein Task (Planetoid-Split); ob das Paper ihn nutzt, entscheidet das Feld protocol (E1)
+    if ds in ETT_TASKS:
         try:
             horizon = int(claim.get("horizon"))
         except (TypeError, ValueError):
-            raise NotRunnable(f"ETTh1: Horizont fehlt oder nicht lesbar ({claim.get('horizon')!r}), Task misst nur {ETTH1_HORIZON}")
+            raise NotRunnable(f"{ds}: Horizont fehlt oder nicht lesbar ({claim.get('horizon')!r}), Task misst nur {ETTH1_HORIZON}")
         if horizon != ETTH1_HORIZON:
-            raise NotRunnable(f"ETTh1: Horizont {horizon}, Task misst nur {ETTH1_HORIZON}")
-        return "ETTh1"
+            raise NotRunnable(f"{ds}: Horizont {horizon}, Task misst nur {ETTH1_HORIZON}")
+        return ds
     raise NotRunnable(f"Datensatz {ds!r} ohne Task")
 
 
@@ -171,8 +179,8 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
     if std:
         warnings.append(f"Info: Das Paper nennt Streuung +-{std.group(1)} (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); "
                         f"die Toleranz +-{TOLERANCE} bleibt fest.")
-    input_length = claim.get("input_length") if task == "ETTh1" else None
-    if task == "ETTh1" and not input_length:
+    input_length = claim.get("input_length") if task in ETT_TASKS else None
+    if task in ETT_TASKS and not input_length:
         warnings.append("Eingabelaenge im Paper nicht belegt, der Agent waehlt sie frei (bis 720).")
 
     claim_id = f"{entry['id']}_{metric}"

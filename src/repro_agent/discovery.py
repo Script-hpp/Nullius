@@ -36,7 +36,9 @@ def _normalize_repo_url(url: str) -> str | None:
     return f"https://github.com/{m.group(1)}/{repo}"
 
 
-ALLOWED_METRICS = {"Cora": {"accuracy"}, "ETTh1": {"mse", "mae"}}
+ETT_DATASETS = ("ETTh1", "ETTh2", "ETTm1", "ETTm2")   # Horizont 96, MSE/MAE; tasks.py ETT
+ALLOWED_METRICS = {"Cora": {"accuracy"}, "CiteSeer": {"accuracy"}, "PubMed": {"accuracy"},
+                   **{ds: {"mse", "mae"} for ds in ETT_DATASETS}}
 METRIC_ALIASES = {"accuracy": "accuracy", "acc": "accuracy", "test accuracy": "accuracy",
                   "mse": "mse", "mean squared error": "mse", "mae": "mae", "mean absolute error": "mae"}
 
@@ -197,12 +199,31 @@ DISCOVERY_QUERIES = {
     "ETTh1": [
         "long-term time series forecasting ETTh1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
     ],
+    "CiteSeer": [
+        "node classification CiteSeer Planetoid public split 120 training nodes test accuracy results table",
+    ],
+    "PubMed": [
+        "node classification PubMed Planetoid public split 60 training nodes test accuracy results table",
+    ],
+    "ETTh2": [
+        "long-term time series forecasting ETTh2 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+    ],
+    "ETTm1": [
+        "long-term time series forecasting ETTm1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+    ],
+    "ETTm2": [
+        "long-term time series forecasting ETTm2 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+    ],
 }
 MAX_SEARCHES_PER_DATASET = 2
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
 EXTRACT_QUERIES = {
     "Cora": "Cora node classification: data split (Planetoid public split 140 training nodes, or random splits / largest connected component), evaluation protocol, test accuracy",
     "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
+    "CiteSeer": "CiteSeer node classification: data split (Planetoid public split 120 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
+    "PubMed": "PubMed node classification: data split (Planetoid public split 60 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
+    **{ds: f"{ds} forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE"
+       for ds in ("ETTh2", "ETTm1", "ETTm2")},
 }
 CACHE_VERSION = 3   # 3: Feld claim.input_length, Hauptergebnis statt Variante; 2: dreistufiges Protokoll (Katalog-Import liest 2 und 3)
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
@@ -212,6 +233,11 @@ DISCOVERY_PROTOCOL_HINTS = {
               "depending on input length and horizon) - these are the same split. "
               "Any input length up to 720 is supported; only the horizon 96 is fixed."),
     "Cora": "Planetoid public split = 140/500/1000 = 20 labels per class.",
+    "CiteSeer": "Planetoid public split = 120/500/1000 = 20 labels per class.",
+    "PubMed": "Planetoid public split = 60/500/1000 = 20 labels per class.",
+    **{ds: ("Equivalent statements: 12/4/4 months; for 15-minute data (ETTm) 34560/11520/11520 rows, for hourly data (ETTh) 8640/2880/2880 rows; "
+            "papers often report window/sample counts instead - these are the same split. "
+            "Any input length up to 720 is supported; only the horizon 96 is fixed.") for ds in ("ETTh2", "ETTm1", "ETTm2")},
     "Cora-LCC": "Shchur et al. 2018 random splits, 20 per class train, 30 per class val, largest connected component.",
 }
 MAX_README_ARXIV_LINKS = 5
@@ -221,7 +247,9 @@ MAX_README_GITHUB_LINKS = 10
 TASK_KEYWORDS = {
     "Cora": ["planetoid", "public split"],
     "Cora-LCC": ["shchur", "largest connected component", "random split"],
-    "ETTh1": ["12/4/4", "96"],
+    "CiteSeer": ["planetoid", "public split"],
+    "PubMed": ["planetoid", "public split"],
+    **{ds: ["12/4/4", "96"] for ds in ETT_DATASETS},
 }
 RETRY_TEMPERATURE = 0.3
 ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
@@ -347,7 +375,7 @@ class DiscoveryAgent:
             + ("'horizon' (integer prediction horizon of the number; choose the number for horizon 96, "
                "never an average over horizons, and the quote must contain 96), "
                "'input_length' (integer input length / look-back window used for that number, at most 720, "
-               "or null if the text does not state it), " if dataset == "ETTh1" else "") +
+               "or null if the text does not state it), " if dataset in ETT_DATASETS else "") +
             "'protocol' (one of \"passt\", \"unklar\", \"passt_nicht\"), "
             "'matched_task' (the task name in brackets when protocol is \"passt\", else null), "
             "'protocol_quote' (a VERBATIM excerpt copied from the text that shows the protocol; required for \"passt\" and \"passt_nicht\"), "
@@ -474,7 +502,7 @@ class DiscoveryAgent:
                             or len(re.findall(r"github\.com/", readme)) > MAX_README_GITHUB_LINKS):
                         continue
 
-                    keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "ogb", "ett", "movielens"]
+                    keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "pubmed", "ogb", "ett", "movielens"]
                     if not any(re.search(r"\b" + re.escape(k) + r"\b", readme) for k in keywords):
                         continue
 
@@ -760,7 +788,7 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                if ds == "ETTh1":
+                if ds in ETT_DATASETS:
                     try:
                         horizon_ok = int(claim_data.get("horizon")) == ETTH1_HORIZON
                     except (TypeError, ValueError):
@@ -771,7 +799,7 @@ class DiscoveryAgent:
                         _update_cache(cache_key, {"status": "rejected", "reason": reason})
                         continue
 
-                if ds == "ETTh1":   # Eingabelaenge frei bis 720; nur uebernehmen, wenn die Zahl im Text steht
+                if ds in ETT_DATASETS:   # Eingabelaenge frei bis 720; nur uebernehmen, wenn die Zahl im Text steht
                     claim_data["input_length"] = _valid_input_length(claim_data.get("input_length"), text)
 
                 method = claim_data.get("method")
