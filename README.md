@@ -20,7 +20,7 @@ The misses are mostly near misses: 20 of 48 single real-claim verdicts are "part
 
 [Demo](TBD) | [Video](TBD) | Built for the Nebius x NVIDIA Global AI Hackathon (Coding and Agentic Engineering, Best Use of Tavily) | MIT | <https://github.com/Script-hpp/Nullius>
 
-![Live run of a reproduction](docs/img/live-running.jpg)
+![Nullius overview: finished checks, one card per paper claim](docs/img/overview.jpg)
 
 **For** reviewers who want a quick check of a headline number, PhD students who want to build on a paper and ML teams that depend on published results. **Honest scope:** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes.
 

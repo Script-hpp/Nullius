@@ -53,7 +53,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Runs" title="Finished checks"
-        what="Nullius is a high-precision checker: when it reports that a target was reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses the target, usually by a small margin. Each card is one paper claim; older runs of the same claim sit under it. Target reached means our number landed within the allowed tolerance of the claim."
+        what="Nullius is a high-precision checker: when it reports a target reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses, usually narrowly. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
         { label: 'Runs', value: runs.length }, { label: 'Target reached', value: reproduced.length, tone: 'green' },
