@@ -594,7 +594,7 @@ class Orchestrator:
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
         if edge_probe:   # B2: synthetischer Graph statt Datensatz, eigene Auswertung (kein Harness, kein Smoke, keine Abdeckung)
             path, n_nodes, n_val, n_test = task.edge_probe
-            npz, truth = make_probe(n_nodes, n_val, n_test, seed=0)
+            npz, truth = make_probe(n_nodes, n_val, n_test, seed=0, n_classes=task.probe_dims[0], n_features=task.probe_dims[1])
             sb.put_file(branch, path, probe_bytes(npz))
             r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", TRAIN_TIMEOUT_S)
             if r.timed_out or r.exit_code != 0:

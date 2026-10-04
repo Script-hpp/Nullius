@@ -34,6 +34,7 @@ class Task:
     mask_val_cmd: str = ""
     # B2 (v5): Kantenrichtungs-Probe auf einem synthetischen Graphen im Format des Datensatzes: (Pfad der npz im Branch, Knoten, Val, Test)
     edge_probe: tuple[str, int, int, int] | None = None
+    probe_dims: tuple[int, int] = (7, 1433)   # (Klassen, Merkmale) des synthetischen Probe-Graphen, je Datensatz
     # Daten pro Lauf vorbereiten (z. B. Split k): Dateien aus harness/ kommen temporaer in den Branch, danach geloescht
     prepare_files: tuple[str, ...] = ()
     prepare_cmd: str = ""           # Template mit {dir} und {split}; laeuft MIT Netz (Rohdaten holen), vor dem Agenten-Code
@@ -60,18 +61,35 @@ def _file_cmd(path: Path, dest: str) -> str:
     return f"mkdir -p $(dirname {dest}) && echo {b64} | base64 -d > {dest}"
 
 
-CORA_DATA_DESCRIPTION = """\
-Dataset: Cora citation graph (Planetoid split), file /data/cora_public.npz (numpy.load):
-- features: float32 [2708, 1433] bag-of-words (binary, not normalised)
+# Planetoid-Datensaetze (Standard-Split, Kipf & Welling): eine Task-Fabrik, parametrisiert ueber PLANETOID (harness/planetoid_data.py SPECS).
+# name: (Anzeigename, Knoten, Merkmale, Klassen, Trainingsknoten, Merkmalsart, Zusatzhinweis)
+PLANETOID = {
+    "cora": ("Cora", 2708, 1433, 7, 140, "bag-of-words (binary, not normalised)", ""),
+    "citeseer": ("CiteSeer", 3327, 3703, 6, 120, "bag-of-words (binary, not normalised)",
+                 "15 isolated nodes have an all-zero feature row and no edges; none of them is in train_idx, val_idx or test_idx.\n"),
+    "pubmed": ("PubMed", 19717, 500, 3, 60, "TF-IDF weights (non-negative floats, not normalised)",
+               "Large graph (19717 nodes): do not build dense N x N matrices (about 1.5 GB each), use sparse operations.\n"),
+}
+PLANETOID_VAL, PLANETOID_TEST = 500, 1000
+
+
+def planetoid_data_description(name: str) -> str:
+    label, n, f, c, n_train, kind, extra = PLANETOID[name]
+    return f"""\
+Dataset: {label} citation graph (Planetoid split), file /data/{name}_public.npz (numpy.load):
+- features: float32 [{n}, {f}] {kind}
 - edges: int64 [E, 2] directed pairs (u, v), already contains both directions
-- labels: int64 [2708], class 0..6; -1 for all test nodes (labels hidden)
-- train_idx (140), val_idx (500), test_idx (1000): node indices
-Task: node classification. Train on train_idx (use val_idx for model selection if you want),
+- labels: int64 [{n}], class 0..{c - 1}; -1 for all test nodes (labels hidden)
+- train_idx ({n_train}), val_idx ({PLANETOID_VAL}), test_idx ({PLANETOID_TEST}): node indices
+{extra}Task: node classification. Train on train_idx (use val_idx for model selection if you want),
 predict a class for every node in test_idx.
 Output: write /output/predictions.csv with header `id,prediction`, one row per test node,
 id = node index from test_idx, prediction = integer class. Nothing else is scored.
 Environment: Python 3.11, CPU only, numpy, scipy, torch preinstalled. Read the random seed from
 the env var SEED (int) and seed numpy and torch with it. Must finish in < 5 minutes."""
+
+
+CORA_DATA_DESCRIPTION = planetoid_data_description("cora")
 
 
 CORA_SMOKE_N = 20
@@ -97,47 +115,63 @@ def data_check_cmd(path: str) -> str:
     return f"test -s {path} || {{ echo 'Setup-Check: {path} fehlt oder ist leer' >&2; exit 1; }}"
 
 
-def cora_task() -> Task:
+def planetoid_task(name: str) -> Task:
+    _, n_nodes, n_features, n_classes, _, _, _ = PLANETOID[name]
+    path = f"/data/{name}_public.npz"
     prep = [
-        _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
+        _file_cmd(HARNESS_DIR / "planetoid_data.py", "/opt/prep/planetoid_data.py"),
+        _file_cmd(HARNESS_DIR / f"{name}_data.py", f"/opt/prep/{name}_data.py"),
         "pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
-        "python /opt/prep/cora_data.py && rm -rf /opt/prep",
-        data_check_cmd("/data/cora_public.npz"),
+        f"python /opt/prep/{name}_data.py && rm -rf /opt/prep",
+        data_check_cmd(path),
     ]
     return Task(
         image="python:3.11-slim",
         setup_cmds=prep,
-        harness_files=["cora_data.py", "metrics.py", "verify.py", "cora_eval.py"],
-        eval_cmd="python {harness_dir}/cora_eval.py",
-        data_description=CORA_DATA_DESCRIPTION,
+        harness_files=["planetoid_data.py", f"{name}_data.py", "metrics.py", "verify.py", "planetoid_eval.py", f"{name}_eval.py"],
+        eval_cmd=f"python {{harness_dir}}/{name}_eval.py",
+        data_description=planetoid_data_description(name),
         code_notes=(
             "Implement the model yourself in PyTorch (no torch_geometric available). "
-            "Print the final validation accuracy to stdout. Use only /data/cora_public.npz. "
+            f"Print the final validation accuracy to stdout. Use only {path}. "
             f"{CORA_SMOKE}"
         ),
         ablation_cmd=(
-            "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
+            f"python -c \"import numpy as np; d = dict(np.load('{path}')); "
             "d['edges'] = np.zeros((0, 2), dtype=np.int64); "
-            "np.savez_compressed('/data/cora_public.npz', **d)\""
+            f"np.savez_compressed('{path}', **d)\""
         ),
-        edge_probe=("/data/cora_public.npz", 2708, 500, 1000),
+        edge_probe=(path, n_nodes, PLANETOID_VAL, PLANETOID_TEST),
+        probe_dims=(n_classes, n_features),
         mask_val_cmd=(
-            "python -c \"import numpy as np; d = dict(np.load('/data/cora_public.npz')); "
+            f"python -c \"import numpy as np; d = dict(np.load('{path}')); "
             "v = d['val_idx']; l = d['labels'].copy(); l[v] = np.random.RandomState(0).permutation(l[v]); d['labels'] = l; "
-            "np.savez_compressed('/data/cora_public.npz', **d)\""
+            f"np.savez_compressed('{path}', **d)\""
         ),
         smoke_ids_cmd=(   # erwartete ids = die ersten N (aufsteigend) von test_idx, aus dem Datensatz selbst
-            "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "
+            f"python -c \"import numpy as np; d = np.load('{path}'); "
             f"print(*sorted(int(i) for i in d['test_idx'])[:{CORA_SMOKE_N}])\""
         ),
         val_notes=CORA_VAL_NOTES,
-        val_harness_files=("cora_val_eval.py",),
-        val_eval_cmd="python {harness_dir}/cora_val_eval.py",
+        val_harness_files=("planetoid_val_eval.py", f"{name}_val_eval.py"),
+        val_eval_cmd=f"python {{harness_dir}}/{name}_val_eval.py",
         val_smoke_ids_cmd=(
-            "python -c \"import numpy as np; d = np.load('/data/cora_public.npz'); "
+            f"python -c \"import numpy as np; d = np.load('{path}'); "
             f"print(*sorted(int(i) for i in d['val_idx'])[:{CORA_SMOKE_N}])\""
         ),
     )
+
+
+def cora_task() -> Task:
+    return planetoid_task("cora")
+
+
+def citeseer_task() -> Task:
+    return planetoid_task("citeseer")
+
+
+def pubmed_task() -> Task:
+    return planetoid_task("pubmed")
 
 
 ETTH1_DATA_DESCRIPTION = """\
@@ -230,7 +264,7 @@ def cora_lcc_task() -> Task:
     return Task(
         image=base.image,
         setup_cmds=["pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu"],
-        harness_files=["cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
+        harness_files=["planetoid_data.py", "cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
         eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_eval.py",
         data_description=CORA_LCC_DATA_DESCRIPTION,
         code_notes=base.code_notes.replace("/data/cora_public.npz", "/data/cora_lcc_public.npz"),
@@ -242,7 +276,7 @@ def cora_lcc_task() -> Task:
         val_harness_files=("cora_lcc_val_eval.py",),
         val_eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_val_eval.py",
         val_smoke_ids_cmd=base.val_smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
-        prepare_files=("cora_data.py", "cora_lcc_data.py"),
+        prepare_files=("planetoid_data.py", "cora_data.py", "cora_lcc_data.py"),
         prepare_cmd="mkdir -p /data && python {dir}/cora_lcc_data.py public {split} /data/cora_lcc_public.npz",
         seeds_per_split=CORA_LCC_SEEDS_PER_SPLIT,
     )
