@@ -1,6 +1,5 @@
 import asyncio
 import getpass
-import hmac
 import json
 import os
 import threading
@@ -11,11 +10,11 @@ from pathlib import Path
 from typing import Dict, Any
 
 from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from . import catalog as cat
-from . import site_export
+from . import live_gate, site_export
 from .discovery import DiscoveryAgent
 from .dossier import REPO_ROOT
 
@@ -34,37 +33,21 @@ background_tasks = set()
 
 class DiscoverRequest(BaseModel):
     datasets: list[str] = ["Cora", "ETTh1"]
-    access_code: str = ""
 
 @app.post("/api/discover")
-async def start_discovery(req: DiscoverRequest):
+async def start_discovery(req: DiscoverRequest, request: Request):
     from .tasks import TASKS
     for ds in req.datasets:
         if ds not in TASKS:
             raise HTTPException(status_code=400, detail=f"Dataset {ds} is not supported.")
             
-    import os
-    import hmac
-    
-    expected_code = os.environ.get("ACCESS_CODE")
-    if not expected_code:
-        raise HTTPException(status_code=500, detail="Server misconfigured: ACCESS_CODE not set")
-        
-    if not req.access_code or not hmac.compare_digest(req.access_code.encode(), expected_code.encode()):
-        raise HTTPException(status_code=403, detail="Invalid access code")
-        
+    ip = live_gate.client_ip(request)
+    check_live("discovery", ip)
     today = datetime.date.today()
     if daily_limit["date"] != today:
-        daily_limit["date"] = today
-        daily_limit["count"] = 0
-        
-    if daily_limit["count"] >= MAX_DAILY_JOBS:
-        raise HTTPException(status_code=429, detail="Daily job limit exceeded")
-        
-    if job_semaphore.locked():
-        raise HTTPException(status_code=429, detail="A job is already running. Try again later.")
-        
+        daily_limit["date"], daily_limit["count"] = today, 0
     daily_limit["count"] += 1
+    ip_limits.add("discovery", ip)
     
     job_id = str(uuid.uuid4())
     queue = asyncio.Queue()
@@ -199,17 +182,64 @@ def sanitize(obj):
     return obj
 
 
-def check_access(code: str) -> None:
-    expected = os.environ.get("ACCESS_CODE")
-    if not expected:
-        raise HTTPException(status_code=500, detail="Server misconfigured: ACCESS_CODE not set")
-    if not code or not hmac.compare_digest(code.encode(), expected.encode()):
-        raise HTTPException(status_code=403, detail="Invalid access code")
+class Refused(Exception):
+    """Live-Start abgelehnt: maschinenlesbarer Grund, keine Kontostaende."""
+
+    def __init__(self, status: int, reason: str, reset_at: str | None = None) -> None:
+        self.status, self.reason, self.reset_at = status, reason, reset_at
+
+
+@app.exception_handler(Refused)
+async def _refused(_request: Request, exc: Refused):
+    msg = live_gate.MESSAGES[exc.reason]
+    return JSONResponse(status_code=exc.status, content={"reason": exc.reason, "message": msg, "detail": msg, "reset_at": exc.reset_at})
+
+
+ip_limits = live_gate.IpLimits()
+
+
+def refusal(kind: str, ip: str) -> Refused | None:
+    """Warum ein Live-Start jetzt nicht moeglich ist (Reihenfolge: Budget, Tavily, Tageslimit, Limit je IP, Sperre). None = frei.
+    Reine Lesefunktion: zaehlt nichts hoch."""
+    reason = live_gate.floor_reason()
+    if reason:
+        return Refused(503, reason)
+    today = datetime.date.today()
+    daily, cap = (repro_daily, MAX_DAILY_REPRO_JOBS) if kind == "reproduction" else (daily_limit, MAX_DAILY_JOBS)
+    used = daily["count"] if daily["date"] == today else 0
+    if used >= cap or ip_limits.used_up(kind, ip):
+        return Refused(429, "daily_limit", live_gate.next_reset_iso())
+    if job_semaphore.locked():
+        return Refused(429, "busy")
+    return None
+
+
+def check_live(kind: str, ip: str) -> None:
+    r = refusal(kind, ip)
+    if r:
+        raise r
+
+
+@app.get("/api/status")
+async def live_status(request: Request):
+    """Ist Live jetzt moeglich? Ohne Geheimnisse und ohne Kontostand. `live` gilt fuer mindestens eine Art; `kinds` je Art."""
+    ip = live_gate.client_ip(request)
+    kinds = {}
+    for kind in ("reproduction", "discovery"):
+        r = refusal(kind, ip)
+        kinds[kind] = {"live": r is None, "reason": r.reason if r else None, "reset_at": r.reset_at if r else None}
+    open_kinds = [k for k in kinds.values() if k["live"]]
+    if open_kinds:
+        return {"live": True, "reason": None, "reset_at": None, "kinds": kinds}
+    # Alle Arten gesperrt: der gemeinsame, schwerste Grund (Budget vor Tavily vor Tageslimit vor Sperre)
+    order = ["budget_floor", "tavily_floor", "daily_limit", "busy"]
+    reason = min((k["reason"] for k in kinds.values()), key=order.index)
+    reset = next((k["reset_at"] for k in kinds.values() if k["reason"] == reason and k["reset_at"]), None)
+    return {"live": False, "reason": reason, "reset_at": reset, "kinds": kinds}
 
 
 class ReproduceRequest(BaseModel):
     catalog_id: str
-    access_code: str = ""
     quick: bool = True
 
 
@@ -220,8 +250,9 @@ def _prune_jobs() -> None:
 
 
 @app.post("/api/reproduce")
-async def start_reproduction(req: ReproduceRequest):
-    check_access(req.access_code)
+async def start_reproduction(req: ReproduceRequest, request: Request):
+    ip = live_gate.client_ip(request)
+    check_live("reproduction", ip)
     entry = next((e for e in cat.load_catalog(CATALOG_PATH) if e["id"] == req.catalog_id), None)
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown catalog entry")
@@ -233,11 +264,8 @@ async def start_reproduction(req: ReproduceRequest):
     today = datetime.date.today()
     if repro_daily["date"] != today:
         repro_daily["date"], repro_daily["count"] = today, 0
-    if repro_daily["count"] >= MAX_DAILY_REPRO_JOBS:
-        raise HTTPException(status_code=429, detail="Daily reproduction limit reached")
-    if job_semaphore.locked():
-        raise HTTPException(status_code=429, detail="A job is already running. Try again later.")
     repro_daily["count"] += 1
+    ip_limits.add("reproduction", ip)
 
     _prune_jobs()
     job = ReproJob(id=str(uuid.uuid4()), catalog_id=entry["id"], quick=req.quick)
