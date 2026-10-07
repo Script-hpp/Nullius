@@ -14,6 +14,11 @@ You give Nullius a machine learning paper (an arXiv link or a catalog entry). It
 
 The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks), **Catalog**, **Live run** (plan, code, branches, measurements and repairs stream in live) and **Evidence** (the certificate with a step-by-step replay).
 
+**Who uses it, and how.**
+- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
+- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
+- *A PhD student or ML team* checks the number before building on a paper.
+
 **Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (fixed and random splits) and ETTh1 (horizon 96). CPU only, claims that run in minutes. "Reproduced" means the target value was reached according to the harness; **method fidelity is not checked**.
 
 ## How we built it
@@ -23,7 +28,7 @@ The product has five pages: Overview, **Discover** (Tavily finds new papers on s
 - **Nebius Sandboxes** (`contree-sdk`): the base image is built once as a snapshot; every seed, repair attempt and ablation is a branch of it. Rollback of a failed attempt is free.
 - **Tavily** Search and Extract at run time for discovery of new papers (the live catalog), claims, setup details and error search; after the verdict a community check reports what others found, with quotes, and never changes the verdict. Every source is stored with mode, timestamp and SHA-256.
 - **Checks without an LLM:** a smoke run on a tiny subset, trivial baselines, a graph ablation, a test for training on validation labels, an edge-direction probe, and a detector for a known data-loader bug (`drop_last`) in time-series papers.
-- **Product:** FastAPI with a queue, daily limits, an access code and Server-Sent Events; a React app for the five pages.
+- **Product:** FastAPI with a queue, daily and per-IP limits, a budget floor and Server-Sent Events; a React app for the five pages.
 
 ## Challenges we ran into
 

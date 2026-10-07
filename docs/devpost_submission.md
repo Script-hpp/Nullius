@@ -28,6 +28,11 @@ You give Nullius a paper (an arXiv link or an entry of the catalog). It then:
 4. lets an **independent harness** score the predictions: the agent delivers only `predictions.csv`, the harness loads the test labels itself and computes the metric with fixed, tested code,
 5. issues a certificate: a verdict per claim with measured mean, spread over seeds, sources and the branch tree as evidence.
 
+**Who uses it, and how.**
+- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
+- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
+- *A PhD student or ML team* checks the number before building on a paper.
+
 **What the benchmark shows** (v4, 48 runs on Token Factory, `README.md` "Benchmark"): Nullius is a high-precision checker. When it reports a target as reached, it was (7 of 7 "reproduced" verdicts for real claims agreed with our reference solution; post hoc, small sample), and none of 48 deliberately wrong claims was reported as reproduced (pre-registered negative control). It often does not reach the target: 2 of 8 paper-claim units with Tavily, 1 of 8 without; most misses are near misses ("partially"). Method fidelity was not checked.
 
 The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that already ran once through the full loop), **Live run** (the loop streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements, repairs) and **Evidence** (the certificate, with a step-by-step replay). If a live run cannot start, the UI says so and offers the last finished run as a replay (`README.md`, "Product tour").
@@ -125,6 +130,8 @@ Run the repository locally: `README.md`, section "Setup and usage" (needs a Toke
 See [`docs/nebius_feedback.md`](nebius_feedback.md). Paste its content into the form field; nothing is duplicated here.
 
 ## Differences and conflicts with `README.md` to report
+
+0. **Use cases (added 4 Oct):** "Who uses it, and how" is in the README, this text and `devpost_story.md` with the same three cases. Numbers come from `run_end` and the first and last event of `web/public/data/kipf_gcn_2017/20261002-110746/events.jsonl` (10.4 min, 0.139 $ gross) and the dossier (0.8151 ± 0.0107, target 0.815, 10 seeds). No user numbers or quotes exist and none are claimed.
 
 1. **Demo access:** no access code; the demo is open with a hard budget floor and daily limits (decision of the user, 2026-10-05). The test notes say so.
 2. **Benchmark numbers:** filled from `benchmark/experiments/results/benchmark_v4.md` (v4 is the main result; v2 and v3 are in `docs/benchmark_history.md`). The README and this text give the same v4 numbers. `CLAUDE.md` still describes the v2 pre-registration as "Stand"; the reviewer updates it.
