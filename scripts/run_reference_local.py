@@ -25,8 +25,10 @@ sys.path.insert(0, str(HARNESS))
 sys.path.insert(0, str(ROOT / "src"))
 
 import cora_data  # noqa: E402
+import ett_data  # noqa: E402
 import etth1_data  # noqa: E402
 import metrics  # noqa: E402
+import planetoid_data  # noqa: E402
 from repro_agent.harness.verify import judge  # noqa: E402
 
 UNITS = {   # name: (Task, Metrik, Zielwert aus dem Paper (b1_candidates.md), Toleranz)
@@ -34,15 +36,54 @@ UNITS = {   # name: (Task, Metrik, Zielwert aus dem Paper (b1_candidates.md), To
     "rlinear": ("ETTh1", "mse", 0.366, 0.01),
     "gcnii": ("Cora", "accuracy", 0.855, 0.01),
 }
-FILES = {"gcnii": "gcnii_cora_reference.py"}   # sonst <name>_reference.py
+# Neue Datensaetze (datasets_v2_validation.md): <modell>_<datensatz>; Zielwerte woertlich aus den gespeicherten Paper-Texten (benchmark/fixtures/), Toleranz vorab festgelegt
+for _m, _tgt in {"gcn": (0.703, 0.790), "sgc": (0.719, 0.789), "gat": (0.725, 0.790)}.items():
+    UNITS[f"{_m}_citeseer"], UNITS[f"{_m}_pubmed"] = ("citeseer", "accuracy", _tgt[0], 0.01), ("pubmed", "accuracy", _tgt[1], 0.01)
+for _ds, (_dl, _nl) in {"etth2": (0.289, 0.277), "ettm1": (0.299, 0.306), "ettm2": (0.167, 0.167)}.items():
+    UNITS[f"dlinear_{_ds}"], UNITS[f"nlinear_{_ds}"] = (_ds, "mse", _dl, 0.01), (_ds, "mse", _nl, 0.01)
+FILES = {"gcnii": "gcnii_cora_reference.py"}   # sonst <name>_reference.py, neue Einheiten: Modelldatei (_PLANETOID_REF / <modell>_reference.py)
+_PLANETOID_REF = {"gcn": "gcn_cora_reference.py", "sgc": "sgc_cora_reference.py", "gat": "gat_cora_reference.py"}
+
+
+def patch_planetoid(code: str, model: str, ds: str, data_path: str) -> str:
+    """Referenz fuer einen anderen Planetoid-Datensatz: Pfad und Klassenzahl; GAT auf PubMed mit der Paper-Anpassung (8 Ausgabekoepfe, L2 0,001, lr 0,01)."""
+    def sub(old: str, new: str) -> None:
+        nonlocal code
+        assert old in code, f"Patch-Stelle fehlt: {old}"
+        code = code.replace(old, new)
+
+    sub("/data/cora_public.npz", data_path)
+    sub("N, n_cls = X.shape[0], 7", "N, n_cls = X.shape[0], int(d['labels'].max()) + 1")
+    if model == "gat" and ds == "pubmed":
+        sub("P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.005, 5e-4, 100", "P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.01, 1e-3, 100\nOUT_HEADS = 8")
+        sub("GATLayer(HID * HEADS, n_cls, 1)", "GATLayer(HID * HEADS, n_cls, OUT_HEADS)")
+        sub("return l2(F.elu(l1(X, train)), train)", "return l2(F.elu(l1(X, train)), train).view(N, OUT_HEADS, n_cls).mean(1)")
+    return code
 DROP_LAST_BATCH = 128
 
 
 def run_one(name: str, task: str, seed: int, cache: Path) -> tuple[float, float, dict]:
-    code = (ROOT / "tests" / "reference" / FILES.get(name, f"{name}_reference.py")).read_text()
+    model = name.split("_")[0]
+    if name in FILES:
+        fname = FILES[name]
+    elif task in planetoid_data.SPECS:
+        fname = _PLANETOID_REF[model]
+    else:
+        fname = f"{model}_reference.py"
+    code = (ROOT / "tests" / "reference" / fname).read_text()
+    new_ett, new_planetoid = task in ett_data.SPECS and task != "etth1", task in planetoid_data.SPECS and task != "cora"
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)
-        if task == "ETTh1":
+        if new_ett:
+            csv = ett_data.download(task, cache / task)
+            ett_data.prepare_public(task, csv, d / f"{task}_public.npz")
+            code = code.replace("/data/etth1_public.npz", str(d / f"{task}_public.npz"))
+        elif new_planetoid:
+            raw = cache / task
+            planetoid_data.download_raw(task, raw)
+            planetoid_data.prepare_public(task, raw, d / f"{task}_public.npz")
+            code = patch_planetoid(code, model, task, str(d / f"{task}_public.npz"))
+        elif task == "ETTh1":
             csv = etth1_data.download(cache / "ett")
             etth1_data.prepare_public(csv, d / "etth1_public.npz")
             code = code.replace("/data/etth1_public.npz", str(d / "etth1_public.npz"))
@@ -61,7 +102,15 @@ def run_one(name: str, task: str, seed: int, cache: Path) -> tuple[float, float,
             raise RuntimeError(r.stderr[-800:])
         rows = (d / "out" / "predictions.csv").read_text().splitlines()[1:]
         extra: dict = {"stdout_tail": r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ""}
-        if task == "ETTh1":
+        if new_ett:
+            tgt = ett_data.targets(task, csv)
+            pred = np.array([float(l.split(",")[1]) for l in rows]).reshape(tgt.shape)
+            value = metrics.mse(pred.reshape(-1).tolist(), tgt.reshape(-1).tolist())
+        elif new_planetoid:
+            truth = planetoid_data.test_labels(task, raw)
+            ids = [l.split(",") for l in rows]
+            value = float(np.mean([truth[i] == p for i, p in ids]))
+        elif task == "ETTh1":
             tgt = etth1_data.targets(csv)
             pred = np.array([float(l.split(",")[1]) for l in rows]).reshape(tgt.shape)
             value = metrics.mse(pred.reshape(-1).tolist(), tgt.reshape(-1).tolist())

@@ -18,7 +18,7 @@ FORBIDDEN: list[tuple[str, str]] = [
     (r"\b(torch_geometric|torchvision\.datasets|torchtext|tensorflow_datasets|ogb|dgl)\b", "Dataset-Bibliothek"),
     (r"\bfetch_\w+|\bPlanetoid\b|\bdownload\w*", "Download-Funktion"),
     (r"\b(pip|wget|curl|git)\b", "Installations-/Download-Tool"),
-    (r"\bind\.cora\b|planetoid", "Zugriff auf Rohdaten des Datensatzes"),
+    (r"\bind\.(cora|citeseer|pubmed)\b|planetoid", "Zugriff auf Rohdaten des Datensatzes"),
 ]
 
 

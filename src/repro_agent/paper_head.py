@@ -20,6 +20,7 @@ DATASETS = {
     "Cora": "Cora, a collection of scientific articles that cite each other",
     "Cora-LCC": "Cora, a collection of scientific articles that cite each other",
     "ETTh1": "ETTh1, hourly measurements from an electricity transformer",
+    "CiteSeer": "CiteSeer, a collection of scientific articles that cite each other",
 }
 SYSTEM = "You explain machine-learning papers to readers without any technical background. Keep reasoning brief."
 HEAD_CHARS = 4500

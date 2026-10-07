@@ -138,6 +138,7 @@ export function Catalog() {
           <dl className="m-0 mt-5 space-y-4 text-[15px] leading-relaxed text-fg-4">
             <div><dt className="inline font-medium text-fg">Cora</dt><dd className="m-0 inline"> <Glossed text="Scientific articles that cite each other, sorted into seven topics. Scored by accuracy, fixed public split." /></dd></div>
             <div><dt className="inline font-medium text-fg">Cora-LCC</dt><dd className="m-0 inline"> The same articles, restricted to the largest connected group, with random 20/30/rest splits as in the 2018 evaluation study.</dd></div>
+            <div><dt className="inline font-medium text-fg">CiteSeer</dt><dd className="m-0 inline"> <Glossed text="Scientific articles that cite each other, sorted into six topics. Scored by accuracy, fixed public split." /></dd></div>
             <div><dt className="inline font-medium text-fg">ETTh1</dt><dd className="m-0 inline"> <Glossed text="Hourly temperature readings of an electricity transformer. We forecast the next 96 hours and score MSE." /></dd></div>
           </dl>
           <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A paper on another dataset needs a new task and harness first; papers on these datasets work out of the box.</p>

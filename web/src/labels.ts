@@ -102,8 +102,8 @@ export function translateJuryReason(reason: string): string {
 export function translateReason(reason: string): string {
   let m: RegExpMatchArray | null
   if (/^Cora ohne matched_task/.test(reason)) return 'the paper does not say which Cora protocol it uses (Planetoid or random splits)'
-  if ((m = reason.match(/^ETTh1: Horizont (\d+), Task misst nur (\d+)/))) return `horizon ${m[1]}, the task only measures ${m[2]}`
-  if (/^ETTh1: Horizont fehlt/.test(reason)) return 'the horizon is missing or unreadable'
+  if ((m = reason.match(/^ETT\w+: Horizont (\d+), Task misst nur (\d+)/))) return `horizon ${m[1]}, the task only measures ${m[2]}`
+  if (/^ETT\w+: Horizont fehlt/.test(reason)) return 'the horizon is missing or unreadable'
   if ((m = reason.match(/^Metrik (.+) auf Task (.+) nicht messbar/))) return `metric ${m[1]} cannot be measured on ${m[2]}`
   if (/^Zielwert fehlt/.test(reason)) return 'the target value is missing or unreadable'
   if ((m = reason.match(/^Datensatz (.+) ohne Task/))) return `no task for dataset ${m[1]}`
