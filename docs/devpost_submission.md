@@ -28,6 +28,11 @@ You give Nullius a paper (an arXiv link or an entry of the catalog). It then:
 4. lets an **independent harness** score the predictions: the agent delivers only `predictions.csv`, the harness loads the test labels itself and computes the metric with fixed, tested code,
 5. issues a certificate: a verdict per claim with measured mean, spread over seeds, sources and the branch tree as evidence.
 
+**Who uses it, and how.**
+- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
+- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
+- *A PhD student or ML team* checks the number before building on a paper.
+
 **What the benchmark shows** (v4, 48 runs on Token Factory, `README.md` "Benchmark"): Nullius is a high-precision checker. When it reports a target as reached, it was (7 of 7 "reproduced" verdicts for real claims agreed with our reference solution; post hoc, small sample), and none of 48 deliberately wrong claims was reported as reproduced (pre-registered negative control). It often does not reach the target: 2 of 8 paper-claim units with Tavily, 1 of 8 without; most misses are near misses ("partially"). Method fidelity was not checked.
 
 The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that already ran once through the full loop), **Live run** (the loop streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements, repairs) and **Evidence** (the certificate, with a step-by-step replay). If a live run cannot start, the UI says so and offers the last finished run as a replay (`README.md`, "Product tour").
@@ -44,7 +49,7 @@ Verdicts are worded carefully: "not reproduced *with our setup*", always with th
 - **Tavily** (`src/repro_agent/tavily_tools.py`, `discovery.py`, `community.py`): Search and Extract at run time for discovery of new papers (the live catalog), claims, setup details and error search; after the verdict a community check reports what others found and possible explanations, each with a quote, and never changes the verdict. Every source is recorded with mode, timestamp and SHA-256 in the dossier and in `events.jsonl`.
 - **Checks and repair loops:** a smoke run on a tiny subset (`SMOKE=1`), trivial baselines (a result below the best trivial baseline is flagged "agent fault suspected"), a graph ablation for graph models (validated 9/10, `benchmark/experiments/results/ablation_gcn_validation.md`), a plan validator, a crash repair from the end of stderr, and a deterministic table-column check.
 - **Cost control:** per-run limit, global budget with a cut-off, retries with back-off, hard stop on billing or authentication errors (`CLAUDE.md`, section "Budget und Kostenkontrolle"; `src/repro_agent/llm.py`).
-- **Product:** FastAPI (`src/repro_agent/api.py`: queue with one job at a time, daily limits, access code, SSE) and a React app (`web/`). Container and hosting: `Dockerfile`, `deploy/`, `docs/deploy.md`.
+- **Product:** FastAPI (`src/repro_agent/api.py`: queue with one job at a time, daily and per-IP limits, budget floor, SSE) and a React app (`web/`). Container and hosting: `Dockerfile`, `deploy/`, `docs/deploy.md`.
 
 Where Token Factory helped (stated only where the repository shows it, `README.md` section "Where Nebius Token Factory helped"): one endpoint for all three Nemotron models; token counts in the API's `usage` field agreed with the console within its rounding (net 1.256 $ in our log, 1.26 $ in the console on 29 Sep 2026); catalog runs cost between 0.025 $ and 0.093 $ per paper (gross, model cost only, Tavily excluded).
 
@@ -100,15 +105,15 @@ Sources of the list: `pyproject.toml`, `web/package.json`, `README.md` (base ima
 
 ## Testing instructions for the judges
 
-Demo URL: `TBD`. Access code for live runs: `TBD` (the pages Overview, Catalog, Evidence and the replay work without a code; only starting a live run or a discovery needs it, `README.md`, "Product tour"). <!-- REVIEW: reviewer decided on an access code (README, CLAUDE.md strategy); the code stays TBD; user decides finally. docs/product_plan.md (29 Sep) planned an open demo; the Devpost rules accept credentials in the test notes. -->
+Demo URL: `TBD`. No access code is needed: every page and the replay are open, and live checks start with one click. Live checks pause when the daily limit or the budget floor is reached; the page then shows the recorded run (`README.md`, "Product tour").
 
 What to try in five minutes:
 
 1. **Overview** (`#overview`): read the scope statement and open a finished certificate (one card per paper claim, earlier runs fold out below it).
 2. **Evidence** (`#/run/<id>`): on the left, what Tavily found and the verified target value with its quote; on the right, what the sandbox measured (mean, spread, seeds, tolerance); below, the branch tree; use the replay to step through the event log. The badge next to each Tavily call shows whether it was live.
-3. **Catalog** (`#/catalog`): candidates with claimed and measured value. Enter the access code and start a **quick check** (3 seeds). One run at a time and daily limits apply; if another run is active, try again later. Expect a few minutes; the page shows the typical duration (from the timestamps of the exported runs) and links the pre-computed result.
+3. **Catalog** (`#/catalog`): candidates with claimed and measured value. Start a **quick check** (3 seeds). One run at a time, daily and per-IP limits apply, and live checks pause when the budget floor is reached (the recorded run is shown then); if another run is active, try again later. Expect a few minutes; the page shows the typical duration (from the timestamps of the exported runs) and links the pre-computed result.
 4. **Live run** (`#/live/<job>`): watch Tavily calls, plan, code, branches and measurements arrive. If the run cannot start, the page offers the last finished run as a replay.
-5. **Discover** (`#/discover`): with the access code, let Tavily search for new papers on Cora or ETTh1 (real Tavily calls, daily limit).
+5. **Discover** (`#/discover`): let Tavily search for new papers on Cora or ETTh1 (real Tavily calls, daily and per-IP limits).
 
 Notes for reading results:
 
@@ -126,7 +131,9 @@ See [`docs/nebius_feedback.md`](nebius_feedback.md). Paste its content into the 
 
 ## Differences and conflicts with `README.md` to report
 
-1. **Demo access:** README: live runs need an access code. `docs/product_plan.md` (29 Sep): demo open for all with a hard budget. This text follows the README; the test notes contain the code (`TBD`).
+0. **Use cases (added 4 Oct):** "Who uses it, and how" is in the README, this text and `devpost_story.md` with the same three cases. Numbers come from `run_end` and the first and last event of `web/public/data/kipf_gcn_2017/20261002-110746/events.jsonl` (10.4 min, 0.139 $ gross) and the dossier (0.8151 ± 0.0107, target 0.815, 10 seeds). No user numbers or quotes exist and none are claimed.
+
+1. **Demo access:** no access code; the demo is open with a hard budget floor and daily limits (decision of the user, 2026-10-05). The test notes say so.
 2. **Benchmark numbers:** filled from `benchmark/experiments/results/benchmark_v4.md` (v4 is the main result; v2 and v3 are in `docs/benchmark_history.md`). The README and this text give the same v4 numbers. `CLAUDE.md` still describes the v2 pre-registration as "Stand"; the reviewer updates it.
 3. **Nebius Compute VM as further Nebius service:** `docs/deploy.md` recommends Coolify. If the demo runs on Coolify, "Built with" and the "other Nebius services" statement name only Token Factory and Sandboxes. No conflict as long as that holds.
 4. **Speed comparison with OpenRouter free endpoints:** no measured comparison exists; neither document makes a speed claim.

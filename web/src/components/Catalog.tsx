@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -8,19 +8,21 @@ import { NextStep, PageIntro } from './page'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { translateJuryReason, translateReason } from '../labels'
-import { startReproduction, useJobInfo } from '../live'
+import { startReproduction, useJobInfo, useLiveStatus } from '../live'
+import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
 import { referenceSentence } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
-type LiveControl = { available: boolean; busy: boolean; hasCode: boolean; starting: boolean; error: string | null; latestLive: string | null; onRun: () => void }
+type LiveControl = { available: boolean; busy: boolean; paused: boolean; starting: boolean; error: string | null; errorIsNotice: boolean; latestLive: string | null; onRun: () => void }
 
 function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
   const v = e.verdict
   const head = useHead(e.id)
   const canRun = live.available && e.status !== 'nicht_laufbar'
-  const why = live.busy ? 'Another run is active' : !live.hasCode ? 'Enter the access code first' : undefined
+  const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
+  const recorded = live.latestLive ?? e.run_id
   return (
     <article className="rounded-xl border border-line bg-surface p-6">
       <div className="flex items-start justify-between gap-4">
@@ -67,7 +69,8 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
           </button>
           <span className="text-[11px] text-muted">Quick check, 3 seeds, watched live</span>
           {live.latestLive && <a href={`#/run/${live.latestLive}`} className="inline-flex items-center gap-1 text-[11px] text-fg-3 hover:text-fg-max">Latest live run</a>}
-          {live.error && <span className="w-full text-[12px] text-tone-red">{live.error}</span>}
+          {live.paused && recorded && <a href={`#/run/${recorded}`} className="inline-flex items-center gap-1 text-[11px] text-fg-3 hover:text-fg-max">Open the recorded run</a>}
+          {live.error && <span className={`w-full text-[12px] ${live.errorIsNotice ? 'text-muted' : 'text-tone-red'}`}>{live.error}</span>}
         </div>
       )}
 
@@ -93,20 +96,22 @@ export function Catalog() {
   const entries = useCatalog()
   const [juryOnly, setJuryOnly] = useState(true)
   const { available, info, refresh } = useJobInfo()
-  const [code, setCode] = useState('')
+  const { status, refresh: refreshStatus } = useLiveStatus()
+  const repro = statusFor(status, 'reproduction')
+  const paused = isPaused(repro)
   const [starting, setStarting] = useState<string | null>(null)
-  const [error, setError] = useState<{ id: string; msg: string } | null>(null)
+  const [error, setError] = useState<{ id: string; msg: string; notice: boolean } | null>(null)
   const [runs, setRuns] = useState<RunRef[]>([])
   useEffect(() => { loadIndex().then(setRuns) }, [])
   const latestLive = (id: string) => runs.filter((r) => r.live && r.catalog_id === id).map((r) => r.id).sort().pop() ?? null
   const run = async (id: string) => {
     setStarting(id); setError(null)
     try {
-      const jobId = await startReproduction(id, code, true)
+      const jobId = await startReproduction(id, true)
       window.location.assign(`#/live/${jobId}`)
     } catch (err) {
-      setError({ id, msg: err instanceof Error ? err.message : 'Could not start the run.' })
-      refresh()
+      setError({ id, msg: err instanceof Error ? err.message : 'Could not start the run.', notice: err instanceof StartRefused && err.reason !== null })
+      refresh(); refreshStatus()
     } finally { setStarting(null) }
   }
   const shown = useMemo(() => (entries ?? []).filter((e) => !juryOnly || e.jury?.ready), [entries, juryOnly])
@@ -116,7 +121,7 @@ export function Catalog() {
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
         what="Papers that Tavily found and that were then run once through the full loop: the agent rebuilt the experiment and our harness measured it. Every entry shows the claimed number next to the measured one."
-        look="Open the evidence of an entry marked Jury ready. With an access code you can also start a short live check yourself." />
+        look="Open the evidence of an entry marked Jury ready. You can also start a short live check yourself." />
 
       <section className="mb-12 grid gap-10 border-t border-line pt-10 md:grid-cols-2 md:gap-0" aria-label="How this catalog is made and which datasets it supports">
         <div className="md:pr-12">
@@ -147,25 +152,26 @@ export function Catalog() {
           <input type="checkbox" checked={juryOnly} onChange={(ev) => setJuryOnly(ev.target.checked)} className="accent-fg-3" />
           Jury-ready only
         </label>
-        {available && (
-          <div className="flex flex-wrap items-center gap-3">
-            <label htmlFor="repro-code" className={label}>Access code</label>
-            <input id="repro-code" type="password" autoComplete="off" value={code} onChange={(ev) => setCode(ev.target.value)}
-              className="block w-40 rounded-lg border border-line bg-raised px-3 py-1.5 font-mono text-sm text-fg outline-none focus:border-line-stronger" />
-            {info?.busy && <span className="text-[12px] text-tone-amber">A {info.kind === 'discovery' ? 'discovery' : 'reproduction'} run is active. Live runs are one at a time.</span>}
-          </div>
+        {available && info?.busy && (
+          <span className="text-[12px] text-tone-amber">A {info.kind === 'discovery' ? 'discovery' : 'reproduction'} run is active. Live runs are one at a time.</span>
         )}
         <span className={label}>{entries ? `${shown.length} of ${total} shown` : 'Loading'}</span>
       </div>
       <p className="mb-6 mt-0 max-w-3xl text-[13px] leading-relaxed text-muted">
         Jury-ready only hides entries whose run crashed or whose code did not implement the method.
-        {available ? ' The access code is needed only to start a live check; the catalog and all evidence are open without it.' : ' Live checks are not available on this page; the finished runs and replays are.'}
+        {available ? ' Live checks need no sign-in; the catalog and all evidence are open.' : ' Live checks are not available on this page; the finished runs and replays are.'}
       </p>
+      {available && paused && (
+        <p role="status" className="mb-6 mt-0 flex max-w-3xl items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-[13px] leading-relaxed text-fg-3">
+          <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+          <span>{pausedText(repro?.reason)} {resumeText(repro?.reason, repro?.reset_at)}</span>
+        </p>
+      )}
 
       <div className="grid gap-5 md:grid-cols-2">
         {shown.map((e) => (
           <CatalogCard key={e.id} e={e} live={{
-            available, busy: !!info?.busy, hasCode: !!code, starting: starting === e.id, error: error?.id === e.id ? error.msg : null,
+            available, busy: !!info?.busy, paused, starting: starting === e.id, error: error?.id === e.id ? error.msg : null, errorIsNotice: !!error?.notice,
             latestLive: latestLive(e.id), onRun: () => run(e.id),
           }} />
         ))}

@@ -22,7 +22,13 @@ The misses are mostly near misses: 20 of 48 single real-claim verdicts are "part
 
 ![Nullius overview: finished checks, one card per paper claim](docs/img/overview.jpg)
 
-**For** reviewers who want a quick check of a headline number, PhD students who want to build on a paper and ML teams that depend on published results. **Honest scope:** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes.
+## Who uses it, and how
+
+- **A reviewer** meets a paper that claims a number on a supported benchmark ("GCN reaches 81.5 % on Cora"). Nullius rebuilds the experiment and measures it over 10 seeds: [Kipf & Welling, reproduced 0.815 ± 0.011, about 10 minutes, 0.139 $ gross](web/public/data/kipf_gcn_2017/20261002-110746/zeugnis.md) (a catalog run of the same claim: 9.6 minutes, 0.074 $). The certificate lists the sources, the measurements and the branch tree.
+- **An author** adds the badge of a finished check to the README: `[![Nullius](<badge-url>)](<certificate-url>)`. The Evidence page of every run shows the snippet ("Add this badge to your README"). The badge says "reproduced with our setup" plus measured against claimed value and "method not checked", and links to the certificate.
+- **A PhD student or ML team** checks the headline number of a paper before building on it, instead of discovering a gap after days of work. Discovery (Tavily) lists new papers on supported benchmarks.
+
+**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes. "Reproduced" means the target value was reached; method fidelity is not checked. "Not reproduced" means not reached with our setup and says nothing yet about the paper.
 
 ## How we use NVIDIA Nemotron
 
@@ -74,7 +80,7 @@ Tavily's effect on the benchmark is small (see below); its main role in the prod
 
 ## Product tour
 
-**Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; a live run needs an access code, one run at a time, daily limits), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
+**Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; live runs need no sign-in; one run at a time, daily and per-IP limits, and they pause when the budget floor is reached, then the recorded run is shown), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.
 
 ![Evidence view](docs/img/evidence.jpg)
 
@@ -158,14 +164,14 @@ LLM_PROVIDER=tokenfactory uv run repro-agent kipf_gcn_2017
 
 # web app (development) and API (live runs, SSE)
 cd web && npm ci && npm run dev
-ACCESS_CODE=change-me uv run uvicorn repro_agent.api:app --port 8000
+uv run uvicorn repro_agent.api:app --port 8000
 
 # tests (no network, no cost)
 uv run python -m pytest -m "not integration"
 cd web && npm run build && npm run lint && npm test
 ```
 
-Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate, `TAVILY_MODE`). Runs are written to `runs/<paper>/<timestamp>/`; `scripts/export_site_data.py` copies selected runs to `web/public/data` (publish only production runs). The API needs `ACCESS_CODE`, limits live runs to one at a time and per day, and keeps all keys on the server. `Dockerfile` builds API and web app into one container; hosting steps are in [`docs/deploy.md`](docs/deploy.md).
+Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT rate, `TAVILY_MODE`). Runs are written to `runs/<paper>/<timestamp>/`; `scripts/export_site_data.py` copies selected runs to `web/public/data` (publish only production runs). The API needs no access code. It limits live runs to one at a time, per day and per IP, pauses them when the remaining model budget or Tavily credits fall below a floor (`LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`; status at `GET /api/status`), and keeps all keys on the server. `Dockerfile` builds API and web app into one container; hosting steps are in [`docs/deploy.md`](docs/deploy.md).
 
 ## Limitations and roadmap
 

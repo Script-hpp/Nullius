@@ -161,7 +161,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
       <RepairStory events={run.events} claimId={claim.id} codeLoader={codeLoader} />
 
-      <ReadmeBadge ref_={ref_} />
+      <ReadmeBadge ref_={ref_} urteil={v?.urteil} />
 
       <section id="sec-details" className="scroll-mt-4 min-w-0" aria-label="Details">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Details</div>
