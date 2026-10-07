@@ -43,3 +43,12 @@ Note: Table 1 of the paper labels ETTm1/ETTm2 as "5min" with 69,680 steps; the E
   [0, 34560) / [34560, 46080) / [46080, 57600). z-score with train statistics, 7 channels, test windows stride 1,
   horizon 96, history up to 720 steps given to the agent. Reference models DLinear and NLinear run UNCHANGED from ETTh1 (L = 336).
   (Original per-dataset learning rates may differ; a miss will be investigated and reported, not silently tuned.)
+
+## Addendum 2026-10-07: correction of a transcription error (PubMed GAT learning rate)
+
+The protocol line above ("learning rate stays 0.005 (not stated for PubMed in the paper text)") is wrong. It is a transcription error of this protocol,
+not a change of the rule. The stored paper text `benchmark/fixtures/1710.10903.json` states: "with an initial learning rate of 0.01 for Pubmed,
+and 0.005 for all other datasets". The reference for GAT on PubMed therefore uses lr 0.01 (`scripts/run_reference_local.py`, `patch_planetoid`).
+Everything else (8 output heads, L2 0.001, tolerance, seeds, rule) stays as pre-registered; nothing was tuned.
+The first run with lr 0.005 (2 of 5 seeds, both 0.761) stays in the results file as the failed first run. The rerun with lr 0.01 (5 seeds) is the run that counts.
+The user approved this correction.

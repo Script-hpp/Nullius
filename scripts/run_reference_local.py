@@ -46,7 +46,7 @@ _PLANETOID_REF = {"gcn": "gcn_cora_reference.py", "sgc": "sgc_cora_reference.py"
 
 
 def patch_planetoid(code: str, model: str, ds: str, data_path: str) -> str:
-    """Referenz fuer einen anderen Planetoid-Datensatz: Pfad und Klassenzahl; GAT auf PubMed mit der Paper-Anpassung (8 Ausgabekoepfe, L2 0,001)."""
+    """Referenz fuer einen anderen Planetoid-Datensatz: Pfad und Klassenzahl; GAT auf PubMed mit der Paper-Anpassung (8 Ausgabekoepfe, L2 0,001, lr 0,01)."""
     def sub(old: str, new: str) -> None:
         nonlocal code
         assert old in code, f"Patch-Stelle fehlt: {old}"
@@ -55,7 +55,7 @@ def patch_planetoid(code: str, model: str, ds: str, data_path: str) -> str:
     sub("/data/cora_public.npz", data_path)
     sub("N, n_cls = X.shape[0], 7", "N, n_cls = X.shape[0], int(d['labels'].max()) + 1")
     if model == "gat" and ds == "pubmed":
-        sub("P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.005, 5e-4, 100", "P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.005, 1e-3, 100\nOUT_HEADS = 8")
+        sub("P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.005, 5e-4, 100", "P, HEADS, HID, LR, L2, PATIENCE = 0.6, 8, 8, 0.01, 1e-3, 100\nOUT_HEADS = 8")
         sub("GATLayer(HID * HEADS, n_cls, 1)", "GATLayer(HID * HEADS, n_cls, OUT_HEADS)")
         sub("return l2(F.elu(l1(X, train)), train)", "return l2(F.elu(l1(X, train)), train).view(N, OUT_HEADS, n_cls).mean(1)")
     return code
