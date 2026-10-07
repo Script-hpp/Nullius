@@ -25,17 +25,15 @@ UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlg
 TOLERANCE = 0.01   # fest, vorab: +-1 Prozentpunkt (Accuracy), +-0.01 absolut (MSE/MAE). Paper-Streuung aendert sie nicht.
 ETTH1_HORIZON = 96
 # Seeds je Task, wenn der Eintrag keine nennt (Kosten: GCN ~25 s pro Seed, siehe docs/next_step_catalog_pipeline.md)
-ETT_TASKS = ("ETTh1", "ETTh2", "ETTm1", "ETTm2")   # Horizont 96
-PLANETOID_TASKS = ("Cora", "CiteSeer", "PubMed")    # Standard-Split
-# Seeds: PubMed ~ Minuten je Seed auf CPU (siehe benchmark/experiments/results/datasets_v2_validation.md), ETTm Testfenster x4
-TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "CiteSeer": 5, "PubMed": 3, **{t: 3 for t in ETT_TASKS}}
-TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "CiteSeer": {"accuracy"}, "PubMed": {"accuracy"},
+ETT_TASKS = ("ETTh1",)   # Horizont 96; ETTh2/ETTm1/ETTm2 nicht freigegeben (datasets_v2_validation.md)
+PLANETOID_TASKS = ("Cora", "CiteSeer")    # Standard-Split; PubMed nicht freigegeben
+TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "CiteSeer": 5, **{t: 3 for t in ETT_TASKS}}
+TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "CiteSeer": {"accuracy"},
                 **{t: {"mse", "mae"} for t in ETT_TASKS}}
 TASK_SUFFIX = {
     "Cora": "Standard-Split",
     "Cora-LCC": "groesste Komponente, zufaellige 20/30/Rest-Splits",
     "CiteSeer": "Standard-Split",
-    "PubMed": "Standard-Split",
     **{t: "Horizont 96" for t in ETT_TASKS},
 }
 METRIC_LABEL = {"accuracy": "Accuracy", "mse": "MSE", "mae": "MAE"}
@@ -131,7 +129,7 @@ def _task_of(cand: dict) -> str:
         if task not in ("Cora", "Cora-LCC"):
             raise NotRunnable("Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)")
         return task
-    if ds in ("CiteSeer", "PubMed"):
+    if ds == "CiteSeer":
         return ds   # nur ein Task (Planetoid-Split); ob das Paper ihn nutzt, entscheidet das Feld protocol (E1)
     if ds in ETT_TASKS:
         try:

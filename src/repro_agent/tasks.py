@@ -329,4 +329,5 @@ def cora_lcc_task() -> Task:
     )
 
 
-TASKS = {"Cora": cora_task, "ETTh1": etth1_task, "Cora-LCC": cora_lcc_task}
+# Freigegeben nach benchmark/experiments/results/datasets_v2_validation.md: CiteSeer. Nicht freigegeben (Referenz verfehlt Regel): PubMed, ETTh2, ETTm1, ETTm2.
+TASKS = {"Cora": cora_task, "CiteSeer": citeseer_task, "ETTh1": etth1_task, "Cora-LCC": cora_lcc_task}

@@ -18,7 +18,7 @@ import { useSummary } from '../summaries'
 
 type Mode = 'idle' | 'live' | 'replay' | 'done'
 
-const DATASETS = ['Cora', 'CiteSeer', 'PubMed', 'ETTh1', 'ETTh2', 'ETTm1', 'ETTm2']
+const DATASETS = ['Cora', 'CiteSeer', 'ETTh1']
 const DEFAULT_DATASETS = ['Cora', 'ETTh1']   // each ticked benchmark costs Tavily credits, so the default stays at two
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 const btn = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'

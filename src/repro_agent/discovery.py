@@ -36,8 +36,8 @@ def _normalize_repo_url(url: str) -> str | None:
     return f"https://github.com/{m.group(1)}/{repo}"
 
 
-ETT_DATASETS = ("ETTh1", "ETTh2", "ETTm1", "ETTm2")   # Horizont 96, MSE/MAE; tasks.py ETT
-ALLOWED_METRICS = {"Cora": {"accuracy"}, "CiteSeer": {"accuracy"}, "PubMed": {"accuracy"},
+ETT_DATASETS = ("ETTh1",)   # Horizont 96, MSE/MAE; ETTh2/ETTm1/ETTm2 nicht freigegeben (datasets_v2_validation.md)
+ALLOWED_METRICS = {"Cora": {"accuracy"}, "CiteSeer": {"accuracy"},
                    **{ds: {"mse", "mae"} for ds in ETT_DATASETS}}
 METRIC_ALIASES = {"accuracy": "accuracy", "acc": "accuracy", "test accuracy": "accuracy",
                   "mse": "mse", "mean squared error": "mse", "mae": "mae", "mean absolute error": "mae"}
@@ -202,18 +202,6 @@ DISCOVERY_QUERIES = {
     "CiteSeer": [
         "node classification CiteSeer Planetoid public split 120 training nodes test accuracy results table",
     ],
-    "PubMed": [
-        "node classification PubMed Planetoid public split 60 training nodes test accuracy results table",
-    ],
-    "ETTh2": [
-        "long-term time series forecasting ETTh2 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
-    ],
-    "ETTm1": [
-        "long-term time series forecasting ETTm1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
-    ],
-    "ETTm2": [
-        "long-term time series forecasting ETTm2 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
-    ],
 }
 MAX_SEARCHES_PER_DATASET = 2
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
@@ -221,9 +209,6 @@ EXTRACT_QUERIES = {
     "Cora": "Cora node classification: data split (Planetoid public split 140 training nodes, or random splits / largest connected component), evaluation protocol, test accuracy",
     "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
     "CiteSeer": "CiteSeer node classification: data split (Planetoid public split 120 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
-    "PubMed": "PubMed node classification: data split (Planetoid public split 60 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
-    **{ds: f"{ds} forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE"
-       for ds in ("ETTh2", "ETTm1", "ETTm2")},
 }
 CACHE_VERSION = 3   # 3: Feld claim.input_length, Hauptergebnis statt Variante; 2: dreistufiges Protokoll (Katalog-Import liest 2 und 3)
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
@@ -234,10 +219,6 @@ DISCOVERY_PROTOCOL_HINTS = {
               "Any input length up to 720 is supported; only the horizon 96 is fixed."),
     "Cora": "Planetoid public split = 140/500/1000 = 20 labels per class.",
     "CiteSeer": "Planetoid public split = 120/500/1000 = 20 labels per class.",
-    "PubMed": "Planetoid public split = 60/500/1000 = 20 labels per class.",
-    **{ds: ("Equivalent statements: 12/4/4 months; for 15-minute data (ETTm) 34560/11520/11520 rows, for hourly data (ETTh) 8640/2880/2880 rows; "
-            "papers often report window/sample counts instead - these are the same split. "
-            "Any input length up to 720 is supported; only the horizon 96 is fixed.") for ds in ("ETTh2", "ETTm1", "ETTm2")},
     "Cora-LCC": "Shchur et al. 2018 random splits, 20 per class train, 30 per class val, largest connected component.",
 }
 MAX_README_ARXIV_LINKS = 5
@@ -248,7 +229,6 @@ TASK_KEYWORDS = {
     "Cora": ["planetoid", "public split"],
     "Cora-LCC": ["shchur", "largest connected component", "random split"],
     "CiteSeer": ["planetoid", "public split"],
-    "PubMed": ["planetoid", "public split"],
     **{ds: ["12/4/4", "96"] for ds in ETT_DATASETS},
 }
 RETRY_TEMPERATURE = 0.3
@@ -502,7 +482,7 @@ class DiscoveryAgent:
                             or len(re.findall(r"github\.com/", readme)) > MAX_README_GITHUB_LINKS):
                         continue
 
-                    keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "pubmed", "ogb", "ett", "movielens"]
+                    keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "ogb", "ett", "movielens"]
                     if not any(re.search(r"\b" + re.escape(k) + r"\b", readme) for k in keywords):
                         continue
 

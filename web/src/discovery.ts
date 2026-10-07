@@ -305,13 +305,12 @@ export function stageLabel(stage: string | undefined, reason: string | undefined
   return STAGE_LABEL[stage ?? ''] ?? stage ?? ''
 }
 
-const ETT_TASKS = ['ETTh1', 'ETTh2', 'ETTm1', 'ETTm2']
+const ETT_TASKS = ['ETTh1']
 
 const TASK_TEXT: Record<string, string> = {
   Cora: 'Cora · Planetoid split',
   'Cora-LCC': 'Cora · random splits, largest component',
   CiteSeer: 'CiteSeer · Planetoid split',
-  PubMed: 'PubMed · Planetoid split',
 }
 
 export function benchmarkText(p: DPaper): string {

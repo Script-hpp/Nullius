@@ -21,10 +21,6 @@ DATASETS = {
     "Cora-LCC": "Cora, a collection of scientific articles that cite each other",
     "ETTh1": "ETTh1, hourly measurements from an electricity transformer",
     "CiteSeer": "CiteSeer, a collection of scientific articles that cite each other",
-    "PubMed": "PubMed, a collection of medical research articles that cite each other",
-    "ETTh2": "ETTh2, hourly measurements from a second electricity transformer",
-    "ETTm1": "ETTm1, measurements every 15 minutes from an electricity transformer",
-    "ETTm2": "ETTm2, measurements every 15 minutes from a second electricity transformer",
 }
 SYSTEM = "You explain machine-learning papers to readers without any technical background. Keep reasoning brief."
 HEAD_CHARS = 4500

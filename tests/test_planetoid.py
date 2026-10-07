@@ -201,8 +201,9 @@ def test_edge_probe_in_dataset_format(name):
     assert len(npz["train_idx"]) == 20 * c and (npz["labels"][npz["test_idx"]] == -1).all()
 
 
-def test_planetoid_not_yet_registered_until_validated():
-    assert set(TASKS) >= {"Cora", "ETTh1", "Cora-LCC"}
+def test_only_validated_datasets_are_registered():
+    # datasets_v2_validation.md: CiteSeer bestanden; PubMed (GAT) und ETTh2/ETTm1/ETTm2 (DLinear) verfehlen die Regel
+    assert set(TASKS) == {"Cora", "CiteSeer", "ETTh1", "Cora-LCC"}
 
 
 @pytest.mark.skipif(not os.environ.get("PLANETOID_NETWORK_TESTS"), reason="braucht Netz (kimiyoung/planetoid), PLANETOID_NETWORK_TESTS=1")

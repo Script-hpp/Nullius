@@ -28,7 +28,7 @@ The misses are mostly near misses: 20 of 48 single real-claim verdicts are "part
 - **An author** adds the badge of a finished check to the README: `[![Nullius](<badge-url>)](<certificate-url>)`. The Evidence page of every run shows the snippet ("Add this badge to your README"). The badge says "reproduced with our setup" plus measured against claimed value and "method not checked", and links to the certificate.
 - **A PhD student or ML team** checks the headline number of a paper before building on it, instead of discovering a gap after days of work. Discovery (Tavily) lists new papers on supported benchmarks.
 
-**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes. "Reproduced" means the target value was reached; method fidelity is not checked. "Not reproduced" means not reached with our setup and says nothing yet about the paper.
+**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96) and, since the dataset extension of 7 Oct 2026, CiteSeer (Planetoid split; its harness passed three reference solutions, but no agent run on it exists yet). PubMed, ETTh2, ETTm1 and ETTm2 are built but not released because a reference solution missed the pre-registered tolerance ([validation results](benchmark/experiments/results/datasets_v2_validation.md)). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes. "Reproduced" means the target value was reached; method fidelity is not checked. "Not reproduced" means not reached with our setup and says nothing yet about the paper.
 
 ## How we use NVIDIA Nemotron
 
@@ -183,3 +183,5 @@ Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT r
 ## Licence
 
 MIT, see [`LICENSE`](LICENSE).
+
+Datasets are not redistributed; the harness downloads them from their sources at run time. The `kimiyoung/planetoid` repository (Cora, CiteSeer, PubMed raw files) carries an MIT `LICENSE` (Copyright 2016 Zhilin Yang); the `zhouhaoyi/ETDataset` repository (ETT files) carries a `LICENSE` file with Creative Commons Attribution-NoDerivatives 4.0 International. Both checked on 7 Oct 2026 by reading the files in those repositories; we did not check licences of other sources.
