@@ -1,6 +1,6 @@
 # Tavily findings become experiments (role 3, stage 2)
 
-Status: **design, awaiting approval** (2026-10-07). Nothing is built yet. Rules in this file are fixed before any real run and are not changed after seeing results.
+Status: **design approved with changes by the coordinator** (2026-10-07; changes marked *approved change* below). Rules in this file are fixed before any real run and are not changed after seeing results.
 
 ## Goal
 
@@ -106,7 +106,7 @@ The change is a *sentence in the code prompt*, "keep everything else". The task'
 | `etth1` (DLinear, NLinear, ...) | `input_window` (L ≤ 720, the task allows any L ≤ 720), `epochs`, `learning_rate`, `batch_size`, `individual` (per-channel vs shared linear layer), `decomposition_kernel` | `input_window` is the only one with a clean public objection so far (336 vs 96, role 3 stage 1) |
 | `cora` / `cora_lcc` (GCN, GAT, ...) | `hidden_units`, `dropout`, `weight_decay`, `learning_rate`, `epochs`, `num_layers`, `feature_normalization` | splits are fixed by the task and **not** changeable: objections about the split/protocol are `not_measurable` ("not supported by this task") |
 
-Anything outside the list is `not_measurable` with note "setting not changeable in this task". The allow-lists live in `tasks.py` (`Task.tunable: tuple[str, ...]`, default `()` so unknown tasks run no `parameter_change`).
+The Evidence view shows the reason when an objection is not measurable (e.g. "split change not supported by this task"). Anything outside the list is `not_measurable` with note "setting not changeable in this task". The allow-lists live in `tasks.py` (`Task.tunable: tuple[str, ...]`, default `()` so unknown tasks run no `parameter_change`).
 
 ## Experiments and fixed verdict rules
 
@@ -123,9 +123,10 @@ Rationale: a seed dependence matters when the spread alone is as large as the to
 ### parameter_change
 One new code from the code role: prompt = task description + plan + final main code + "Change exactly this setting: `<param>` from `<from_value>` to `<to_value>`. Change nothing else. Return the full script." Then the normal seed-0 repair loop (`_run_seed`, max `MAX_ATTEMPTS_PER_CLAIM` attempts), then `K3 = min(3, S)` seeds total (seed 0 plus 2 more, seeds `0..K3-1`), own branches. Main comparison uses the **same seeds** of the main run (`main_mean_k3` = mean of the main measurement on seeds `0..K3-1`) so the comparison is paired.
 - `delta = new_mean - main_mean_k3`.
-- `bestaetigt` if `|delta| > tol` (the named setting moves the result by more than the verdict tolerance).
-- `widerlegt` if `|delta| <= tol` and at least 2 valid seeds.
-- `offen` if fewer than 2 valid seeds, the static check or smoke check fails after the repair attempts, or the code diff does not touch the named setting.
+- *Approved change:* `SE = pooled_std / sqrt(n)` with `pooled_std = sqrt((s_new^2 + s_main^2) / 2)` over the `n` paired seeds (sample std, ddof 1).
+- `bestaetigt` if `|delta| > max(tol, 2*SE)`.
+- `widerlegt` if `|delta| <= tol` and at least 2 valid paired seeds.
+- `offen` otherwise: fewer than 2 valid seeds, static/smoke check fails after the repair attempts, the code does not contain `to_value`, or `tol < |delta| <= 2*SE` (effect larger than the tolerance but not separable from seed noise).
 - Reported next to it (information, not part of the rule): whether `new_mean` is within `tol` of the paper target.
 
 A cheap deterministic guard on "changes exactly that setting": the new code must contain the literal `to_value` (as number or word), else `offen` ("code did not apply the change"). Whether other settings changed too cannot be fully proven; the diff against the main code is stored (`code_hash` of both) and shown.
@@ -165,6 +166,10 @@ Tavily: **0 additional credits** (the round reads the community findings). A liv
 
 Sandbox (Nebius, free): seed_variance 5 × ~25 s (GCN) or ~5 × 1 min (DLinear); parameter_change 3 seeds + code attempts. Adds roughly 3–8 minutes to a run.
 
+## Quick mode (live API, approved change)
+
+The API live path (`QUICK_SEEDS = 3`) turns the feature **on**, in quick mode: at most **2** experiments and **3** extra seeds for `seed_variance`. The event `objection_round_end` records `seconds` (added wall time) and the number of experiments, so the added time is visible in `events.jsonl`. The Orchestrator and all benchmark/experiment scripts default to off.
+
 ## Report and Evidence view
 
 Zeugnis (`report.py`): new section `## Objections checked (Tavily role 3 → own experiments)` after "What others found": one line per entry: `"<quote>" (<url>) → <what was measured> → <status>`, e.g. `"…MSE 0.426, not in paper 0.386…" (…/issues/117) → reported number; our measurement 0.3769 ± 0.0021 supports the paper → widerlegt` or `→ input window 336 vs 96: MSE 0.3771 vs 0.3769 (Δ 0.0002, tolerance 0.010) → widerlegt`. Wording is careful: "bestaetigt/widerlegt" always means "by the rule fixed in advance on this task", the objection's author may have used another setup.
@@ -177,11 +182,11 @@ Type classification with fake LLM (all four types, demotion by deterministic che
 
 ## Pre-registered test (phase C, written before any run)
 
-`benchmark/experiments/tavily_experiments_test.md`: (1) fixture run on DLinear using `role3_zeng_objections.json` (findings from the stored pages, LLM live is needed for extraction/classification; the question is whether to run it on Token Factory or with an LLM stub, see open questions); (2) after approval one live Kipf run and one live DLinear run; caps 1.00 USD gross, 60 Tavily credits.
+`benchmark/experiments/tavily_experiments_test.md`: (1) fixture run on DLinear using `role3_zeng_objections.json` (findings from the stored pages, LLM live is needed for extraction/classification;); (2) after approval one live Kipf run and one live DLinear run; caps 1.00 USD gross, 60 Tavily credits.
 
-## Open questions for the coordinator
+## Answered questions (coordinator, 2026-10-07)
 
-1. **Kipf has no role-3 fixture** (`benchmark/fixtures/` has `role3_zeng_objections.json` only; the Kipf repo issue pages are in `logs/community_cache.json` only if a live run cached them). Proposal: no fixture run for Kipf; Kipf only live (phase C, ≈ 8–12 credits). OK?
-2. The fixture test on DLinear needs a real LLM for extraction and classification (the stored pages are raw text). Proposal: run it on Token Factory (small: 5 pages) and spend the sandbox runs for real, as a dress rehearsal before the live runs. Alternative: only fake-based tests in phase B, no fixture run.
-3. Rule thresholds above (`std >= tol`, `|delta| > tol`, K = 5/3) are my proposal; tell me if you want others before they are frozen.
-4. Default of `objection_experiments`: off in the Orchestrator and the benchmark scripts, **on** in the API live path (`api.py`) once approved. OK?
+1. Kipf has no role-3 fixture: Kipf runs live only (phase C). Approved.
+2. DLinear fixture dress rehearsal with real LLM and real Nebius sandbox on Token Factory; counts against the 1.00 USD cap, 0 Tavily credits (fixture). Approved.
+3. Thresholds approved: `seed_variance` rule as written, K = 5/3; `parameter_change` rule changed (SE rule above).
+4. API default on (quick mode limits above); off in Orchestrator and benchmark scripts. Approved.
