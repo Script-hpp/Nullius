@@ -323,6 +323,24 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
           detail: `${e.mode === 'cache' ? 'From the 7-day cache. ' : ''}Each note carries a verbatim quote; ${num(e.dropped) ?? 0} statement${num(e.dropped) === 1 ? '' : 's'} without a quote in the page dropped. Not part of the verdict.` })
         break
       }
+      case 'objection_classified': {
+        const t = String(e.otype ?? '')
+        push('community', { actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: t === 'not_measurable' ? 'gray' : 'violet',
+          title: t === 'not_measurable' ? 'Objection kept as text' : `Objection turned into a test: ${t.replace(/_/g, ' ')}`,
+          detail: e.note ? String(e.note) : undefined, expand: e.quote ? { kind: 'quote', quote: String(e.quote) } : undefined })
+        break
+      }
+      case 'objection_experiment': {
+        if (e.stage === 'seed') push('community', { actor: 'sandbox', tone: e.measured == null ? 'red' : 'green', title: `Objection test, seed ${e.seed}`,
+          detail: e.measured == null ? 'No valid measurement.' : `${fmtValue(metric, num(e.measured))} measured by the harness in its own branch.` })
+        break
+      }
+      case 'objection_checked': {
+        const lab: Record<string, string> = { bestaetigt: 'confirmed', widerlegt: 'refuted', offen: 'open', 'nicht pruefbar': 'not measurable' }
+        push('community', { actor: 'harness', tone: e.status === 'widerlegt' ? 'green' : e.status === 'bestaetigt' ? 'amber' : 'gray',
+          title: `Objection ${lab[String(e.status)] ?? e.status}`, detail: 'Tested by us with a rule fixed in advance. Not part of the verdict.', expand: e.quote ? { kind: 'quote', quote: String(e.quote) } : undefined })
+        break
+      }
       case 'explanations': {
         const n = num(e.n_items) ?? 0
         push('community', { actor: 'nemotron', role: 'fast', model: modelName('fast'), tone: n ? 'violet' : 'gray',
