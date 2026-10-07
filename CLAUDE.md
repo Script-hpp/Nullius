@@ -371,7 +371,7 @@ Anstatt nur einen arXiv-Link einzufügen, bieten wir der Jury eine kuratierte Li
 2. **Wartezeit & Fast-Mode:** Da vollständige Läufe (wie Shchur oder GAT) lange dauern, bieten wir für die Live-Demo einen **"Schnellprüfungs-Modus"** (mit weniger Seeds/Epochen) an. Das vorab berechnete, vollständige Ergebnis wird daneben angezeigt.
 3. **Fallback-Stabilität:** Sandbox-Umgebungen können instabil sein. Schlägt ein Live-Lauf fehl, schaltet das Frontend auf eine "Wiedergabe" (Playback) des Vorab-Laufs um, versehen mit einem ehrlichen Hinweis auf temporäre Instabilität.
 4. **Kosten- & Missbrauchsschutz:**
-    * Zugangscode für die Jury.
+    * ~~Zugangscode für die Jury.~~ Ersetzt (Entscheidung des Nutzers, 2026-10-05) durch die offene Demo mit Budget- und Tavily-Untergrenze, Tageslimits und Limit je IP (siehe „Live-Modus“).
     * Warteschlange (Queue) im Backend (nur ein Lauf gleichzeitig).
     * Tägliches Kostenlimit/Budget auf Server-Seite.
 
@@ -474,7 +474,7 @@ Um dieses Produkterlebnis bereitzustellen, wird die Architektur wie folgt aufgeb
 
 Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine Backend-Pflicht, keine Keys. Grundlage: `runs/<paper>/<ts>/events.jsonl` (Ereignisprotokoll des Loops, `events.py`) und `dossier.json`. Export ausgewählter Läufe mit `scripts/export_site_data.py` nach `web/public/data`; nur Prod-Läufe veröffentlichen. Ältere Läufe ohne `events.jsonl` werden aus dem Dossier abgespielt. Keys nie ins Frontend.
 
-**Live-Modus (gebaut):** FastAPI `src/repro_agent/api.py`, Start `uvicorn repro_agent.api:app`; Auslieferung von API und Web-App in einem Container über `deploy/serve.py` (`Dockerfile`, `docs/deploy.md`). Das Starten von Jobs braucht `ACCESS_CODE`, ein Lauf gleichzeitig (Semaphor im Speicher, genau ein uvicorn-Worker), Tageslimits `MAX_DAILY_JOBS` (Discovery, Default 5) und `MAX_DAILY_REPRO_JOBS` (Reproduktion, Default 3).
+**Live-Modus (gebaut):** FastAPI `src/repro_agent/api.py`, Start `uvicorn repro_agent.api:app`; Auslieferung von API und Web-App in einem Container über `deploy/serve.py` (`Dockerfile`, `docs/deploy.md`). Die Demo ist **offen, ohne Zugangscode**; die Sperre für Live-Läufe (`src/repro_agent/live_gate.py`, eingebunden in `api.py`) ersetzt ihn. Ein Lauf gleichzeitig (Semaphor im Speicher, genau ein uvicorn-Worker). Sperrgründe (HTTP 503 bzw. 429, Antwort nennt nur den Grund, nie Kontostände): `budget_floor` (`BUDGET_TOTAL_USD` minus Bruttokosten seit `BUDGET_SINCE` unter `LIVE_MIN_BUDGET_USD`, Default 3,0), `tavily_floor` (`TAVILY_CREDITS_TOTAL` minus Credits seit `TAVILY_CREDITS_SINCE` unter `LIVE_MIN_TAVILY_CREDITS`, Default 300; Zähler `src/repro_agent/tavily_usage.py` → `logs/tavily_usage.jsonl`, Schätzung, im Zweifel zu hoch), `daily_limit` (`MAX_DAILY_JOBS` Discovery, Default 5, und `MAX_DAILY_REPRO_JOBS` Reproduktion, Default 3), `busy`. Dazu Limit je IP und Tag (`MAX_DAILY_REPRO_PER_IP`, `MAX_DAILY_DISCOVER_PER_IP`, Default je 1); `TRUST_PROXY=1` nur hinter einem Reverse-Proxy (letzter `X-Forwarded-For`-Eintrag). `GET /api/status` meldet `live`, `reason`, `reset_at` und `kinds`; bei Sperre zeigt das Frontend die Wiedergabe. **Grenze:** Tageszähler und IP-Limits liegen im Speicher, ein Neustart setzt sie zurück; die Untergrenzen bleiben wirksam, weil sie aus den Logs unter `logs/` (Volume!) rechnen.
 - `POST /api/discover`, Stream `GET /api/discover/{job_id}/stream`: Tavily-Discovery auf unterstützten Datensätzen.
 - `POST /api/reproduce` (Katalogeintrag, Default Schnellprüfung mit `QUICK_SEEDS = 3`), Stream `GET /api/reproduce/{job_id}/stream?from=<n>` (SSE, Reconnect liefert Events erneut), `GET /api/jobs/current`. Der Orchestrator läuft mit `graph_repair=True` und **ohne LLM-Cache**; die API **schreibt nie `benchmark/catalog.yaml`**. Der fertige Lauf wird nach `REPRO_EXPORT_DIR` exportiert (`site_export.export_live_run`) und erscheint in der Evidence-Ansicht.
 - Web: Live-Lauf `#/live/<job>` (Phasen-Timeline `web/src/components/run/`), Evidence `#/run/<id>` mit Replay, Katalog `#/catalog`, Discover `#/discover`. Die Steuerung erscheint nur, wenn die API erreichbar ist; sonst Replay des letzten Laufs. Statischer Spiegel: `.github/workflows/pages.yml`.
@@ -490,13 +490,16 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [ ] Preise pro Modell in TF-Konsole notieren, Kosten-Log kalibrieren
 - [x] Benchmark-Liste festgelegt: 6 Papers, 8 Paper-Claim-Einheiten statt 8–10 Papers (`benchmark/experiments/benchmark_v2.md`); v2, v3, v4 gelaufen und ausgewertet
 - [x] Live-Modus (FastAPI + SSE) gebaut (`src/repro_agent/api.py`)
-- [x] Hosting-Optionen verglichen, Empfehlung Coolify (`docs/deploy.md`); **Deployment und Demo-URL stehen aus**
+- [x] Hosting-Optionen verglichen, Empfehlung Coolify (`docs/deploy.md`); **Deployment und Demo-URL liegen beim Nutzer**
 - [x] Benchmark auswerten, Zahlen ins README (v4, präzisionsorientiert; Devpost-Texte auf v4)
 - [x] Katalog: Referenz-Papers Kipf und Shchur mit echten Läufen (2026-10-04)
 - [x] Demo-Video gerendert (Film v8, siehe „Demo und Einreichung“)
 - [x] Live-Läufe überschrieben `benchmark/fixtures/` (gefunden und behoben 2026-10-04, Merge `fix-live-fixtures`): `TAVILY_MODE=live` schreibt nie mehr nach `benchmark/fixtures/`, Tests arbeiten auf einer Kopie mit Wächter. Bekannte Grenze: Repo-Suche, Repo-Dateien und Zielwert-Extraktion **lesen** im Live-Modus weiter vorhandene Fixtures (kein neuer Tavily-/LLM-Aufruf, wenn eine Fixture existiert)
-- [ ] Deployment und Demo-URL (Nutzer), Repo öffentlich (Nutzer)
-- [ ] Video auf YouTube hochladen, Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`; Demo-URL, Video-Link, Zugangscode noch `TBD`), Feedback-Feld aus `docs/nebius_feedback.md`
+- [x] Offene Demo ohne Zugangscode (Merge `open-demo-lock`, 2026-10-07): Budget- und Tavily-Untergrenze, Limit je IP, `/api/status`, Tavily-Credit-Zähler; Nutzungsfälle im README (Merge `impact-usecases`)
+- [ ] Datensätze v2 (`datasets-v2`) in Arbeit (Stand 2026-10-07)
+- [ ] **Film neu rendern:** Film v8 zeigt in Szene 3 das Zugangscode-Feld und passt nicht mehr zur offenen Demo; neues Skript `docs/video_script.md`, Regie `docs/video_director.md` anpassen (Reviewer-Session)
+- [ ] **Limits in zwei Stufen** (Nutzer setzt die Variablen in Coolify und deployt neu; Begründung und Rechnung `docs/deploy.md`, „Limits bis 15.12.“): bis 2026-11-30 `MAX_DAILY_REPRO_JOBS=1`, `MAX_DAILY_JOBS=1`; **ab 2026-12-01** (Bewertung 01.–15.12.) `MAX_DAILY_REPRO_JOBS=3`. Nicht während eines laufenden Jobs deployen
+- [ ] Nutzer: Deployment und Demo-URL, Repo öffentlich, Video auf YouTube hochladen, Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`; Demo-URL und Video-Link noch `TBD`, kein Zugangscode), Feedback-Feld aus `docs/nebius_feedback.md`
 
 ## Projektstruktur (tatsächlich)
 
