@@ -47,7 +47,6 @@ type: Literal["seed_variance","parameter_change","reported_number","not_measurab
 type_reason: str           # one sentence from the LLM (why this type)
 # parameter_change
 param: str | None          # key from the task allow-list, e.g. "input_window"
-from_value: str | None     # our main setting, taken from the plan/code by the LLM or the allow-list default
 to_value: str | None       # value the objection names; must occur in the quote
 # reported_number
 reported_value: float | None   # must occur in the quote as a number
@@ -114,14 +113,14 @@ The Evidence view shows the reason when an objection is not measurable (e.g. "sp
 
 ### seed_variance
 Run `K = min(5, S)` **extra** seeds `S .. S+K-1` with the **final main code** (the code of the verdict, `discarded` hashes excluded), one branch each, same pipeline as the main seeds (smoke, `unshare -n`, static code check, fresh harness). Pool = main seeds + extra seeds.
-- `bestaetigt` if `std(pool) >= tol` **or** `|mean(extra) - main_mean| > tol`.
+- `bestaetigt` (with at least 2 valid extra seeds) if `std(pool) >= tol` **or** `|mean(extra) - main_mean| > tol`.
 - `widerlegt` if both are false and at least `ceil(K/2)` extra seeds are valid.
 - `offen` otherwise (fewer valid extra seeds, or the main run has no valid seeds).
 
 Rationale: a seed dependence matters when the spread alone is as large as the tolerance used for the verdict, or when fresh seeds land elsewhere than the original seeds.
 
 ### parameter_change
-One new code from the code role: prompt = task description + plan + final main code + "Change exactly this setting: `<param>` from `<from_value>` to `<to_value>`. Change nothing else. Return the full script." Then the normal seed-0 repair loop (`_run_seed`, max `MAX_ATTEMPTS_PER_CLAIM` attempts), then `K3 = min(3, S)` seeds total (seed 0 plus 2 more, seeds `0..K3-1`), own branches. Main comparison uses the **same seeds** of the main run (`main_mean_k3` = mean of the main measurement on seeds `0..K3-1`) so the comparison is paired.
+One new code from the code role: prompt = task description + plan + final main code + "Change exactly this setting: set `<param>` to `<to_value>` (our current value is whatever the main code uses; the LLM does not guess it). Change nothing else. Return the full script." Then the normal seed-0 repair loop (`_run_seed`, max `MAX_ATTEMPTS_PER_CLAIM` attempts), then `K3 = min(3, S)` seeds total (seed 0 plus 2 more, seeds `0..K3-1`), own branches. Main comparison uses the **same seeds** of the main run (`main_mean_k3` = mean of the main measurement on seeds `0..K3-1`) so the comparison is paired.
 - `delta = new_mean - main_mean_k3`.
 - *Approved change:* `SE = pooled_std / sqrt(n)` with `pooled_std = sqrt((s_new^2 + s_main^2) / 2)` over the `n` paired seeds (sample std, ddof 1).
 - `bestaetigt` if `|delta| > max(tol, 2*SE)`.
@@ -190,3 +189,10 @@ Type classification with fake LLM (all four types, demotion by deterministic che
 2. DLinear fixture dress rehearsal with real LLM and real Nebius sandbox on Token Factory; counts against the 1.00 USD cap, 0 Tavily credits (fixture). Approved.
 3. Thresholds approved: `seed_variance` rule as written, K = 5/3; `parameter_change` rule changed (SE rule above).
 4. API default on (quick mode limits above); off in Orchestrator and benchmark scripts. Approved.
+
+## Implementation notes (phase B)
+
+- Events carry the object type as `otype` (the field `type` is the event type). `objection_classified`, `objection_experiment` (stage `start`/`seed`/`end`), `objection_checked`, `objection_round_end` (`seconds`, `n_experiments`, `quick`, `cost_net_usd`).
+- The round uses the first paper claim with a valid measurement (`origin == "paper"`). Findings about another claim's metric are demoted (`reported_metric` must equal that claim's metric).
+- The paired main seeds of `parameter_change` are the first three seeds that the final main code measured.
+- Module `src/repro_agent/objection_experiments.py`; wiring `Orchestrator._objection_round` (after `_community_round`), switch `objection_experiments`/`objection_quick`.
