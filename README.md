@@ -78,6 +78,16 @@ Tavily's effect on the benchmark is small (see below); its main role in the prod
 
 **Not built:** objection findings turned into their own experiments (for example one branch per seed claimed by an issue), Tavily Research for citable sources (role 7), and the "re-run" mode that executes the authors' code.
 
+## What Nullius found: SL-GCN on Cora
+
+A catalog check of a recent paper, one of the first claims Nullius ran on a Discovery find. Not reproduced with our setup; this says nothing yet about the paper.
+
+- **Claim:** Stuart-Landau Oscillatory GNN (arXiv 2511.08094) reports SL-GCN at **82.92 ± 1.39 %** on Cora with Shchur-style random splits (Table 2, arXiv v2; `benchmark/catalog.yaml`, entry `disc_2511_08094`). The paper averages over 100 splits and initialisations.
+- **Measured:** **0.783 ± 0.018** accuracy (mean ± std over 10 seeds), against target 0.8292 with tolerance ±0.01, so the gap (0.046) is more than 3 × tolerance: verdict "not reproduced" (`web/public/data/disc_2511_08094/20260930-200050/zeugnis.md`, `dossier.json`).
+- **Effort:** 1 generated program, 10 of 10 seeds valid, 0 repairs, 0.025 $ gross (`catalog.yaml`; `events.jsonl`, `run_end`). The graph ablation shows the code uses the graph (0.751 with edges, 0.559 without, seed 0).
+- **Evidence:** [run page](web/public/data/disc_2511_08094/20260930-200050/zeugnis.md); in the web app `#/run/disc_2511_08094--20260930-200050` (target quote with SHA-256, plan, code, branch tree, replay).
+- **Read with care:** Nullius matched the reference verdict on only **2 of 8** benchmark units, so a miss can be a weakness of our agent, not of the paper. The first run on this claim (`20260930-194446`, same folder) measured 0.552 and was flagged "method not implemented". Method fidelity is not checked (overall statement: provisional). We use 10 seeds instead of 100 splits. We did not contact the authors and make no claim about them.
+
 ## Product tour
 
 **Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that ran once through the full loop; live runs need no sign-in; one run at a time, daily and per-IP limits, and they pause when the budget floor is reached, then the recorded run is shown), **Live run**, A reproduction streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements and repairs as they happen. If a live run cannot start, the UI offers the last finished run as a replay. **Evidence**: the certificate is a page of its own: what Tavily found and the target value on the left, what the sandbox measured on the right, branch tree, step-by-step replay. The web app is a static React app (`web/`); live controls appear only when the API is reachable.

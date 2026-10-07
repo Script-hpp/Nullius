@@ -19,6 +19,8 @@ The product has five pages: Overview, **Discover** (Tavily finds new papers on s
 - *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
 - *A PhD student or ML team* checks the number before building on a paper.
 
+**What Nullius found.** A recent paper on a supported benchmark, the Stuart-Landau Oscillatory GNN (arXiv 2511.08094), reports 82.92 ± 1.39 % for SL-GCN on Cora with random splits (Table 2, arXiv v2). Nullius rebuilt the experiment and measured 0.783 ± 0.018 over 10 seeds (tolerance ±0.01), so the certificate says "not reproduced with our setup": one generated program, 10 of 10 seeds valid, no repairs, 0.025 $ gross, and the graph ablation confirms the code uses the graph. Read this with care: Nullius agreed with the reference verdict on only 2 of 8 benchmark units, so a miss can be a weakness of our agent; the paper averages over 100 splits where we use 10 seeds; method fidelity is not checked, so the overall statement stays provisional. We have not contacted the authors and claim nothing about them. Sources: `benchmark/catalog.yaml` (`disc_2511_08094`), `web/public/data/disc_2511_08094/20260930-200050/` (`zeugnis.md`, `dossier.json`, `events.jsonl`); Evidence page `#/run/disc_2511_08094--20260930-200050`.
+
 **Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (fixed and random splits) and ETTh1 (horizon 96). CPU only, claims that run in minutes. "Reproduced" means the target value was reached according to the harness; **method fidelity is not checked**.
 
 ## How we built it
