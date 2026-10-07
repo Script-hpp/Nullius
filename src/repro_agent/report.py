@@ -6,6 +6,24 @@ from .dossier import Dossier
 from .droplast_note import droplast_text
 
 
+def describe_check(o: dict) -> str:
+    """Ein Satz: was wurde fuer diesen Einwand gemessen (oder warum nicht)."""
+    m, t = o.get("measured") or {}, o["type"]
+    if t == "not_measurable" or o["status"] == "nicht pruefbar":
+        return f"not measurable: {o.get('note') or o.get('type_reason') or 'stays text'}"
+    if t == "reported_number":
+        sup = {"paper": "supports the paper's value", "reported": "supports the reported value", "both": "supports both values",
+               "neither": "supports neither value"}.get(m.get("supports", ""), "no comparison")
+        return f"reported number {o.get('reported_value')}; our measurement {m.get('mean', float('nan')):.4f} {sup}" + (f" ({o['note']})" if o.get("note") else "")
+    if t == "seed_variance" and "mean" in m:
+        return (f"{m.get('n_extra')} extra seeds: mean {m['mean']:.4f}, std over all seeds {m['std_pool']:.4f} "
+                f"(main mean {m['main_mean']:.4f})")
+    if t == "parameter_change" and "delta" in m:
+        return (f"{o.get('param')} = {o.get('to_value')}: mean {m['mean']:.4f} vs {m['main_mean']:.4f} for the main code "
+                f"(delta {m['delta']:+.4f}, {m['n']} paired seeds)")
+    return f"{t}: {o.get('note') or 'no valid measurement'}"
+
+
 def render_markdown(dossier: Dossier) -> str:
     lines = [f"# Reproduktions-Zeugnis: {dossier.paper_id}", ""]
     if dossier.warnings:
@@ -64,6 +82,12 @@ def render_markdown(dossier: Dossier) -> str:
             lines.append("No public discussion found.")
         lines.append(f"Abfrage: {c.get('queried_at', '?')} ({c.get('mode', '?')}), {len(c.get('pages', []))} Seiten gelesen, "
                      f"{c.get('dropped', 0)} Aussagen verworfen (Zitat nicht im Text).")
+        lines.append("")
+    if dossier.objection_checks:
+        lines.append("## Objections checked (Tavily role 3 -> own experiments, nur Bericht, nicht Teil des Urteils)")
+        for o in dossier.objection_checks:
+            lines.append(f"- \"{o['quote']}\" ({o['url']}) -> {describe_check(o)} -> {o['status']}")
+        lines.append("bestaetigt/widerlegt gilt nach der vorab festgelegten Regel auf diesem Task; die Autorin des Einwands kann ein anderes Setup benutzt haben.")
         lines.append("")
     for cid, ex in dossier.explanations.items():
         lines.append(f"## Possible explanations für {cid} (Tavily Rolle 6, ungeprüfte Hypothesen, nicht Teil des Urteils)")

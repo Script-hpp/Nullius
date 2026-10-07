@@ -114,6 +114,9 @@ class Dossier:
     # Modus Nachlauf (nachlauf.py): claim_id -> {repo, commit, command, command_source, command_documented, command_diff, env_diff, seed_method,
     # own_metric (je Seed), self_check (P3), independence (P2), test_loader}. Leer im Nachbau.
     nachlauf: dict = field(default_factory=dict)
+    # Einwand-Experimente (objection_experiments.py): belegte Funde der Community-Suche, eingeordnet und, wo messbar, im eigenen Branch
+    # geprueft. Nur Bericht, nie Teil des Urteils; Versuche stehen hier, nicht in `attempts`.
+    objection_checks: list = field(default_factory=list)
 
     def save(self, timestamp: str) -> Path:
         run_dir = REPO_ROOT / "runs" / self.paper_id / timestamp
@@ -146,6 +149,7 @@ class Dossier:
             edge_direction=data.get("edge_direction", {}),
             droplast_notes=data.get("droplast_notes", {}),
             community=data.get("community"),
+            objection_checks=data.get("objection_checks", []),
             explanations=data.get("explanations", {}),
             summary=data.get("summary"),
             nachlauf=data.get("nachlauf", {}),

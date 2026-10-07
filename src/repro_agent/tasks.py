@@ -45,6 +45,9 @@ class Task:
     val_smoke_ids: tuple[str, ...] = ()
     val_smoke_ids_cmd: str = ""
     val_smoke_dims: tuple[int, ...] | None = None
+    # Einwand-Experimente (objection_experiments.py): Einstellungen, die ein Einwand aendern darf (Schluessel, Beschreibung).
+    # Daten, Splits und Metrik gehoeren nie dazu; leer = keine parameter_change-Experimente fuer diesen Task.
+    tunable: tuple[tuple[str, str], ...] = ()
 
     def env_for(self, seed: int) -> str:
         if self.seeds_per_split:
@@ -97,6 +100,25 @@ def data_check_cmd(path: str) -> str:
     return f"test -s {path} || {{ echo 'Setup-Check: {path} fehlt oder ist leer' >&2; exit 1; }}"
 
 
+CORA_TUNABLE = (
+    ("hidden_units", "number of hidden units per layer"),
+    ("dropout", "dropout rate"),
+    ("weight_decay", "L2 regularisation / weight decay"),
+    ("learning_rate", "optimiser learning rate"),
+    ("epochs", "number of training epochs"),
+    ("num_layers", "number of layers"),
+    ("feature_normalization", "row-normalisation of the node features"),
+)
+ETTH1_TUNABLE = (
+    ("input_window", "number of past hourly steps used as input (L <= 720)"),
+    ("epochs", "number of training epochs"),
+    ("learning_rate", "optimiser learning rate"),
+    ("batch_size", "batch size"),
+    ("individual", "one linear layer per channel (individual) versus one shared layer"),
+    ("decomposition_kernel", "moving-average kernel size of the trend/seasonal decomposition"),
+)
+
+
 def cora_task() -> Task:
     prep = [
         _file_cmd(HARNESS_DIR / "cora_data.py", "/opt/prep/cora_data.py"),
@@ -105,6 +127,7 @@ def cora_task() -> Task:
         data_check_cmd("/data/cora_public.npz"),
     ]
     return Task(
+        tunable=CORA_TUNABLE,
         image="python:3.11-slim",
         setup_cmds=prep,
         harness_files=["cora_data.py", "metrics.py", "verify.py", "cora_eval.py"],
@@ -186,6 +209,7 @@ def etth1_task() -> Task:
         data_check_cmd("/data/etth1_public.npz"),
     ]
     return Task(
+        tunable=ETTH1_TUNABLE,
         image="python:3.11-slim",
         setup_cmds=prep,
         harness_files=["etth1_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "etth1_eval.py"],
@@ -228,6 +252,7 @@ initialisation from the env var SEED (int) and seed numpy and torch with it. Mus
 def cora_lcc_task() -> Task:
     base = cora_task()
     return Task(
+        tunable=CORA_TUNABLE,
         image=base.image,
         setup_cmds=["pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu"],
         harness_files=["cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
