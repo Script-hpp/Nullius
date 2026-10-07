@@ -13,7 +13,7 @@ Laut Produktstrategie (CLAUDE.md, Abschnitt 3 "Live-Katalog") darf ein Paper ers
 | Baustein | Ort | Stand |
 |---|---|---|
 | Discovery | `src/repro_agent/discovery.py` | Tavily Search (Papers, Code, Community) + Extract mit Frage, LLM-Claim (Rolle `extract`, Super), Code-Prüfungen, Cache `logs/discovery_cache.json` (`cache_version` 2) |
-| Discovery-API | `src/repro_agent/api.py` | `POST /api/discover` (Zugangscode aus `ACCESS_CODE`, Whitelist aus `TASKS`, 1 Job gleichzeitig, `MAX_DAILY_JOBS`), `GET /api/discover/{id}/stream` (SSE) |
+| Discovery-API | `src/repro_agent/api.py` | `POST /api/discover` (offen, kein Zugangscode; Sperre über `live_gate.py`: Budget- und Tavily-Untergrenze, `MAX_DAILY_JOBS`, Limit je IP; Whitelist aus `TASKS`, 1 Job gleichzeitig), `GET /api/discover/{id}/stream` (SSE) |
 | Discovery-UI | `web/src/components/Discovery.tsx`, `web/src/discovery.ts` | Live + Replay (`web/public/data/discovery/replay.jsonl`, Token-Factory-Aufnahme) |
 | Reproduktions-Loop | `src/repro_agent/loop.py` (`Orchestrator.run(paper_id)`) | liest Paper und Claims aus `benchmark/papers.yaml` (`load_claims`), Rollen 2/4, Code schreiben, Sandbox, Harness, Urteil, `runs/<paper>/<ts>/` mit `dossier.json`, `events.jsonl`, `zeugnis.md` |
 | Tasks | `src/repro_agent/tasks.py` | `Cora` (Planetoid), `Cora-LCC` (Shchur-Splits), `ETTh1` (Horizont 96, Eingabelänge frei bis 720) |
