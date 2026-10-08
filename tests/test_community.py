@@ -32,6 +32,7 @@ class FakeTools:
         self.crawl_pages, self.read, self.explain_pages, self.repo_pages = crawl_pages or [], read_pages or [], explain_pages or [], repo_pages or []
         self.method_pages = method_pages or []
         self.critique_pages = critique_pages or []
+        self.critique_limit = None
 
     @staticmethod
     def _res(pages):
@@ -47,6 +48,7 @@ class FakeTools:
 
     def search_critique(self, method, dataset, limit=5):
         self.calls.append(("critique", method, dataset))
+        self.critique_limit = limit
         return {**self._res(self.critique_pages), "queries": ["q1", "q2", "q3", "q4"]}
 
     def search_repo_issues(self, slug, limit=5):
@@ -591,3 +593,74 @@ def test_quote_check_stays_strict_and_candidates_store_raw_output():
     orch(tools, Bad())._community_round(kipf_paper(), d)
     assert d.community["findings"] == [] and d.community["candidates"][0]["outcome"] == "dropped_quote_not_in_page"
     assert d.community["candidates"][0]["quote_in_page"] is False
+
+
+# Nachtrag C: Seitenreihenfolge vor dem Schnitt auf MAX_CHUNKS. Die FITS-Seite stand im Lauf von Nachtrag A an Stelle 12 von 22 gelesenen
+# (0-basiert) und fiel unbemerkt hinter docs[:12]. Text: woertlicher Auszug aus dem FITS-README (github.com/VEWOXIC/FITS, "Important Update:
+# 2023-12-25", frei abgerufen am 2026-10-08, nicht ueber Tavily); die Fuellseiten sind synthetisch.
+FITS_README = (
+    "## Important Update: 2023-12-25\n\nWe've identified a significant bug in our code, originally found in Informer. This issue has "
+    "implications for a broad spectrum of research on time series forecasting, including but not limited to:\n\n"
+    "- PatchTST (ICLR 2023)\n- DLinear (AAAI 2022 reported version)\n- FEDformer (ICML 2022)\n\n"
+    "### Description of the Bug:\n\nThe bug stems from an incorrect implementation in the data loader. Specifically, "
+    "the test dataloader uses `drop_last=True`, which may exclude a significant portion of test data, particularly with large batch sizes, "
+    "leading to unfair model comparisons.\n\nThe discovered bug predominantly impacts results on smaller datasets like ETTh1 and ETTh2.\n"
+)
+FITS_QUOTE = "the test dataloader uses `drop_last=True`, which may exclude a significant portion of test data"
+
+
+def dlinear_paper():
+    return {"title": "Are Transformers Effective for Time Series Forecasting?", "dataset": "ETTh1", "arxiv_url": "https://arxiv.org/abs/2205.13504",
+            "claims": [{"id": "c", "extract": {"method": "DLinear", "dataset": "ETTh1"}}], "community": []}
+
+
+def late_fits_scenario():
+    fillers = [(f"https://arxiv.org/html/2601.{i:05d}", f"We compare DLinear on ETTh1 with our model {i}. We tune the hyperparameter grid, "
+                f"report the test set MSE over 3 seeds and the validation set curve. " + "z" * 3000) for i in range(12)]
+    other = ("https://arxiv.org/html/2604.99999", "A KAN model on Weather and ETTm1. We use a unified protocol. Test set results over seeds. "
+             "Our dataloader sets drop_last=True for training only; leakage is avoided.")   # nennt weder DLinear noch ETTh1: wird nicht gelesen
+    return fillers + [other, ("https://github.com/VEWOXIC/FITS", FITS_README)]
+
+
+def test_rank_docs_puts_rare_protocol_keywords_first_and_keeps_ties_in_order():
+    common = "tune the hyperparameter on the validation set and report the test set accuracy"
+    docs = [community.Doc(f"u{i}", common + " " * i) for i in range(4)] + [community.Doc("rare", common + " drop_last leakage")]
+    assert [d.name for d in community.rank_docs(docs)] == ["rare", "u0", "u1", "u2", "u3"]
+    assert [d.name for d in community.rank_docs(docs[:1])] == ["u0"] and community.rank_docs([]) == []
+
+
+def test_late_page_with_rare_protocol_keyword_reaches_the_extractor_and_passes_page_rule(monkeypatch):
+    def run():
+        tools = FakeTools(search_pages=[], critique_pages=late_fits_scenario())
+        d = dossier()
+        community.CACHE_PATH.unlink(missing_ok=True)
+        orch(tools, QuoteLLM([("Test loader drops data.", FITS_QUOTE)]))._community_round(dlinear_paper(), d)
+        return tools, d.community
+    tools, c = run()
+    assert tools.critique_limit == community.CRITIQUE_RESULTS >= 8
+    assert [f["url"] for f in c["findings"]] == ["https://github.com/VEWOXIC/FITS"] and c["findings"][0]["pass_reason"] == "page_names_method"
+    assert c["findings"][0]["kind"] == community.KIND_PROTOCOL
+    assert "https://arxiv.org/html/2604.99999" not in {p["url"] for p in c["pages"]}      # Seite ohne Methode/Datensatz: nicht gelesen
+    assert len(c["pages"]) == 13 and c["not_extracted"] and "https://github.com/VEWOXIC/FITS" not in c["not_extracted"]
+    # alte Reihenfolge (Eingang der Suchergebnisse): die Seite faellt hinter den Schnitt, nichts wird extrahiert
+    monkeypatch.setattr(community, "rank_docs", lambda docs: docs)
+    _, old = run()
+    assert old["findings"] == [] and old["not_extracted"] == ["https://github.com/VEWOXIC/FITS"]
+
+
+def test_generic_pages_without_rare_keywords_do_not_make_findings():
+    fillers = [(u, t) for u, t in late_fits_scenario()[:12]]
+    tools = FakeTools(search_pages=[], critique_pages=fillers)
+    d = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools, QuoteLLM([("Test loader drops data.", FITS_QUOTE)]))._community_round(dlinear_paper(), d)
+    assert d.community["findings"] == [] and d.community["candidates"] == []
+
+
+def test_fits_style_finding_is_accepted_as_protocol_change_by_the_fixed_validation():
+    from repro_agent.objection_experiments import validate
+    finding = {"statement": "The test dataloader drops part of the test data.", "quote": FITS_QUOTE}
+    out = validate({"type": "protocol_change", "reason": "r"}, finding, "mse", {}, ("drop_last",))
+    assert out["type"] == "protocol_change" and out["param"] == "drop_last"
+    generic = {"statement": "Baselines are quoted from original publications.", "quote": "Nonlinear baselines are quoted from their original publications"}
+    assert validate({"type": "protocol_change"}, generic, "mse", {}, ("drop_last",))["type"] == "not_measurable"

@@ -11,8 +11,10 @@ Kontingent: Ergebnis je arXiv-ID in `logs/community_cache.json` (7 Tage), Discov
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -28,6 +30,7 @@ CACHE_VERSION = 3        # 3: generische Kritik-Vorlagen, Foren, Issue-Texte; 2:
 MAX_PAGE_CHARS = 60_000  # laengere Seiten sind Sammlungen/Dumps, keine Diskussion
 COLLECTION_RE = re.compile(r"gist\.github\.com|awesome[-_]|paper[-_]?club|reading[-_ ]?list|papers?[-_]we[-_]love|/awesome", re.I)
 MAX_PAGES = 5            # Treffer der Suche
+CRITIQUE_RESULTS = 8     # Treffer je Kritik-Vorlage (gleiche Credits wie 5; mehr Recall bei schwankender Suche)
 MAX_CRAWL = 3            # Seiten des Issue-Crawls (immer limit)
 MAX_READ = 3             # Discovery-Treffer, die statt einer Suche gelesen werden
 MAX_BODIES = 4           # Issue-Seiten, deren Text per Extract nachgeladen wird (ein Aufruf)
@@ -165,6 +168,17 @@ def select_docs(items: list[dict], title: str, arxiv_id: str, exempt: tuple[str,
     return docs
 
 
+def rank_docs(docs: list[Doc]) -> list[Doc]:
+    """Reihenfolge vor dem Schnitt auf MAX_CHUNKS: Seiten mit Setup-/Protokoll-Stichworten, die in wenigen der gelesenen Seiten vorkommen,
+    zuerst (Gewicht je Stichwort log((N+1)/(df+1)): was auf allen Seiten steht, zaehlt nicht; Gleichstand = Eingangsreihenfolge). Vorher
+    entschied die Reihenfolge der Suchergebnisse, und spaete Treffer fielen unbemerkt heraus (Nachtrag C)."""
+    n = len(docs)
+    present = [{k for k in SETUP_KEYWORDS if k in d.text.lower()} for d in docs]
+    df = Counter(k for s in present for k in s)
+    score = [sum(math.log((n + 1) / (df[k] + 1)) for k in s) for s in present]
+    return [docs[i] for i in sorted(range(n), key=lambda i: (-score[i], i))]
+
+
 def _pages(docs: list[Doc]) -> list[dict]:
     import hashlib
     return [{"url": d.name, "n_chars": len(d.text), "sha256": hashlib.sha256(d.text.encode()).hexdigest()} for d in docs]
@@ -220,7 +234,7 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
         queries.append({"kind": "method_search", "method": method, "dataset": dataset})
     crit_res = None
     if method and dataset and hasattr(tools, "search_critique"):   # generische Kritik-Vorlagen (Fehler, Neubewertung, Folgearbeiten, Foren)
-        crit_res = drop_noise(tools.search_critique(method, dataset, MAX_PAGES), arxiv_id)
+        crit_res = drop_noise(tools.search_critique(method, dataset, CRITIQUE_RESULTS), arxiv_id)
         calls.extend(["search"] * len(crit_res.get("queries", [])))
         queries.append({"kind": "critique_search", "method": method, "dataset": dataset, "queries": crit_res.get("queries", [])})
     urls_seen = [r.get("url", "") for r in res.get("results", [])] if not prior_urls else prior_urls
@@ -243,7 +257,7 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
         items = _with_issue_bodies(tools, items, calls, queries)
     items += list((crawl or {}).get("results", []))
     method_hits = {r.get("url", "") for src in (method_res, crit_res) for r in (src or {}).get("results", [])}
-    docs = select_docs(items, title, arxiv_id, exempt, method, dataset, method_hits)
+    docs = rank_docs(select_docs(items, title, arxiv_id, exempt, method, dataset, method_hits))
     drops: list[dict] = []
     cands: list[dict] = []
     kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files, drops, cands)
@@ -282,9 +296,10 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
     hits = [{"url": r.get("url", ""), "title": r.get("title", ""), "n_chars": len(r.get("raw_content") or r.get("content") or "")}
             for r in items]   # was Tavily lieferte, vor dem Seitenfilter
     read = {d.name for d in docs}
+    not_extracted = [d.name for d in docs[MAX_CHUNKS:]]   # gelesen (bezahlt), aber nach dem Schnitt nicht an den Extraktor gegeben
     return {"findings": findings, "dropped": dropped, "pages": _pages(docs), "queries": queries,
             "reused_discovery": bool(prior_urls), "calls": calls, "hits": hits,
-            "not_read": [h["url"] for h in hits if h["url"] not in read], "dropped_items": drops, "candidates": cands}
+            "not_read": [h["url"] for h in hits if h["url"] not in read], "not_extracted": not_extracted, "dropped_items": drops, "candidates": cands}
 
 
 EXPLAIN_SYSTEM = "You extract possible explanations from web pages. Answer only from the text you are given."

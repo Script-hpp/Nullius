@@ -107,3 +107,52 @@ I expect the FITS `drop_last` finding to pass now if Tavily returns the README a
 ### Acceptance (unchanged)
 
 As in Addendum A. A `protocol_change` entry rests on re-scored main-branch predictions, so criterion 3 (2 measurements in own branches) is not claimed for it.
+
+## Addendum C (2026-10-08): fix of the silent page cut before extraction, and one more DLinear run
+
+Written and committed **before** the run described here. Coordinator task (Nachtrag C). Goal: a normal live run of Zeng DLinear finds the `drop_last` objection by itself and runs it as `protocol_change`. This is a function test of the feature, not a benchmark. No accuracy claim.
+
+### Cause, from stored data only (no new Tavily calls)
+
+Source: `events.jsonl` and `dossier.json` (`community.pages`, `hits`, `candidates`) of the Addendum A run (`20261008-151520`) and the clean Addendum B repeat (`20261008-164946`); FITS README read once from GitHub for free (not Tavily).
+
+1. **Addendum A diagnosis was incomplete.** `community.what_others_found` passes `docs[:MAX_CHUNKS]` (12) to the extractor, in the order of the search results. In the run of Addendum A, 22 pages were read; the FITS README stood at index 12 (0-based), behind the cut. It never reached the extractor. This is why no FITS candidate was logged, and why the addendum could not explain it. The `names_paper` explanation (offline replay) is true but was not the live blocker. Nine more read pages (TSF-Skeleton, LTSF-Benchmark.md, exp_main.py, the LTSF-Linear repo page, LICENSE, README.md, issues #116, #118, #107) were cut the same way, 10 of 22 in total. Nothing in the log showed the cut.
+2. **Addendum B rule works as designed but could not act.** In the clean B repeat, 17 pages were read and the last 5 (LTSF-Linear repo page, LICENSE, issues #107, #108, #117) were cut by the same slice. More important: **no hit among the 30 stored hits is the FITS README, SparseTSF or any page with `drop_last` text.** The only candidate (`decisionintelligence/TFB`) was not read, because the page filter wants method plus dataset in the text. The same four critique queries returned the FITS README in A and did not in B: Tavily search results vary between runs. The B rule (page names the method) was therefore never tested on live data.
+3. `dossier.droplast_notes` (FITS README, SparseTSF, TFB) is a **fixed source list** in `droplast_note.py`, not a Tavily result. It must not be shown as a find. It stays as is.
+
+So two obstacles: (a) a silent cut by arrival order, which can remove exactly the short, focused pages (a README bug notice) behind long papers; (b) search variance, which the code cannot remove but can make less costly.
+
+### Fix (generic, no paper- or term-specific rule, no changed query text)
+
+1. `community.rank_docs`: before the cut to `MAX_CHUNKS` (12 pages, unchanged, so extraction cost stays bounded), the pages read are ordered by a rarity score: for each setup/protocol keyword of `SETUP_KEYWORDS` that occurs in the page, weight `log((N+1)/(df+1))`, with `N` = pages read and `df` = pages containing the keyword; sum over the page's keywords; ties keep the arrival order. A keyword that stands on every page (hyperparameter, test set, seeds) weighs about 0. A page with a keyword that few pages share (here: `drop_last`, `leakage`) goes first. The keyword set is the existing `SETUP_KEYWORDS`; nothing new is hard-coded. With 12 pages or fewer the order has no effect on what is extracted.
+2. `CRITIQUE_RESULTS = 8`: the four critique searches ask for 8 results instead of 5 (same credits: a basic search costs 1 credit, `logs/tavily_usage.jsonl` shows `credits: 1, depth: basic`). More recall against the search variance of point 2 above. Whether Tavily returns more than 5 is not checked offline.
+3. Pages read but cut are now logged: `community.not_extracted` (dossier and `community` event). Nothing else in the event changes (`web/` is not touched).
+
+Not changed: `names_paper` and the page-level rule of Addendum B, the quote check, the page filter, the noise filter, objection classification, the fixed demotion rules, the `protocol_change` rule (`effect >= tolerance/4`), the experiment limits, the harness. No query text.
+
+Known limits, stated now: (i) ranking by rarity is a heuristic; a long paper with a rare keyword can still outrank a README and vice versa. (ii) With IDF over a small set (N around 15 to 25) the weights are coarse. (iii) The Addendum B page-level rule still lets generic findings through on pages that name the method (3 such findings in the clean B repeat); this fix does not tighten it, and precision of the community round is **not improved** by it. (iv) The ranking may cut pages that gave kept findings before; that is reported if it happens.
+
+### Offline tests (no network)
+
+`tests/test_community.py`, new: `rank_docs` puts the rare-keyword page first and keeps ties in order; a scenario modelled on Addendum A (12 generic pages naming DLinear and ETTh1 with common keywords, then a page with a verbatim excerpt of the FITS README at index 13 of the critique results) yields the finding with `pass_reason = page_names_method`, the page is among the 13 read; with the old order (`rank_docs` replaced by identity) the same input yields no finding and `not_extracted == [FITS url]`; a page that names neither the method nor the dataset (a KAN-paper stand-in with `drop_last` in its text) is not read; 12 generic pages alone give no finding and no candidate; the critique search is asked for `CRITIQUE_RESULTS >= 8` results; the FITS-style quote passes the fixed `protocol_change` validation, a generic "baselines are quoted from their publications" quote is demoted to `not_measurable`. The text of the FITS excerpt is verbatim from the public README; the filler pages are synthetic.
+
+### Run (phase D of this addendum)
+
+One live run: `LLM_PROVIDER=tokenfactory TAVILY_MODE=live SANDBOX_BACKEND=nebius nohup uv run python scripts/run_objection_live.py --paper zeng_dlinear_2023 --claim dlinear_etth1_96_mse --fresh-community`, no `timeout` wrapper, full mode (5 seeds), product configuration with `objection_experiments=True`, no LLM cache. Sandbox backend `nebius` (a parallel Docker run on the laptop forbids `local`; if Nebius fails, ask the coordinator, do not switch).
+
+- **Caps for Addendum C:** Token Factory **0.25 USD gross**, Tavily **40 credits** (counted from the start timestamp of the run in `logs/tavily_usage.jsonl`; other sessions share that log, so any foreign call in the window is reported). Observed full runs cost 0.18 (A) to 0.33 USD gross (B); the 0.25 cap is therefore a **target, not a hard stop**: an abort in the middle of the run would give no result, so the run keeps the standard brake `MAX_COST_PER_RUN_USD=0.50` and an excess is reported as it is. Expected Tavily use about 18 to 24 credits (4 critique searches cost the same with 8 results).
+- **Number of runs: 1.** A repeat only after an infrastructure failure (sandbox setup, API outage, the known role-2 `ExtractionInvalid` crash before the community round) and only if the caps allow. Not a repeat to improve a result.
+
+### Acceptance criteria (all required; otherwise "not met")
+
+1. The run completes with a verdict and writes `dossier.json`, `events.jsonl`, `zeugnis.md`.
+2. The community round, not `droplast_notes`, delivers a finding whose quote is verbatim on a stored page and is about the test loader dropping the last batch (a `kind = protocol note` finding with its URL).
+3. The objection round classifies a finding as `protocol_change` (after the fixed demotion) **without any manual input**, and `objection_checks` holds that entry with type `protocol_change`.
+4. Both numbers are measured: the entry shows the full-test-set value and the `drop_last` value from at least 2 valid main seeds, and its status follows the fixed rule applied to the stored numbers (recomputed in the evaluation).
+5. The main verdict (`urteil`, mean, std) rests on main attempts only.
+
+Expectation from the manual run, not a criterion: full 0.3793, truncated 0.3754 (batch size 128), paper 0.375; I expect `widerlegt` or `bestaetigt` depending on the batch size named in the quote (effect threshold 0.0025; 0.3793 vs 0.3754 is 0.0039 at batch size 128).
+
+### Honest expectation
+
+Whether the FITS README (or another page with the statement) is returned again is up to Tavily: one of two live runs returned it. The fix removes the silent cut and widens the search a little; it cannot force the hit. If no such finding appears, the result is "not met", reported with hits, `not_extracted` and drop reasons from the log. No second run for that.
