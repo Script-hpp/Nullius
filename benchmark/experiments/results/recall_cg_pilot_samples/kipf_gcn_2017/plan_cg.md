@@ -1,0 +1,15 @@
+- Model: 2‑layer GCN (GraphConvolution) → input 1433 → hidden 16 → output 7 (classes).  
+- Activations: ReLU after first GCN, linear (identity) after second GCN.  
+- Dropout: 0.5 applied to both layers (sparse dropout on inputs).  
+- Weight decay (L2): 0.0005 × ‖W₁‖² (only first GCN weight matrix).  
+- Optimizer: Adam with learning rate 0.01.  
+- Loss: masked softmax‑cross‑entropy (using train/val/test masks).  
+- Metric: masked accuracy.  
+- Preprocessing: row‑normalize features; adj̃ = (D+I)^{-1/2} (A+I) (D+I)^{-1/2}; convert to sparse tuple.  
+- Training: full‑batch (no mini‑batching), up to 200 epochs, early stopping if val loss does not improve for 10 consecutive epochs (patience = 10).  
+- Model selection: restore weights from epoch with lowest validation loss.  
+- Seed: read `SEED` env var, set `numpy.random.seed(SEED)` and `tf.set_random_seed(SEED)`.  
+- Output: for each node in `test_idx`, write `id,prediction` where prediction = argmax of softmax logits.  
+- (uncertain) batch_size: full batch (standard for Planetoid splits).  
+- (uncertain) number of layers: 2 (default GCN architecture).  
+- (uncertain) heads: not applicable (GCN uses a single head).
