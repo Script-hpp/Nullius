@@ -187,6 +187,11 @@ STATIC_LIB_HINT = (
     "and implement every layer in plain PyTorch/NumPy."
 )
 ONE_CLASS_HINT = "\n\nAll predictions are the same class, so the model did not learn. Check:\n"
+OOM_HINT = (
+    "\n\nThe process was killed or could not allocate memory: it ran out of memory (the sandbox has a few GB). Do not build dense tensors "
+    "of size nodes x nodes x heads (or windows x channels x length x length); use sparse or edge-list operations, or process in chunks, and "
+    "free intermediate tensors. Keep the method described in the plan."
+)
 
 
 def repair_hint(summary: str | None) -> str:
@@ -197,6 +202,8 @@ def repair_hint(summary: str | None) -> str:
         return STATIC_LIB_HINT
     if "einzige Vorhersage-Klasse" in text:
         return ONE_CLASS_HINT + CHECKLIST_CLASSIFICATION
+    if ("Traceback" not in text and "Killed" in text) or "can't allocate memory" in text or "out of memory" in text.lower():
+        return OOM_HINT
     return ""
 
 
@@ -232,7 +239,7 @@ class Orchestrator:
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
-        spec_mode: bool = False, code_grounded: bool = False,
+        spec_mode: bool = False, code_grounded: bool = False, io_helper: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
@@ -243,6 +250,10 @@ class Orchestrator:
         # code_grounded (docs/recall_analysis_3.md Hebel 3): der Repo-Ausschnitt (S4) geht ROH in Plan-, Code- und Reparatur-Prompt,
         # Zahlen erzwingt S2 (nur Zahlenschluessel). Modus: Nachbau aus Paper UND Autorencode, unabhaengig gemessen. Default aus.
         self.code_grounded = code_grounded
+        # io_helper (docs/recall_analysis_3.md Hebel 4): unser Ausgabevertrag laeuft ueber harness/nullius_io.py. Der Agent liefert Arrays,
+        # der Helfer schreibt predictions.csv/val_predictions.csv und die SMOKE-Teilmengen. Nur Code-/Reparatur-Prompt (nicht der Plan). Default aus.
+        self.io_helper = io_helper
+        self.train_timeout_s = TRAIN_TIMEOUT_S   # je Seed; Gate-Laeufe setzen es aus der Laufzeit der Referenzloesung (timeouts.train_timeout)
         self.spec_mode = spec_mode or code_grounded
         self.spec: Spec | None = None
         self.setup_v2 = setup_v2 or self.spec_mode
@@ -445,7 +456,12 @@ class Orchestrator:
                        to_hash=hashlib.sha256(new.encode()).hexdigest()[:12], overrides=report["overrides"])
         return new
 
+    def _prompt_task(self, task: Task) -> Task:
+        """Task fuer Code- und Reparatur-Prompt: mit `io_helper` der Ausgabevertrag ueber den Helfer, sonst unveraendert (Prompts byte-gleich)."""
+        return task.with_io_helper() if getattr(self, "io_helper", False) else task
+
     def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
+        task = self._prompt_task(task)
         return self._enforce_spec(self._code_from_llm(
             CODE_SYSTEM,
             f"{task.data_description}\n\n{self._details_prompt()}\n\n"
@@ -457,6 +473,7 @@ class Orchestrator:
         ))
 
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
+        task = self._prompt_task(task)
         return self._enforce_spec(self._code_from_llm(
             CODE_SYSTEM,
             f"{task.data_description}\n\n{self._details_prompt()}\n\n"
@@ -623,6 +640,9 @@ class Orchestrator:
             return None
         return {"executed": sorted(cov.executed), "missing": sorted(cov.missing)}
 
+    def _train_timeout(self) -> int:
+        return int(getattr(self, "train_timeout_s", TRAIN_TIMEOUT_S))
+
     def _run_and_eval(
         self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False,
         ablate: bool = False, with_val: bool = False, mask_val: bool = False, edge_probe: bool = False,
@@ -634,11 +654,13 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
+        if getattr(self, "io_helper", False) and task.io_config:
+            sb.put_file(branch, f"{WORKDIR}/nullius_io.py", task.io_helper_source().encode())
         if edge_probe:   # B2: synthetischer Graph statt Datensatz, eigene Auswertung (kein Harness, kein Smoke, keine Abdeckung)
             path, n_nodes, n_val, n_test = task.edge_probe
             npz, truth = make_probe(n_nodes, n_val, n_test, seed=0, n_classes=task.probe_dims[0], n_features=task.probe_dims[1])
             sb.put_file(branch, path, probe_bytes(npz))
-            r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", TRAIN_TIMEOUT_S)
+            r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", self._train_timeout())
             if r.timed_out or r.exit_code != 0:
                 return {"status": "fehler", "detail": "timeout" if r.timed_out else (r.stderr or r.stdout)}
             try:
@@ -668,10 +690,10 @@ class Orchestrator:
         r = sb.run(
             branch,
             f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n {runner}",
-            TRAIN_TIMEOUT_S,
+            self._train_timeout(),
         )
         if r.timed_out:
-            return {"status": "timeout", "detail": f"Training > {TRAIN_TIMEOUT_S}s"}
+            return {"status": "timeout", "detail": f"Training > {self._train_timeout()}s"}
         if r.exit_code != 0:
             return {"status": "fehler", "detail": (r.stderr or r.stdout)}
         coverage = self._measure_coverage(branch) if with_cov else None
@@ -1401,7 +1423,7 @@ class Orchestrator:
             if status == "timeout":
                 if not product:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
-                summary = TIMEOUT_REPAIR_MESSAGE.format(limit=TRAIN_TIMEOUT_S)   # Produktpfad: schneller machen
+                summary = TIMEOUT_REPAIR_MESSAGE.format(limit=self._train_timeout())   # Produktpfad: schneller machen
             if n < self.settings.max_attempts_per_claim:
                 hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:
