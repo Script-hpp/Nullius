@@ -192,17 +192,25 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
     items = (res.get("results", []) + (method_res or {}).get("results", []) + (repo_res or {}).get("results", [])
              + list((crawl or {}).get("results", [])))
     docs = select_docs(items, title, arxiv_id, exempt, method, dataset, {r.get("url", "") for r in (method_res or {}).get("results", [])})
-    kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files)
+    drops: list[dict] = []
+    kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files, drops)
     n_before = len(kept)
+    all_kept = kept
     kept = [o for o in kept if o.source.lower().startswith(exempt) if exempt] + [
         o for o in kept if not (exempt and o.source.lower().startswith(exempt)) and names_paper(f"{o.statement} {o.quote}", title, arxiv_id, method)]
     dropped += n_before - len(kept)   # Aussage ohne Methode/Titel im Satz oder Zitat: zu allgemein
+    drops += [{"url": o.source, "reason": "names_neither_method_title_nor_arxiv_id", "topic": o.topic, "statement": o.statement[:300],
+               "quote": o.quote[:300]} for o in all_kept if o not in kept]
     findings = []
     for o in kept:
         kind = classify(o.statement, o.quote, o.protocol)
         findings.append(asdict(Finding(o.topic, o.statement, o.quote, o.source, kind, o.repo_check, KIND_LABEL[kind])))
+    hits = [{"url": r.get("url", ""), "title": r.get("title", ""), "n_chars": len(r.get("raw_content") or r.get("content") or "")}
+            for r in items]   # was Tavily lieferte, vor dem Seitenfilter
+    read = {d.name for d in docs}
     return {"findings": findings, "dropped": dropped, "pages": _pages(docs), "queries": queries,
-            "reused_discovery": bool(prior_urls), "calls": calls}
+            "reused_discovery": bool(prior_urls), "calls": calls, "hits": hits,
+            "not_read": [h["url"] for h in hits if h["url"] not in read], "dropped_items": drops}
 
 
 EXPLAIN_SYSTEM = "You extract possible explanations from web pages. Answer only from the text you are given."

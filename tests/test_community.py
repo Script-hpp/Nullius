@@ -439,3 +439,26 @@ def test_same_page_with_query_string_or_fragment_is_read_once():
              {"url": "https://github.com/tkipf/gcn/issues/15", "raw_content": "other issue"}]
     docs = community.select_docs(items, KIPF, "1609.02907", ("https://github.com/tkipf/gcn/",))
     assert [d.name for d in docs] == [base, "https://github.com/tkipf/gcn/issues/15"] and docs[0].text == "issue text A"
+
+
+def test_hits_and_drop_reasons_are_logged():
+    page = f"Review of {KIPF}. Some say: {TOO_GOOD}. Another review: GCN accuracy on Cora is lower with random splits."
+    tools = FakeTools(search_pages=[("https://openreview.net/forum?id=1", page)])
+    llm = QuoteLLM([("Results look too good.", TOO_GOOD), ("GCN is worse with random splits.", "GCN accuracy on Cora is lower with random splits")])
+    d = dossier()
+    o = orch(tools, llm)
+    o._community_round(kipf_paper(), d)
+    c = d.community
+    assert [h["url"] for h in c["hits"]] == ["https://openreview.net/forum?id=1"] and c["not_read"] == []
+    assert [x["reason"] for x in c["dropped_items"]] == ["names_neither_method_title_nor_arxiv_id"]
+    assert c["dropped_items"][0]["quote"] == TOO_GOOD[:300] and len(c["dropped_items"]) == c["dropped"]
+    ev = types(o, "community")[0]
+    assert ev["hits"] == c["hits"] and ev["dropped_items"] == c["dropped_items"]
+
+
+def test_quote_not_in_page_reason():
+    tools = FakeTools(search_pages=[("https://github.com/a/b/issues/1", PAGE_ISSUE)])
+    o, d = orch(tools, FakeLLM([ISSUE, REPORT])), dossier()
+    o._community_round(paper(), d)
+    assert {x["reason"] for x in d.community["dropped_items"]} <= {"quote_not_in_page", "names_neither_method_title_nor_arxiv_id"}
+    assert len(d.community["dropped_items"]) == d.community["dropped"]
