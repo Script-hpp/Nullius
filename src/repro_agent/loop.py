@@ -819,7 +819,7 @@ class Orchestrator:
             self._emit("source", **rec)
         self._emit("community", mode=mode, n_findings=len(found["findings"]), dropped=found["dropped"], queries=found["queries"],
                    reused_discovery=found["reused_discovery"], findings=found["findings"],
-                   hits=found.get("hits", []), not_read=found.get("not_read", []), dropped_items=found.get("dropped_items", []))
+                   hits=found.get("hits", []), not_read=found.get("not_read", []), dropped_items=found.get("dropped_items", []), candidates=found.get("candidates", []))
         if deviating and entry.get("explanations"):
             expl = entry["explanations"]
             for cid in deviating:

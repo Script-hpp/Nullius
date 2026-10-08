@@ -543,3 +543,51 @@ def test_extract_failure_keeps_the_paid_hits():
     d = dossier(repo=repo)
     orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
     assert d.community is not None and [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/1"]
+
+
+# ---- Addendum B: Seitenebene fuer Setup-Themen -----------------------------------------------------------------------------
+
+DL = "the test dataloader uses drop_last=True, which may exclude a significant portion of test data"
+
+
+def _page_rule(page_text, pairs):
+    tools = FakeTools(search_pages=[], critique_pages=[("https://example.org/fits", page_text)])   # Seite kommt als Kritik-Treffer
+    d = dossier()
+    o = orch(tools, QuoteLLM(pairs))
+    community.CACHE_PATH.unlink(missing_ok=True)
+    o._community_round(kipf_paper(), d)
+    return d.community
+
+
+def test_setup_finding_passes_when_page_names_method_but_statement_does_not():
+    c = _page_rule(f"README of another model. Compared with GCN on Cora. Note: {DL}.", [("Test loader drops data.", DL)])
+    assert [f["quote"] for f in c["findings"]] == [DL] and c["findings"][0]["pass_reason"] == "page_names_method"
+    assert [x["outcome"] for x in c["candidates"]] == ["kept_page_names_method"] and c["dropped_items"] == []
+
+
+def test_setup_finding_dropped_when_page_does_not_name_method(monkeypatch):
+    # select_docs laesst solche Seiten normalerweise nicht durch; hier erzwungen, damit die Regel allein geprueft wird
+    monkeypatch.setattr(community, "select_docs", lambda items, *a, **kw: [community.Doc(i["url"], i["raw_content"]) for i in items])
+    c = _page_rule(f"README of another model about Cora arXiv 2501.00001. Note: {DL}.", [("Test loader drops data.", DL)])
+    assert c["findings"] == [] and c["dropped_items"][0]["reason"] == "names_neither_method_title_nor_arxiv_id"
+    assert c["candidates"][0]["outcome"] == "dropped_names_neither_method_title_nor_arxiv_id"
+
+
+def test_non_setup_finding_keeps_statement_level_rule_even_if_page_names_method():
+    c = _page_rule(f"Mentions GCN on Cora once. {TOO_GOOD}.", [("Results look too good.", TOO_GOOD)])
+    assert c["findings"] == [] and c["candidates"][0]["outcome"] == "dropped_names_neither_method_title_nor_arxiv_id"
+
+
+def test_quote_check_stays_strict_and_candidates_store_raw_output():
+    c = _page_rule(f"Compared with GCN on Cora. {DL}.", [("Test loader drops data.", DL)])
+    assert c["findings"][0]["pass_reason"] == "page_names_method"
+
+    class Bad:
+        def complete(self, role, messages, **kw):
+            return SimpleNamespace(content=json.dumps([{"topic": "t", "statement": "drop_last used", "quote": "invented quote GCN"}]))
+    tools = FakeTools(search_pages=[], critique_pages=[("https://example.org/fits", "GCN on Cora. Nothing else here at all.")])
+    d = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools, Bad())._community_round(kipf_paper(), d)
+    assert d.community["findings"] == [] and d.community["candidates"][0]["outcome"] == "dropped_quote_not_in_page"
+    assert d.community["candidates"][0]["quote_in_page"] is False

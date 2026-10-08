@@ -19,7 +19,7 @@ from pathlib import Path
 
 from .claims_source import _norm
 from .dossier import REPO_ROOT
-from .objections import Objection, extract_objections
+from .objections import PROTOCOL_KEYWORDS, Objection, extract_objections
 from .setup_details import Doc, _chunks, _parse_list
 
 CACHE_PATH = REPO_ROOT / "logs" / "community_cache.json"
@@ -134,6 +134,16 @@ def names_paper(text: str, title: str, arxiv_id: str, method: str | None) -> boo
     return (" ".join((title or "").lower().split()) in low and bool(title)) or (bool(arxiv_id) and arxiv_id.lower() in low) or _word(text, method or "")
 
 
+SETUP_KEYWORDS = PROTOCOL_KEYWORDS + ("random seed", "seeds", "batch size", "learning rate", "input length", "lookback", "window size",
+                                      "data split", "evaluation protocol")
+
+
+def is_setup_topic(o: Objection) -> bool:
+    """Evaluations-, Protokoll- oder Setup-Thema (messbare Klassen: Protokoll, Parameter, Seed): Stichwortpruefung auf Aussage, Zitat, Thema."""
+    low = f"{o.statement} {o.quote} {o.topic}".lower()
+    return o.protocol or any(k in low for k in SETUP_KEYWORDS)
+
+
 def select_docs(items: list[dict], title: str, arxiv_id: str, exempt: tuple[str, ...] = (), method: str | None = None,
                 dataset: str | None = None, method_hits: set[str] = frozenset()) -> list[Doc]:
     """Seiten, die gelesen werden: kein Duplikat, nicht leer, <= MAX_PAGE_CHARS, keine Sammelseite. Seiten des Paper-Repos (exempt) sind
@@ -235,24 +245,46 @@ def what_others_found(tools, llm, title: str, arxiv_id: str, dataset: str, repo_
     method_hits = {r.get("url", "") for src in (method_res, crit_res) for r in (src or {}).get("results", [])}
     docs = select_docs(items, title, arxiv_id, exempt, method, dataset, method_hits)
     drops: list[dict] = []
-    kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files, drops)
+    cands: list[dict] = []
+    kept, dropped = extract_objections(llm, docs[:MAX_CHUNKS], title, dataset, repo_files, drops, cands)
     n_before = len(kept)
     all_kept = kept
-    kept = [o for o in kept if o.source.lower().startswith(exempt) if exempt] + [
-        o for o in kept if not (exempt and o.source.lower().startswith(exempt)) and names_paper(f"{o.statement} {o.quote}", title, arxiv_id, method)]
+    page_text = {d.name: d.text for d in docs}
+    reasons: dict[int, str] = {}
+
+    def passes(o: Objection) -> bool:
+        if exempt and o.source.lower().startswith(exempt):
+            return True
+        if names_paper(f"{o.statement} {o.quote}", title, arxiv_id, method):
+            return True
+        if is_setup_topic(o) and names_paper(page_text.get(o.source, ""), title, arxiv_id, method):   # Seitenebene, nur Setup-Themen
+            reasons[id(o)] = "page_names_method"
+            return True
+        return False
+
+    kept = [o for o in kept if passes(o)]
     dropped += n_before - len(kept)   # Aussage ohne Methode/Titel im Satz oder Zitat: zu allgemein
     drops += [{"url": o.source, "reason": "names_neither_method_title_nor_arxiv_id", "topic": o.topic, "statement": o.statement[:300],
                "quote": o.quote[:300]} for o in all_kept if o not in kept]
     findings = []
     for o in kept:
         kind = classify(o.statement, o.quote, o.protocol)
-        findings.append(asdict(Finding(o.topic, o.statement, o.quote, o.source, kind, o.repo_check, KIND_LABEL[kind])))
+        findings.append({**asdict(Finding(o.topic, o.statement, o.quote, o.source, kind, o.repo_check, KIND_LABEL[kind])),
+                         "pass_reason": reasons.get(id(o), "statement_names_method")})
+    for c in cands:   # Ausgang je roher Kandidat, damit nachvollziehbar bleibt, warum er blieb oder fiel
+        k = next((o for o in all_kept if o.source == c["url"] and o.quote[:300] == c["quote"]), None)
+        if not c["quote_in_page"]:
+            c["outcome"] = "dropped_quote_not_in_page"
+        elif k is None:
+            c["outcome"] = "dropped_duplicate"
+        else:
+            c["outcome"] = "kept_" + reasons.get(id(k), "statement_names_method") if k in kept else "dropped_names_neither_method_title_nor_arxiv_id"
     hits = [{"url": r.get("url", ""), "title": r.get("title", ""), "n_chars": len(r.get("raw_content") or r.get("content") or "")}
             for r in items]   # was Tavily lieferte, vor dem Seitenfilter
     read = {d.name for d in docs}
     return {"findings": findings, "dropped": dropped, "pages": _pages(docs), "queries": queries,
             "reused_discovery": bool(prior_urls), "calls": calls, "hits": hits,
-            "not_read": [h["url"] for h in hits if h["url"] not in read], "dropped_items": drops}
+            "not_read": [h["url"] for h in hits if h["url"] not in read], "dropped_items": drops, "candidates": cands}
 
 
 EXPLAIN_SYSTEM = "You extract possible explanations from web pages. Answer only from the text you are given."

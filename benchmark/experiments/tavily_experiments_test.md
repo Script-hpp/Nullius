@@ -77,3 +77,33 @@ The `drop_last` finding for DLinear is hoped for, but may not appear: the follow
 ### Acceptance (unchanged)
 
 The criteria of parts 1 and 2 stand as written. Criterion 3 asks for a status resting on 2 valid measurements **in own branches**; a `protocol_change` rests on re-scored main-branch predictions, so by construction it does not satisfy that wording. It is reported separately ("met" is not claimed for it under criterion 3). The coordinator's acceptance (an exported run whose Evidence view shows a checked objection with quote, URL, measurement, status) is judged on the result as it stands.
+
+## Addendum B (2026-10-08): post hoc page-level `names_paper` for setup findings, and one more DLinear run
+
+Written and committed **before** the run described here. This is a **post hoc rule change, labelled as such**: it was chosen after seeing the result of Addendum A, and the user approved it explicitly on 2026-10-08. It changes one filter, not the checks that keep a finding honest.
+
+### Why (result of Addendum A, `results/tavily_experiments_addendum_a.md`)
+
+The new queries found the FITS README. An offline replay of the extractor on that README returned the `drop_last` statement with a verbatim quote, but `names_paper` dropped it: the statement and quote do not name DLinear (the page lists DLinear among affected models elsewhere). The live run kept 0 findings. The blocker was the statement-level filter, not the search.
+
+### Rule change (generic, no paper-specific term)
+
+1. A candidate whose topic is evaluation, protocol or setup (the measurable classes: protocol, parameter, seed; decided by a keyword check on topic, statement and quote, `community.SETUP_KEYWORDS`: the protocol keywords plus seed, batch size, learning rate, input length, lookback, window size, data split, evaluation protocol) passes `names_paper` if the **page text** names the method (whole word), the full title or the arXiv ID. Reason logged per finding: `pass_reason = "page_names_method"` (otherwise `statement_names_method`; repo pages stay exempt).
+2. Candidates of any other topic keep the statement-level rule unchanged.
+3. The quote check stays strict: the quote must occur verbatim on the page. No other check is touched (page-size filter, noise filter, objection classification, experiment rules, tolerance/4 threshold).
+4. Known limit, stated now: pages are read only if they already name the title, the arXiv ID, or (method-search hits) method plus dataset. So for a non-repo page that was read, the page-level test is almost always true. The rule therefore means in practice "a setup finding on a page about the method counts", which is weaker than before. A page-level mention does not show that the statement is about the method (the FAN example in Addendum A, a label-leak statement about another repo's code, would pass if its topic were a setup topic and the page named DLinear). I accept this for one run and report any such finding as it is, with the quote.
+5. Raw extractor candidates are now stored per page (`community.candidates`, also in the `community` event): url, topic, statement, quote, `quote_in_page`, and `outcome` (`kept_page_names_method`, `kept_statement_names_method`, `dropped_quote_not_in_page`, `dropped_names_neither_method_title_nor_arxiv_id`, `dropped_duplicate`). Earlier runs stored only drops, which is why the FITS case could not be explained.
+
+Tests (offline): setup finding passes by page; dropped when the page does not name the method; non-setup finding keeps the statement rule; quote not on page stays dropped; candidates stored.
+
+### Run
+
+One live run: `zeng_dlinear_2023`, claim `dlinear_etth1_96_mse`, 5 seeds, full mode, `--fresh-community`, `LLM_PROVIDER=tokenfactory`, `TAVILY_MODE=live`, sandbox `nebius`, `objection_experiments=True`. Caps for the whole test (raised by the user): Token Factory **1.25 USD gross** (about 0.92 used; the run starts only if it fits with margin, a run cost about 0.18), Tavily **80 credits** (about 59 used; stop at 78, a run used about 18, so it fits only if the community round plus roles use at most about 19). No re-run to improve a result.
+
+### Honest expectation (not a success criterion)
+
+I expect the FITS `drop_last` finding to pass now if Tavily returns the README again and the extractor repeats it (not deterministic: it did not appear in the live run of Addendum A). If it passes, the `protocol_change` check reads the stored drop_last numbers; I expect `widerlegt` more likely than `bestaetigt` (effect near the 0.0025 threshold). Any other outcome is reported as is. The main verdict (about 0.39, `teilweise`) is unrelated.
+
+### Acceptance (unchanged)
+
+As in Addendum A. A `protocol_change` entry rests on re-scored main-branch predictions, so criterion 3 (2 measurements in own branches) is not claimed for it.
