@@ -208,6 +208,9 @@ class SpecItem:
     enforce: bool = False               # S2: im CONFIG-Block erzwingen
     alternatives: list[dict] = field(default_factory=list)   # unterlegene Werte anderer Quellen (Dossier, nie im Prompt)
     note: str = ""
+    specific: bool = True               # F4: False = allgemeine Konfiguration (train.conf), die eine Modell-Konfiguration ueberschreibt
+    origin: str = "model"               # F1/F4: "raw" = deterministisch aus einer Zeile des Ausschnitts gelesen, sonst vom Extraktor
+    tie: list[dict] = field(default_factory=list)   # F4: gleichrangige, widersprechende Werte (nicht erzwungen)
 
 
 @dataclass
@@ -309,9 +312,95 @@ def other_model_selected(quote: str, model: str) -> str:
     return ""
 
 
-def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_only: bool = False
+# ---- F1 / F4 (code_grounded): Werte deterministisch aus Zeilen des Ausschnitts lesen ------------------------------------------
+# Feste Tabelle Schluesselname im Code -> Schluessel des Steckbriefs (nur Namen, nie Werte). Nur skalare Zahlen; Listen (hid_units = [8]) fallen weg.
+KEY_ALIASES = {
+    "lr": ("lr", "learning_rate", "learning-rate", "init_lr"),
+    "weight_decay": ("weight_decay", "weight-decay", "wd", "l2_coef", "l2_reg", "l2_lambda", "l2"),
+    "epochs": ("epochs", "num_epochs", "nb_epochs", "n_epochs", "max_epochs", "max_epoch", "train_epochs"),
+    "batch_size": ("batch_size", "batch-size", "bs"),
+    "dropout": ("dropout", "dropout_prob", "dropout_rate", "dropout_p"),
+    "hidden": ("hidden", "hidden_size", "hidden_dim", "hidden_channels", "hid_dim", "n_hid", "num_hidden"),
+    "layers": ("num_layers", "n_layers", "nb_layers", "layers", "e_layers"),
+    "patience": ("patience", "early_stopping_patience", "nb_patience"),
+    "seq_len": ("seq_len", "input_len", "lookback", "look_back"),
+}
+ALIAS_KEY = {alias: key for key, names in KEY_ALIASES.items() for alias in names}
+_NUM = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
+ASSIGN_RE = re.compile(rf"^(?:export\s+)?([A-Za-z_]\w*)\s*(?:=|:)\s*(?:!!float\s+)?({_NUM})\s*[,;]?\s*(?:#.*)?$")   # nur Zeilen ohne Einrueckung
+FLAG_NUM_RE = re.compile(rf"--([A-Za-z_][\w-]*)(?:\s+|=)({_NUM})(?![\w.])")
+NUM_TOKEN_RE = re.compile(r"\d+\.\d+(?:[eE][+-]?\d+)?|\.\d+|\d+(?:[eE][+-]?\d+)?")
+
+
+def _doc_path(name: str) -> str:
+    return name.split(":", 1)[-1].split("@")[0].replace(" (function body)", "")
+
+
+def _is_specific(source: str, model: str) -> bool:
+    """Konfigurationsdatei mit dem Modellnamen im Pfad (gat.conf.yaml) gilt vor der allgemeinen (train.conf.yaml). Andere Quellen: immer."""
+    path = _doc_path(source)
+    return model.lower() in path.lower() if CONFIG_RE.search(path) else True
+
+
+def raw_items(docs: list[Doc], names: list[str], model: str, family: str) -> list[SpecItem]:
+    """F1 (Startskript) und F4 (c, Konfiguration): Zuweisungen `name = Zahl`, `name: Zahl` und `--flag Zahl` in den Startskripten und
+    Konfigurationsdateien des Ausschnitts. Steht ein Schluessel in einer Datei mit mehreren verschiedenen Werten (mehrere Laeufe in einem
+    Shell-Skript), wird er dort nicht gelesen. Deterministisch, kein LLM."""
+    num_keys = {k for k, _ in keys_for(family, True)[0]}
+    want = {n.replace(" (function body)", "") for n in names}
+    out: list[SpecItem] = []
+    for d in docs:
+        path = _doc_path(d.name)
+        if d.name not in want or not (START_RE.search(path) or CONFIG_RE.search(path)):
+            continue
+        found: dict[str, list[tuple[str, str]]] = {}
+        for line in d.text.splitlines():
+            m = ASSIGN_RE.match(line.rstrip())
+            hits = [(m.group(1), m.group(2))] if m else []
+            if path.endswith(".sh"):
+                hits += FLAG_NUM_RE.findall(line)
+            for name, value in hits:
+                key = ALIAS_KEY.get(name.lower().replace("-", "_")) or ALIAS_KEY.get(name.lower())
+                if key in num_keys:
+                    found.setdefault(key, []).append((value, line.strip()))
+        for key, occ in found.items():
+            if len({float(v) for v, _ in occ}) != 1:
+                continue
+            value, quote = occ[0]
+            number = parse_number(key, value)
+            if number is None:
+                continue
+            out.append(SpecItem(key, value, quote, d.name, source_rank(d.name, quote), number, specific=_is_specific(d.name, model), origin="raw"))
+    return out
+
+
+def paper_numbers(details: list[SetupDetail], items: list[SpecItem]) -> set[float]:
+    """Zahlen aus belegten Paper-Zitaten (Rolle 4 und Steckbrief-Eintraege der Quelle 'paper'): Belege, die einen Konfigurationswert stuetzen."""
+    texts = [d.quote for d in details if getattr(d, "source", "") == "paper" and not getattr(d, "excluded", "")]
+    texts += [i.quote for i in items if i.source == "paper"]
+    nums: set[float] = set()
+    for t in texts:
+        for tok in NUM_TOKEN_RE.findall(t):
+            try:
+                nums.add(float(tok))
+            except ValueError:
+                pass
+    return nums
+
+
+def normalize_source(source: str, names: list[str]) -> str:
+    """F4 (a): Quelle ohne `@commit` (oder ohne `repo:`) auf die eindeutige Dokumentzeile abbilden. Unbekannt oder mehrdeutig: unveraendert."""
+    if source in names:
+        return source
+    base = source.removeprefix("repo:").split("@")[0]
+    hits = [n for n in names if n.startswith("repo:") and n.removeprefix("repo:").split("@")[0] == base]
+    return hits[0] if len(hits) == 1 else source
+
+
+def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_only: bool = False, normalize: bool = False
                    ) -> tuple[list[SpecItem], list[dict]]:
-    """Deterministisch: bekannter Schluessel, bekannte Quelle, Zitat im Dokument, Zahl im Zitat, keine fremde Modellwahl."""
+    """Deterministisch: bekannter Schluessel, bekannte Quelle, Zitat im Dokument, Zahl im Zitat, keine fremde Modellwahl.
+    normalize (F4 a, code_grounded): fehlt der `@commit` in der Quelle, wird sie auf die eindeutige Dokumentzeile abgebildet."""
     num, txt = keys_for(family, numeric_only)
     num_keys, txt_keys = {k for k, _ in num}, {k for k, _ in txt}
     hay = {d.name: _norm(d.text) for d in docs}
@@ -322,6 +411,8 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
             continue
         key, value, quote, source = (str(it.get(k, "")).strip() for k in ("key", "value", "quote", "source"))
         source = re.sub(r"\s*\(function body\)\s*$", "", source)
+        if normalize:
+            source = normalize_source(source, list(hay))
         reason = ""
         if key not in num_keys | txt_keys:
             reason = "unbekannter Schluessel"
@@ -341,7 +432,7 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
             dropped.append({"item": it, "reason": reason})
             continue
         number = parse_number(key, value) if key in num_keys else None
-        kept.append(SpecItem(key, value, quote, source, source_rank(source, quote), number))
+        kept.append(SpecItem(key, value, quote, source, source_rank(source, quote), number, specific=_is_specific(source, model)))
     return kept, dropped
 
 
@@ -355,9 +446,12 @@ def _same_value(a: SpecItem, b: SpecItem) -> bool:
     return _norm(a.value) == _norm(b.value)
 
 
-def resolve(items: list[SpecItem], family: str, numeric_only: bool = False) -> tuple[list[SpecItem], list[str]]:
+def resolve(items: list[SpecItem], family: str, numeric_only: bool = False, corroborate: set[float] | None = None
+            ) -> tuple[list[SpecItem], list[str]]:
     """Ein Eintrag je Schluessel: hoechster Rang gewinnt; argparse-Defaults fallen weg, sobald eine hoehere Quelle den Schluessel
     setzt (D-Klasse). Widersprechen sich zwei Quellen GLEICHEN Rangs, wird nichts erzwungen (Hinweis statt Raten).
+    corroborate (F4, code_grounded): Zahlen aus belegten Paper-Zitaten. Dann gilt zusaetzlich: eine Modell-Konfiguration schlaegt die
+    allgemeine (train.conf), und von zwei widersprechenden gleichrangigen Werten gewinnt der, dessen Zahl das Paper nennt (wenn genau einer).
     Rueckgabe (Eintraege in Schluesselreihenfolge, Schluessel ohne Beleg)."""
     num, txt = keys_for(family, numeric_only)
     order = [k for k, _ in num + txt]
@@ -367,12 +461,25 @@ def resolve(items: list[SpecItem], family: str, numeric_only: bool = False) -> t
         if not group:
             missing.append(key)
             continue
+        if corroborate is not None and any(i.rank == "config" and i.specific for i in group):
+            group = [i for i in group if not (i.rank == "config" and not i.specific)]
         win = group[0]
         alts = [i for i in group[1:] if not _same_value(i, win)]
-        win.alternatives = [{"value": a.value, "source": a.source, "rank": a.rank, "quote": a.quote} for a in alts]
         tie = [a for a in alts if a.rank == win.rank]
+        note = ""
+        if tie and corroborate is not None:
+            cands = [win] + tie
+            backed = [c for c in cands if c.number is not None and any(abs(float(c.number) - x) <= 1e-12 * max(1.0, abs(x)) for x in corroborate)]
+            if backed and len({float(c.number) for c in backed}) == 1:
+                win = backed[0]
+                alts = [i for i in group if i is not win and not _same_value(i, win)]
+                tie = []   # entschieden: der unterlegene gleichrangige Wert bleibt als Alternative im Dossier
+                note = "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat"
+        win.alternatives = [{"value": a.value, "source": a.source, "rank": a.rank, "quote": a.quote} for a in alts]
         if tie:
-            win.note = "gleichrangige Quellen widersprechen sich: " + "; ".join(f"{a.value} ({a.source})" for a in tie)
+            note = "gleichrangige Quellen widersprechen sich: " + "; ".join(f"{a.value} ({a.source})" for a in tie)
+            win.tie = [{"value": i.value, "source": i.source} for i in [win] + tie]
+        win.note = note
         win.enforce = win.number is not None and not tie
         out.append(win)
     return out, missing
@@ -412,20 +519,68 @@ def drop_run_script_defaults(excerpt: str) -> tuple[str, list[str]]:
     return excerpt[: heads[0].start()] + "".join(out), sorted(set(dropped))
 
 
+def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], names: list[str], details: list[SetupDetail]
+              ) -> tuple[list[SpecItem], list[str]]:
+    """code_grounded: zu den Eintraegen des Extraktors kommen die deterministisch gelesenen Zeilen des Ausschnitts (F1, F4 c); die Rangregel
+    entscheidet (Startskript > Config > Paper), bei gleichem Rang gilt F4 (Modell-Konfiguration, Paper-Zahl)."""
+    raw = raw_items(docs, names, model, family)
+    return resolve(kept + raw, family, True, corroborate=paper_numbers(details, kept))
+
+
 def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False) -> Spec:
     """ask(system, user) -> Antworttext. Ein LLM-Aufruf; alles danach ist deterministisch.
     numeric_only (code_grounded): nur Zahlenschluessel (S2 erzwingt sie), der Ausschnitt bleibt roh im Spec (argparse-Defaults
-    entfernt, wo ein Startskript das Flag setzt) und geht in Plan-, Code- und Reparatur-Prompt."""
+    entfernt, wo ein Startskript das Flag setzt) und geht in Plan-, Code- und Reparatur-Prompt. Nur dort gelten F1 und F4:
+    Quellen ohne @commit werden abgebildet, Startskript- und Konfigurationswerte deterministisch gelesen, Konflikte gleichen Rangs nach F4 entschieden."""
     model, family = model_name_of(claim_text), family_for(dataset)
     excerpt, names = focused_excerpt(docs, model, dataset, details)
     dropped_defaults: list[str] = []
     if numeric_only:
         excerpt, dropped_defaults = drop_run_script_defaults(excerpt)
     raw = _parse_list(ask(SPEC_SYSTEM, build_prompt(details, excerpt, claim_text, dataset, model, family, numeric_only)))
-    kept, dropped = verify_entries(raw, docs, model, family, numeric_only)
-    items, missing = resolve(kept, family, numeric_only)
+    kept, dropped = verify_entries(raw, docs, model, family, numeric_only, normalize=numeric_only)
+    if numeric_only:
+        items, missing = _assemble(model, family, kept, docs, names, details)
+    else:
+        items, missing = resolve(kept, family, numeric_only)
     return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=names, missing=missing,
                 excerpt=excerpt if numeric_only else "", dropped_defaults=dropped_defaults)
+
+
+def excerpt_docs(excerpt: str) -> list[Doc]:
+    """Dokumente aus einem gespeicherten Ausschnitt (Abschnitte `=== name ===`); Namen ohne ' (function body)', gleiche Namen zusammengefuegt."""
+    heads = list(SECTION_RE.finditer(excerpt))
+    merged: dict[str, str] = {}
+    for i, m in enumerate(heads):
+        name = m.group(1).replace(" (function body)", "")
+        merged[name] = merged.get(name, "") + excerpt[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(excerpt)]
+    return [Doc(n, t) for n, t in merged.items()]
+
+
+def rebuild_spec(old: dict, details: list[SetupDetail], paper_text: str | None = None) -> Spec:
+    """Wiederholt den deterministischen Teil (F1, F4) auf einem gespeicherten Steckbrief (spec.json eines frueheren Laufs), OHNE neuen
+    Extraktor-Aufruf: die Eintraege des Extraktors (Sieger und unterlegene Alternativen) und die verworfenen Eintraege mit Grund 'Quelle unbekannt'
+    (diese werden gegen die Dokumente des Ausschnitts neu geprueft) gehen mit den neu gelesenen Zeilen des Ausschnitts durch dieselbe Rangregel.
+    Alles, was schon geprueft war, bleibt geprueft (die Pruefregeln sind nur gelockert, nie verschaerft)."""
+    model, family = old["model"], old["family"]
+    docs = excerpt_docs(old["excerpt"]) + ([Doc("paper", paper_text)] if paper_text else [])
+    kept: list[SpecItem] = []
+    for it in old["items"]:
+        base = {k: v for k, v in it.items() if k in SpecItem.__dataclass_fields__}
+        sp = SpecItem(**{**base, "alternatives": [], "note": "", "tie": [], "enforce": False})
+        if sp.origin == "raw":
+            continue   # wird unten neu gelesen
+        kept.append(sp)
+        for a in it.get("alternatives", []):
+            kept.append(SpecItem(it["key"], a["value"], a["quote"], a["source"], a["rank"], parse_number(it["key"], str(a["value"])),
+                                 specific=_is_specific(a["source"], model)))
+    redo = [d["item"] for d in old.get("dropped", []) if d.get("reason") == "Quelle unbekannt" and isinstance(d.get("item"), dict)]
+    again, still = verify_entries(redo, docs, model, family, True, normalize=True)
+    dropped = [d for d in old.get("dropped", []) if d.get("reason") != "Quelle unbekannt"] + still
+    names = [d.name for d in docs if d.name != "paper"]
+    items, missing = _assemble(model, family, kept + again, docs, names, details)
+    return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=old.get("excerpt_docs", []), missing=missing,
+                excerpt=old["excerpt"], dropped_defaults=old.get("dropped_defaults", []))
 
 
 def _short(q: str) -> str:
@@ -443,9 +598,19 @@ def format_spec(spec: Spec) -> str:
         return ""
     lines = []
     for i in spec.items:
+        if i.tie and spec.excerpt:   # code_grounded: Quellen gleichen Rangs widersprechen sich, kein Wert wird vorgegeben
+            vals = "; ".join(f"{t['value']} [{_doc_path(t['source'])}]" for t in i.tie)
+            lines.append(f"- {i.key}: sources of equal rank disagree ({vals}); not fixed here, decide with the paper and the code excerpt below")
+            continue
         val = _fmt_number(i.number) if i.enforce else i.value
         lines.append(f"- {i.key} = {val}   [{i.rank}: \"{_short(i.quote)}\"]")
-    missing = f"\nNot stated in any source (choose a standard value and say so in a comment): {', '.join(spec.missing)}." if spec.missing else ""
+    if spec.missing and spec.excerpt:   # F4 (b): im Ausschnitt kann der Wert trotzdem stehen
+        missing = ("\nNot extracted into this spec (if the authors' code excerpt below defines one of them, use that value; otherwise choose "
+                   f"a standard value and say so in a comment): {', '.join(spec.missing)}.")
+    elif spec.missing:
+        missing = f"\nNot stated in any source (choose a standard value and say so in a comment): {', '.join(spec.missing)}."
+    else:
+        missing = ""
     return (
         f"Reproduction spec for {spec.model}, checked against the paper and the authors' code. Conflicts between sources are "
         "already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; "

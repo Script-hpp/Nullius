@@ -1,6 +1,6 @@
 """Gate G0 (Genauigkeit), vorab festgelegt in benchmark/experiments/recall_cg_gate.md. Zwei Betriebsarten:
 
-  Referenz (kein LLM):   uv run python scripts/review/cg_gate.py --ref <Einheiten|all> --out <Ausgabe> [--io-check]
+  Referenz (kein LLM):   uv run python scripts/review/cg_gate.py --ref <Einheiten|all> --out <Ausgabe> [--io-check] [--sandbox local|nebius] [--workers N]
   Gate (Token Factory):  uv run python scripts/review/cg_gate.py --run --main <Checkout mit runs/> --clones <Repo-Klone> --out <Ausgabe>
   Auswerten (kein LLM):  uv run python scripts/review/cg_gate.py --score <Ausgabe>
 
@@ -146,8 +146,28 @@ class _NoLLM:
         return x
 
 
+ATTEMPT_LOG_CHARS = 1500
+
+
+def log_attempt(path: Path, lock: threading.Lock, code: str, seed: int, wall_s: float, res: dict | None, exc: BaseException | None) -> None:
+    """F8: Fehlerprotokoll je Versuch (Status, Sekunden, letzte 1500 Zeichen des Fehlertexts, Code-Hash, Exit-Code). Reine Beobachtung."""
+    import hashlib
+    row = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "seed": seed, "code_hash": hashlib.sha256(code.encode()).hexdigest()[:12],
+           "wall_s": round(wall_s, 1)}
+    if res is not None:
+        row.update({"status": res.get("status"), "exit_code": res.get("exit_code"), "train_s": None if res.get("train_seconds") is None else round(res["train_seconds"], 1),
+                    "detail": str(res.get("detail", ""))[-ATTEMPT_LOG_CHARS:], "soft_timeout": res.get("soft_timeout"),
+                    "stack": (res.get("stack") or "")[-ATTEMPT_LOG_CHARS:] or None, "stdout_tail": (res.get("stdout_tail") or "")[-400:] or None,
+                    "measured": res.get("measured")})
+    if exc is not None:
+        row.update({"status": "exception", "detail": f"{type(exc).__name__}: {str(exc)[-ATTEMPT_LOG_CHARS:]}"})
+    with lock:
+        with path.open("a") as f:
+            f.write(json.dumps(row) + "\n")
+
+
 def make_orchestrator(sandbox, ask=None, llm=None, details=None, cg: bool = False, spec=None, io_helper: bool = True,
-                      timeout_s: int = 600, events: list | None = None):
+                      timeout_s: int = 600, events: list | None = None, attempt_log: Path | None = None):
     """Orchestrator ohne `run()`: nur die Teile, die Messung und Reparatur brauchen (Produktfunktionen `_attempt`, `_run_seed`,
     `_spec_conform`, `_verdict`). Produktkonfiguration wie Benchmark v4 (`graph_repair=True`, `setup_v2`); LLM-Zwischenspeicher aus."""
     from repro_agent.config import load_settings
@@ -169,17 +189,22 @@ def make_orchestrator(sandbox, ask=None, llm=None, details=None, cg: bool = Fals
     o.llm, o._cost_base = llm or _NoLLM(), 0.0
     o.tavily_mode, o.use_tavily, o.error_search_live = "fixture", False, False
     o.n_candidates = 1
-    orig = o._attempt
+    impl = [o._attempt]   # austauschbar fuer Tests (attempt.impl)
+    log_lock = threading.Lock()
 
     def attempt(snapshot, code, seed, task, metric, **kw):   # Branch nach dem Versuch freigeben (sonst sammeln sich tausende Container)
         sandbox.begin_attempt()
+        t0, res = time.time(), None
         try:
-            branch, res = orig(snapshot, code, seed, task, metric, **kw)
+            branch, res = impl[0](snapshot, code, seed, task, metric, **kw)
             res["train_seconds"] = sandbox.times.pop(branch, None)
             return branch, res
         finally:
             sandbox.release_attempt()   # auch bei Exception (try/finally), nichts bleibt haengen
+            if attempt_log is not None:   # F8
+                log_attempt(attempt_log, log_lock, code, seed, time.time() - t0, res, sys.exc_info()[1])
 
+    attempt.impl = impl
     o._attempt = attempt
     return o
 
@@ -191,8 +216,17 @@ def snapshot_for(sandbox, snapshots: dict, snap_lock, key: str, task):
         return snapshots[key]
 
 
+def make_sandbox(kind: str = "local"):
+    """Messweg: `local` = Docker mit Kerngruppen (G0), `nebius` = Nebius-Sandbox wie im Produkt (G1)."""
+    if kind == "nebius":
+        from gate_sandbox import NebiusGateSandbox
+        return NebiusGateSandbox()
+    from gate_sandbox import GateSandbox
+    return GateSandbox()
+
+
 # ---- Referenzlauf (Schritt 2: Beweis des Messwegs, kein LLM) -----------------------------------------------------------------
-def run_reference(units: list[str], out: Path, io_check: bool = False) -> int:
+def run_reference(units: list[str], out: Path, io_check: bool = False, sandbox_kind: str = "local", workers: int = 4) -> int:
     """tests/reference-Loesungen durch den GENAUEN Messweg: Basis-Snapshot, GateSandbox (Kerngruppen, Container ohne Netz im Training),
     Produkt-`_attempt` (statische Pruefung, Training mit `unshare -n`, Harness frisch), volle Seed-Zahl, Urteil wie der Orchestrator.
     Die Formpruefung (SMOKE=1) entfaellt: die Referenzen kennen SMOKE nicht (sie sind Selbsttest der Pipeline, nie Agenten-Code)."""
@@ -202,8 +236,7 @@ def run_reference(units: list[str], out: Path, io_check: bool = False) -> int:
     from repro_agent.tasks import TASKS
 
     out.mkdir(parents=True, exist_ok=True)
-    from gate_sandbox import GateSandbox
-    sandbox, snapshots, lock = GateSandbox(), {}, threading.Lock()
+    sandbox, snapshots, lock = make_sandbox(sandbox_kind), {}, threading.Lock()
     rows = []
     try:
         for unit in units:
@@ -219,14 +252,14 @@ def run_reference(units: list[str], out: Path, io_check: bool = False) -> int:
             o = make_orchestrator(sandbox.for_unit(unit), io_helper=False, timeout_s=3600)
             o._smoke_ok.add(hashlib.sha256(code.encode()).hexdigest())
             t0 = time.time()
-            with ThreadPoolExecutor(max_workers=4) as pool:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
                 results = list(pool.map(lambda sd: o._attempt(snap, code, sd, task, claim.metric)[1], range(n_seeds)))
             ok = [r for r in results if r["status"] == "ok"]
             vals = [r["measured"] for r in ok]
             secs = [r["train_seconds"] for r in results if r.get("train_seconds") is not None]
             allm = {n: statistics.mean(r["metrics"][n] for r in ok) for n in (ok[0]["metrics"] if ok else {})}
             verdict = o._verdict(claim, vals, n_seeds, [], (ok[0].get("baselines") if ok else None), allm) if vals else None
-            row = {"unit": unit, "ref_file": spec.ref_file, "n_seeds": n_seeds, "n_ok": len(ok), "values": vals,
+            row = {"unit": unit, "ref_file": spec.ref_file, "sandbox": sandbox_kind, "n_seeds": n_seeds, "n_ok": len(ok), "values": vals,
                    "mean": statistics.mean(vals) if vals else None, "std": statistics.stdev(vals) if len(vals) > 1 else 0.0,
                    "urteil": verdict.urteil if verdict else None, "known_mean": spec.ref_mean, "known_verdict": spec.ref_verdict,
                    "train_seconds": secs, "max_train_seconds": max(secs) if secs else None, "wall_seconds": round(time.time() - t0),
@@ -251,8 +284,7 @@ def run_remeasure(pilot: Path, out: Path, timeout_s: int = 600, only: str | None
 
     pilot_units = {"zeng_nlinear_2023": "nlinear_etth1_96_mse", "wu_sgc_2019": "sgc_cora_acc", "velickovic_gat_2018": "gat_cora_acc", "kipf_gcn_2017": "gcn_cora_acc"}
     out.mkdir(parents=True, exist_ok=True)
-    from gate_sandbox import GateSandbox
-    sandbox, snapshots, lock = GateSandbox(), {}, threading.Lock()
+    sandbox, snapshots, lock = make_sandbox("local"), {}, threading.Lock()
     jobs = []
     for unit, claim_id in pilot_units.items():
         for f in sorted((pilot / unit).glob("final_*.json")):
@@ -351,13 +383,12 @@ def run_gate(main: Path, clones: Path, out: Path, units: list[str], timeouts: di
     from repro_agent.spec import build_spec
     from repro_agent.tasks import TASKS
     from uptake_probe import FACTS, check_facts, load_unit
-    from gate_sandbox import GateSandbox
 
     out.mkdir(parents=True, exist_ok=True)
     llm = LLMClient()
     spend = Spend(out / "spend.jsonl", llm, COST_CAP_GROSS_USD)
     ask = make_ask(llm, spend)
-    sandbox, snapshots, snap_lock = GateSandbox(), {}, threading.Lock()
+    sandbox, snapshots, snap_lock = make_sandbox("local"), {}, threading.Lock()
     samples: list[Sample] = []
     samples_lock = threading.Lock()
 
@@ -501,7 +532,7 @@ def main() -> int:
     if "--ref" in argv:
         sel = arg("--ref")
         units = list(UNITS) if sel == "all" else sel.split(",")
-        return run_reference(units, Path(arg("--out")), "--io-check" in argv)
+        return run_reference(units, Path(arg("--out")), "--io-check" in argv, sandbox_kind=arg("--sandbox", "local"), workers=int(arg("--workers", "4")))
     if "--remeasure" in argv:
         return run_remeasure(Path(arg("--remeasure")), Path(arg("--out")), only=arg("--only"))
     if "--run" in argv:
