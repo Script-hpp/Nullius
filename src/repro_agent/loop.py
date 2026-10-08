@@ -53,7 +53,7 @@ from .setup_details import (
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 from . import spec_check
-from .spec import Spec, as_dict as spec_as_dict, build_spec, config_note, format_spec, model_name_of
+from .spec import Spec, as_dict as spec_as_dict, build_spec, config_note, format_spec, model_files, model_name_of
 
 DEFAULT_SEEDS = 5
 MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
@@ -884,6 +884,9 @@ class Orchestrator:
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None
+        if unit and not model_files([Doc(f"repo:{p}", t) for p, t in dump.files.items()], model_name_of(claim_text)):
+            self._emit("model_file_missing", model=model_name_of(claim_text), url=url, files=sorted(dump.files))   # S4: nie still ignorieren
+            self._warn(f"Steckbrief: Datei des Modells {model_name_of(claim_text)} nicht im Repo-Ausschnitt")
         self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
@@ -924,10 +927,11 @@ class Orchestrator:
             code = self.write_code(plan, task)
             self._announce_code(claim, code)
             self._emit("code_written", claim_id=claim.id, code_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
+            code, _, spec_disc = self._spec_conform(claim, None, plan, task, code)   # Steckbrief (S2/S3) auch ohne Kandidaten
             # Seed 0 zuerst mit Reparaturschleife -> ein lauffaehiger Code pro Generierung. Die uebrigen
             # Seeds laufen parallel mit genau diesem Code (Streuung = Seed, nicht Code-Variante).
             v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seeds[0])
-            graph_ab, graph_notes, discarded = None, [], set()
+            graph_ab, graph_notes, discarded = None, [], set(spec_disc)
             if getattr(self, "graph_repair", False) and v0 is not None:   # Katalog/API: Fehler- und Graph-Check nach Seed 0
                 v0, note0, code, graph_ab, graph_notes, discarded, _ = self._seed0_quality_loop(
                     claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
@@ -1011,6 +1015,34 @@ class Orchestrator:
                    explanation=verdict.explanation)
         self._droplast_round(claim, dossier, discarded, verdict)   # nur Bericht, nach dem Urteil
 
+    def _spec_conform(self, claim: Claim, cand: int | None, plan: str, task: Task, code: str) -> tuple[str, tuple[int, int] | None, set]:
+        """S2/S3 nach dem Schreiben: CONFIG erzwingen und pruefen, nicht erzwungene Eintraege einzeln fragen, bei Befunden hoechstens
+        MAX_SPEC_REPAIRS gezielte Reparaturen. Rueckgabe (Code, (erfuellt, gesamt) oder None ohne Steckbrief, verworfene Code-Hashes)."""
+        spec = self._active_spec()
+        h = lambda c: hashlib.sha256(c.encode()).hexdigest()[:12]
+        spec_score, disc = None, set()
+        if spec is None or not spec.items:
+            return code, spec_score, disc
+        for rep in range(MAX_SPEC_REPAIRS + 1):
+            code, cfg_report = spec_check.config_check(code, spec)
+            items_report = spec_check.check_items(
+                lambda sys, usr: self._ask("code", sys, usr, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
+                code, spec)
+            fails = spec_check.failures(cfg_report, items_report)
+            spec_score = spec_check.score(spec, cfg_report, items_report)
+            self._emit("spec_check", claim_id=claim.id, candidate=cand, round=rep, score=spec_score, fails=fails, code_hash=h(code))
+            if not fails or rep == MAX_SPEC_REPAIRS:
+                break
+            try:
+                new_code = self.repair_code(plan, task, code, spec_check.repair_message(fails, spec))
+                disc.add(h(code))
+                code = new_code
+                self._announce_code(claim, code)
+            except Exception as exc:
+                self._warn(f"Steckbrief-Reparatur gescheitert: {exc}")
+                break
+        return code, spec_score, disc
+
     def _run_candidates(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, seed: int, k: int,
     ):
@@ -1042,27 +1074,7 @@ class Orchestrator:
         def one(j: int) -> dict:
             i = idx[j]
             code = codes[j]
-            spec = self._active_spec()
-            spec_score, disc = None, set()
-            if spec is not None and spec.items:
-                for rep in range(MAX_SPEC_REPAIRS + 1):
-                    code, cfg_report = spec_check.config_check(code, spec)
-                    items_report = spec_check.check_items(
-                        lambda sys, usr: self._ask("code", sys, usr, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
-                        code, spec)
-                    fails = spec_check.failures(cfg_report, items_report)
-                    spec_score = spec_check.score(spec, cfg_report, items_report)
-                    self._emit("spec_check", claim_id=claim.id, candidate=i, round=rep, score=spec_score, fails=fails, code_hash=h(code))
-                    if not fails or rep == MAX_SPEC_REPAIRS:
-                        break
-                    try:
-                        new_code = self.repair_code(plan, task, code, spec_check.repair_message(fails, spec))
-                        disc.add(h(code))
-                        code = new_code
-                        self._announce_code(claim, code)
-                    except Exception as exc:
-                        self._warn(f"Steckbrief-Reparatur gescheitert: {exc}")
-                        break
+            code, spec_score, disc = self._spec_conform(claim, i, plan, task, code)
 
             v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seed, i)
             res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": disc, "faults": 0}
@@ -1444,6 +1456,7 @@ class Orchestrator:
             paper, claims = load_claims(paper_id)
         else:
             raise ValueError(f"source muss benchmark oder catalog sein, nicht {source!r}")
+        self._paper_id = paper_id   # S4: Fixture-Schluessel je Einheit (Steckbrief-Modus)
         self._warnings = list(paper.get("warnings", []))
         self.details = []   # pro Lauf neu, sonst erbt ein Paper ohne Rolle 4 die Details des vorigen
         if self.claim_ids:
