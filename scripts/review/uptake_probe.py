@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / "src"))
 TEMPS = (0.2, 0.5, 0.8)
 ARMS = ("heute", "steckbrief", "steckbrief_pruefung")
 THRESHOLD_ABS, THRESHOLD_GAIN, MAX_FAILED_CALLS = 0.7, 0.25, 2
-COST_CAP_GROSS_USD, COST_CAP_MARGIN_USD = 1.20, 0.03   # Addendum 2026-10-08: harte Grenze brutto fuer ganz V1
+import os
+COST_CAP_GROSS_USD, COST_CAP_MARGIN_USD = float(os.environ.get("UPTAKE_CAP_GROSS_USD", "1.20")), 0.03   # Env: Rest nach Trockenlauf   # Addendum 2026-10-08: harte Grenze brutto fuer ganz V1
 
 
 class CostCapReached(BaseException):   # nicht Exception: loop.py faengt RuntimeError/Exception
