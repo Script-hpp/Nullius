@@ -24,3 +24,10 @@ Unit tests (`tests/test_community.py`, four new): setup finding passes by page t
 ## Honest note on the rule
 
 Because pages are read only if they already name title, arXiv ID or (method hits) method plus dataset, the page-level test is nearly always true for a read page. The rule effectively lets any setup-topic finding on a page about the method through. Stated in the pre-registration, point 4.
+
+## Repeat attempt (2026-10-08, coordinator task)
+
+- Crash analysis of the first run: role 2 uses model role `fast` (Lightning). Three attempts (temperatures 0.0/0.1/0.2, `max_tokens` 6000, then doubled on `finish_reason: length`) gave 6000 (length), 10607 (stop) and 12000 (length) completion tokens, none with a JSON object containing `quote`. Lightning writes its reasoning into the answer; this is the known quirk, not a new bug. `claims_source.extract_target` already retries with other temperature and larger limit, so no code change was made. Open robustness idea (not built): escalate the last attempt to the `code` role (Super).
+- Repeat run (same command, run dir `runs/zeng_dlinear_2023/20261008-162236`): role 2 passed this time (target 0.375 verified), role 4 gave 110 kept / 11 dropped. The run was then **killed by my own `timeout 590` wrapper** during the seed-0 repair loop (attempt 3). This is an operator error, not an infrastructure failure. The community round never started: **no found/kept/dropped data, no `protocol_change` entry, no full vs truncated numbers.**
+- Spent in this addendum since its start: about 0.231 USD gross, 10 Tavily credits (about 1.15 of 1.25 USD and about 69 of 80 credits in total). Another full run (about 0.18 USD gross) would pass the 1.25 USD cap, so I asked the coordinator to raise it (msg_bca0bd43665a, no answer after 15 minutes) and did **not** run again.
+- Status: acceptance not reached; Addendum B rule still untested on live data.
