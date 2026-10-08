@@ -172,10 +172,13 @@ def make_orchestrator(sandbox, ask=None, llm=None, details=None, cg: bool = Fals
     orig = o._attempt
 
     def attempt(snapshot, code, seed, task, metric, **kw):   # Branch nach dem Versuch freigeben (sonst sammeln sich tausende Container)
-        branch, res = orig(snapshot, code, seed, task, metric, **kw)
-        res["train_seconds"] = sandbox.times.pop(branch, None)
-        sandbox.release(branch)
-        return branch, res
+        sandbox.begin_attempt()
+        try:
+            branch, res = orig(snapshot, code, seed, task, metric, **kw)
+            res["train_seconds"] = sandbox.times.pop(branch, None)
+            return branch, res
+        finally:
+            sandbox.release_attempt()   # auch bei Exception (try/finally), nichts bleibt haengen
 
     o._attempt = attempt
     return o
@@ -213,7 +216,7 @@ def run_reference(units: list[str], out: Path, io_check: bool = False) -> int:
             code = (REFERENCE_DIR / spec.ref_file).read_text()
             if spec.ref_file == "dlinear_reference.py":   # Referenzmittel 0,3809 gilt mit LR_HALVE=1 (etth1_harness_reference.txt); ohne: 0,4278
                 code = code.replace('os.environ.get("LR_HALVE") == "1"', "True")
-            o = make_orchestrator(sandbox, io_helper=False, timeout_s=3600)
+            o = make_orchestrator(sandbox.for_unit(unit), io_helper=False, timeout_s=3600)
             o._smoke_ok.add(hashlib.sha256(code.encode()).hexdigest())
             t0 = time.time()
             with ThreadPoolExecutor(max_workers=4) as pool:
@@ -272,7 +275,7 @@ def run_remeasure(pilot: Path, out: Path, timeout_s: int = 600, only: str | None
         snap = snapshot_for(sandbox, snapshots, lock, paper["dataset"], task)
         n_seeds = paper.get("seeds", 5)
         code = code_file.read_text()
-        o = make_orchestrator(sandbox, io_helper=False, timeout_s=timeout_s)
+        o = make_orchestrator(sandbox.for_unit(unit), io_helper=False, timeout_s=timeout_s)
         t0 = time.time()
         branch, res0 = o._attempt(snap, code, 0, task, claim.metric)
         measured, allm, baselines = [], {}, res0.get("baselines")
@@ -364,7 +367,7 @@ def run_gate(main: Path, clones: Path, out: Path, units: list[str], timeouts: di
     def unit_arm(unit: str, arm: str, data: dict, task, claim, spec, snap) -> None:
         ud = out / unit
         plan_file = ud / f"plan_{arm}.md"
-        orch = make_orchestrator(sandbox, ask=ask, llm=llm, details=data["details"], cg=arm == "cg", spec=spec,
+        orch = make_orchestrator(sandbox.for_unit(unit), ask=ask, llm=llm, details=data["details"], cg=arm == "cg", spec=spec,
                                  timeout_s=timeouts.get(unit, 600))
         if not plan_file.exists():
             plan_file.write_text(orch.plan(data["paper"], claim, task))
