@@ -53,7 +53,8 @@ from .setup_details import (
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 from . import spec_check
-from .spec import Spec, as_dict as spec_as_dict, build_spec, config_note, format_spec, model_files, model_name_of
+from .spec import (
+    Spec, as_dict as spec_as_dict, build_spec, config_note, format_code_grounded, format_spec, model_files, model_name_of)
 
 DEFAULT_SEEDS = 5
 MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
@@ -231,7 +232,7 @@ class Orchestrator:
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
-        spec_mode: bool = False,
+        spec_mode: bool = False, code_grounded: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
@@ -239,9 +240,12 @@ class Orchestrator:
         # v5 Schritt A: Pflichtliste, Quellenrang und Geltungsbereich in Rolle 4 (setup_details.py); Default aus, damit v2 bis v4 reproduzierbar bleiben
         # Steckbrief (docs/recall_steckbrief_plan.md): S1 Steckbrief statt Zitatliste, S2 CONFIG erzwingen, S3 Einzelpruefung,
         # S4 Repo-Auswahl je Einheit. Braucht Quellenrang und Geltungsbereich, setzt daher setup_v2. Default aus (v4 reproduzierbar).
-        self.spec_mode = spec_mode
+        # code_grounded (docs/recall_analysis_3.md Hebel 3): der Repo-Ausschnitt (S4) geht ROH in Plan-, Code- und Reparatur-Prompt,
+        # Zahlen erzwingt S2 (nur Zahlenschluessel). Modus: Nachbau aus Paper UND Autorencode, unabhaengig gemessen. Default aus.
+        self.code_grounded = code_grounded
+        self.spec_mode = spec_mode or code_grounded
         self.spec: Spec | None = None
-        self.setup_v2 = setup_v2 or spec_mode
+        self.setup_v2 = setup_v2 or self.spec_mode
         self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
@@ -373,6 +377,8 @@ class Orchestrator:
         """Setup-Angaben im Prompt; im Produktpfad sind Repo-Defaults (argparse) gekennzeichnet (M7).
         Steckbrief-Modus: der Steckbrief ersetzt die Zitatliste (die volle Liste bleibt im Dossier)."""
         spec = self._active_spec()
+        if spec is not None and getattr(self, "code_grounded", False) and (spec.items or spec.excerpt):
+            return format_code_grounded(spec, self.details)
         if spec is not None and spec.items:
             return format_spec(spec)
         if getattr(self, "setup_v2", False):
@@ -383,7 +389,7 @@ class Orchestrator:
         """Nur Produktpfad: Paper-Wert und Repo-Wert fuer dasselbe Thema im Plan-Prompt, beide mit Quelle (M7).
         Steckbrief-Modus: Widersprueche sind schon per Rangregel geloest, der Plan sieht sie nicht."""
         spec = self._active_spec()
-        if spec is not None and spec.items:
+        if spec is not None and (spec.items or (getattr(self, "code_grounded", False) and spec.excerpt)):
             return ""
         if getattr(self, "setup_v2", False):
             text = format_conflicts_v2(self.details)
@@ -1515,7 +1521,7 @@ class Orchestrator:
             if getattr(self, "spec_mode", False):
                 self.spec = build_spec(
                     lambda system, user: self._ask("extract", system, user, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
-                    self.details, docs, claims[0].text, paper["dataset"]
+                    self.details, docs, claims[0].text, paper["dataset"], numeric_only=getattr(self, "code_grounded", False)
                 )
                 self._emit("spec", **spec_as_dict(self.spec))
                 print(f"Steckbrief (S1): {len(self.spec.items)} Werte erzwungen/pruefbar, {len(self.spec.missing)} fehlend", flush=True)

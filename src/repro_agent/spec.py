@@ -69,7 +69,10 @@ BINARY_EXT = re.compile(r"\.(pkl|pickle|npz|npy|pt|pth|bin|h5|hdf5|zip|gz|tar|pn
 DATA_DIR = re.compile(r"(^|/)(data|dataset|datasets|checkpoints?|logs?|results?|figures?|pics?|img|images)/", re.I)
 
 
-def keys_for(family: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+def keys_for(family: str, numeric_only: bool = False) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """numeric_only (code_grounded): nur Zahlenschluessel; was nicht per CONFIG erzwungen wird, steht roh im Code-Ausschnitt."""
+    if numeric_only:
+        return NUMERIC_COMMON + NUMERIC_FAMILY.get(family, []), []
     return NUMERIC_COMMON + NUMERIC_FAMILY.get(family, []), TEXT_COMMON + TEXT_FAMILY.get(family, [])
 
 
@@ -215,6 +218,8 @@ class Spec:
     dropped: list[dict] = field(default_factory=list)
     excerpt_docs: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
+    excerpt: str = ""                                          # code_grounded: roher Ausschnitt fuer Plan-, Code- und Reparatur-Prompt
+    dropped_defaults: list[str] = field(default_factory=list)  # code_grounded: argparse-Flags, deren Default entfernt wurde
 
     def get(self, key: str) -> SpecItem | None:
         return next((i for i in self.items if i.key == key), None)
@@ -230,8 +235,9 @@ class Spec:
 SPEC_SYSTEM = "You fill a reproduction spec from verified sources. Keep reasoning brief."
 
 
-def build_prompt(details: list[SetupDetail], excerpt: str, claim_text: str, dataset: str, model: str, family: str) -> str:
-    num, txt = keys_for(family)
+def build_prompt(details: list[SetupDetail], excerpt: str, claim_text: str, dataset: str, model: str, family: str,
+                 numeric_only: bool = False) -> str:
+    num, txt = keys_for(family, numeric_only)
     keys = "\n".join(f"- {k}: {d}" for k, d in num + txt)
     lines = []
     for d in details:
@@ -303,9 +309,10 @@ def other_model_selected(quote: str, model: str) -> str:
     return ""
 
 
-def verify_entries(raw: list, docs: list[Doc], model: str, family: str) -> tuple[list[SpecItem], list[dict]]:
+def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_only: bool = False
+                   ) -> tuple[list[SpecItem], list[dict]]:
     """Deterministisch: bekannter Schluessel, bekannte Quelle, Zitat im Dokument, Zahl im Zitat, keine fremde Modellwahl."""
-    num, txt = keys_for(family)
+    num, txt = keys_for(family, numeric_only)
     num_keys, txt_keys = {k for k, _ in num}, {k for k, _ in txt}
     hay = {d.name: _norm(d.text) for d in docs}
     kept, dropped = [], []
@@ -348,11 +355,11 @@ def _same_value(a: SpecItem, b: SpecItem) -> bool:
     return _norm(a.value) == _norm(b.value)
 
 
-def resolve(items: list[SpecItem], family: str) -> tuple[list[SpecItem], list[str]]:
+def resolve(items: list[SpecItem], family: str, numeric_only: bool = False) -> tuple[list[SpecItem], list[str]]:
     """Ein Eintrag je Schluessel: hoechster Rang gewinnt; argparse-Defaults fallen weg, sobald eine hoehere Quelle den Schluessel
     setzt (D-Klasse). Widersprechen sich zwei Quellen GLEICHEN Rangs, wird nichts erzwungen (Hinweis statt Raten).
     Rueckgabe (Eintraege in Schluesselreihenfolge, Schluessel ohne Beleg)."""
-    num, txt = keys_for(family)
+    num, txt = keys_for(family, numeric_only)
     order = [k for k, _ in num + txt]
     out, missing = [], []
     for key in order:
@@ -371,14 +378,54 @@ def resolve(items: list[SpecItem], family: str) -> tuple[list[SpecItem], list[st
     return out, missing
 
 
-def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str) -> Spec:
-    """ask(system, user) -> Antworttext. Ein LLM-Aufruf; alles danach ist deterministisch."""
+# ---- code_grounded: roher Ausschnitt ---------------------------------------------------------------------------------------
+SECTION_RE = re.compile(r"^=== (.+?) ===$", re.M)
+SH_FLAG_RE = re.compile(r"(?<![\w-])--([A-Za-z_][\w-]*)")
+ADD_ARG_RE = re.compile(r"add_argument\((?:[^()]|\([^()]*\))*\)", re.S)
+DEFAULT_KW_RE = re.compile(r",?[ \t]*\bdefault\s*=\s*(?:'[^']*'|\"[^\"]*\"|\[[^\]]*\]|\([^)]*\)|[^,)\n]+)")
+
+
+def drop_run_script_defaults(excerpt: str) -> tuple[str, list[str]]:
+    """Setzt ein Startskript (.sh) ein Flag, faellt der argparse-Default dieses Flags aus den Python-Stuecken weg (D-Klasse: der Default
+    0.0001 neben `--learning_rate 0.005` im Skript). Rueckgabe (Ausschnitt, entfernte Flags). Deterministisch, ohne LLM."""
+    heads = list(SECTION_RE.finditer(excerpt))
+    sections = [(m.group(1), excerpt[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(excerpt)]) for i, m in enumerate(heads)]
+    is_sh = lambda name: name.split(" (")[0].split("@")[0].endswith(".sh")   # Name wie "repo:scripts/etth1.sh@0c11366"
+    flags = {f for name, body in sections if is_sh(name) for f in SH_FLAG_RE.findall(body)}
+    if not flags:
+        return excerpt, []
+    dropped: list[str] = []
+
+    def strip(call: re.Match) -> str:
+        text = call.group(0)
+        named = {f for f in flags if re.search(rf"['\"]--{re.escape(f)}['\"]", text)}
+        if not named or not DEFAULT_KW_RE.search(text):
+            return text
+        dropped.extend(sorted(named))
+        return DEFAULT_KW_RE.sub("", text, count=1)
+
+    out = []
+    for m, (name, body) in zip(heads, sections):
+        if not is_sh(name):
+            body = ADD_ARG_RE.sub(strip, body)
+        out.append(f"=== {name} ===" + body)
+    return excerpt[: heads[0].start()] + "".join(out), sorted(set(dropped))
+
+
+def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False) -> Spec:
+    """ask(system, user) -> Antworttext. Ein LLM-Aufruf; alles danach ist deterministisch.
+    numeric_only (code_grounded): nur Zahlenschluessel (S2 erzwingt sie), der Ausschnitt bleibt roh im Spec (argparse-Defaults
+    entfernt, wo ein Startskript das Flag setzt) und geht in Plan-, Code- und Reparatur-Prompt."""
     model, family = model_name_of(claim_text), family_for(dataset)
     excerpt, names = focused_excerpt(docs, model, dataset, details)
-    raw = _parse_list(ask(SPEC_SYSTEM, build_prompt(details, excerpt, claim_text, dataset, model, family)))
-    kept, dropped = verify_entries(raw, docs, model, family)
-    items, missing = resolve(kept, family)
-    return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=names, missing=missing)
+    dropped_defaults: list[str] = []
+    if numeric_only:
+        excerpt, dropped_defaults = drop_run_script_defaults(excerpt)
+    raw = _parse_list(ask(SPEC_SYSTEM, build_prompt(details, excerpt, claim_text, dataset, model, family, numeric_only)))
+    kept, dropped = verify_entries(raw, docs, model, family, numeric_only)
+    items, missing = resolve(kept, family, numeric_only)
+    return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=names, missing=missing,
+                excerpt=excerpt if numeric_only else "", dropped_defaults=dropped_defaults)
 
 
 def _short(q: str) -> str:
@@ -420,6 +467,33 @@ def config_note(spec: Spec) -> str:
     )
 
 
+CG_INTRO = (
+    "Authors' code for {model}: verbatim excerpt of the official repository (model file, layers it imports, preprocessing and "
+    "learning-rate-schedule functions, run scripts, configs). It defines the method AND the training protocol of the paper's "
+    "experiment: model definition, preprocessing, optimiser, learning-rate schedule, early stopping, how the dataset is run. "
+    "Re-implement exactly this method in your own single script for the task below (our data file and output contract); do not "
+    "copy data-loading or I/O code. If a script or default selects a model other than {model}, ignore that selection. "
+    "Argparse defaults that a run script overrides were removed from the excerpt."
+)
+
+
+def format_code_grounded(spec: Spec, details: list[SetupDetail]) -> str:
+    """code_grounded: numerischer Steckbrief (erzwungen, S2), belegte Paper-Angaben und der ROHE Repo-Ausschnitt statt destillierter Zitate."""
+    from .setup_details import format_for_prompt_v2
+
+    paper = format_for_prompt_v2([d for d in details if d.source == "paper"])
+    parts = [format_spec(spec) if spec.items else "", paper]
+    if spec.excerpt:
+        parts.append(CG_INTRO.format(model=spec.model) + "\n\n" + spec.excerpt)
+    return "\n\n".join(p for p in parts if p)
+
+
 def as_dict(spec: Spec) -> dict:
     from dataclasses import asdict
-    return asdict(spec)
+    d = asdict(spec)
+    d.pop("excerpt", None)   # roh nur im Prompt; Dossier traegt Stuecknamen und Laenge
+    if not d.get("dropped_defaults"):
+        d.pop("dropped_defaults", None)
+    if spec.excerpt:
+        d["excerpt_chars"] = len(spec.excerpt)
+    return d
