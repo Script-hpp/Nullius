@@ -1,0 +1,29 @@
+{
+ "formatted": "",
+ "dropped": [
+  {
+   "item": 0,
+   "reason": "kein Objekt"
+  }
+ ],
+ "missing": [
+  "lr",
+  "weight_decay",
+  "epochs",
+  "batch_size",
+  "dropout",
+  "hidden",
+  "layers",
+  "patience",
+  "heads",
+  "optimizer",
+  "lr_schedule",
+  "early_stopping",
+  "activation",
+  "init",
+  "model_core",
+  "feature_norm",
+  "adj_norm",
+  "self_loops"
+ ]
+}

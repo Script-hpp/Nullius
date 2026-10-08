@@ -1,0 +1,121 @@
+{
+ "formatted": "Reproduction spec for GAT, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than GAT, ignore that selection.\n- epochs = 100000   [paper: \"Maximum number of epochs: 100000.\"]\n- hidden = 64   [paper: \"GAT 64 0.01 0.6/0.3 0.01 92 K\"]\n- patience = 100   [paper: \"Early stopping: stop optimization if neither the validation loss nor the validation accuracy improve for 100 epochs.\"]\nNot stated in any source (choose a standard value and say so in a comment): lr, weight_decay, batch_size, dropout, layers, heads, optimizer, lr_schedule, early_stopping, activation, init, model_core, feature_norm, adj_norm, self_loops.",
+ "dropped": [
+  {
+   "item": {
+    "key": "lr",
+    "value": "0.01",
+    "quote": "learning_rate: 0.01",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "weight_decay",
+    "value": "0.01",
+    "quote": "weight_decay: 0.01",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "dropout",
+    "value": "input_dropout_prob: 0.6\ncoefficient_dropout_prob: 0.3",
+    "quote": "input_dropout_prob: 0.6\ncoefficient_dropout_prob: 0.3",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "layers",
+    "value": "2",
+    "quote": "num_layers: 2",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "heads",
+    "value": "num_heads:\n    - 8\n    - 1",
+    "quote": "num_heads:\n    - 8\n    - 1",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "lr_schedule",
+    "value": "constant",
+    "quote": "lr_decay_factor: 0.0\nlr_decay_steps: null",
+    "source": "repo:config/train.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "early_stopping",
+    "value": "Early stopping: stop optimization if neither the validation loss nor the validation accuracy improve for 100 epochs. Once training has stopped, we reset the state of the weights to the step with the lowest validation loss.",
+    "quote": "Early stopping: stop optimization if neither the validation loss nor the validation accuracy improve for 100 epochs. Once training has stopped, we reset the state of the weights to the step with the lowest validation loss.",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "init",
+    "value": "tf.glorot_uniform_initializer()",
+    "quote": "initializer=tf.glorot_uniform_initializer(),",
+    "source": "repo:gnnbench/models/gat.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "feature_norm",
+    "value": "none",
+    "quote": "normalize_features: false",
+    "source": "repo:config/train.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "adj_norm",
+    "value": "row-normalised",
+    "quote": "row_normalize, add_self_loops",
+    "source": "repo:gnnbench/models/gat.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "self_loops",
+    "value": "true",
+    "quote": "add_self_loops",
+    "source": "repo:gnnbench/models/gat.py"
+   },
+   "reason": "Quelle unbekannt"
+  }
+ ],
+ "missing": [
+  "lr",
+  "weight_decay",
+  "batch_size",
+  "dropout",
+  "layers",
+  "heads",
+  "optimizer",
+  "lr_schedule",
+  "early_stopping",
+  "activation",
+  "init",
+  "model_core",
+  "feature_norm",
+  "adj_norm",
+  "self_loops"
+ ]
+}
