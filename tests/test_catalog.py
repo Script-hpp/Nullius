@@ -123,6 +123,13 @@ def test_order_e5():
     assert [e["arxiv_id"] for e in chosen] == ["2001.00001", "2001.00002", "2001.00003", "2601.21866"]
 
 
+def test_select_only_matches_arxiv_id_and_entry_id():
+    a, b = entry(cand("2001.00001")), entry(cand("2001.00002"))
+    assert [e["id"] for e in curate_mod.select([a, b], "2001.00002")] == [b["id"]]
+    assert [e["id"] for e in curate_mod.select([a, b], a["id"])] == [a["id"]]
+    assert curate_mod.select([a, b], "nope") == []
+
+
 # ---- Import und Datei ------------------------------------------------------------
 def test_import_is_idempotent_and_keeps_status(tmp_path):
     entries = []
