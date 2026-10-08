@@ -8,6 +8,16 @@ from .config import Settings, load_settings
 from .tavily_usage import CountedClient
 
 RESEARCH_DOMAINS = ["github.com", "arxiv.org", "openreview.net"]
+FORUM_DOMAINS = ["discuss.dgl.ai", "discuss.pytorch.org", "discuss.huggingface.co", "stats.stackexchange.com", "reddit.com"]
+NOISE_DOMAINS = ["scirp.org", "semanticscholar.org", "researchgate.net", "scholar.google.com", "paperswithcode.com", "connectedpapers.com"]
+# Allgemeine Kritik-Vorlagen, fuer jedes Paper gleich (nur Methode und Datensatz werden eingesetzt, nie Paper-Eigenheiten).
+# (Vorlage, mit Diskussionsforen?) Die letzte Vorlage sucht Folgearbeiten, die die Methode neu ausfuehren.
+CRITIQUE_TEMPLATES = (
+    ("{method} {dataset} reproduce results differ", True),
+    ("{method} bug evaluation", True),
+    ("{method} baseline re-evaluation fixed", True),
+    ("we re-run {method} on {dataset} and compare with the reported numbers", False),
+)
 ERROR_DOMAINS = ["stackoverflow.com", "github.com", "discuss.pytorch.org", "pytorch.org", "numpy.org"]
 
 
@@ -82,6 +92,21 @@ class TavilyTools:
             query=f'{method} {dataset} reproducibility OR re-evaluation OR pitfalls OR "could not reproduce"',
             max_results=limit, include_raw_content="text", include_domains=["arxiv.org", "openreview.net"],
         ))
+
+    def search_critique(self, method: str, dataset: str, limit: int = 5) -> dict:
+        """Rolle 3: generische Kritik-Vorlagen (CRITIQUE_TEMPLATES) auf github/arxiv/openreview, die ersten drei zusaetzlich auf
+        Diskussionsforen (FORUM_DOMAINS). Eine Search je Vorlage (je 1 Credit); Treffer ohne Duplikat-URLs zusammengefuehrt."""
+        merged, seen, queries = [], set(), []
+        for template, forums in CRITIQUE_TEMPLATES:
+            q = template.format(method=method, dataset=dataset)
+            res = self._client.search(query=q, max_results=limit, include_raw_content="text",
+                                      include_domains=RESEARCH_DOMAINS + (FORUM_DOMAINS if forums else []), exclude_domains=NOISE_DOMAINS)
+            queries.append(q)
+            for r in (res or {}).get("results", []):
+                if r.get("url") not in seen:
+                    seen.add(r.get("url"))
+                    merged.append(r)
+        return self._note(3, "search", " | ".join(queries), {"results": merged, "queries": queries})
 
     def search_repo_issues(self, owner_repo: str, limit: int = 5) -> dict:
         """Rolle 3: Issues des Paper-Repos per Suche statt der drei neuesten per Crawl: Query "<repo> reproduce results accuracy",

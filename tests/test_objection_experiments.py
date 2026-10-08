@@ -396,3 +396,75 @@ def test_zeugnis_section_quote_url_measurement_status():
     assert "reported number 0.426; our measurement 0.3760 supports the paper's value" in text and "-> offen" in text
     assert "not changeable in this task (the task fixes data and splits)" in text and "-> nicht pruefbar" in text
     assert "## Objections checked" not in render_markdown(Dossier(paper_id="p"))
+
+
+# ---- protocol_change (drop_last): Neubewertung derselben Vorhersagen, kein Lauf --------------------------------------------
+
+Q_DROP = "the test loader uses drop_last=True, so the last incomplete batch of the test set is dropped (batch_size 32 in the script)"
+DROP = {"type": "protocol_change", "reason": "r"}
+
+
+def droplast_metrics(shift):
+    """metrics_droplast eines Seeds: je Batchgroesse verschiebt sich die MSE um `shift` (Fenster wie bei 2785 Testfenstern)."""
+    return {str(b): {"mse": 0.376 + shift * (b / 256), "mae": 0.4, "windows": 2785 - d, "dropped": d} for b, d in ((32, 1), (64, 33), (128, 97), (256, 225))}
+
+
+def with_droplast(o, shift, seeds=(0, 1, 2, 3, 4)):
+    for a in o.dossier.attempts:
+        a.metrics_droplast = droplast_metrics(shift) if a.seed in seeds else None
+    return o
+
+
+def test_protocol_change_is_validated_against_quote_task_and_metric():
+    r = run(with_droplast(fresh(seeded), 0.0), [(Q_DROP, DROP)])["obj1"]
+    assert r["type"] == "protocol_change" and r["param"] == "drop_last" and r["to_value"] == "32"
+    r = run(fresh(seeded), [(Q_UNFAIR, DROP)])["obj1"]
+    assert r["type"] == "not_measurable" and "no statement about a dropped last test batch" in r["note"]
+    cora = fresh(seeded, task=cora_task())
+    r = run(cora, [(Q_DROP, DROP)])["obj1"]
+    assert r["type"] == "not_measurable" and "no protocol re-evaluation" in r["note"]
+    r = oe.validate(DROP, finding(1, Q_DROP), "accuracy", {}, ("drop_last",))
+    assert r["type"] == "not_measurable" and "mse and mae" in r["note"]
+
+
+def test_protocol_change_needs_no_branch_no_code_and_keeps_main_untouched():
+    o = with_droplast(fresh(seeded), 0.02)
+    before = [dataclasses.asdict(a) for a in o.dossier.attempts]
+    r = run(o, [(Q_DROP, {**DROP})])["obj1"]
+    assert o.branches == 0 and o.code_requests == [] and r["attempts"] == []
+    assert r["status"] == "bestaetigt" and r["measured"]["seeds"] == [0, 1, 2, 3, 4] and r["measured"]["main_branches"] == ["b0", "b1", "b2", "b3", "b4"]
+    assert r["measured"]["sizes"]["32"]["delta"] == pytest.approx(0.02 * 32 / 256) and r["measured"]["restricted_to"] == "32"
+    assert [dataclasses.asdict(a) for a in o.dossier.attempts] == before and o.dossier.verdicts[0].urteil == "reproduziert"
+    assert o.of("objection_round_end")[0]["n_experiments"] == 0
+
+
+def test_protocol_change_rule_boundaries():
+    seeds = lambda shift: [(0.376, droplast_metrics(shift)) for _ in range(3)]
+    thr = TOL * oe.PROTOCOL_EFFECT                      # 0.0025
+    st, m, _ = oe.rule_protocol_droplast(seeds(thr), "mse", TOL, 0.375)       # b=256: shift = thr exactly -> effect >= thr
+    assert st == "bestaetigt" and m["max_effect"] == pytest.approx(thr)
+    st, m, _ = oe.rule_protocol_droplast(seeds(thr * 0.99), "mse", TOL, 0.375)
+    assert st == "widerlegt"
+    st, _, _ = oe.rule_protocol_droplast(seeds(thr), "mse", TOL, 0.375, batch="32")   # nur b=32: Effekt thr/8 -> widerlegt
+    assert st == "widerlegt"
+    assert oe.rule_protocol_droplast(seeds(0.1)[:1], "mse", TOL, 0.375)[0] == "offen"
+    assert oe.rule_protocol_droplast(seeds(0.1), "mse", TOL, 0.375, batch="48")[0] == "offen"
+    assert oe.rule_protocol_droplast([], "mse", TOL, 0.375)[0] == "offen"
+
+
+def test_protocol_change_offen_without_stored_droplast_metrics():
+    r = run(fresh(seeded), [(Q_DROP, DROP)])["obj1"]
+    assert r["status"] == "offen" and "fewer than 2 valid seeds" in r["note"]
+
+
+def test_protocol_change_not_counted_against_experiment_limit_and_zeugnis_line():
+    o = with_droplast(fresh(seeded), 0.02)
+    r = run(o, [(Q_WINDOW, WINDOW), (Q_SEED, SEEDV), (Q_DROP, DROP), (Q_NUMBER, NUMBER)])
+    assert r["obj3"]["status"] == "bestaetigt" and r["obj3"]["type"] == "protocol_change"
+    assert o.of("objection_round_end")[0]["n_experiments"] == 2
+    from repro_agent.report import describe_check
+    assert "drop_last=True loader keeps them" in describe_check(r["obj3"])
+
+
+def test_etth1_declares_drop_last_and_others_do_not():
+    assert etth1_task().protocols == ("drop_last",) and cora_task().protocols == ()

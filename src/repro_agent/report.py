@@ -11,6 +11,11 @@ def describe_check(o: dict) -> str:
     m, t = o.get("measured") or {}, o["type"]
     if t == "not_measurable" or o["status"] == "nicht pruefbar":
         return f"not measurable: {o.get('note') or o.get('type_reason') or 'stays text'}"
+    if t == "protocol_change" and "sizes" in m:
+        b = m["nearest_to_target"]
+        v = m["sizes"][b]
+        return (f"same predictions, test windows as a drop_last=True loader keeps them: largest change {m['max_effect']:.4f} "
+                f"(batch size {b}: {v['truncated_mean']:.4f} on {v['windows']} of {v['windows'] + v['dropped']} windows vs {v['full_mean']:.4f} on all, {m['n']} seeds)")
     if t == "reported_number":
         sup = {"paper": "supports the paper's value", "reported": "supports the reported value", "both": "supports both values",
                "neither": "supports neither value"}.get(m.get("supports", ""), "no comparison")

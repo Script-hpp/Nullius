@@ -48,6 +48,9 @@ class Task:
     # Einwand-Experimente (objection_experiments.py): Einstellungen, die ein Einwand aendern darf (Schluessel, Beschreibung).
     # Daten, Splits und Metrik gehoeren nie dazu; leer = keine parameter_change-Experimente fuer diesen Task.
     tunable: tuple[tuple[str, str], ...] = ()
+    # Protokoll-Neubewertungen (protocol_change): Namen der Re-Evaluationen, die der Harness aus denselben Vorhersagen rechnet
+    # (kein neuer Lauf). "drop_last" = Metrik ueber die Testfenster, die ein Loader mit drop_last=True liefert (harness/droplast.py).
+    protocols: tuple[str, ...] = ()
 
     def env_for(self, seed: int) -> str:
         if self.seeds_per_split:
@@ -210,6 +213,7 @@ def etth1_task() -> Task:
     ]
     return Task(
         tunable=ETTH1_TUNABLE,
+        protocols=("drop_last",),
         image="python:3.11-slim",
         setup_cmds=prep,
         harness_files=["etth1_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "etth1_eval.py"],

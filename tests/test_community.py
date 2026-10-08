@@ -26,11 +26,12 @@ ERRATUM = "Erratum: Table 2 of GraphNet: Better Node Classification was recomput
 
 
 class FakeTools:
-    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None, method_pages=None):
+    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None, method_pages=None, critique_pages=None):
         self.calls = []
         self.search_pages = search_pages if search_pages is not None else [("https://github.com/a/b/issues/1", PAGE_ISSUE), ("https://example.org/r", PAGE_REPORT)]
         self.crawl_pages, self.read, self.explain_pages, self.repo_pages = crawl_pages or [], read_pages or [], explain_pages or [], repo_pages or []
         self.method_pages = method_pages or []
+        self.critique_pages = critique_pages or []
 
     @staticmethod
     def _res(pages):
@@ -43,6 +44,10 @@ class FakeTools:
     def search_method_critique(self, method, dataset, limit=5):
         self.calls.append(("method_search", method, dataset))
         return self._res(self.method_pages)
+
+    def search_critique(self, method, dataset, limit=5):
+        self.calls.append(("critique", method, dataset))
+        return {**self._res(self.critique_pages), "queries": ["q1", "q2", "q3", "q4"]}
 
     def search_repo_issues(self, slug, limit=5):
         self.calls.append(("repo_search", slug))
@@ -141,7 +146,7 @@ def test_repo_issues_by_search_crawl_only_as_fallback():
     tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)], repo_pages=[("https://github.com/a/b/issues/7", "Issue about reproduce accuracy " + ISSUE)])
     d = dossier(repo=repo)
     orch(tools, FakeLLM([REPORT, ISSUE]))._community_round(paper(), d)
-    assert [c[0] for c in tools.calls] == ["search", "repo_search"] and tools.calls[1][1] == "a/b"
+    assert [c[0] for c in tools.calls] == ["search", "repo_search", "extract"] and tools.calls[1][1] == "a/b"   # extract: Issue-Text nachladen
     assert "https://github.com/a/b/issues/7" in [p["url"] for p in d.community["pages"]]            # Repo-Seite braucht den Titel nicht
     # auch die Repo-Suche leer: Crawl als Rueckfall, limit 3
     community.CACHE_PATH.unlink(missing_ok=True)
@@ -152,7 +157,7 @@ def test_repo_issues_by_search_crawl_only_as_fallback():
     community.CACHE_PATH.unlink(missing_ok=True)
     tools3 = FakeTools()
     orch(tools3, FakeLLM([ISSUE]))._community_round(paper(), dossier(repo=repo))
-    assert [c[0] for c in tools3.calls] == ["search"]
+    assert [c[0] for c in tools3.calls] == ["search", "extract"]   # Issue-Text nachladen, sonst nichts
     # kein Repo: nie Repo-Suche oder Crawl
     community.CACHE_PATH.unlink(missing_ok=True)
     tools4 = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
@@ -368,6 +373,11 @@ def kipf_paper(with_method=True):
     return {"title": KIPF, "dataset": "Cora", "arxiv_url": "https://arxiv.org/abs/1609.02907", "claims": claims, "community": []}
 
 
+def kipf_paper_of(method):
+    return {"title": "Some Unrelated Title", "dataset": "Cora", "arxiv_url": "https://arxiv.org/abs/2501.00009",
+            "claims": [{"id": "c", "extract": {"method": method, "dataset": "Cora"}}], "community": []}
+
+
 def test_finding_must_name_method_or_title_but_repo_pages_are_exempt():
     page = f"Review of {KIPF}. Some say: {TOO_GOOD}. Another review: GCN accuracy on Cora is lower with random splits."
     issue = "Issue in the repo: the numbers differ on my machine, please explain the preprocessing step."
@@ -391,7 +401,7 @@ def test_method_query_reads_critique_papers_without_the_title():
     assert [f["url"] for f in d.community["findings"]] == ["https://arxiv.org/abs/1811.05868"]      # Kritik-Paper, nicht die eigene Seite
     f = d.community["findings"][0]
     assert f["kind"] == "other" and f["label"] == "Note"                                                  # Label-Feld nie leer
-    assert {q["kind"] for q in d.community["queries"]} == {"search", "method_search"}
+    assert {q["kind"] for q in d.community["queries"]} == {"search", "method_search", "critique_search"}
 
 
 def test_method_query_needs_method_and_dataset_in_the_page():
@@ -462,3 +472,74 @@ def test_quote_not_in_page_reason():
     o._community_round(paper(), d)
     assert {x["reason"] for x in d.community["dropped_items"]} <= {"quote_not_in_page", "names_neither_method_title_nor_arxiv_id"}
     assert len(d.community["dropped_items"]) == d.community["dropped"]
+
+
+# ---- generische Kritik-Vorlagen, Foren, Issue-Texte (Pivot 2026-10-08) -----------------------------------------------------
+
+def test_critique_templates_are_generic_and_search_forums():
+    from repro_agent import tavily_tools as tt
+
+    seen = []
+    t = tt.TavilyTools.__new__(tt.TavilyTools)
+    t.on_call = None
+    t._client = SimpleNamespace(search=lambda **kw: seen.append(kw) or {"results": [{"url": "https://x/" + kw["query"].replace(" ", "_")}, {"url": "https://x/dup"}]})
+    res = t.search_critique("GCN", "Cora", 5)
+    assert [k["query"] for k in seen] == ["GCN Cora reproduce results differ", "GCN bug evaluation", "GCN baseline re-evaluation fixed",
+                                           "we re-run GCN on Cora and compare with the reported numbers"]
+    assert all(k["max_results"] == 5 and "arxiv.org" in k["include_domains"] and "openreview.net" in k["include_domains"]
+               and "github.com" in k["include_domains"] for k in seen)
+    assert [("discuss.dgl.ai" in k["include_domains"]) for k in seen] == [True, True, True, False]
+    assert len(res["results"]) == 5 and res["queries"] == [k["query"] for k in seen]   # Duplikat-URL einmal
+    # keine Paper-Eigenheiten in den Vorlagen
+    assert not any(w in " ".join(q for q, _ in tt.CRITIQUE_TEMPLATES).lower() for w in ("drop_last", "dlinear", "etth1", "github.com/"))
+
+
+def test_critique_hits_are_read_with_method_and_dataset_but_paper_and_quote_checks_stay():
+    page = "We re-run MyNet on Cora and find the reported accuracy drops by two points. Details follow."
+    tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)], critique_pages=[("https://arxiv.org/abs/2601.00002", page)])
+    quote = "We re-run MyNet on Cora and find the reported accuracy drops by two points."
+    d = dossier()
+    orch(tools, QuoteLLM([("Re-run drops accuracy.", quote), ("Made up.", "nowhere in the page")]))._community_round(kipf_paper_of("MyNet"), d)
+    assert ("critique", "MyNet", "Cora") in tools.calls
+    assert [f["url"] for f in d.community["findings"]] == ["https://arxiv.org/abs/2601.00002"]
+    assert d.community["calls"].count("search") == 1 + 1 + 4   # title, method, 4 critique templates
+    # Seite ohne Methode+Datensatz im Text wird auch als Treffer der Kritik-Vorlagen nicht gelesen
+    tools2 = FakeTools(search_pages=[], critique_pages=[("https://arxiv.org/abs/2601.00003", "Totally unrelated text about transformers.")])
+    d2 = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools2, QuoteLLM([]))._community_round(kipf_paper_of("MyNet"), d2)
+    assert d2.community["pages"] == []
+
+
+def test_short_issue_hits_get_their_body_by_extract_limited():
+    repo = {"url": "https://github.com/a/b"}
+    heads = [(f"https://github.com/a/b/issues/{i}", f"Issue {i} title") for i in range(1, 8)]
+    body = "Issue 2 title. Description: " + ISSUE
+    tools = FakeTools(search_pages=heads, read_pages=[("https://github.com/a/b/issues/2", body)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    ext = [c for c in tools.calls if c[0] == "extract"]
+    assert len(ext) == 1 and len(ext[0][1]) == community.MAX_BODIES == 4 and ext[0][1][0].endswith("/issues/1")
+    assert [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/2"]   # Zitat steht nur im Text
+    assert {"kind": "issue_bodies", "urls": list(ext[0][1])} in d.community["queries"]
+
+
+def test_issue_list_page_alone_triggers_the_crawl_for_bodies():
+    repo = {"url": "https://github.com/a/b"}
+    tools = FakeTools(search_pages=[("https://github.com/a/b/issues", "Issues\n#1 Something\n#2 Other")],
+                      crawl_pages=[("https://github.com/a/b/issues/9", "Issue nine " + ISSUE)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    assert ("crawl", "https://github.com/a/b", 3) in tools.calls
+    assert [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/9"]
+
+
+def test_extract_failure_keeps_the_paid_hits():
+    class Boom(FakeTools):
+        def read_pages(self, urls, limit=3):
+            raise RuntimeError("down")
+    repo = {"url": "https://github.com/a/b"}
+    tools = Boom(search_pages=[("https://github.com/a/b/issues/1", PAGE_ISSUE[:100] + ISSUE)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    assert d.community is not None and [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/1"]

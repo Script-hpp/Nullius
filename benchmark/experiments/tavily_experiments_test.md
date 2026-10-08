@@ -49,3 +49,31 @@ Acceptance of the whole task (coordinator): at least one real exported run (`scr
 ## Report (phase D)
 
 `benchmark/experiments/results/tavily_experiments_test.md`: every criterion with its numbers from the files (dossier, events, `logs/costs.jsonl`, `logs/tavily_usage.jsonl`), "met / not met", costs and credits against the caps, counts per type and status, what did not work. No claim of improved accuracy.
+
+## Addendum A (2026-10-08): post hoc query pivot and one more DLinear run
+
+Written and committed **before** the run described here. This is a **post hoc pivot after coordinator web research**: parts 1 and 2 (four runs) yielded no measurable live objection, and the coordinator then searched the web by hand (not with Tavily) and found objections outside the channels our role-3 queries cover: the LTSF-Linear test loader sets `drop_last=True` and so drops part of the test set (documented in the FITS README and the SparseTSF paper); discussions of GAT/SGC on discuss.dgl.ai; the Shchur 2018 split critique for GCN. This addendum changes the **search**, not the checks. It does not touch the rules above.
+
+### What changes (generic, same for every paper; no paper-specific term, no hard-coded URL)
+
+1. Query templates (`tavily_tools.CRITIQUE_TEMPLATES`), method and dataset are the only substitutions, one Tavily search each (1 credit each, 5 results):
+   - `<method> <dataset> reproduce results differ`
+   - `<method> bug evaluation`
+   - `<method> baseline re-evaluation fixed`
+   - `we re-run <method> on <dataset> and compare with the reported numbers` (follow-up papers and repos)
+   Domains: `github.com`, `arxiv.org`, `openreview.net` kept; discussion forums added for the first three (`discuss.dgl.ai`, `discuss.pytorch.org`, `discuss.huggingface.co`, `stats.stackexchange.com`, `reddit.com`). The old three searches stay.
+2. Issue bodies: a numbered issue/PR/discussion hit whose text is shorter than 1,500 characters (a heading, not a post) is re-read with one Extract call (at most 4 pages). If no numbered issue page of the paper's repo was found at all (only the `/issues` list page, or nothing), the existing crawl of the repo's issues runs (limit 3, unchanged); it returns issue bodies.
+3. Unchanged: crawl `limit`, the quote check (the quote must occur in the page), `names_paper` (a finding must name the method, the full title or the arXiv ID; repo pages exempt), noise filter, page-size filter, objection classification and all rules above. Community cache version raised to 3 so older entries are not reused (`--fresh-community` is used anyway).
+4. New objection type `protocol_change` (only for tasks that declare it; ETTh1 declares `drop_last`). The classifier may choose it only if the quote says that the test loader drops the last incomplete batch (fixed code demotes otherwise: keyword check on statement and quote, claim metric must be mse/mae, task must support it). **No new branch and no agent code.** Our harness already computes, for every valid main seed, the claim metric over the test windows a `drop_last=True` loader would keep (`harness/droplast.py`, batch sizes 32/64/128/256, from the same predictions as the full value, `Attempt.metrics_droplast`); the type only evaluates these stored numbers. The agent never sees or computes them. Rule (fixed now): `effect = |truncated mean - full mean|` per batch size (or only the size named in the quote), over the same seeds. `bestaetigt` if at least 2 valid seeds and the largest effect >= tolerance / 4 (the same 1/4 threshold the existing drop_last report note uses); `widerlegt` if at least 2 valid seeds and all effects are below it; `offen` otherwise. The Evidence line states the number of windows kept and the nearest-to-target batch size. A `bestaetigt` says: re-scoring the same predictions on a drop_last test set moves the metric by at least tolerance / 4. It does not say that the paper used drop_last.
+
+### Run (phase D of this addendum)
+
+One live run: `zeng_dlinear_2023`, claim `dlinear_etth1_96_mse`, 5 seeds, full mode, `--fresh-community`, `LLM_PROVIDER=tokenfactory`, `TAVILY_MODE=live`, sandbox `nebius`, product configuration with `objection_experiments=True`. Caps for the whole test (unchanged except Tavily): Token Factory **1.00 USD gross** (0.733 used, a run does not start above 0.90; ask first if the run would exceed it), Tavily **80 credits** (raised by the coordinator from 60; about 41 used, a run does not start above 72). No re-run to improve a result; an infrastructure failure may be repeated once only with the coordinator's approval.
+
+### Honest expectation (not a success criterion)
+
+The `drop_last` finding for DLinear is hoped for, but may not appear: the follow-up sources name `drop_last` in READMEs and an appendix, and our queries and the page filters may still not return them, or the extractor quote may not pass `names_paper` (it often says "LTSF-Linear" or "the original code", not "DLinear"). If it appears and passes, I expect `widerlegt` more likely than `bestaetigt`: for 2785 test windows the stored drop_last effect on ETTh1 DLinear-type models is about 0.001 to 0.004 MSE (see `droplast_note.py`), i.e. close to the 0.0025 threshold. A result in either direction is reported as is. If no `protocol_change` entry appears, the result is "not found" and is reported with the hits and drop reasons from the log (they are logged since commit 25c4f82).
+
+### Acceptance (unchanged)
+
+The criteria of parts 1 and 2 stand as written. Criterion 3 asks for a status resting on 2 valid measurements **in own branches**; a `protocol_change` rests on re-scored main-branch predictions, so by construction it does not satisfy that wording. It is reported separately ("met" is not claimed for it under criterion 3). The coordinator's acceptance (an exported run whose Evidence view shows a checked objection with quote, URL, measurement, status) is judged on the result as it stands.

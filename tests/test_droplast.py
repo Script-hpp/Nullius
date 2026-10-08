@@ -188,13 +188,17 @@ def test_no_prompt_path_reads_droplast_fields():
     """Testwerte bleiben beim Harness: die Felder kommen nur in Harness, Dossier, Hinweisregel, Bericht und in loop.py an genau vier Stellen vor."""
     src = Path(__file__).resolve().parents[1] / "src" / "repro_agent"
     fields = ("metrics_droplast", "droplast_note", "_droplast_round")
-    owners = {"droplast_note.py", "dossier.py", "report.py", "loop.py", "nachlauf.py", "nachlauf_agent.py"}   # Modus Nachlauf: nachlauf.py (M1, kein LLM), nachlauf_agent.py (M3, Prompts ohne Testwerte: tests/test_nachlauf_agent.py)
+    owners = {"droplast_note.py", "dossier.py", "report.py", "loop.py", "nachlauf.py", "nachlauf_agent.py", "objection_experiments.py"}   # objection_experiments.py: protocol_change liest sie nur fuer die Regel, nie in einem Prompt (unten geprueft); Modus Nachlauf: nachlauf.py (M1, kein LLM), nachlauf_agent.py (M3, Prompts ohne Testwerte: tests/test_nachlauf_agent.py)
     for f in src.glob("*.py"):
         if any(x in f.read_text() for x in fields):
             assert f.name in owners, f.name
     lines = [l.strip() for l in (src / "loop.py").read_text().splitlines() if any(x in l for x in fields)]
     # Import, Ergebnis-Dict, Aufruf nach dem Urteil, Methode (Kopf, Hinweis, Lesen, Schreiben), Attempt-Feld: keine Zeile baut einen Prompt
     assert not [l for l in lines if re.search(r"prompt|system=|user=|\bask\(|\.chat\(|messages", l)]
+    oe = (src / "objection_experiments.py").read_text()
+    for name in ("classify_prompt", "_run_parameter_change", "classify_finding"):
+        body = oe.split(f"def {name}")[1].split("\ndef ")[0]
+        assert "droplast" not in body.lower().replace("drop_last", ""), name
     d = Dossier(paper_id="p", claims=[Claim("c", "t", "mse", 0.3, 0.01, "s", "paper")])
     d.droplast_notes["c"] = {"droplast": 0.123456}
     assert "0.123456" not in d.condensed_for_reasoning() and "droplast" not in d.condensed_for_reasoning().lower()

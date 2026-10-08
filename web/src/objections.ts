@@ -7,6 +7,7 @@ import type { Tone } from './labels'
 export const TYPE_LABEL: Record<string, string> = {
   seed_variance: 'Seed dependence',
   parameter_change: 'Setting changed',
+  protocol_change: 'Evaluation protocol',
   reported_number: 'Reported number',
   not_measurable: 'Not measurable',
 }
@@ -26,6 +27,10 @@ export function measuredLine(o: Json): string {
   if (o.type === 'reported_number') {
     const sup: Record<string, string> = { paper: "supports the paper's value", reported: 'supports the reported value', both: 'supports both values', neither: 'supports neither value' }
     return m.mean === undefined ? 'no comparison possible' : `Reported ${f(o.reported_value, 3)}; our measurement ${f(m.mean)} ${sup[m.supports] ?? ''}`.trim()
+  }
+  if (o.type === 'protocol_change' && m.sizes) {
+    const v = m.sizes[m.nearest_to_target]
+    return `Same predictions, scored on the windows a drop_last loader keeps: largest change ${f(m.max_effect)} (batch size ${m.nearest_to_target}: ${f(v?.truncated_mean)} on ${v?.windows} of ${v ? v.windows + v.dropped : '–'} windows against ${f(v?.full_mean)} on all, ${m.n} seeds)`
   }
   if (o.type === 'seed_variance' && m.mean !== undefined) return `${m.n_extra} extra seeds: mean ${f(m.mean)}, spread over all seeds ${f(m.std_pool)} (main run ${f(m.main_mean)})`
   if (o.type === 'parameter_change' && m.delta !== undefined) {

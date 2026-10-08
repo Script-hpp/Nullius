@@ -21,13 +21,16 @@ from dataclasses import asdict, dataclass, field
 
 from .claims_source import _norm
 
-TYPES = ("seed_variance", "parameter_change", "reported_number", "not_measurable")
+TYPES = ("seed_variance", "parameter_change", "protocol_change", "reported_number", "not_measurable")
 MAX_FINDINGS = 12            # Funde, die klassifiziert werden (Kosten: ein extract-Aufruf je Fund)
 MAX_EXPERIMENTS = 3          # Experimente mit Sandbox pro Lauf; Schnellmodus (API) 2
 QUICK_MAX_EXPERIMENTS = 2
 SEED_VAR_K = 5               # zusaetzliche Seeds bei seed_variance; Schnellmodus 3
 QUICK_SEED_VAR_K = 3
 PARAM_SEEDS = 3              # Seeds bei parameter_change (Seed 0 und 2 weitere), gepaart mit den Hauptseeds
+# protocol_change "drop_last": der Fund sagt, der Test-Loader verwerfe den letzten unvollstaendigen Batch (ein Teil des Testsatzes fehlt).
+DROPLAST_WORDS = re.compile(r"drop[_ -]?last|(?:last|final)\s+(?:incomplete\s+|partial\s+|small\s+)?batch|(?:drops?|dropped|discard\w*|skips?|skipped|omit\w*)\s+(?:the\s+)?(?:last|final|remaining)\b", re.I)
+PROTOCOL_EFFECT = 0.25       # Anteil der Toleranz: so viel Verschiebung der Metrik gilt als Wirkung (wie NEAR_FRACTION in droplast_note.py)
 SEED_WORDS = re.compile(r"seed|random|initiali[sz]|varian|vary|varies|varied|stochastic|run[- ]to[- ]run|unstable|fluctuat", re.I)
 
 RULE_SEED = ("seed_variance: K extra seeds with the final main code. bestaetigt if std(main+extra) >= tolerance or "
@@ -36,6 +39,10 @@ RULE_SEED = ("seed_variance: K extra seeds with the final main code. bestaetigt 
 RULE_PARAM = ("parameter_change: one new code changes exactly the named setting; paired seeds with the main run. delta = new mean - main mean "
               "(same seeds), SE = sqrt((s_new^2 + s_main^2) / 2) / sqrt(n). bestaetigt if |delta| > max(tolerance, 2*SE); widerlegt if "
               "|delta| <= tolerance (at least 2 valid pairs); offen otherwise.")
+RULE_PROTOCOL = ("protocol_change (drop_last): no new run and no new code. Our harness recomputes the claim metric from the same agent predictions "
+                 "on the test windows a loader with drop_last=True keeps (batch sizes 32, 64, 128, 256, or only the size named in the quote), "
+                 "for every valid main seed. effect = |truncated mean - full mean| (same seeds). bestaetigt if at least 2 valid seeds and the "
+                 "largest effect >= tolerance / 4; widerlegt if at least 2 valid seeds and all effects < tolerance / 4; offen otherwise.")
 RULE_REPORTED = ("reported_number: no new run. Needs the same setup (named in the quote). bestaetigt if |ours - reported| <= tolerance and "
                  "|reported - target| > tolerance; widerlegt if |ours - target| <= tolerance and |ours - reported| > tolerance; offen otherwise.")
 RULE_NONE = "not_measurable: stays text."
@@ -73,7 +80,7 @@ class ObjectionCheck:
 CLASSIFY_SYSTEM = "You classify objections quoted from web pages. Answer only from the text you are given."
 
 
-def classify_prompt(paper: str, dataset: str, claim, tunable: dict[str, str], finding: dict) -> str:
+def classify_prompt(paper: str, dataset: str, claim, tunable: dict[str, str], finding: dict, protocols: tuple[str, ...] = ()) -> str:
     settings = "\n".join(f"- {k}: {v}" for k, v in tunable.items()) or "(none: this task allows no setting to be changed)"
     return (
         f"Paper: {paper}. Dataset: {dataset}. Claim: {claim.text} (metric {claim.metric}, target {claim.target}).\n"
@@ -81,10 +88,13 @@ def classify_prompt(paper: str, dataset: str, claim, tunable: dict[str, str], fi
         "- seed_variance: the quote itself says the result varies with random seed / initialisation / run.\n"
         "- parameter_change: the quote names a concrete setting AND a concrete value for it (for example an input window of 336 "
         "instead of 96) that could change the result.\n"
+        "- protocol_change: the quote says that the evaluation drops the last incomplete batch of the test set (drop_last=True), so "
+        "part of the test windows is not evaluated. Only if the task allows this re-evaluation (listed below).\n"
         "- reported_number: the quote contains a number that someone measured with the same metric as the claim.\n"
         "- not_measurable: anything else (fairness, novelty, wording, questions, bugs of the original code, other metrics).\n"
         "If in doubt choose not_measurable.\n"
         f"Settings this task allows to change (parameter_change only):\n{settings}\n"
+        f"Re-evaluations this task supports (protocol_change only): {', '.join(protocols) or '(none)'}.\n"
         "For parameter_change give param = the key from the list; if the quote names a setting that is not in the list, give its name "
         "in a few words. to_value = the value exactly as written in the quote.\n"
         "For reported_number give reported_value = the number as written in the quote and reported_metric. same_setup is 'yes' only if "
@@ -113,7 +123,7 @@ def _numbers(text: str) -> list[float]:
     return [float(x) for x in re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?", text.replace(",", "."))]
 
 
-def validate(raw: dict, finding: dict, claim_metric: str, tunable: dict[str, str]) -> dict:
+def validate(raw: dict, finding: dict, claim_metric: str, tunable: dict[str, str], protocols: tuple[str, ...] = ()) -> dict:
     """Feste Pruefung der LLM-Antwort. Rueckgabe: {type, reason, param, to_value, reported_value, reported_metric, same_setup, note}.
     Eine Behauptung, die das Zitat oder die Task-Liste nicht deckt, wird `not_measurable` mit Begruendung (sichtbar im Zeugnis)."""
     typ = str(raw.get("type", "")).strip()
@@ -138,6 +148,17 @@ def validate(raw: dict, finding: dict, claim_metric: str, tunable: dict[str, str
             out["note"] = "the value is not written in the quote"
         else:
             out.update(type=typ, param=param, to_value=to_value)
+    elif typ == "protocol_change":
+        text = finding["statement"] + " " + finding["quote"]
+        if "drop_last" not in protocols:
+            out["note"] = "this task supports no protocol re-evaluation"
+        elif claim_metric.lower() not in ("mse", "mae"):
+            out["note"] = f"the re-evaluation is defined for mse and mae, not {claim_metric}"
+        elif not DROPLAST_WORDS.search(text):
+            out["note"] = "no statement about a dropped last test batch in the quote"
+        else:
+            m = re.search(r"batch[_ ]?size\D{0,12}(\d+)", finding["quote"], re.I)
+            out.update(type=typ, param="drop_last", to_value=m.group(1) if m else None)
     elif typ == "reported_number":
         metric = str(raw.get("reported_metric") or "").strip()
         try:
@@ -154,12 +175,12 @@ def validate(raw: dict, finding: dict, claim_metric: str, tunable: dict[str, str
     return out
 
 
-def classify_finding(llm, paper: str, dataset: str, claim, tunable: dict[str, str], finding: dict) -> dict:
+def classify_finding(llm, paper: str, dataset: str, claim, tunable: dict[str, str], finding: dict, protocols: tuple[str, ...] = ()) -> dict:
     resp = llm.complete("extract", [
         {"role": "system", "content": CLASSIFY_SYSTEM},
-        {"role": "user", "content": classify_prompt(paper, dataset, claim, tunable, finding)},
+        {"role": "user", "content": classify_prompt(paper, dataset, claim, tunable, finding, protocols)},
     ], temperature=0.0, max_tokens=6000, timeout_s=600)
-    return validate(_parse_object(resp.content), finding, claim.metric, tunable)
+    return validate(_parse_object(resp.content), finding, claim.metric, tunable, protocols)
 
 
 # ---- Regeln (reine Funktionen, vorab festgelegt) ----------------------------------------------------------------------
@@ -194,6 +215,29 @@ def rule_parameter_change(new: dict[int, float], main: dict[int, float], tol: fl
     if abs(delta) <= tol:
         return "widerlegt", meas, ""
     return "offen", meas, "effect larger than the tolerance but not separable from seed noise (|delta| <= 2*SE)"
+
+
+def rule_protocol_droplast(per_seed: list[tuple[float, dict]], metric: str, tol: float, target: float,
+                           batch: str | None = None) -> tuple[str, dict, str]:
+    """per_seed: je gueltigem Hauptseed (Vollwert, metrics_droplast {"128": {"mse", "mae", "windows", "dropped"}, ...}). `batch`: nur diese Groesse."""
+    rows = [(full, d) for full, d in per_seed if d]
+    sizes = sorted({b for _, d in rows for b in d if (batch is None or b == batch) and metric in d[b]}, key=int)
+    if len(rows) < 2 or not sizes:
+        note = "fewer than 2 valid seeds with a drop_last re-evaluation" if len(rows) < 2 else f"batch size {batch} is not one of the evaluated sizes"
+        return "offen", {"n": len(rows)}, note
+    per_size = {}
+    for b in sizes:
+        pairs = [(full, d[b]) for full, d in rows if b in d and metric in d[b]]
+        full_m, trunc_m = statistics.mean(f for f, _ in pairs), statistics.mean(d[metric] for _, d in pairs)
+        per_size[b] = {"full_mean": full_m, "truncated_mean": trunc_m, "delta": trunc_m - full_m, "n": len(pairs),
+                       "windows": pairs[0][1]["windows"], "dropped": pairs[0][1]["dropped"], "distance_to_target": abs(trunc_m - target)}
+    effect = max(abs(v["delta"]) for v in per_size.values())
+    meas = {"n": len(rows), "sizes": per_size, "max_effect": effect, "threshold": tol * PROTOCOL_EFFECT, "target": target,
+            "full_mean": statistics.mean(f for f, _ in rows), "restricted_to": batch}
+    meas["nearest_to_target"] = min(per_size, key=lambda b: per_size[b]["distance_to_target"])
+    if effect >= tol * PROTOCOL_EFFECT:
+        return "bestaetigt", meas, ""
+    return "widerlegt", meas, ""
 
 
 def rule_reported(r: float, m: float | None, t: float, tol: float, same_setup: str) -> tuple[str, dict, str]:
@@ -251,13 +295,15 @@ def run_round(orch, dossier, paper: dict, quick: bool = False) -> None:
     title, dataset = paper.get("title", ""), paper.get("dataset", "")
     checks: list[ObjectionCheck] = []
     for i, f in enumerate(findings, 1):
-        info = classify_finding(orch.llm, title, dataset, claim, tunable, f)
+        info = classify_finding(orch.llm, title, dataset, claim, tunable, f, tuple(getattr(task, "protocols", ()) or ()))
         c = ObjectionCheck(
             id=f"obj{i}", claim_id=claim.id, topic=f.get("topic", ""), statement=f["statement"], quote=f["quote"], url=f["url"],
             kind=f.get("kind", ""), type=info["type"], type_reason=info["reason"], param=info["param"], to_value=info["to_value"],
             reported_value=info["reported_value"], reported_metric=info["reported_metric"], same_setup=info["same_setup"], note=info["note"])
         if c.type == "not_measurable":
             c.status = "nicht pruefbar"
+        elif c.type == "protocol_change":
+            _run_protocol_change(dossier, claim, ctx, c)
         elif c.type == "reported_number":
             c.status, c.measured, c.note = rule_reported(
                 c.reported_value, verdict.measured_mean, claim.target, claim.tolerance, c.same_setup)
@@ -326,6 +372,17 @@ def _parallel(orch, ctx, claim, code, seeds, c) -> dict[int, float]:
 def main_values(dossier, claim_id: str, code_hash: str) -> dict[int, float]:
     """Messwerte des Hauptlaufs je Seed fuer genau den Code, der das Urteil trug."""
     return {a.seed: a.measured for a in dossier.attempts if a.claim_id == claim_id and a.code_hash == code_hash and a.measured is not None}
+
+
+def _run_protocol_change(dossier, claim, ctx, c: ObjectionCheck) -> None:
+    """Keine Sandbox, kein Agentencode: der Harness hat die Metrik im Hauptlauf schon je Seed ueber die Fenster eines Loaders mit
+    drop_last=True gerechnet (Attempt.metrics_droplast, aus denselben Vorhersagen wie der Vollwert). Hier wird nur ausgewertet."""
+    c.rule, c.main_code_hash = RULE_PROTOCOL, _hash(ctx["code"])
+    atts = [a for a in dossier.attempts if a.claim_id == claim.id and a.code_hash == c.main_code_hash and a.measured is not None and a.metrics_droplast]
+    c.status, c.measured, c.note = rule_protocol_droplast([(a.measured, a.metrics_droplast) for a in atts], claim.metric, claim.tolerance,
+                                                         claim.target, c.to_value)
+    if c.measured is not None:
+        c.measured.update(seeds=sorted(a.seed for a in atts), main_branches=[a.branch_id for a in atts])
 
 
 def _run_seed_variance(orch, dossier, claim, verdict, ctx, c: ObjectionCheck, k: int) -> None:
