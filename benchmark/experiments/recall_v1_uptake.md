@@ -54,3 +54,15 @@ Gilt alles: Empfehlung, ein vorab festgelegtes bezahltes v6 vorzubereiten (Gate 
 ## Nicht Teil von V1
 
 Kein Sandbox-Smoke (`SMOKE=1`), keine Accuracy, kein Vergleich mit Arm A. Keine Änderung an Benchmark-v4-Ergebnissen oder -Protokollen. Das Ergebnis ist ein Gate für die Frage „bezahlter Lauf ja/nein“, kein Befund über die Wirksamkeit.
+
+## Addendum 2026-10-08 (vor dem ersten Probe-Aufruf; Text oben unverändert)
+
+Entscheidung der Nutzerin/des Nutzers: Der OpenRouter-Schlüssel ist Free-Tier (ca. 50 Anfragen pro Tag), V1 läuft deshalb auf Token Factory, verkleinert. Die Abweichungen im Einzelnen:
+
+- **Anbieter und Modell:** `LLM_PROVIDER=tokenfactory`, Modell `nvidia/nemotron-3-super-120b-a12b` (Super) für `code`, `extract` und `reasoning`; **kein Ultra**. Plan und S1 laufen also auf Super. Keine Tavily- und keine Sandbox-Aufrufe (unverändert). Die Prototyp-Regel „0 $" entfällt; die Kosten zählen zum globalen Budget (`.env` und `logs/` sind die des Haupt-Checkouts).
+- **Arme:** nur `heute` und `steckbrief_pruefung`. Der Arm `steckbrief` (S1 allein) entfällt; die Regeln 1–4 nutzen nur diese zwei Arme und bleiben unverändert. „Arm `steckbrief` allein" wird nicht berichtet. Aufrufe je Arm: 7 Einheiten × (1 Plan + 3 Code-Proben); dazu je Einheit ein S1-Aufruf. Regel 3 bleibt „höchstens 2 von 21".
+- **Einheiten und Temperaturen:** wie oben, 7 Einheiten × 3 Temperaturen (0,2 / 0,5 / 0,8). SparseTSF entfällt (siehe oben, unverändert).
+- **S4-Erweiterungen über den Plan hinaus akzeptiert:** Der Repo-Ausschnitt (S4) enthält gegenüber dem Plan zusätzlich (a) Modell-Konfigurationsdateien, (b) Rümpfe von Vorverarbeitungsfunktionen aus Skripten, (c) Stern-Importe. Mit ihnen stieg die Liefer-Abdeckung in V0 von 13/22 auf 21/22 Fakten (`results/recall_v0_audit.md`). Diese Erweiterungen sind Teil dessen, was V1 testet; ein Bestehen von V1 gilt für S1–S4 einschließlich dieser Zusätze.
+- **Kostengrenze:** hart **1,20 $ brutto** für ganz V1 (inkl. Trockenlauf), im Skript durchgesetzt: vor jedem Aufruf wird `LLMClient.total_cost_usd × (1 + VAT_RATE)` geprüft; ab 1,20 $ minus 0,03 $ Marge bricht das Skript ab (`CostCapReached`), speichert die bis dahin erzeugten Proben und berichtet das Teilergebnis. Bei Abbruch wird die Regel nur auf den vorhandenen Proben ausgewertet und als unvollständig gekennzeichnet; sie wird nicht als bestanden gewertet.
+- **Echte Proben:** `LLM_CACHE=off`. Kein Cache-Treffer über Temperaturen oder Wiederholungen hinweg; jeder Code-Aufruf ist ein frischer Modellaufruf.
+- **Trockenlauf zuerst:** 1 Einheit, 1 Temperatur (0,2), beide Arme (`--units`, `--temps`, `--arms`). Die Kosten werden hochgerechnet; liegt die Hochrechnung der Gesamtkosten über 1,20 $, wird nicht weitergelaufen, sondern die Koordination gefragt. Die Skriptänderungen (`--arms`, `--temps`, Kostengrenze, Teilspeicherung) ändern weder `FACTS` noch `decide` noch die Checks.

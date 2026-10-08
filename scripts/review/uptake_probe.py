@@ -26,6 +26,11 @@ sys.path.insert(0, str(ROOT / "src"))
 TEMPS = (0.2, 0.5, 0.8)
 ARMS = ("heute", "steckbrief", "steckbrief_pruefung")
 THRESHOLD_ABS, THRESHOLD_GAIN, MAX_FAILED_CALLS = 0.7, 0.25, 2
+COST_CAP_GROSS_USD, COST_CAP_MARGIN_USD = 1.20, 0.03   # Addendum 2026-10-08: harte Grenze brutto fuer ganz V1
+
+
+class CostCapReached(BaseException):   # nicht Exception: loop.py faengt RuntimeError/Exception
+    """Kostengrenze erreicht: Lauf abbrechen, Teilergebnis berichten."""
 
 
 # ---- Fakt-Checks (deterministisch, ohne LLM) --------------------------------------------------------------------------------
@@ -247,13 +252,24 @@ def make_orchestrator(ask, unit_data: dict, arm: str, spec, events: list):
     return o
 
 
-def run_probe(ask_for, main: Path, clones: Path, out: Path, units: list[str]) -> list[Sample]:
+def run_probe(ask_for, main: Path, clones: Path, out: Path, units: list[str], arms: tuple[str, ...] = ARMS,
+              temps: tuple[float, ...] = TEMPS) -> list[Sample]:
     """ask_for(role) -> ask(role, system, user, max_tokens=None, temperature=0.2) mit .content/.finish_reason."""
+    out.mkdir(parents=True, exist_ok=True)
+    samples: list[Sample] = []
+    try:
+        _probe_units(ask_for, main, clones, out, units, arms, temps, samples)
+    except CostCapReached as exc:   # Teilergebnis speichern und berichten
+        print(f"ABBRUCH (Kostengrenze): {exc}; {len(samples)} Proben gespeichert", file=sys.stderr, flush=True)
+        (out / "ABORTED_COST_CAP.txt").write_text(str(exc))
+    store(samples, out)
+    return samples
+
+
+def _probe_units(ask_for, main, clones, out, units, arms, temps, samples) -> None:
     from repro_agent.spec import build_spec, format_spec
     from repro_agent.tasks import TASKS
 
-    out.mkdir(parents=True, exist_ok=True)
-    samples: list[Sample] = []
     for unit in units:
         data = load_unit(main, clones, unit)
         task = TASKS[data["paper"]["dataset"]]()
@@ -262,11 +278,11 @@ def run_probe(ask_for, main: Path, clones: Path, out: Path, units: list[str]) ->
                           data["details"], data["docs"], data["claim"].text, data["paper"]["dataset"])
         (out / f"{unit}_spec.json").write_text(json.dumps({"formatted": format_spec(spec), "dropped": spec.dropped,
                                                            "missing": spec.missing}, indent=1, default=str))
-        for arm in ARMS:
+        for arm in arms:
             events: list = []
             o = make_orchestrator(ask, data, arm, spec, events)
             plan = o.plan(data["paper"], data["claim"], task)
-            for t in TEMPS:
+            for t in temps:
                 code = None
                 try:
                     code = o.write_code(plan, task, temperature=t)
@@ -280,8 +296,6 @@ def run_probe(ask_for, main: Path, clones: Path, out: Path, units: list[str]) ->
                 samples.append(s)
                 (out / f"{unit}__{arm}__{t}.py").write_text(code or "# kein Code\n")
         (out / f"{unit}_events.json").write_text(json.dumps(events[-50:], default=str)[:20000])
-    store(samples, out)
-    return samples
 
 
 def store(samples: list[Sample], out: Path) -> None:
@@ -302,11 +316,12 @@ def store(samples: list[Sample], out: Path) -> None:
 
 def report(samples: list[Sample]) -> str:
     d = decide(samples)
-    lines = ["| Einheit | Fakt | Klasse | " + " | ".join(ARMS) + " |", "|---|---|---|" + "---|" * len(ARMS)]
+    arms = [a for a in ARMS if any(s.arm == a for s in samples)]
+    lines = ["| Einheit | Fakt | Klasse | " + " | ".join(arms) + " |", "|---|---|---|" + "---|" * len(arms)]
     for unit, facts in FACTS.items():
         for fid, (cls, _) in facts.items():
             cells = []
-            for arm in ARMS:
+            for arm in arms:
                 got = [s.facts.get(fid, False) for s in samples if s.unit == unit and s.arm == arm]
                 cells.append(f"{sum(got)}/{len(got)}" if got else "-")
             lines.append(f"| {unit} | {fid} | {cls} | " + " | ".join(cells) + " |")
@@ -326,12 +341,18 @@ def main() -> int:
     llm = LLMClient()
 
     def ask(role, system, user, max_tokens=None, temperature=0.2):
+        spent = llm.gross(llm.total_cost_usd)
+        if spent >= COST_CAP_GROSS_USD - COST_CAP_MARGIN_USD:
+            raise CostCapReached(f"{spent:.3f} $ brutto >= Grenze {COST_CAP_GROSS_USD} $ minus Marge {COST_CAP_MARGIN_USD} $")
         return llm.complete(role, [{"role": "system", "content": system}, {"role": "user", "content": user}],
                             temperature=temperature, max_tokens=max_tokens)
 
     units = arg("--units").split(",") if "--units" in argv else DEV_UNITS + NEW_UNITS
-    samples = run_probe(ask, Path(arg("--main")), Path(arg("--clones")), Path(arg("--out")), units)
+    arms = tuple(arg("--arms").split(",")) if "--arms" in argv else ARMS
+    temps = tuple(float(x) for x in arg("--temps").split(",")) if "--temps" in argv else TEMPS
+    samples = run_probe(ask, Path(arg("--main")), Path(arg("--clones")), Path(arg("--out")), units, arms, temps)
     print(report(samples))
+    print(f"Kosten dieses Laufs: {llm.total_cost_usd:.4f} $ netto, {llm.gross(llm.total_cost_usd):.4f} $ brutto")
     return 0
 
 
