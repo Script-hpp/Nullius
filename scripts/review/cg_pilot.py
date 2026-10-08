@@ -42,6 +42,7 @@ CALL_CAP = 45            # HTTP-Anfragen insgesamt (S1 + Plaene + Code + Reparat
 MIN_INTERVAL_S = 3.3     # Free-Tier: 20 Anfragen pro Minute
 MIN_VALID_SHARE = 0.5    # Urteil nur, wenn mindestens die Haelfte der Seeds einen gueltigen Wert lieferte
 MAX_REPAIRS = 1          # je Probe, gemeinsame Reparatur (Fehler beim Seed-0-Lauf, bei cg zusaetzlich CONFIG-Befunde)
+CPU_SLOTS, CORES_PER_SLOT = 4, 4   # 4 parallele Seeds auf 16 Kernen (Infrastruktur-Korrektur, siehe Addendum 2)
 PASS_FAIL_UNITS_MIN, PASS_FAIL_UNITS_GAIN, PASS_NONREG_LOSS = 3, 2, 1
 
 
@@ -136,7 +137,7 @@ class NoNetLocalSandbox:
 
     def __init__(self):
         from repro_agent.sandbox.local import LocalSandbox
-        self.inner, self.branches = LocalSandbox(), []
+        self.inner, self.branches, self._n, self._lock = LocalSandbox(), [], 0, threading.Lock()
 
     def base_snapshot(self, image, setup_cmds, label=None):
         return self.inner.base_snapshot(image, setup_cmds, label=label)
@@ -144,7 +145,11 @@ class NoNetLocalSandbox:
     def branch(self, snapshot):
         import uuid
         name = f"cgpilot-{uuid.uuid4().hex[:8]}"
-        subprocess.run(["docker", "run", "-d", "--name", name, snapshot, "sleep", "infinity"], check=True, capture_output=True)
+        with self._lock:   # Infrastruktur-Korrektur: jeder Container bekommt eigene Kerne (4 parallele Seeds ueberbuchten sonst alle 16 Kerne)
+            slot, self._n = self._n % CPU_SLOTS, self._n + 1
+        cores = f"{slot * CORES_PER_SLOT}-{slot * CORES_PER_SLOT + CORES_PER_SLOT - 1}"
+        subprocess.run(["docker", "run", "-d", "--name", name, "--cpuset-cpus", cores, snapshot, "sleep", "infinity"], check=True,
+                       capture_output=True)
         subprocess.run(["docker", "exec", name, "mkdir", "-p", "/work", "/output"], check=True, capture_output=True)
         self.branches.append(name)
         return name
