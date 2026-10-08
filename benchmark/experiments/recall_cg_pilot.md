@@ -59,3 +59,13 @@ Sonst: nicht bestanden, Stopp, Bericht „Code-Grounding hat die Accuracy im kos
 1. Diese Datei, `cg_pilot.py`, `test_cg_pilot.py` committen (**vor dem ersten Aufruf**).
 2. Pilot laufen lassen (`scripts/review/cg_pilot.py`), Zaehler pruefen.
 3. Ergebnisse in `benchmark/experiments/results/recall_cg_pilot.md`, committen, nicht pushen, nicht mergen.
+
+## Addendum 2026-10-08 (nach dem Tageslimit, vor dem naechsten Aufruf; Text oben unveraendert)
+
+Das kostenlose OpenRouter-Tageslimit (`free-models-per-day`, 50 Anfragen) wurde nach 29 gezaehlten Anfragen erreicht. Stand: Generierung vollstaendig (4 S1-Aufrufe, 8 Plaene, 16 Code-Proben, alle in `out/` gespeichert), noch keine Messung, keine Reparatur. Entscheidung der Nutzerin/des Nutzers (ueber die Koordination): nicht bis morgen warten.
+
+- **Restliche Aufrufe (Reparaturen) laufen auf Token Factory:** `LLM_PROVIDER=tokenfactory`, Modell `nvidia/nemotron-3-super-120b-a12b` (Super) fuer alle Rollen, **kein Ultra** (`TF_MODEL_REASONING` wird auf Super gesetzt). Gleiche Modellfamilie wie der kostenlose Endpunkt; die Prototyp-Regel „0 $" entfaellt fuer diesen Rest, die Kosten zaehlen zum globalen Budget (`.env` und `logs/` sind Symlinks auf den Haupt-Checkout).
+- **Harte Kostengrenze 0,30 $ brutto** fuer den Rest des Pilots, im Skript erzwungen (`CG_PILOT_COST_CAP_GROSS_USD=0.30`: vor jedem Aufruf wird `total_cost_usd × (1 + VAT_RATE)` des Prozesses geprueft; bei Erreichen Stopp mit Teilergebnis).
+- **Unveraendert:** die schon erzeugten Plaene, Steckbriefe und Code-Proben (kein Neu-Generieren, kein Austausch), Einheiten, Arme, Temperaturen, Zaehlregel, Entscheidungsregel, Reparaturregel (hoechstens eine je Probe, abwechselnd `heute`/`cg`), Aufrufgrenze 45 (29 verbraucht), Messung in Docker mit voller Seed-Zahl.
+- **Folge fuer die Lesart:** Die Reparaturen kommen von Super auf Token Factory statt von Super auf OpenRouter-Free; gleiches Modell, anderer Anbieter, kein Unterschied zwischen den Armen (beide Arme reparieren auf demselben Weg).
+- **Beobachtung vor der Reparatur (Seed-0-Diagnose ohne LLM, nur Docker, kein Teil der Regel):** 11 von 16 Proben scheitern im Seed-0-Lauf und brauchen eine Reparatur; im Arm `cg` kommen CONFIG-Befunde hinzu. Diese Diagnose aendert nichts an den Proben.

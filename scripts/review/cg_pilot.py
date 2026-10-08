@@ -390,7 +390,12 @@ def main() -> int:
     counter = CallCounter(out / "calls.jsonl")
     counter.wrap(llm._client)
 
+    import os
+    cost_cap = float(os.environ.get("CG_PILOT_COST_CAP_GROSS_USD", "0"))   # Addendum: Token Factory, harte Grenze brutto fuer den Rest
+
     def ask(role, system, user, max_tokens=None, temperature=0.2):
+        if cost_cap and llm.gross(llm.total_cost_usd) >= cost_cap:
+            raise QuotaStop(f"Kostengrenze {cost_cap} $ brutto erreicht ({llm.gross(llm.total_cost_usd):.4f} $)")
         return llm.complete(role, [{"role": "system", "content": system}, {"role": "user", "content": user}],
                             temperature=temperature, max_tokens=max_tokens)
 
