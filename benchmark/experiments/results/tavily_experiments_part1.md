@@ -53,3 +53,23 @@ Totals after the three runs: Token Factory 0.2401 (part 1) + 0.0809 + 0.0648 + 0
 3. `objection_round_end` seconds and cost: no event was written in any run (the round returned early without findings). No data.
 
 Result so far: the live path never produced a checked objection, so the acceptance condition (exported run with an "Objections checked" block) is **not reached**. Nothing here shows that the feature works or fails on live findings; it shows that for GCN/Cora the live community search yields no verified, measurable finding, and a Tavily connection error cost the DLinear round.
+
+## Offline diagnosis (no Tavily, no Token Factory; written after coordinator chose "stop paid runs")
+
+Limit of the evidence: the dossier stores per community page only `url`, `n_chars`, `sha256`, not the Tavily snippets or the LLM's dropped candidates. What follows uses those fields plus free web fetches of the page URLs (WebFetch, not Tavily).
+
+**Kipf run 2 (live, `mode=live`).** 3 searches (title, method+dataset, repo issues of `tkipf/gcn`). `select_docs` kept 2 pages:
+- `arxiv.org/html/2102.12557v1` (22,084 chars): "Benchmarking Graph Neural Networks on Link Prediction" (Wang, Vinel). Link prediction across datasets; abstract names no Cora, seeds or splits. Not a node-classification protocol note for this claim.
+- `github.com/tkipf/gcn/issues/14` (143 chars): "Can't run on Nell dataset #14", a `load_data` crash (row index out of bounds). Not a measurable objection; Tavily returned only 143 chars of it (title level), so the extractor saw almost nothing.
+The LLM extractor produced 1 candidate that was dropped. The code gives two possible reasons (`extract_objections` quote check, or `names_paper` for a statement naming neither method nor title); the reason is not logged, so which one fired cannot be shown.
+
+**Kipf run 1 (cache entry from 2026-10-02).** 7 pages kept, 2 candidates dropped, 0 findings. Pages (titles by free fetch): 2009.13734 (GCN plus side information, new method), 2207.05669 (GCN to large-scale GCN, reproduces Kipf's numbers, abstract names no seed/split variance), 1803.04489 (Probabilistic and Regularized GCNs, reproduces Kipf, alternatives do not help), plus a Reddit paper-notes thread, an OpenReview forum page, `eric-yyjau/paperNotes/issues/2`, `tkipf/gcn/issues/14`. All are re-implementations or follow-up methods, not critiques of the protocol.
+
+**Would a human see a measurable objection?** In these sources: no for seed dependence, split or hyperparameter. Two papers reproduce Kipf's numbers (supporting, not objecting); I did not read their full text, so a seed remark inside them is possible but not shown. The Kipf GCN claim has no well-known public objection of the seed/split kind in what Tavily returned. The known critique (Shchur et al. 2018, 1811.05868) is a separate catalog paper, not returned for the Kipf title query.
+
+**DLinear connection error.** `CountedClient._call` (`src/repro_agent/tavily_usage.py`) had no retry. The Tavily SDK uses `requests`; `RemoteDisconnected` surfaces as `requests.exceptions.ConnectionError`, the community check caught it and gave up (it is a best-effort add-on), so the whole objection round was lost. Fixed: up to 3 attempts with 2 s / 4 s backoff for `ConnectionError`, `Timeout`, `ChunkedEncodingError` only; other errors (key, limit, 4xx) are not retried; each attempt is logged as one call (conservative credit count). Tests: `tests/test_tavily_usage.py` (retry succeeds on third attempt with 3 log lines; gives up after three; non-transient error not retried). The LLM client's own 5-attempt retry is separate.
+
+**Recommendation.**
+1. For GCN/Cora, "sources contain nothing measurable" is the best reading of the stored evidence; no filter or query change is justified by it. Do not loosen `names_paper`/quote checks to get findings.
+2. Keep the Kipf query as is, but if a measurable finding is wanted for the acceptance condition, the paper choice matters more than the filter: DLinear's stored fixture has a real issue (#117, reported number 0.426), and Shchur-type papers have a known critique. One live DLinear run with the retry fix is the cheapest next step (about 0.22 USD gross, about 14 credits; 0.39 USD / about 26 credits left under the caps). Not run, awaiting decision.
+3. For diagnosability, log the Tavily result URLs and titles and the reason each LLM candidate was dropped (small change in `community.what_others_found`). Without it the "1 dropped" cannot be explained after the fact.

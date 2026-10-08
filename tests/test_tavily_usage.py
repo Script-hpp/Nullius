@@ -78,3 +78,39 @@ def test_used_credits_since(log):
     log.write_text(json.dumps({"ts": 1.0, "endpoint": "search", "credits": 5}) + "\n"
                    + json.dumps({"ts": 5e9, "endpoint": "search", "credits": 7}) + "\n")
     assert tu.used_credits() == 12 and tu.used_credits("2100-01-01T00:00Z") == 7
+
+
+def test_transient_connection_error_is_retried(log, monkeypatch):
+    import requests
+    monkeypatch.setattr(tu, "_sleep", lambda s: None)
+
+    class Flaky(FakeClient):
+        n = 0
+
+        def search(self, **kw):
+            Flaky.n += 1
+            if Flaky.n < 3:
+                raise requests.exceptions.ConnectionError("Remote end closed connection without response")
+            return {"results": [1]}
+
+    assert tu.CountedClient(Flaky()).search(query="x") == {"results": [1]}
+    e = entries(log)
+    assert len(e) == 3 and "error" in e[0] and "error" not in e[2]
+
+
+def test_connection_error_gives_up_after_three_and_other_errors_not_retried(log, monkeypatch):
+    import requests
+    monkeypatch.setattr(tu, "_sleep", lambda s: None)
+
+    class Down(FakeClient):
+        def search(self, **kw):
+            raise requests.exceptions.ConnectionError("down")
+
+    with pytest.raises(requests.exceptions.ConnectionError):
+        tu.CountedClient(Down()).search(query="x")
+    assert len(entries(log)) == 3
+    c = FakeClient()
+    c.fail = True
+    with pytest.raises(RuntimeError):
+        tu.CountedClient(c).search(query="x")
+    assert len(entries(log)) == 4
