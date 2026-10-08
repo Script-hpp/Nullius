@@ -87,22 +87,52 @@ def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path = F
 IMPORT_RE = re.compile(r"^\s*(?:from\s+([\w.]+)\s+import\s+([\w, ]+)|import\s+([\w.]+))", re.M)
 
 
-def imported_files(files: dict[str, str], listing: list[str]) -> list[str]:
-    """Lokale Module, die die gewaehlten Dateien importieren (eine Ebene): dort stehen oft Schichten und Vorverarbeitung."""
+def imported_files(files: dict[str, str], listing: list[str], relative: bool = False) -> list[str]:
+    """Lokale Module, die die gewaehlten Dateien importieren (eine Ebene): dort stehen oft Schichten und Vorverarbeitung.
+    relative=True (Steckbrief-Modus, S4): auch relative Imports (`from . import gat`, `from ..layers import GCN`) und
+    Pfade ohne Ruecksicht auf Gross-/Kleinschreibung."""
     have, out = set(files), []
     paths = set(listing)
+    lower = {p.lower(): p for p in listing} if relative else {}
+
+    def find(cand: str | None) -> str | None:
+        if not cand:
+            return None
+        cand = cand.lstrip("/")
+        if cand in paths:
+            return cand
+        return lower.get(cand.lower()) if relative else None
+
     for path, text in files.items():
         if not path.endswith(".py"):
             continue
         base = path.rsplit("/", 1)[0] if "/" in path else ""
         for a, names, b in IMPORT_RE.findall(text):
-            mod = (a or b).replace(".", "/")
-            cands = [f"{mod}.py", f"{mod}/__init__.py", f"{base}/{mod}.py" if base else None]
-            cands += [f"{mod}/{n.strip()}.py" for n in names.split(",") if n.strip()]   # from utils import layers
+            raw = a or b
+            if relative and raw.startswith("."):
+                dots = len(raw) - len(raw.lstrip("."))
+                parts = base.split("/") if base else []
+                parts = parts[: max(0, len(parts) - (dots - 1))]
+                rest = raw.lstrip(".").replace(".", "/")
+                mod = "/".join(p for p in parts + ([rest] if rest else []) if p)
+                cands = [f"{mod}.py" if rest else None, f"{mod}/__init__.py" if rest else None]
+                cands += [f"{mod}/{n.strip()}.py" if mod else f"{n.strip()}.py" for n in names.split(",") if n.strip()]
+            else:
+                mod = raw.replace(".", "/")
+                cands = [f"{mod}.py", f"{mod}/__init__.py", f"{base}/{mod}.py" if base else None]
+                cands += [f"{mod}/{n.strip()}.py" for n in names.split(",") if n.strip()]   # from utils import layers
             for cand in cands:
-                if cand and cand in paths and cand not in have and cand not in out:
-                    out.append(cand)
+                hit = find(cand)
+                if hit and hit not in have and hit not in out:
+                    out.append(hit)
     return out
+
+
+def model_file_in_listing(listing: list[str], model: str) -> str | None:
+    """Datei, die nach dem Claim-Modell heisst (models/NLinear.py, gnnbench/models/gat.py), kuerzester Pfad zuerst."""
+    m = model.lower()
+    hits = [p for p in listing if p.endswith(".py") and p.rsplit("/", 1)[-1][:-3].lower() == m]
+    return min(hits, key=len) if hits else None
 
 
 def _repo_key(url: str) -> str:
@@ -140,14 +170,30 @@ def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: s
     return [p for p in _last_string_list(resp.content) if p in valid][:MAX_FILES]
 
 
+IMPORT_CHAR_BUDGET = 120_000   # Steckbrief-Modus: importierte Dateien bis zu diesem Gesamtumfang statt fester Anzahl
+
+
+def unit_fixture_name(url: str, unit_key: str) -> str:
+    return f"{_repo_key(url)}__{re.sub(r'[^A-Za-z0-9_.-]+', '_', unit_key)}.json"
+
+
 def read_repo(
     sandbox: Sandbox, llm: LLMClient, url: str, claim_text: str, dataset: str,
-    fixture_dir: Path = FIXTURE_DIR, focus_model: bool = False,
+    fixture_dir: Path = FIXTURE_DIR, focus_model: bool = False, unit_key: str | None = None, model: str | None = None,
 ) -> RepoDump:
-    """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern."""
-    fixture = fixture_dir / f"{_repo_key(url)}.json"
+    """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern.
+
+    unit_key (Steckbrief-Modus, S4): Fixture je Einheit (Paper) statt je Repo. Eine fuer einen anderen Claim angelegte Fixture
+    (NLinear erbte die DLinear-Auswahl) wird dann nie gelesen. Zusaetzlich: Pflicht-Modelldatei (`model`), relative Imports
+    zwei Ebenen tief mit Zeichenbudget, nur Quelltext (keine Pickles/Daten)."""
+    from .spec import is_source_text
+
+    fixture = fixture_dir / (unit_fixture_name(url, unit_key) if unit_key else f"{_repo_key(url)}.json")
     if fixture.exists():
-        return RepoDump(**json.loads(fixture.read_text()))
+        dump = RepoDump(**json.loads(fixture.read_text()))
+        if unit_key:
+            dump.files = {p: t for p, t in dump.files.items() if is_source_text(p, t)}
+        return dump
 
     snap = sandbox.base_snapshot(
         "python:3.11-slim",
@@ -167,11 +213,32 @@ def read_repo(
     def read(paths):
         for path in paths:
             try:
-                files[path] = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")[:MAX_FILE_CHARS]
+                text = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")[:MAX_FILE_CHARS]
             except (OSError, UnicodeDecodeError):
                 continue
-    read(chosen)
-    read(imported_files(files, listing)[:MAX_IMPORTED])
+            if unit_key and not is_source_text(path, text):
+                continue
+            files[path] = text
+    if unit_key:
+        if model:
+            mf = model_file_in_listing(listing, model)
+            if mf and mf not in chosen:
+                chosen = [mf] + chosen
+        read(chosen)
+        for _ in range(2):   # zwei Ebenen
+            budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
+            nxt = []
+            for p in imported_files(files, listing, relative=True):
+                if budget <= 0:
+                    break
+                nxt.append(p)
+                budget -= MAX_FILE_CHARS // 3   # Schaetzung je Datei vor dem Lesen
+            if not nxt:
+                break
+            read(nxt)
+    else:
+        read(chosen)
+        read(imported_files(files, listing)[:MAX_IMPORTED])
     dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing))
     fixture_dir.mkdir(parents=True, exist_ok=True)
     fixture.write_text(json.dumps(asdict(dump), ensure_ascii=False, indent=1))

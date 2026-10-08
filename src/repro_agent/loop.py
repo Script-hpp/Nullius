@@ -52,6 +52,8 @@ from .setup_details import (
     Doc, SetupDetail, extract_setup_details, extract_setup_details_v2, format_conflicts, format_conflicts_v2, format_for_prompt,
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
+from . import spec_check
+from .spec import Spec, as_dict as spec_as_dict, build_spec, config_note, format_spec, model_name_of
 
 DEFAULT_SEEDS = 5
 MAX_PARALLEL = int(os.getenv("MAX_PARALLEL_SEEDS", "4"))  # gleichzeitige Branches; 20 liefen im Test ohne Fehler
@@ -102,6 +104,8 @@ TRIAGE_CHARS = 1500
 WORKDIR = "/work"
 REPO_DIFF_MAX_TOKENS = 16000   # A2: ~16k Prompt-Token; mit 6000 zehrte Super das Limit mit Denken auf (v4-Abbruch)
 CODE_RETRY_MAX_TOKENS = 24000   # Wiederholung nach fehlendem Code-Block oder abgeschnittener Antwort
+MAX_SPEC_REPAIRS = 2   # Steckbrief (S3): gezielte Reparaturrunden je Claim fuer den gewaehlten Code
+SPEC_MAX_TOKENS = 12000   # Steckbrief-Aufruf (S1) und Einzelfragen (S3): Super denkt im Antworttext
 CODE_ONLY_NOTE = (
     "\n\nIMPORTANT: Reply with the complete script in one ```python block and nothing else. "
     "Do not reason at length before the code; the answer must not be cut off."
@@ -227,12 +231,17 @@ class Orchestrator:
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
+        spec_mode: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
         # v5 Schritt A: Pflichtliste, Quellenrang und Geltungsbereich in Rolle 4 (setup_details.py); Default aus, damit v2 bis v4 reproduzierbar bleiben
-        self.setup_v2 = setup_v2
+        # Steckbrief (docs/recall_steckbrief_plan.md): S1 Steckbrief statt Zitatliste, S2 CONFIG erzwingen, S3 Einzelpruefung,
+        # S4 Repo-Auswahl je Einheit. Braucht Quellenrang und Geltungsbereich, setzt daher setup_v2. Default aus (v4 reproduzierbar).
+        self.spec_mode = spec_mode
+        self.spec: Spec | None = None
+        self.setup_v2 = setup_v2 or spec_mode
         self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
@@ -357,14 +366,25 @@ class Orchestrator:
             text = self._ask("reasoning", PLAN_SYSTEM, user + PLAN_RETRY_NOTE, temperature=0.4).content
         return text
 
+    def _active_spec(self) -> Spec | None:
+        return getattr(self, "spec", None) if getattr(self, "spec_mode", False) else None
+
     def _details_prompt(self) -> str:
-        """Setup-Angaben im Prompt; im Produktpfad sind Repo-Defaults (argparse) gekennzeichnet (M7)."""
+        """Setup-Angaben im Prompt; im Produktpfad sind Repo-Defaults (argparse) gekennzeichnet (M7).
+        Steckbrief-Modus: der Steckbrief ersetzt die Zitatliste (die volle Liste bleibt im Dossier)."""
+        spec = self._active_spec()
+        if spec is not None and spec.items:
+            return format_spec(spec)
         if getattr(self, "setup_v2", False):
             return format_for_prompt_v2(self.details)
         return format_for_prompt(self.details, mark_defaults=getattr(self, "graph_repair", False))
 
     def _conflicts_prompt(self) -> str:
-        """Nur Produktpfad: Paper-Wert und Repo-Wert fuer dasselbe Thema im Plan-Prompt, beide mit Quelle (M7)."""
+        """Nur Produktpfad: Paper-Wert und Repo-Wert fuer dasselbe Thema im Plan-Prompt, beide mit Quelle (M7).
+        Steckbrief-Modus: Widersprueche sind schon per Rangregel geloest, der Plan sieht sie nicht."""
+        spec = self._active_spec()
+        if spec is not None and spec.items:
+            return ""
         if getattr(self, "setup_v2", False):
             text = format_conflicts_v2(self.details)
         else:
@@ -382,9 +402,10 @@ class Orchestrator:
         hoeheres max_tokens und der Hinweis, nur Code zurueckzugeben."""
         last: ValueError | None = None
         for i in range(3):
+            first_max = CODE_RETRY_MAX_TOKENS if self._active_spec() is not None else None   # Steckbrief: Limit auch beim ersten Aufruf
             resp = self._ask(
                 "code", system, user + (CODE_ONLY_NOTE if i else ""),
-                max_tokens=CODE_RETRY_MAX_TOKENS if i else None, temperature=temperature + 0.3 * i,
+                max_tokens=CODE_RETRY_MAX_TOKENS if i else first_max, temperature=temperature + 0.3 * i,
             )
             if getattr(resp, "finish_reason", None) == "length":
                 last = ValueError("Antwort abgeschnitten (finish_reason length)")
@@ -403,25 +424,40 @@ class Orchestrator:
         val_notes = getattr(task, "val_notes", "")
         return PRODUCT_LIB_NOTE + (f" {val_notes}" if val_notes else "")
 
+    def _spec_note(self) -> str:
+        spec = self._active_spec()
+        return config_note(spec) if spec is not None else ""
+
+    def _enforce_spec(self, code: str) -> str:
+        """S2 (deterministisch): abweichende oder fehlende CONFIG-Werte per Override-Zeile auf den Steckbrief setzen."""
+        spec = self._active_spec()
+        if spec is None or not spec.enforced():
+            return code
+        new, report = spec_check.config_check(code, spec)
+        if report["overrides"]:
+            self._emit("spec_override", code_hash=hashlib.sha256(code.encode()).hexdigest()[:12],
+                       to_hash=hashlib.sha256(new.encode()).hexdigest()[:12], overrides=report["overrides"])
+        return new
+
     def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
-        return self._code_from_llm(
+        return self._enforce_spec(self._code_from_llm(
             CODE_SYSTEM,
             f"{task.data_description}\n\n{self._details_prompt()}\n\n"
             f"Reproduction plan:\n{plan}\n\n"
             "The script runs WITHOUT network access and must not download anything, spawn "
             f"processes or use eval/exec. {task.code_notes} Write train.py implementing this plan."
-            f"{self._product_notes(task)}{self._fidelity_note()}",
+            f"{self._product_notes(task)}{self._fidelity_note()}{self._spec_note()}",
             **({"temperature": temperature} if temperature != 0.2 else {}),
-        )
+        ))
 
     def repair_code(self, plan: str, task: Task, code: str, error_summary: str) -> str:
-        return self._code_from_llm(
+        return self._enforce_spec(self._code_from_llm(
             CODE_SYSTEM,
             f"{task.data_description}\n\n{self._details_prompt()}\n\n"
             f"Reproduction plan:\n{plan}\n\nThis script failed:\n"
             f"```python\n{code}\n```\nProblem: {error_summary}\n\nReturn the corrected full script."
-            f"{self._product_notes(task)}{self._fidelity_note()}",
-        )
+            f"{self._product_notes(task)}{self._fidelity_note()}{self._spec_note()}",
+        ))
 
     def _error_hints(self, claim: Claim, summary: str | None) -> str:
         """Rolle 5 (nur Produktpfad, Tavily live): Websuche mit der Fehlerzeile, Treffer als Hinweis an `code`.
@@ -842,7 +878,9 @@ class Orchestrator:
             docs.append(Doc("repo-readme", readme))
             self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         try:
-            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False))
+            unit = getattr(self, "_paper_id", None) if getattr(self, "spec_mode", False) else None   # S4: Fixture je Einheit
+            dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False),
+                             unit_key=unit, model=model_name_of(claim_text) if unit else None)
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None
@@ -1003,12 +1041,37 @@ class Orchestrator:
 
         def one(j: int) -> dict:
             i = idx[j]
-            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, codes[j], seed, i)
-            res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": set(), "faults": 0}
+            code = codes[j]
+            spec = self._active_spec()
+            spec_score, disc = None, set()
+            if spec is not None and spec.items:
+                for rep in range(MAX_SPEC_REPAIRS + 1):
+                    code, cfg_report = spec_check.config_check(code, spec)
+                    items_report = spec_check.check_items(
+                        lambda sys, usr: self._ask("code", sys, usr, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
+                        code, spec)
+                    fails = spec_check.failures(cfg_report, items_report)
+                    spec_score = spec_check.score(spec, cfg_report, items_report)
+                    self._emit("spec_check", claim_id=claim.id, candidate=i, round=rep, score=spec_score, fails=fails, code_hash=h(code))
+                    if not fails or rep == MAX_SPEC_REPAIRS:
+                        break
+                    try:
+                        new_code = self.repair_code(plan, task, code, spec_check.repair_message(fails, spec))
+                        disc.add(h(code))
+                        code = new_code
+                        self._announce_code(claim, code)
+                    except Exception as exc:
+                        self._warn(f"Steckbrief-Reparatur gescheitert: {exc}")
+                        break
+
+            v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seed, i)
+            res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": disc, "faults": 0}
+            if spec_score is not None:
+                res["spec_score"] = spec_score
             if v0 is not None:   # Kandidatenphase: nur Fehler-Check; Graph-Ablation nur fuer den Sieger
-                v0, note0, code, ab, notes, disc, faults = self._seed0_quality_loop(
+                v0, note0, code, ab, notes, disc2, faults = self._seed0_quality_loop(
                     claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seed, i, graph=False)
-                res.update(v0=v0, note0=note0, code=code, ab=ab, notes=notes, discarded=disc, faults=faults)
+                res.update(v0=v0, note0=note0, code=code, ab=ab, notes=notes, discarded=disc | disc2, faults=faults)
             val = self.__dict__.get("_val", {}).get((h(res["code"]), seed)) if res["v0"] is not None else None
             res["val"] = val if isinstance(val, dict) and "value" in val else None
             res["val_check"] = (self.val_label_check(snapshot, res["code"], seed, task, claim.metric, res["val"])
@@ -1027,8 +1090,16 @@ class Orchestrator:
                 val_warning = "alle lauffaehigen Kandidaten nutzen Validierungslabels im Training (B1), Auswahl wie bisher"
             elif len(eligible) < len(runnable):
                 val_warning = f"{len(runnable) - len(eligible)} Kandidat(en) wegen Validierungslabels im Training aus der Auswahl genommen (B1)"
-            pick, reason = select_candidate([r["val"] for r in eligible])
-            win = eligible[pick]
+            
+            if self._active_spec() is not None:
+                max_score = max((r.get("spec_score", (0, 0))[0] for r in eligible), default=0)
+                spec_eligible = [r for r in eligible if r.get("spec_score", (0, 0))[0] == max_score]
+                pick, reason = select_candidate([r["val"] for r in spec_eligible])
+                win = spec_eligible[pick]
+                reason = f"spec ({max_score}) + {reason}"
+            else:
+                pick, reason = select_candidate([r["val"] for r in eligible])
+                win = eligible[pick]
         else:
             win, reason = results[0], "fallback"
         self._emit("candidates", claim_id=claim.id, k=k, chosen=win["i"], chosen_hash=h(win["code"]), reason=reason,
@@ -1428,12 +1499,21 @@ class Orchestrator:
                            targeted_docs=v2_info["targeted_docs"], added=v2_info["added"],
                            bodies=v2_info["bodies"], literals=v2_info["literals"],
                            excluded=[{"topic": d.topic, "value": d.value, "reason": d.excluded} for d in excluded])
+            if getattr(self, "spec_mode", False):
+                self.spec = build_spec(
+                    lambda system, user: self._ask("extract", system, user, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
+                    self.details, docs, claims[0].text, paper["dataset"]
+                )
+                self._emit("spec", **spec_as_dict(self.spec))
+                print(f"Steckbrief (S1): {len(self.spec.items)} Werte erzwungen/pruefbar, {len(self.spec.missing)} fehlend", flush=True)
+
         elif extra_details:
             self.details = extra_details
         dossier = Dossier(
             paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
             setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings), summary=paper_head,
             setup_missing=list(self._setup_missing) if getattr(self, "setup_v2", False) else [],
+            spec=spec_as_dict(getattr(self, "spec", None)) if getattr(self, "spec", None) is not None else None,
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
