@@ -89,6 +89,7 @@ def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path | N
 
 
 IMPORT_RE = re.compile(r"^\s*(?:from\s+([\w.]+)\s+import\s+([\w, ]+)|import\s+([\w.]+))", re.M)
+IMPORT_RE_S4 = re.compile(r"^\s*(?:from\s+([\w.]+)\s+import\s+([\w, *]+)|import\s+([\w.]+))", re.M)   # Steckbrief-Modus: auch `from gcn.layers import *`
 
 
 def imported_files(files: dict[str, str], listing: list[str], relative: bool = False) -> list[str]:
@@ -111,7 +112,7 @@ def imported_files(files: dict[str, str], listing: list[str], relative: bool = F
         if not path.endswith(".py"):
             continue
         base = path.rsplit("/", 1)[0] if "/" in path else ""
-        for a, names, b in IMPORT_RE.findall(text):
+        for a, names, b in (IMPORT_RE_S4 if relative else IMPORT_RE).findall(text):
             raw = a or b
             if relative and raw.startswith("."):
                 dots = len(raw) - len(raw.lstrip("."))
@@ -137,6 +138,13 @@ def model_file_in_listing(listing: list[str], model: str) -> str | None:
     m = model.lower()
     hits = [p for p in listing if p.endswith(".py") and p.rsplit("/", 1)[-1][:-3].lower() == m]
     return min(hits, key=len) if hits else None
+
+
+def model_config_in_listing(listing: list[str], model: str) -> list[str]:
+    """Konfigurationsdateien des Claim-Modells (config/optimized/gat.conf.yaml), kuerzeste zuerst, hoechstens 2."""
+    m = model.lower()
+    hits = [p for p in listing if re.search(r"\.(ya?ml|json|conf|cfg|ini|toml)$", p, re.I) and m in p.rsplit("/", 1)[-1].lower()]
+    return sorted(hits, key=len)[:2]
 
 
 def _repo_key(url: str) -> str:
@@ -230,6 +238,7 @@ def read_repo(
             mf = model_file_in_listing(listing, model)
             if mf and mf not in chosen:
                 chosen = [mf] + chosen
+            chosen = chosen + [c for c in model_config_in_listing(listing, model) if c not in chosen]
         read(chosen)
         for _ in range(2):   # zwei Ebenen
             budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())

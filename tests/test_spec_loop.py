@@ -137,3 +137,26 @@ def test_single_code_path_also_checks_and_repairs_spec(tmp_path, monkeypatch):
     run(o, tmp_path)
     rounds = [(kw["round"], kw["candidate"], kw["score"]) for t, kw in events if t == "spec_check"]
     assert rounds == [(0, None, (0, 1)), (1, None, (1, 1))]
+
+
+# ---- S4-Ausschnitt (V0-Befunde) -------------------------------------------------------------------------------------------------
+
+def test_excerpt_keeps_later_pieces_after_tiny_file_and_same_file_bodies():
+    from repro_agent.spec import focused_excerpt
+    model = "class NLinear:\n    pass\n" + "x = 1\n" * 50
+    docs = [Doc("repo:models/NLinear.py@c", "from . import tiny\n" + model), Doc("repo:models/tiny.py@c", "A = 1\n"),
+            Doc("repo:run.sh", "python run.py --model DLinear --data ETTh1 --learning_rate 0.005\n" * 5),
+            Doc("repo:load.py@c", "def load_data(x):\n    return preprocess_a(x)\n\n\ndef preprocess_a(x):\n    return x / x.sum(1)\n" + "# pad\n" * 40),
+            Doc("repo:main.py@c", "import load\nloss.backward()\nload.load_data(1)\n")]
+    text, names = focused_excerpt(docs, "NLinear", "ETTh1", [])
+    assert "--learning_rate 0.005" in text                       # Startskript nach der winzigen Datei nicht verloren
+    assert "return x / x.sum(1)" in text                         # zweite Stufe: load_data -> preprocess_a, beide Rumpfe derselben Datei
+
+
+def test_star_import_and_model_config_resolved_in_unit_mode():
+    from repro_agent.repo_source import imported_files, model_config_in_listing
+    files = {"gcn/models.py": "from gcn.layers import *\n"}
+    assert imported_files(files, ["gcn/models.py", "gcn/layers.py"], relative=True) == ["gcn/layers.py"]
+    assert imported_files(files, ["gcn/models.py", "gcn/layers.py"]) == []                    # alter Pfad unveraendert
+    lst = ["config/optimized/gat.conf.yaml", "config/reference/gat.conf.yaml", "config/optimized/gcn.conf.yaml", "x.py"]
+    assert model_config_in_listing(lst, "GAT") == ["config/optimized/gat.conf.yaml", "config/reference/gat.conf.yaml"]

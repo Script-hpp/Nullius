@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from .claims_source import _norm
 from .setup_details import (
-    CALL_RE, OPTIONAL_RE, RANKS, START_RE, Doc, SetupDetail, family_for, function_body, numbers_in_quote, quote_in_text,
+    CALL_RE, CONFIG_RE, OPTIONAL_RE, RANKS, START_RE, Doc, SetupDetail, family_for, function_body, numbers_in_quote, quote_in_text,
     source_rank,
 )
 
@@ -59,6 +59,9 @@ TEXT_FAMILY = {
 INT_KEYS = {"epochs", "batch_size", "hidden", "layers", "patience", "heads", "seq_len"}
 EXCERPT_CHARS = 15_000      # Repo-Ausschnitt fuer den Steckbrief-Aufruf (nie im Code-Prompt)
 PIECE_CHARS = 6_000
+SCRIPT_CHARS = 4_500        # Start-/Trainingsskripte und Konfigurationen
+TRAIN_RE = re.compile(r"\.backward\(\)|optimizer\.step\(\)|\.minimize\(|\.fit\(")   # Trainingsschleife (Skript ohne Standardnamen)
+CONFIG_STEMS = {"train", "default", "config", "base", "params", "hparams"}   # allgemeine Trainingskonfiguration neben der des Modells
 QUOTE_SHOW = 160            # Zitatlaenge im Prompt
 NUM_RE = re.compile(r"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$")
 MODEL_SEL_RE = re.compile(r"\bmodel(?:_name|_type)?\b\s*(?:=|:|\s)\s*['\"]?([A-Za-z][\w-]*)", re.I)
@@ -105,7 +108,7 @@ def model_files(docs: list[Doc], model: str) -> list[Doc]:
 
 
 def _imported_docs(src: list[Doc], docs: list[Doc]) -> list[Doc]:
-    from .repo_source import IMPORT_RE
+    from .repo_source import IMPORT_RE_S4 as IMPORT_RE
     by_mod = {}
     for d in docs:
         if d.name.startswith("repo:") and _path(d).endswith(".py"):
@@ -121,23 +124,26 @@ def _imported_docs(src: list[Doc], docs: list[Doc]) -> list[Doc]:
     return out
 
 
-def _called_bodies(details: list[SetupDetail], docs: list[Doc]) -> list[tuple[str, str]]:
-    """Ruempfe der in den Angaben aufgerufenen Funktionen (preprocess_features, adjust_learning_rate ...), aus den gelesenen Dateien."""
+PREP_RE = re.compile(r"norm|preprocess|schedul|adjust_|scale|standardi|split|load_", re.I)   # Vorverarbeitung und lr-Schedule (Namen, keine Werte)
+
+
+def _called_bodies(details: list[SetupDetail], docs: list[Doc], scripts: list[Doc] | None = None) -> list[tuple[str, str]]:
+    """Ruempfe der aufgerufenen Funktionen (preprocess_features, adjust_learning_rate ...), aus den gelesenen Dateien. Aufrufe stammen aus
+    den Angaben (Zitat/Wert) und aus Startskripten/Modelldatei, dort nur Namen der Vorverarbeitung oder des Schedules (PREP_RE)."""
     py = [d for d in docs if d.name.startswith("repo:") and _path(d).endswith(".py")]
     out, seen = [], set()
-    for det in details:
-        if getattr(det, "excluded", ""):
+    calls = [c for det in details if not getattr(det, "excluded", "") for c in CALL_RE.findall(f"{det.value} {det.quote}")]
+    calls += [c for d in (scripts or []) if _path(d).endswith(".py") for c in CALL_RE.findall(d.text) if PREP_RE.search(c)]
+    for call in calls:
+        name = call.rsplit(".", 1)[-1]
+        if name in seen or len(name) < 4:
             continue
-        for call in CALL_RE.findall(f"{det.value} {det.quote}"):
-            name = call.rsplit(".", 1)[-1]
-            if name in seen or len(name) < 4:
-                continue
-            for d in py:
-                body = function_body(d.text, name)
-                if body:
-                    seen.add(name)
-                    out.append((d.name, body))
-                    break
+        for d in py:
+            body = function_body(d.text, name)
+            if body:
+                seen.add(name)
+                out.append((d.name, body))
+                break
     return out
 
 
@@ -148,23 +154,39 @@ def focused_excerpt(docs: list[Doc], model: str, dataset: str, details: list[Set
     repo = [d for d in docs if d.name.startswith("repo:") and is_source_text(_path(d), d.text)]
     pieces: list[tuple[str, str]] = []
     mf = model_files(repo, model)[:2]
-    pieces += [(d.name, d.text) for d in mf]
-    pieces += [(d.name, d.text) for d in _imported_docs(mf, repo)[:3]]
-    pieces += [(f"{name} (function body)", body) for name, body in _called_bodies(details, repo)[:4]]
     ds, m = (re.split(r"[^a-z0-9]+", dataset.lower()) + [""])[0], model.lower()
     starts = [d for d in repo if START_RE.search(_path(d)) and (ds and ds in d.text.lower() or m in d.text.lower())]
     starts.sort(key=lambda d: (not _path(d).endswith(".sh"), m not in d.text.lower(), len(d.text)))
-    pieces += [(d.name, d.text) for d in starts[:2]]
+    trainers = sorted((d for d in repo if _path(d).endswith(".py") and TRAIN_RE.search(d.text) and d not in mf and d not in starts),
+                      key=lambda d: len(d.text))[:2]
+    cfgs = [d for d in repo if CONFIG_RE.search(_path(d)) and (m in _stem(_path(d)) or _stem(_path(d)).split(".")[0] in CONFIG_STEMS)]
+    cfgs.sort(key=lambda d: (m not in _path(d).lower(), len(d.text)))
+    # Reihenfolge = Vorrang beim Zeichenbudget: Modelldatei, Startskripte, Modell-Konfiguration, importierte Layer, Rumpfe
+    pieces += [(d.name, d.text) for d in mf]
+    pieces += [(d.name, d.text[:SCRIPT_CHARS]) for d in starts[:2]]
+    pieces += [(d.name, d.text[:SCRIPT_CHARS]) for d in cfgs[:4]]
+    scripts = mf + starts[:2] + trainers
+    first = _called_bodies([], repo, scripts)                          # Namen der Vorverarbeitung/des Schedules in Skripten
+    second = _called_bodies([], repo, [Doc(n, b) for n, b in first])   # zweite Stufe: load_citation -> preprocess_citation
+    named = _called_bodies(details, repo)                              # Aufrufe aus den belegten Angaben
+    bodies = []
+    for x in first + second + named:
+        if x not in bodies:
+            bodies.append(x)
+    rank = [(f"{name} (function body)", body) for name, body in bodies[:10]]
+    pieces += rank[:len(first)] + [(d.name, d.text) for d in _imported_docs(mf, repo)[:3]] + rank[len(first):]
     out, names, used, seen = [], [], 0, set()
     for name, text in pieces:
-        if name in seen:
+        if (name, text) in seen:   # mehrere Rumpfe derselben Datei tragen denselben Namen
             continue
-        seen.add(name)
+        seen.add((name, text))
         chunk = text[:PIECE_CHARS]
         if used + len(chunk) > budget:
             chunk = chunk[: max(0, budget - used)]
-        if len(chunk) < 200:
-            break
+        if budget - used < 200:
+            break          # Budget erschoepft
+        if len(chunk.strip()) < 20:
+            continue       # leere Datei (__init__.py) ueberspringen; kurze Konfigurationen (hidden_size: 64) bleiben
         out.append(f"=== {name} ===\n{chunk}")
         names.append(name)
         used += len(chunk)
