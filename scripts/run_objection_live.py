@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from repro_agent import community  # noqa: E402
 from repro_agent.loop import Orchestrator  # noqa: E402
 
 
@@ -19,7 +20,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--paper", required=True)
     ap.add_argument("--claim", required=True)
+    ap.add_argument("--fresh-community", action="store_true", help="Community-Cache umgehen (kein Lesen, kein Schreiben): erzwingt Live-Suche (Rolle 3)")
     a = ap.parse_args()
+    if a.fresh_community:
+        community.cache_get = lambda *args, **kw: None
+        community.cache_put = lambda *args, **kw: None
     orch = Orchestrator(graph_repair=True, tavily_mode="live", llm_cache=False, objection_experiments=True, claim_ids=[a.claim])
     dossier = orch.run(a.paper)
     print("run dir:", orch.last_run_dir)
