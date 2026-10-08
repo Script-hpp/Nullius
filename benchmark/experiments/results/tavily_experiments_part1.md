@@ -27,3 +27,29 @@ Part 1 overall: criteria 1 (event type `objection_experiment` absent because no 
 - obj3 `type_reason` is empty and note "classification missing or invalid": classifier output for that finding was invalid and fell back to `not_measurable`.
 - The main run itself did not reproduce the target (0.459 vs 0.375, 9 of 13 attempts were `fehler` with repair, 4 seed attempts `abweichung`). Within scope of this test; not a feature problem. It did not re-run.
 - Conclusion: pipeline runs end to end and demotes correctly, but part 1 cannot show a measured objection experiment on DLinear. Seed/parameter path remains untested on real data until part 2.
+
+## Cost bookkeeping note
+
+Part 1 cost 0.2401 USD gross (0.2018 net) per the `run_end` event. It is missing from `logs/costs.jsonl` because the worktree `logs/` was an empty directory, not a symlink, during that run. For the part 2 cap (1.00 USD gross total), count 0.2401 USD as already spent. Remaining at the start of part 2: 0.7599 USD gross. Tavily credits used in part 1: 0.
+
+# Part 2 (live runs, approved by coordinator 2026-10-08; interim, written by the resume worker)
+
+Runner: `scripts/run_objection_live.py` (product config: `graph_repair=True`, `objection_experiments=True`, `TAVILY_MODE=live`, Token Factory, Nebius sandbox, full mode, no LLM cache). Worktree `logs/` is now a symlink to the main checkout's `logs/`.
+
+| Run | Dir (`runs/...`) | Verdict | Gross cost | Tavily credits (own, from `tavily_usage.jsonl`) | Objection checks |
+|---|---|---|---|---|---|
+| Kipf run 1 | `kipf_gcn_2017/20261008-122632` | reproduziert 0.8151 +/- 0.0107 | 0.0809 | 7 | 0 (community round served from `logs/community_cache.json`, `mode=cache`, entry from 2026-10-02: 0 verified findings, 2 dropped) |
+| Kipf run 2 (`--fresh-community`) | `kipf_gcn_2017/20261008-130547` | teilweise 0.8000 +/- 0.0138 | 0.0648 | 13 | 0 (community `mode=live`, 3 searches, 0 verified findings, 1 dropped) |
+| DLinear | `zeng_dlinear_2023/20261008-133630` | reproduziert 0.3774 +/- 0.0003 | 0.2226 | about 14 | 0 (community check failed: `ConnectionError ... RemoteDisconnected` from Tavily, run continued; `dossier.community = None`) |
+
+Deviation (reported): the pre-registration said role 3 "needs a live search (no fixture exists)". A 7-day community cache entry for 1609.02907 existed in the global `logs/` and served run 1. With coordinator approval run 2 bypassed the cache (script-level flag, global cache file untouched). This is a configuration fix, not a rerun to improve a result; both runs are reported. Kipf verdict differs between the two runs (reproduziert vs teilweise): independent generations, no feature involvement.
+
+Totals after the three runs: Token Factory 0.2401 (part 1) + 0.0809 + 0.0648 + 0.2226 = 0.6084 USD gross of 1.00; Tavily about 34 credits of 60 (counts are from the shared global log, other sessions' calls excluded by hand; estimator rounds up).
+
+## Part 2 criteria
+
+1. Run completes with verdict, `objection_checks` not empty or log shows why: Kipf run 1 and 2: verdicts present; empty with reason in the log (0 verified findings), **met** by the "or log shows why" clause. DLinear: verdict present, empty because the community search crashed on a Tavily connection error, the log shows a warning but no finding was evaluated; **not met in substance** (infrastructure failure).
+2. Criteria 2, 4, 5 of part 1: no entries exist, so vacuous; not evidence for the feature.
+3. `objection_round_end` seconds and cost: no event was written in any run (the round returned early without findings). No data.
+
+Result so far: the live path never produced a checked objection, so the acceptance condition (exported run with an "Objections checked" block) is **not reached**. Nothing here shows that the feature works or fails on live findings; it shows that for GCN/Cora the live community search yields no verified, measurable finding, and a Tavily connection error cost the DLinear round.
