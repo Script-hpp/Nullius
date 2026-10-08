@@ -630,7 +630,7 @@ class Orchestrator:
         sb.put_file(branch, f"{WORKDIR}/train.py", code.encode())
         if edge_probe:   # B2: synthetischer Graph statt Datensatz, eigene Auswertung (kein Harness, kein Smoke, keine Abdeckung)
             path, n_nodes, n_val, n_test = task.edge_probe
-            npz, truth = make_probe(n_nodes, n_val, n_test, seed=0)
+            npz, truth = make_probe(n_nodes, n_val, n_test, seed=0, n_classes=task.probe_dims[0], n_features=task.probe_dims[1])
             sb.put_file(branch, path, probe_bytes(npz))
             r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", TRAIN_TIMEOUT_S)
             if r.timed_out or r.exit_code != 0:
@@ -782,7 +782,7 @@ class Orchestrator:
             try:
                 ev = extract_target_cached(
                     self.llm, text, spec["method"], spec["dataset"], spec["metric"],
-                    percent=spec.get("percent", True),
+                    percent=spec.get("percent", True), mode=self.tavily_mode,
                 )
             except ExtractionInvalid as exc:
                 if not keep:
@@ -880,7 +880,7 @@ class Orchestrator:
         try:
             unit = getattr(self, "_paper_id", None) if getattr(self, "spec_mode", False) else None   # S4: Fixture je Einheit
             dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False),
-                             unit_key=unit, model=model_name_of(claim_text) if unit else None)
+                             unit_key=unit, model=model_name_of(claim_text) if unit else None, mode=self.tavily_mode)
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None

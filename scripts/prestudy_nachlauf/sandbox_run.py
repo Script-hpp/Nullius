@@ -137,6 +137,7 @@ def eval_cmd(harness_dir: str) -> str:
 
 def adapter_files() -> dict[str, bytes]:
     files = {f"{ADAPTER_DIR}/common.py": (HERE / "common.py").read_bytes(),
+             f"{ADAPTER_HARNESS_DIR}/ett_data.py": (HARNESS_DIR / "ett_data.py").read_bytes(),   # etth1_data.py bindet ett_data.py
              f"{ADAPTER_HARNESS_DIR}/etth1_data.py": (HARNESS_DIR / "etth1_data.py").read_bytes()}
     for name in ("adapter_rtsf.py", "adapter_ltsf.py"):
         files[f"{ADAPTER_DIR}/{name}"] = (HERE / name).read_bytes()

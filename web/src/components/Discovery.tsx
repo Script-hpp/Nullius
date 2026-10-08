@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles } from 'lucide-react'
+import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
 import { Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
 import { translateReason } from '../labels'
+import { useLiveStatus } from '../live'
+import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
@@ -16,7 +18,8 @@ import { useSummary } from '../summaries'
 
 type Mode = 'idle' | 'live' | 'replay' | 'done'
 
-const DATASETS = ['Cora', 'ETTh1']
+const DATASETS = ['Cora', 'CiteSeer', 'ETTh1']
+const DEFAULT_DATASETS = ['Cora', 'ETTh1']   // each ticked benchmark costs Tavily credits, so the default stays at two
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 const btn = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
 
@@ -293,8 +296,10 @@ function Timeline({ view }: { view: DiscoveryView }) {
 }
 
 export function Discovery() {
-  const [datasets, setDatasets] = useState<string[]>(DATASETS)
-  const [code, setCode] = useState('')
+  const [datasets, setDatasets] = useState<string[]>(DEFAULT_DATASETS)
+  const { status: liveStatus, refresh: refreshStatus } = useLiveStatus()
+  const disc = statusFor(liveStatus, 'discovery')
+  const paused = isPaused(disc)
   const [mode, setMode] = useState<Mode>('idle')
   const [events, setEvents] = useState<DEvent[]>([])
   const [recorded, setRecorded] = useState(false)
@@ -345,7 +350,7 @@ export function Discovery() {
     try {
       res = await fetch('/api/discover', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ datasets, access_code: code }),
+        body: JSON.stringify({ datasets }),
       })
     } catch {
       setError('The live backend is not reachable.')
@@ -353,9 +358,11 @@ export function Discovery() {
       return
     }
     if (!res.ok) {
-      setError(res.status === 403 ? 'Wrong access code.'
-        : res.status === 429 ? 'A run is already active or the daily limit is reached. Try again later.'
-        : res.status === 404 ? 'The live backend is not available on this site.'
+      let body: unknown = null
+      try { body = await res.json() } catch { /* no body */ }
+      refreshStatus()
+      setError(res.status === 404 ? 'The live backend is not available on this site.'
+        : res.status === 503 || res.status === 429 ? startErrorText(res.status, body, 'search').text
         : `The live backend answered with an error (${res.status}).`)
       setMode('idle')
       return
@@ -382,13 +389,13 @@ export function Discovery() {
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Discover" title="Find papers worth checking"
         what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. It reads only the protocol and results, and keeps claims it can quote word for word."
-        look="Press Replay recorded run to watch a real search play back, no access code needed. Papers appear on the right as they are found, each with a short summary." />
+        look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
 
       <div className="mb-6 rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div>
             <div className={label}>Benchmarks</div>
-            <div className="mt-2 flex gap-4">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               {DATASETS.map((d) => (
                 <label key={d} className="inline-flex items-center gap-2 text-sm text-fg-3 cursor-pointer">
                   <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="accent-fg-3" />
@@ -397,13 +404,8 @@ export function Discovery() {
               ))}
             </div>
           </div>
-          <div>
-            <label htmlFor="access-code" className={label}>Access code</label>
-            <input id="access-code" type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} disabled={running}
-              className="mt-2 block w-44 rounded-lg border border-line bg-raised px-3 py-2 font-mono text-sm text-fg outline-none focus:border-line-stronger" />
-          </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={startLive} disabled={running || !datasets.length || !code} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+            <button onClick={startLive} disabled={running || !datasets.length || paused} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               <Play className="w-4 h-4" />Start live run
             </button>
             <button onClick={startReplay} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
@@ -422,8 +424,14 @@ export function Discovery() {
         </div>
 
         <p className="mb-0 mt-4 max-w-3xl text-[12px] leading-relaxed text-muted">
-          Replay needs no access code. A live run searches the web right now, spends Tavily credits and model calls, and so needs the code; one run at a time.
+          A live run searches the web right now and spends search and model calls, so it is limited: one run at a time, and a daily limit. Replay has no limit.
         </p>
+        {paused && (
+          <p role="status" className="mb-0 mt-3 flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-fg-3">
+            <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+            <span>{pausedText(disc?.reason, 'search')} {resumeText(disc?.reason, disc?.reset_at)}</span>
+          </p>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
           <span className={`inline-flex items-center gap-1.5 font-medium uppercase tracking-wider ${mode === 'live' ? 'text-tone-green' : 'text-fg-3'}`}>
             <Radio className="w-3.5 h-3.5" />{status}

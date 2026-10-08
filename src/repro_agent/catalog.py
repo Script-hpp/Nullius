@@ -20,16 +20,21 @@ CATALOG_YAML = REPO_ROOT / "benchmark" / "catalog.yaml"
 DISCOVERY_CACHE = REPO_ROOT / "logs" / "discovery_cache.json"
 ACCEPTED_CACHE_VERSIONS = (2, 3)   # Discovery schreibt 3; 2 hat kein Feld input_length (= null)
 
+DISCOVERY, REFERENCE = "discovery", "reference"   # Feld `origin` eines Eintrags; fehlendes Feld = discovery
 UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlgeschlagen", "nicht_laufbar"
 TOLERANCE = 0.01   # fest, vorab: +-1 Prozentpunkt (Accuracy), +-0.01 absolut (MSE/MAE). Paper-Streuung aendert sie nicht.
 ETTH1_HORIZON = 96
 # Seeds je Task, wenn der Eintrag keine nennt (Kosten: GCN ~25 s pro Seed, siehe docs/next_step_catalog_pipeline.md)
-TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "ETTh1": 3}
-TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "ETTh1": {"mse", "mae"}}
+ETT_TASKS = ("ETTh1",)   # Horizont 96; ETTh2/ETTm1/ETTm2 nicht freigegeben (datasets_v2_validation.md)
+PLANETOID_TASKS = ("Cora", "CiteSeer")    # Standard-Split; PubMed nicht freigegeben
+TASK_SEEDS = {"Cora": 5, "Cora-LCC": 5, "CiteSeer": 5, **{t: 3 for t in ETT_TASKS}}
+TASK_METRICS = {"Cora": {"accuracy"}, "Cora-LCC": {"accuracy"}, "CiteSeer": {"accuracy"},
+                **{t: {"mse", "mae"} for t in ETT_TASKS}}
 TASK_SUFFIX = {
     "Cora": "Standard-Split",
     "Cora-LCC": "groesste Komponente, zufaellige 20/30/Rest-Splits",
-    "ETTh1": "Horizont 96",
+    "CiteSeer": "Standard-Split",
+    **{t: "Horizont 96" for t in ETT_TASKS},
 }
 METRIC_LABEL = {"accuracy": "Accuracy", "mse": "MSE", "mae": "MAE"}
 STD_RE = re.compile(r"(?:±|\\pm|\+-|\+/-)\s*(\d+(?:\.\d+)?)")
@@ -58,6 +63,10 @@ def save_catalog(entries: list[dict], path: Path = CATALOG_YAML) -> None:
     text = yaml.safe_dump({"candidates": entries}, sort_keys=False, allow_unicode=True, width=120)
     Path(path).write_text(
         "# Discovery-Kandidaten und ihr Pruefstatus (scripts/curate_catalog.py). papers.yaml bleibt unberuehrt.\n" + text)
+
+
+def origin_of(entry: dict) -> str:
+    return entry.get("origin") or DISCOVERY
 
 
 def find_entry(entries: list[dict], paper_id: str) -> dict:
@@ -98,12 +107,14 @@ def entry_from_candidate(c: dict, source: str) -> dict:
 
 
 def import_candidates(entries: list[dict], candidates: list[tuple[dict, str]]) -> int:
-    """Idempotent: bekannte IDs bleiben unveraendert (Status, Urteil, Quelle). Gibt Anzahl neuer Eintraege zurueck."""
+    """Idempotent: bekannte IDs bleiben unveraendert (Status, Urteil, Quelle). Gibt Anzahl neuer Eintraege zurueck.
+    Referenz-Eintraege (origin reference) blockieren ihre arXiv-ID: ein Kandidat desselben Papers wird nie daneben angelegt."""
     known = {e["id"] for e in entries}
+    reference_arxiv = {e["arxiv_id"] for e in entries if origin_of(e) == REFERENCE}
     added = 0
     for cand, source in candidates:
         entry = entry_from_candidate(cand, source)
-        if entry["id"] not in known:
+        if entry["id"] not in known and entry["arxiv_id"] not in reference_arxiv:
             entries.append(entry)
             known.add(entry["id"])
             added += 1
@@ -118,14 +129,16 @@ def _task_of(cand: dict) -> str:
         if task not in ("Cora", "Cora-LCC"):
             raise NotRunnable("Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)")
         return task
-    if ds == "ETTh1":
+    if ds == "CiteSeer":
+        return ds   # nur ein Task (Planetoid-Split); ob das Paper ihn nutzt, entscheidet das Feld protocol (E1)
+    if ds in ETT_TASKS:
         try:
             horizon = int(claim.get("horizon"))
         except (TypeError, ValueError):
-            raise NotRunnable(f"ETTh1: Horizont fehlt oder nicht lesbar ({claim.get('horizon')!r}), Task misst nur {ETTH1_HORIZON}")
+            raise NotRunnable(f"{ds}: Horizont fehlt oder nicht lesbar ({claim.get('horizon')!r}), Task misst nur {ETTH1_HORIZON}")
         if horizon != ETTH1_HORIZON:
-            raise NotRunnable(f"ETTh1: Horizont {horizon}, Task misst nur {ETTH1_HORIZON}")
-        return "ETTh1"
+            raise NotRunnable(f"{ds}: Horizont {horizon}, Task misst nur {ETTH1_HORIZON}")
+        return ds
     raise NotRunnable(f"Datensatz {ds!r} ohne Task")
 
 
@@ -164,8 +177,8 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
     if std:
         warnings.append(f"Info: Das Paper nennt Streuung +-{std.group(1)} (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); "
                         f"die Toleranz +-{TOLERANCE} bleibt fest.")
-    input_length = claim.get("input_length") if task == "ETTh1" else None
-    if task == "ETTh1" and not input_length:
+    input_length = claim.get("input_length") if task in ETT_TASKS else None
+    if task in ETT_TASKS and not input_length:
         warnings.append("Eingabelaenge im Paper nicht belegt, der Agent waehlt sie frei (bis 720).")
 
     claim_id = f"{entry['id']}_{metric}"
@@ -180,8 +193,9 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
                     "extract": {"method": method, "dataset": entry["candidate"]["dataset"], "metric": extract_metric,
                                 "percent": metric == "accuracy"}}],
     }
+    kind = "reference (benchmark papers.yaml)" if origin_of(entry) == REFERENCE else "discovery"
     claims = [Claim(id=claim_id, text=text, metric=metric, target=target, tolerance=TOLERANCE,
-                    source=f"discovery: {url}, Zitat: {quote}", origin="paper", evidence_urls=[url])]
+                    source=f"{kind}: {url}, Zitat: {quote}", origin="paper", evidence_urls=[url])]
     return paper, claims
 
 

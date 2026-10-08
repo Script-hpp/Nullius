@@ -26,20 +26,21 @@ BOTH_MIN = 0.50              # beide Seiten >= : beide Richtungen genutzt
 BOTH, ONE, UNCLEAR, NOT_MEASURABLE = "beide Richtungen", "Kante nur in einer Richtung", "unklar", "nicht messbar"
 
 
-def make_probe(n_nodes: int, n_val: int, n_test: int, seed: int = 0) -> tuple[dict, dict]:
-    """(npz-Felder wie der Task-Datensatz, Wahrheit {labels, side_a: Test-Ids Seite A, side_b})."""
+def make_probe(n_nodes: int, n_val: int, n_test: int, seed: int = 0, n_classes: int = N_CLASSES,
+               n_features: int = N_FEATURES) -> tuple[dict, dict]:
+    """(npz-Felder wie der Task-Datensatz, Wahrheit {labels, side_a: Test-Ids Seite A, side_b}). Klassen-/Merkmalszahl je Datensatz (Default Cora)."""
     rng = np.random.default_rng(seed)
     m = n_nodes // 2
     partner = np.full(n_nodes, -1)
     partner[:m], partner[m:2 * m] = np.arange(m, 2 * m), np.arange(m)
-    labels = rng.integers(0, N_CLASSES, n_nodes)
-    labels[:N_CLASSES * 20] = np.tile(np.arange(N_CLASSES), 20)   # genug Knoten je Klasse fuer eine ausgeglichene Trainingsmenge
+    labels = rng.integers(0, n_classes, n_nodes)
+    labels[:n_classes * 20] = np.tile(np.arange(n_classes), 20)   # genug Knoten je Klasse fuer eine ausgeglichene Trainingsmenge
     rng.shuffle(labels)
-    feats = (rng.random((n_nodes, N_FEATURES)) < P_NOISE).astype(np.float32)
+    feats = (rng.random((n_nodes, n_features)) < P_NOISE).astype(np.float32)
     for i in range(n_nodes):
         c = labels[partner[i]] if partner[i] >= 0 else labels[i]   # ein ungepaarter Knoten (ungerade N) traegt sein eigenes Label
         feats[i, c * SIGNAL_WORDS:(c + 1) * SIGNAL_WORDS] = (rng.random(SIGNAL_WORDS) < P_SIGNAL)
-    train = np.concatenate([rng.permutation(np.flatnonzero(labels == c))[:20] for c in range(N_CLASSES)])
+    train = np.concatenate([rng.permutation(np.flatnonzero(labels == c))[:20] for c in range(n_classes)])
     rest = rng.permutation(np.setdiff1d(np.arange(n_nodes), train))
     val, test = rest[:n_val], rest[n_val:n_val + n_test]
     edges = np.concatenate([np.stack([np.arange(m), np.arange(m, 2 * m)], 1), np.stack([np.arange(m, 2 * m), np.arange(m)], 1)]).astype(np.int64)

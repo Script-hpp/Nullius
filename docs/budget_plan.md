@@ -58,8 +58,8 @@ Die Demo muss erreichbar und kostenlos testbar bleiben. Juroren müssen nicht se
 |---|---|---|
 | `BUDGET_TOTAL_USD` | 20.00 | Anteil des Servers, **nicht** der ganze Kontostand (siehe „Zwei Logs") |
 | `BUDGET_SINCE` | Zeitpunkt des Deployments (UTC) | Server zählt nur eigene Läufe ab dann |
-| `MAX_DAILY_REPRO_JOBS` | 1 | schlimmster Fall 47 × 0,50 $ = 23,50 $; der Client stoppt vorher bei 95 % = 19,00 $ |
-| `MAX_DAILY_JOBS` (Discovery) | 3 | Discovery braucht vor allem Tavily-Credits |
+| `MAX_DAILY_REPRO_JOBS` | 1 (ab 2026-12-01: 3) | Stand 2026-10-07: zwei Stufen und Rechnung in `docs/deploy.md`, „Limits bis 15.12.“ (gemessen 15,30 $ von 17,00 $ verfügbar); die Untergrenze `LIVE_MIN_BUDGET_USD=3` ist die harte Obergrenze |
+| `MAX_DAILY_JOBS` (Discovery) | 1 | Discovery braucht vor allem Tavily-Credits (ca. 16 je Lauf) |
 | `MAX_COST_PER_RUN_USD` | 0.50 | unverändert, bis die Messung unten vorliegt |
 
 Erwartung statt schlimmstem Fall: Eine Schnellprüfung kostete vor `setup_v2` 0,03 bis 0,10 $ (`docs/deploy.md`). Mit `setup_v2` ist sie teurer; der Probelauf kam auf rund 0,39 $ je Benchmark-Lauf mit **zwei** Claims und vollen Seeds, das ist keine Messung einer Schnellprüfung. **Offen:** Kosten einer Schnellprüfung mit dem aktuellen Code messen (fällt beim Vorzeige-Lauf fürs Video ohnehin an) und hier eintragen. Liegt sie unter 0,25 $, kann `MAX_COST_PER_RUN_USD` auf 0.30 sinken.
@@ -99,6 +99,6 @@ Kontingent getrennt von Token Factory. Stand laut Dashboard (vom Nutzer abgelese
 
 Verfügbar bis 15.12.: 900 Credits im laufenden Monat, dazu der Monatsplan für November und Dezember (falls der Plan weiterläuft: je 1 000) und 3 125 Credits Add-on. Ob und wann das Add-on verfällt, im Dashboard prüfen.
 
-Verbrauch je Lauf ist **nicht gemessen**. Bis zum Deployment einmal messen (Credits im Dashboard vor und nach einem Live-Lauf und einer Discovery) und hier eintragen; erst dann lässt sich sagen, wie viele Läufe pro Tag das Kontingent bis 15.12. trägt. Bis dahin gilt: `MAX_DAILY_JOBS=3` (Discovery) und `MAX_DAILY_REPRO_JOBS=1`.
+Verbrauch je Lauf ist **nicht gemessen**. Bis zum Deployment einmal messen (Credits im Dashboard vor und nach einem Live-Lauf und einer Discovery) und hier eintragen; erst dann lässt sich sagen, wie viele Läufe pro Tag das Kontingent bis 15.12. trägt. Bis dahin gilt (Stand 2026-10-07): `MAX_DAILY_JOBS=1` (Discovery) und `MAX_DAILY_REPRO_JOBS=1`.
 
 Im Plan oben fallen Tavily-Aufrufe nur bei den Vorzeige-Läufen an (Standard `TAVILY_MODE=live`) und in der Jury-Phase bei Live-Läufen und Discovery. M1 bis M4 des Nachlaufs laufen ohne Tavily. Regeln unverändert: Crawl immer mit `limit`, Research höchstens einmal je Paper, keine Tests mit echten Aufrufen.

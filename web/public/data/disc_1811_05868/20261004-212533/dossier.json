@@ -1,0 +1,1988 @@
+{
+  "paper_id": "disc_1811_05868",
+  "claims": [
+    {
+      "id": "disc_1811_05868_accuracy",
+      "text": "GCN erreicht 81.5 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)",
+      "metric": "accuracy",
+      "target": 0.815,
+      "tolerance": 0.01,
+      "source": "Table 1, arXiv v2 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "target_evidence": {
+        "value": 0.815,
+        "quote": "GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6",
+        "table": "Table 1",
+        "url": "https://arxiv.org/pdf/1811.05868v2",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-10-04T19:25:35+00:00",
+        "sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056",
+        "arxiv_version": "v2",
+        "caveat": null,
+        "column_check": "ok",
+        "from_store": false
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-90ad0e96",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "2f5490720bf7",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_tensor = torch.sparse_coo_tensor(indices, values, size=(N, N), dtype=torch.float32)\nTraceback (most recent call last):\n  File \"/work/train.py\", line 194, in <module>\n    main()\n  File \"/work/train.py\", line 174, in main\n    sorted_test = np.sort(test_idx.cpu().numpy())\n                          ^^^^^^^^^^^^\nAttributeError: 'numpy.ndarray' object has no attribute 'cpu'",
+      "tavily_queries": [],
+      "cost_usd": 0.04799771999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-a92f28c8",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "29c89be071e7",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7990632318501171,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.051907319999999986,
+      "metrics": {
+        "accuracy": 0.7990632318501171
+      },
+      "coverage": {
+        "executed": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          18,
+          19,
+          20,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          32,
+          38,
+          39,
+          41,
+          43,
+          44,
+          45,
+          47,
+          48,
+          49,
+          50,
+          51,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          69,
+          70,
+          71,
+          73,
+          75,
+          76,
+          77,
+          78,
+          80,
+          81,
+          82,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          99,
+          100,
+          101,
+          102,
+          103,
+          106,
+          107,
+          110,
+          112,
+          113,
+          114,
+          116,
+          117,
+          120,
+          121,
+          122,
+          123,
+          124,
+          125,
+          126,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          135,
+          136,
+          137,
+          138,
+          140,
+          141,
+          142,
+          144,
+          147,
+          148,
+          149,
+          150,
+          152,
+          155,
+          156,
+          157,
+          158,
+          161,
+          165,
+          166,
+          167,
+          170,
+          174,
+          175,
+          176,
+          178,
+          179
+        ],
+        "missing": [
+          109,
+          162,
+          163,
+          171,
+          172
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8666666666666667,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-9d1acd13",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "8a179625fdaf",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7971896955503512,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.051907319999999986,
+      "metrics": {
+        "accuracy": 0.7971896955503512
+      },
+      "coverage": {
+        "executed": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          21,
+          22,
+          23,
+          24,
+          27,
+          34,
+          35,
+          37,
+          39,
+          40,
+          42,
+          46,
+          47,
+          48,
+          51,
+          52,
+          53,
+          56,
+          57,
+          58,
+          60,
+          61,
+          62,
+          63,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          74,
+          75,
+          77,
+          79,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          115,
+          117,
+          118,
+          119,
+          120,
+          123,
+          124,
+          125,
+          127,
+          131,
+          132,
+          134,
+          135,
+          136,
+          137,
+          138,
+          139,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          148,
+          149,
+          150,
+          151,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          161,
+          162,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          173,
+          176,
+          178,
+          181,
+          182,
+          183,
+          184,
+          185,
+          188,
+          189,
+          192,
+          209,
+          210
+        ],
+        "missing": [
+          25,
+          72,
+          76,
+          128,
+          194,
+          195,
+          200,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8571428571428571,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-99061d81",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7901639344262295,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.051907319999999986,
+      "metrics": {
+        "accuracy": 0.7901639344262295
+      },
+      "coverage": {
+        "executed": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          21,
+          22,
+          23,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          36,
+          37,
+          40,
+          41,
+          44,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          59,
+          60,
+          61,
+          64,
+          65,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          77,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          87,
+          88,
+          89,
+          90,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          100,
+          101,
+          102,
+          104,
+          106,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          116,
+          121,
+          124,
+          126,
+          127,
+          128,
+          129,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          147,
+          148,
+          149,
+          150,
+          153,
+          154,
+          155,
+          156,
+          159,
+          160,
+          163,
+          164,
+          165,
+          166,
+          167,
+          170,
+          171,
+          172,
+          188,
+          189,
+          190,
+          191,
+          193,
+          194
+        ],
+        "missing": [
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          181,
+          182,
+          183,
+          184,
+          185,
+          186
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8761904761904762,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-056e0d6c",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "6005d7edffa0",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7925058548009367,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7925058548009367
+      },
+      "coverage": {
+        "executed": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          21,
+          22,
+          23,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          36,
+          37,
+          40,
+          41,
+          44,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          59,
+          60,
+          61,
+          64,
+          65,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          77,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          87,
+          88,
+          89,
+          90,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          100,
+          101,
+          102,
+          104,
+          106,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          116,
+          121,
+          124,
+          126,
+          127,
+          128,
+          129,
+          130,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          149,
+          150,
+          151,
+          152,
+          154,
+          157,
+          158,
+          161,
+          162,
+          165,
+          166,
+          167,
+          168,
+          169,
+          172,
+          173,
+          174,
+          190,
+          191,
+          192,
+          193,
+          195,
+          196
+        ],
+        "missing": [
+          176,
+          177,
+          178,
+          179,
+          180,
+          181,
+          183,
+          184,
+          185,
+          186,
+          187,
+          188
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8523809523809524,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-8471c5b3",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.8149882903981265,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8149882903981265
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-746ba9e7",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.7704918032786885,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7704918032786885
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-7971abca",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.8084309133489461,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8084309133489461
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-c98607c7",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 3,
+      "status": "stabil",
+      "measured": 0.8065573770491803,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8065573770491803
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-365e3b07",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.8037470725995316,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8037470725995316
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-efe99a01",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 6,
+      "status": "stabil",
+      "measured": 0.8215456674473068,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8215456674473068
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-e94950dd",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 8,
+      "status": "abweichung",
+      "measured": 0.8,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-cd17265f",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 7,
+      "status": "abweichung",
+      "measured": 0.7901639344262295,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7901639344262295
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-85536613",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 9,
+      "status": "stabil",
+      "measured": 0.8140515222482435,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8140515222482435
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-fbdd51ae",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 10,
+      "status": "stabil",
+      "measured": 0.818735362997658,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.818735362997658
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-8bad4dc0",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 12,
+      "status": "abweichung",
+      "measured": 0.795784543325527,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.795784543325527
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-87c60826",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 11,
+      "status": "abweichung",
+      "measured": 0.8252927400468384,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8252927400468384
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-2dc12d1d",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 13,
+      "status": "abweichung",
+      "measured": 0.8046838407494146,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8046838407494146
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-e0196819",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 14,
+      "status": "abweichung",
+      "measured": 0.7953161592505855,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7953161592505855
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-03725611",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 15,
+      "status": "stabil",
+      "measured": 0.8079625292740047,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8079625292740047
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-bf869e78",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 16,
+      "status": "abweichung",
+      "measured": 0.7967213114754098,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7967213114754098
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-7e8b2c65",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 17,
+      "status": "abweichung",
+      "measured": 0.7817330210772834,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7817330210772834
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-4cee3ece",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 18,
+      "status": "stabil",
+      "measured": 0.8149882903981265,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8149882903981265
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-ae275410",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 19,
+      "status": "abweichung",
+      "measured": 0.8271662763466042,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8271662763466042
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-204768f3",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 20,
+      "status": "stabil",
+      "measured": 0.8224824355971897,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8224824355971897
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-7ef5fcb1",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 21,
+      "status": "abweichung",
+      "measured": 0.8046838407494146,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8046838407494146
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-cbc79e23",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 22,
+      "status": "stabil",
+      "measured": 0.8210772833723653,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8210772833723653
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-9219ac6e",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 23,
+      "status": "stabil",
+      "measured": 0.8201405152224824,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8201405152224824
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-8116f007",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 24,
+      "status": "abweichung",
+      "measured": 0.7597189695550352,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7597189695550352
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-790a4a4e",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 25,
+      "status": "stabil",
+      "measured": 0.805152224824356,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.805152224824356
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-4e028dd6",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 26,
+      "status": "stabil",
+      "measured": 0.8154566744730679,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8154566744730679
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-08f03292",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 27,
+      "status": "stabil",
+      "measured": 0.8121779859484778,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8121779859484778
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-5b39d7bd",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 28,
+      "status": "stabil",
+      "measured": 0.8056206088992974,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.8056206088992974
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-6aec4043",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261004-212533",
+      "code_hash": "1c049829bfa9",
+      "seed": 29,
+      "status": "abweichung",
+      "measured": 0.7929742388758783,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06842531999999998,
+      "metrics": {
+        "accuracy": 0.7929742388758783
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "urteil": "teilweise",
+      "measured_mean": 0.8049336455893833,
+      "measured_std": 0.01582868326927225,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0158. Mit unserem Setup gemessen (30 von 30 Seeds, Zielwert 0.815 +/- 0.01, Table 1, arXiv v2 (pdf)): Mittel 0.8049. Code-Kandidaten: 3, gewaehlt Kandidat 2 (Code 1c049829bfa9) nach Validierungs-Metrik (0: accuracy 0.8667, 1: accuracy 0.8571, 2: accuracy 0.8762); Repo-Abgleich: 1 Abweichungen, Reparatur nicht uebernommen (Validierung schlechter als beim alten Code)",
+      "sources": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "train/validation/test splits",
+      "value": "100 random train/validation/test splits per dataset",
+      "quote": "For each dataset we use 100 random train/validation/test splits and perform 20 random initializations for each split.",
+      "source": "paper"
+    },
+    {
+      "topic": "data_split",
+      "value": "20 labeled nodes per class for training, 30 nodes per class for validation, rest for test",
+      "quote": "In all cases, we use 20 labeled nodes per class as the training set, 30 nodes per class as the validation set, and the rest as the test set.",
+      "source": "paper"
+    },
+    {
+      "topic": "evaluation_protocol",
+      "value": "Mean test accuracy averaged over 100 random train/validation/test splits with 20 random weight initializations each",
+      "quote": "Table 1: Mean test set accuracy and standard deviation in percent averaged over 100 random train/validation/test splits with 20 random weight initializations each for all models and all datasets.",
+      "source": "paper"
+    },
+    {
+      "topic": "hyperparameter_search",
+      "value": "Grid search over learning rate, hidden layer size, L2 regularization strength, dropout probability",
+      "quote": "We performed an extensive grid search for learning rate, size of the hidden layer, strength of the L2 regularization, and dropout probability (Appendix C).",
+      "source": "paper"
+    },
+    {
+      "topic": "model_selection_criterion",
+      "value": "Chosen hyperparameter configuration that achieved best average accuracy on Cora and CiteSeer (averaged over 100 splits and 20 initializations)",
+      "quote": "For every model, we picked the hyperparameter configuration that achieved the best average accuracy on Cora and CiteSeer datasets (averaged over 100 train/validation/test splits and 20 random initializations for each).",
+      "source": "paper"
+    },
+    {
+      "topic": "config_usage",
+      "value": "Best-performing configurations from Table 4 used for all subsequent experiments",
+      "quote": "The chosen best‑performing configurations were used for all subsequent experiments and are listed in Table 4.",
+      "source": "paper"
+    },
+    {
+      "topic": "GCN early stopping (original)",
+      "value": "stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs",
+      "quote": "Early stopping: stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs.",
+      "source": "paper"
+    },
+    {
+      "topic": "GCN training mode",
+      "value": "Full-batch training",
+      "quote": "Full-batch training.",
+      "source": "paper"
+    },
+    {
+      "topic": "GCN max epochs (original)",
+      "value": "200",
+      "quote": "Maximum number of epochs: 200.",
+      "source": "paper"
+    },
+    {
+      "topic": "GCN data split",
+      "value": "20 per class for training; 500 nodes validation; 1000 nodes test (Planetoid split)",
+      "quote": "Train set: 20 per class; validation set: 500 nodes; test set: 1000 (as in the Planetoid split).",
+      "source": "paper"
+    },
+    {
+      "topic": "GCN unified early stopping",
+      "value": "stop if total validation loss does not improve for 50 epochs; reset weights to best validation loss",
+      "quote": "we train for a maximum of 100 k epochs. However, the actual training time is considerably shorter since we use strict early stopping. Specifically, with our unified early stopping criterion training stops if the total validation loss (loss on the data plus regularization loss) does not improve for 50 epochs. Once training has stopped, we reset the state of the weights to the step with the lowest validation loss.",
+      "source": "paper"
+    },
+    {
+      "topic": "Model name",
+      "value": "\"GCN\"",
+      "quote": "model_name: \"GCN\"",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "Number of layers",
+      "value": "2",
+      "quote": "num_layers: 2",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "Hidden size",
+      "value": "64",
+      "quote": "hidden_size: 64",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "Dropout probability",
+      "value": "0.8",
+      "quote": "dropout_prob: 0.8",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "Learning rate",
+      "value": "0.01",
+      "quote": "learning_rate: 0.01",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "Weight decay",
+      "value": "0.001",
+      "quote": "weight_decay: 0.001",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "model_name",
+      "value": "GCN",
+      "quote": "model_name: \"GCN\"",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "num_layers",
+      "value": "2",
+      "quote": "num_layers: 2",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "hidden_size",
+      "value": "16",
+      "quote": "hidden_size: 16",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "dropout_prob",
+      "value": "0.5",
+      "quote": "dropout_prob: 0.5",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "learning_rate",
+      "value": "0.01",
+      "quote": "learning_rate: 0.01",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912"
+    },
+    {
+      "topic": "adjacency_preprocessing",
+      "value": "Make graph undirected and remove self-loops when standardize is False",
+      "quote": "else:\n        dataset_graph = dataset_graph.to_undirected()\n        dataset_graph = eliminate_self_loops(dataset_graph)",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "adjacency_preprocessing",
+      "value": "Apply standardization (unknown transformation) when standardize is True",
+      "quote": "if standardize:\n        dataset_graph = dataset_graph.standardize()",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "label_processing",
+      "value": "Binarize labels",
+      "quote": "labels = binarize_labels(labels)",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "split_function",
+      "value": "Function to generate train/val/test splits supporting per-class or size-based specification",
+      "quote": "def get_train_val_test_split(random_state,\n                             labels,\n                             train_examples_per_class=None, val_examples_per_class=None,\n                             test_examples_per_class=None,\n                             train_size=None, val_size=None, test_size=None):",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "split_coverage",
+      "value": "If test size not specified, ensure all indices are used in split",
+      "quote": "if test_size is None and test_examples_per_class is None:\n        # all indices must be part of the split\n        assert len(np.concatenate((train_indices, val_indices, test_indices))) == num_samples",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "split_balance_check",
+      "value": "When using per-class train split, assert each class has equal number of training examples",
+      "quote": "if train_examples_per_class is not None:\n        train_labels = labels[train_indices, :]\n        train_sum = np.sum(train_labels, axis=0)\n        # assert all classes have equal cardinality\n        assert np.unique(train_sum).size == 1",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "class-balanced sampling",
+      "value": "selects num_examples_per_class per class without replacement",
+      "quote": "return np.concatenate([random_state.choice(sample_indices_per_class[class_index], num_examples_per_class, replace=False) for class_index in range(len(sample_indices_per_class))])",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "validation cardinality check",
+      "value": "assert all classes have equal cardinality",
+      "quote": "# assert all classes have equal cardinality\nassert np.unique(val_sum).size == 1",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "test cardinality check",
+      "value": "assert all classes have equal cardinality",
+      "quote": "# assert all classes have equal cardinality\nassert np.unique(test_sum).size == 1",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "data type casting",
+      "value": "adjacency and features cast to float32",
+      "quote": "adj = adj.astype(np.float32)\nfeatures = features.tocsr()\nfeatures = features.astype(np.float32)",
+      "source": "repo:gnnbench/data/make_dataset.py@1e72912"
+    },
+    {
+      "topic": "Early stopping improvement tolerance",
+      "value": "Reset patience only if validation accuracy improves by at least tolerance or validation loss improves by at least tolerance",
+      "quote": "# But only reset patience if accuracy or loss improved by a certain degree. This avoids long-running\n            # convergence processes like for the LabelPropagation algorithm.\n            if val_accuracy >= self.val_accuracy_max + self.tolerance or val_loss <= self.val_loss_min - self.tolerance:\n                self.patience_step = 0",
+      "source": "repo:gnnbench/early_stopping.py@1e72912"
+    },
+    {
+      "topic": "Patience increment",
+      "value": "Otherwise increment patience step",
+      "quote": "else:\n                self.patience_step += 1",
+      "source": "repo:gnnbench/early_stopping.py@1e72912"
+    },
+    {
+      "topic": "Stopping condition",
+      "value": "Training stops when patience_step reaches self.patience",
+      "quote": "return self.patience_step >= self.patience",
+      "source": "repo:gnnbench/early_stopping.py@1e72912"
+    },
+    {
+      "topic": "Variable reset for best weights",
+      "value": "Functions to extract and restore trainable variables to the state at minimum validation loss",
+      "quote": "def get_reset_variable_ops():\n    # Operations for resetting the state of trainable variables to the one at the minimum val loss step.\n    with tf.name_scope('reset_variable_state_ops'):\n        extract_variables_state_op = extract_variables_state()\n        variables_state = [tf.placeholder(var.dtype, var.shape) for var in tf.trainable_variables()]\n        set_trainable_variables_op = set_trainable_variables(variables_state)\n    return extract_variables_state_op, variables_state, set_trainable_variables_op",
+      "source": "repo:gnnbench/early_stopping.py@1e72912"
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/shchur/gnn-benchmark",
+    "commit": "1e72912a0810cdf27ae54fd589a3b43358a2b161",
+    "files": [
+      "README.md",
+      "config/optimized/gcn.conf.yaml",
+      "config/reference/gcn.conf.yaml",
+      "config/train.conf.yaml",
+      "gnnbench/data/io.py",
+      "gnnbench/data/make_dataset.py",
+      "gnnbench/data/preprocess.py",
+      "gnnbench/early_stopping.py",
+      "gnnbench/metrics.py",
+      "gnnbench/models/__init__.py",
+      "gnnbench/run_single_job.py",
+      "gnnbench/train.py",
+      "gnnbench/util.py",
+      "scripts/create_jobs.py"
+    ]
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.1377049180327869
+    },
+    "no_graph": {
+      "accuracy": 0.448711943793911
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/pdf/1811.05868v2",
+      "mode": "live",
+      "n_chars": 25012,
+      "retrieved_at": "2026-10-04T19:25:35+00:00",
+      "sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/shchur/gnn-benchmark",
+      "mode": "live",
+      "n_chars": 31073,
+      "retrieved_at": "2026-10-04T19:25:53+00:00",
+      "sha256": "6855b77b691d9f197d8902084f1a113bdce265bc2f4a2c292b71808ef1ae7e32"
+    },
+    {
+      "kind": "community",
+      "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+      "mode": "live",
+      "n_chars": 30770,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "e02ba6fdc15d69cd9b27a8170335e7904ec16545a93b994fe477cc46b7d27118"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/fixed_configs.conf.yaml",
+      "mode": "live",
+      "n_chars": 2887,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "a0a97e38cfb5f266bf63d03aa4496654ae8a21fd98cdbd2a098160e812d43f44"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark",
+      "mode": "live",
+      "n_chars": 16353,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "16909fe1a37db39e168ce386032e147392be85fc1d8d6a563a632bc76992d365"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/README.md",
+      "mode": "live",
+      "n_chars": 2545,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "85d6a32ba2f8da0e6187254b7b99a3227ecb7a474b09c5a6cf6e27b16452f320"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/data/npz/ms_academic_cs.npz",
+      "mode": "live",
+      "n_chars": 2074,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "e6c0603f209af7d809c090b5425e6e1d07c0cbb3711d816ae87d00aef6d37107"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/setup.py",
+      "mode": "live",
+      "n_chars": 1327,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "a1295bab2e8198f575cc6dcd61c45f5f01c9a73960b3d8c873d08560e6fe7486"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/13",
+      "mode": "live",
+      "n_chars": 624,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "3675c23138ca54cc432073f7a9cab75a7db8d765fd46991b35c05d85f1db023c"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/10",
+      "mode": "live",
+      "n_chars": 539,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "d7feb0482bfa64a2e737c09ed84bbfa4f2bed1ebec6726a7e26f6567e91c80fe"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/12",
+      "mode": "live",
+      "n_chars": 844,
+      "retrieved_at": "2026-10-04T19:34:15+00:00",
+      "sha256": "3703705f86aca23d9f29a23f75c7aa9ccc7c42cf86a8aed89a6a0fae350fbdb1"
+    }
+  ],
+  "ablations": {
+    "disc_1811_05868_accuracy": {
+      "accuracy_full": 0.7901639344262295,
+      "accuracy_ablated": 0.5925058548009368,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau",
+  "graph_repairs": {},
+  "fault_repairs": {},
+  "droplast_notes": {},
+  "community": {
+    "findings": [],
+    "dropped": 9,
+    "pages": [
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "n_chars": 30770,
+        "sha256": "e02ba6fdc15d69cd9b27a8170335e7904ec16545a93b994fe477cc46b7d27118"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/fixed_configs.conf.yaml",
+        "n_chars": 2887,
+        "sha256": "a0a97e38cfb5f266bf63d03aa4496654ae8a21fd98cdbd2a098160e812d43f44"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark",
+        "n_chars": 16353,
+        "sha256": "16909fe1a37db39e168ce386032e147392be85fc1d8d6a563a632bc76992d365"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/README.md",
+        "n_chars": 2545,
+        "sha256": "85d6a32ba2f8da0e6187254b7b99a3227ecb7a474b09c5a6cf6e27b16452f320"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/data/npz/ms_academic_cs.npz",
+        "n_chars": 2074,
+        "sha256": "e6c0603f209af7d809c090b5425e6e1d07c0cbb3711d816ae87d00aef6d37107"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/setup.py",
+        "n_chars": 1327,
+        "sha256": "a1295bab2e8198f575cc6dcd61c45f5f01c9a73960b3d8c873d08560e6fe7486"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/13",
+        "n_chars": 624,
+        "sha256": "3675c23138ca54cc432073f7a9cab75a7db8d765fd46991b35c05d85f1db023c"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/10",
+        "n_chars": 539,
+        "sha256": "d7feb0482bfa64a2e737c09ed84bbfa4f2bed1ebec6726a7e26f6567e91c80fe"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/12",
+        "n_chars": 844,
+        "sha256": "3703705f86aca23d9f29a23f75c7aa9ccc7c42cf86a8aed89a6a0fae350fbdb1"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "search",
+        "title": "Pitfalls of Graph Neural Network Evaluation"
+      },
+      {
+        "kind": "method_search",
+        "method": "GCN",
+        "dataset": "Cora"
+      },
+      {
+        "kind": "repo_search",
+        "repo": "shchur/gnn-benchmark"
+      },
+      {
+        "kind": "crawl",
+        "url": "https://github.com/shchur/gnn-benchmark/issues"
+      }
+    ],
+    "reused_discovery": false,
+    "calls": [
+      "search",
+      "search",
+      "search",
+      "crawl"
+    ],
+    "mode": "live",
+    "queried_at": "2026-10-04T19:34:15+00:00"
+  },
+  "summary": null,
+  "explanations": {
+    "disc_1811_05868_accuracy": {
+      "items": [
+        {
+          "topic": "different protocol or split",
+          "explanation": "The paper points out that prior attacks use a validation set much larger than the training set, which is not realistic and can affect reported numbers.",
+          "quote": "All existing label poisoning attacks (LPATTACK, LAFAK, MG) evaluate on data splits with validation (val) set size much larger than that of training (train) set.",
+          "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "hyperparameters that the paper does not state",
+          "explanation": "The paper notes that existing attacks use default hyper‑parameters tuned for clean labels, which may not be appropriate for poisoned data and can lead to different results.",
+          "quote": "Despite establishing this, all the label-poisoning attacks for GNNs still use default h-params to evaluate the effectiveness of the proposed attack. The default h-params were tuned to work with clean labels (unpoisoned).",
+          "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "known evaluation or data-loading bug",
+          "explanation": "Treating the validation set as always clean is described as an unrealistic assumption that can distort evaluation outcomes.",
+          "quote": "It is an unrealistic assumption for an attacker to treat train and val sets as separate entities. In other words, the current evaluation setup in literature for label-poisoning attacks training nodes while the val set is untouched and remains sanitized.",
+          "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "results that others could not reproduce",
+          "explanation": "The paper highlights that variance in results is large, often comparable to the claimed improvement, which can hinder reproducibility.",
+          "quote": "We see that the variance is relatively large, often of the same order as the supposed improvement by an attack.",
+          "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Neighborhood size inconsistency",
+          "explanation": "Different GNN layers consider neighborhoods of different sizes, causing incomparable evaluations unless adjusted.",
+          "quote": "The first source of inconsistency when comparing GNNs comes from the fact that different layers are designed to take into account neighborhoods of different sizes.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Fair evaluation of neighborhoods",
+          "explanation": "A fair evaluation should ensure all models see the same neighborhoods, but this is often ignored.",
+          "quote": "A fair evaluation should keep these differences into account and allow each GNN to look at the same neighborhoods, but at the same time, it could be argued that a layer designed to operate on larger neighborhoods is more expressive.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Impact on model complexity",
+          "explanation": "Variations in neighborhood size affect parameters, nonlinearity, and regularization, leading to performance differences.",
+          "quote": "Moreover, this difference between methods may have an impact on the number of parameters, nonlinearity, and overall amount of regularization in a GNN.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Dropout layer count disparity",
+          "explanation": "Equivalent neighborhood reach may require different numbers of dropout layers, altering regularization.",
+          "quote": "For instance, a GCN that reaches a neighborhood of order 3 may have 3 dropout layers, while the equivalent Cheby with K=3 will have only one.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Parameter efficiency of SGC",
+          "explanation": "SGC can reach any neighborhood with constant parameters unlike other methods, affecting comparability.",
+          "quote": "Another example: an SGC architecture can reach any neighborhood with a constant number of parameters, while other methods can’t.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Inconsistent regularization reporting",
+          "explanation": "The literature applies regularization inconsistently, making it unclear whether gains are due to model or regularization.",
+          "quote": "The literature is largely inconsistent with how regularization is applied across different papers, making it difficult to say whether the performance improvements reported for a model are due to the actual contribution or to a different regularization scheme.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Common regularization practices",
+          "explanation": "Frequent use of high learning rates, high L2 penalty, extreme dropout, low epochs, and low early‑stopping patience introduces variability.",
+          "quote": "High learning rates; High L2 penalty; Extremely high dropout rates on node features and adjacency matrix; Low number of training epochs; Low patience for early stopping.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Fixed training epochs",
+          "explanation": "Using a fixed number of epochs is task‑specific and can cause results to depend heavily on initialization.",
+          "quote": "First, I argue that setting a fixed number of training epochs is a form of alchemy that should be avoided if possible, because it’s incredibly task-specific. Letting a model train to convergence is almost always a better approach, because it’s less dependent on the initialization of the weights.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Dropout on adjacency matrix inconsistency",
+          "explanation": "Applying dropout to the adjacency matrix improves generalization, but papers differ on whether they use it, causing unfair comparisons.",
+          "quote": "When comparing different models, if one is using dropout on the adjacency matrix then all the others should do the same. However, the common practice of comparing methods using the “same architecture from the original paper” means that some methods will be tested with dropout on A, and some without, as if the dropout is a particular characteristic of only some methods.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Learning rate and weight decay tuning",
+          "explanation": "Learning rates and weight decay are often taken as‑is without tuning, yet they significantly affect performance.",
+          "quote": "Finally, the remaining key factors in training are the learning rate and weight decay. These are often given as-is in the literature, but it is a good idea to tune them whenever possible.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Parallel heads comparability",
+          "explanation": "Fundamental differences between head‑based models (e.g., GAT) and filter‑based models (e.g., ARMA) make head‑count comparisons unfair.",
+          "quote": "Because of these fundamental semantic differences, it is impossible to say whether a comparison between GAT with H heads and an ARMA layer of order H is fair.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Dataset quality concerns",
+          "explanation": "Benchmark datasets like Cora are insufficient for fair evaluation, leading to unreliable results.",
+          "quote": "Finally, I’m going to spend a few words on datasets, because there is no chance of having a fair evaluation if the datasets on which we test our models are not good. And in truth, the benchmark datasets that we use for evaluating GNNs are not that good.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Need for many repetitions",
+          "explanation": "Experiments often require hundreds of repetitions to obtain significant results, indicating instability and reproducibility issues.",
+          "quote": "However, many experiments in the literature still had to be repeated hundreds of times in order to give significant results, and that is bad for three reasons: time, money, and the environment, in no particular order.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "Hyperparameter search burden",
+          "explanation": "Grid search on these datasets demands excessive computation, making reliable outcomes hard to achieve.",
+          "quote": "Especially if running a grid search of hyperparameters, it just doesn’t make sense to be using datasets that require that much computation to give reliable outcomes, more so if we consider that these are supposed to be easy datasets.",
+          "url": "https://danielegrattarola.github.io/posts/2019-12-13/pitfalls.html",
+          "status": "unverified hypothesis"
+        }
+      ],
+      "dropped": 3,
+      "mode": "live"
+    }
+  },
+  "setup_missing": [],
+  "val_label_check": {
+    "disc_1811_05868_accuracy": {
+      "0": {
+        "code_hash": "29c89be071e7",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.8666666666666667,
+        "val_masked": 0.638095238095238,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "1": {
+        "code_hash": "8a179625fdaf",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.8571428571428571,
+        "val_masked": 0.7333333333333333,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "2": {
+        "code_hash": "1c049829bfa9",
+        "verdict": "Validierungslabels nicht genutzt",
+        "val_full": 0.8761904761904762,
+        "val_masked": 0.8666666666666667,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      }
+    }
+  },
+  "edge_direction": {
+    "disc_1811_05868_accuracy": [
+      {
+        "code_hash": "1c049829bfa9",
+        "verdict": "beide Richtungen",
+        "acc_side_a": 0.56,
+        "acc_side_b": 0.5495750708215298,
+        "detail": null
+      }
+    ]
+  },
+  "repo_diff": {
+    "disc_1811_05868_accuracy": {
+      "deviations": [
+        {
+          "aspect": "stopping criterion",
+          "file": "gnnbench/train.py",
+          "repo_quote": "# test early stopping criterion\n            if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):\n                _log.debug(f\"Early stopping by {early_stopping_criterion} criterion\"\n                           f\" after {sess.run(global_step)} epochs.\")\n                break",
+          "our_quote": "# Early stopping: stop if val_loss > mean of last 10 val losses\n            if len(val_losses) >= 10:\n                recent = val_losses[-10:]\n                if val_loss > np.mean(recent):\n                    break",
+          "difference": "The reproducer's script uses a custom early stopping condition (stop if current validation loss exceeds the average of the last 10 validation losses) while the original repository uses a criterion (likely patience-based) via the `early_stopping.should_stop` method."
+        }
+      ],
+      "dropped": 0,
+      "truncation": [
+        {
+          "file": "scripts/create_jobs.py",
+          "kept_chars": 5736,
+          "of_chars": 7070
+        },
+        {
+          "file": "config/train.conf.yaml",
+          "kept_chars": 0,
+          "of_chars": 3575
+        },
+        {
+          "file": "gnnbench/metrics.py",
+          "kept_chars": 0,
+          "of_chars": 507
+        },
+        {
+          "file": "gnnbench/early_stopping.py",
+          "kept_chars": 0,
+          "of_chars": 5951
+        },
+        {
+          "file": "gnnbench/models/__init__.py",
+          "kept_chars": 0,
+          "of_chars": 170
+        },
+        {
+          "file": "gnnbench/util.py",
+          "kept_chars": 0,
+          "of_chars": 5934
+        }
+      ],
+      "from_hash": "1c049829bfa9",
+      "result": "kept",
+      "reason": "Validierung schlechter als beim alten Code",
+      "val_old": 0.8761904761904762,
+      "val_new": 0.8523809523809524,
+      "to_hash": "6005d7edffa0"
+    }
+  },
+  "warnings": [
+    "Info: Das Paper nennt Streuung +-1.3 (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); die Toleranz +-0.01 bleibt fest."
+  ],
+  "nachlauf": {}
+}

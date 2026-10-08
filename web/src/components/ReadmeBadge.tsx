@@ -1,23 +1,24 @@
 import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
-import { badgeMarkdown } from '../badge'
+import { badgeMarkdown, badgeNote } from '../badge'
 import { SITE_BASE_IS_PLACEHOLDER, SITE_BASE_URL } from '../config'
 import { runDir, type RunRef } from '../data'
 
-// "Show this result in your README": preview of the badge file of this run and the Markdown to copy. Shown only when the badge exists (older exports have none).
-export function ReadmeBadge({ ref_ }: { ref_: RunRef }) {
+// "Add this badge to your README": preview of the badge file of this run and the Markdown to copy. Shown only when the badge exists (older exports have none).
+export function ReadmeBadge({ ref_, urteil }: { ref_: RunRef; urteil?: string }) {
   const [copied, setCopied] = useState(false)
   const [missing, setMissing] = useState(false)
   if (missing) return null
+  const note = badgeNote(urteil, ref_.gesamtaussage, !!ref_.catalog_id)
   const md = badgeMarkdown(SITE_BASE_URL, ref_.paper_id, ref_.timestamp)
   const copy = async () => {
     try { await navigator.clipboard.writeText(md); setCopied(true); window.setTimeout(() => setCopied(false), 1800) } catch { /* clipboard blocked: the text stays selectable */ }
   }
   return (
-    <section id="sec-badge" className="scroll-mt-4 min-w-0 rounded-xl border border-line bg-surface p-6 md:p-8" aria-label="Show this result in your README">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Show this result in your README</div>
+    <section id="sec-badge" className="scroll-mt-4 min-w-0 rounded-xl border border-line bg-surface p-6 md:p-8" aria-label="Add this badge to your README">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Add this badge to your README</div>
       <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">
-        Authors can add this badge to a README. It states our verdict with our setup, the measured and the claimed value, and that the method was not checked. A click leads to this certificate.
+        {note.text} A click on the badge leads to this certificate.
       </p>
       <div className="mt-6 inline-block rounded-lg border border-line bg-white p-3">
         <img src={`${import.meta.env.BASE_URL}data/${runDir(ref_)}badge.svg`} alt="Nullius badge for this run" onError={() => setMissing(true)} className="block h-auto max-w-full" />

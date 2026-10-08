@@ -10,6 +10,9 @@ export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
 }
 // Same wording for every run: "reproduced" means the target value was reached with our setup; method fidelity is not checked.
 export const RESULT = RESULT_CATALOG
+// Tooltip for the green badge: the badge says "target reached", never "method reproduced".
+export const TARGET_HINT = 'The independent harness measured the target value. Method fidelity not checked.'
+export const resultHint = (urteil: string | undefined) => (urteil === 'reproduziert' ? TARGET_HINT : undefined)
 export const PRELIMINARY = 'Preliminary: method fidelity not checked'
 export const isPreliminary = (gesamt: string | undefined) => gesamt === 'vorlaeufig'
 export const NOT_ASSESSABLE = 'nicht bewertbar (Methode nicht umgesetzt)'
@@ -99,8 +102,8 @@ export function translateJuryReason(reason: string): string {
 export function translateReason(reason: string): string {
   let m: RegExpMatchArray | null
   if (/^Cora ohne matched_task/.test(reason)) return 'the paper does not say which Cora protocol it uses (Planetoid or random splits)'
-  if ((m = reason.match(/^ETTh1: Horizont (\d+), Task misst nur (\d+)/))) return `horizon ${m[1]}, the task only measures ${m[2]}`
-  if (/^ETTh1: Horizont fehlt/.test(reason)) return 'the horizon is missing or unreadable'
+  if ((m = reason.match(/^ETT\w+: Horizont (\d+), Task misst nur (\d+)/))) return `horizon ${m[1]}, the task only measures ${m[2]}`
+  if (/^ETT\w+: Horizont fehlt/.test(reason)) return 'the horizon is missing or unreadable'
   if ((m = reason.match(/^Metrik (.+) auf Task (.+) nicht messbar/))) return `metric ${m[1]} cannot be measured on ${m[2]}`
   if (/^Zielwert fehlt/.test(reason)) return 'the target value is missing or unreadable'
   if ((m = reason.match(/^Datensatz (.+) ohne Task/))) return `no task for dataset ${m[1]}`

@@ -4,6 +4,7 @@ export const GLOSSARY: Record<string, string> = {
   accuracy: 'The share of test cases a model gets right. 81.5% accuracy means about 82 of 100 articles were sorted into the correct topic.',
   MSE: 'Mean squared error: how far a forecast is from the real values, on average. Lower is better, 0 would be perfect.',
   Cora: 'A standard benchmark: about 2,700 scientific articles that cite each other, each belonging to one of seven topics.',
+  CiteSeer: 'A standard benchmark: about 3,300 scientific articles that cite each other, each belonging to one of six topics.',
   ETTh1: 'A standard benchmark for forecasting: hourly temperature readings from an electricity transformer.',
   seed: 'A starting number for the random choices in a training run. Different seeds give slightly different results, so we run several and use the average.',
   tolerance: 'How far our measurement may differ from the claimed value and still count as a match. We fix it before the run.',

@@ -13,6 +13,8 @@ Stand 29.09.2026. Ziel: ein vollständiges Produkterlebnis (Bewertungskriterium 
 **Nullius prüft Papers, die auf unterstützten Benchmarks evaluieren.** Jeder Datensatz braucht einen von Hand gebauten Task (Daten, Harness, Baselines, Referenzlösung). Unterstützt sind: Cora mit festem Split (Planetoid), Cora auf der größten Komponente mit zufälligen Splits (Shchur), ETTh1 (DLinear-Protokoll, Horizont 96). GAT und DGI haben gezeigt, dass ein neues Paper auf einem vorhandenen Datensatz ohne neuen Task funktioniert. Die Startseite zeigt die Liste und erklärt, wie man einen neuen Datensatz hinzufügt (`docs/adding_a_task.md`, noch zu schreiben).
 
 ## Entscheidungen (29.09.2026)
+> **Stand 2026-10-07:** Gebaut ist die offene Demo ohne Zugangscode. Die Variablen `DEMO_*` unten wurden nie umgesetzt; es gelten `LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`, `MAX_DAILY_*` und Limit je IP (`CLAUDE.md`, „Live-Modus“; `docs/deploy.md`, „Limits bis 15.12.“). Der Absatz bleibt als Verlauf.
+
 - **Demo offen für alle Besucher** (kein Zugangscode als Pflicht), mit Warteschlange und **hartem Budget**. Grund: die Jury soll ohne Zugangsdaten testen können; die Regeln verlangen eine kostenlos testbare Demo bis mindestens 15.12.2026.
   - Ein Lauf gleichzeitig (Warteschlange), Position sichtbar.
   - Budgetgrenzen aus der Umgebung (`DEMO_MAX_RUNS_PER_DAY`, `DEMO_MAX_USD_PER_DAY`, `DEMO_MAX_USD_TOTAL`, brutto), zusätzlich Grenze je IP und je Lauf (`MAX_COST_PER_RUN_USD`, Seeds und Zeit begrenzt).
