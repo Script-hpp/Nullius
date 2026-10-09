@@ -125,6 +125,7 @@ def test_call_level_stop_matches_the_costs_module():
     assert R.STOP_GROSS_USD < R.CAP_GROSS_USD
     env = R.worker_env("2026-10-09T01:00:00Z")
     assert env["LLM_PROVIDER"] == "tokenfactory" and env["LLM_CACHE"] == "off" and env["SANDBOX_BACKEND"] == "nebius" and env["TAVILY_MODE"] == "fixture"
+    assert env["TF_MODEL_REASONING"] == "nvidia/nemotron-3-super-120b-a12b"   # Nachtrag 1: Ultra entfernt
 
 
 def test_reference_block_in_preregistration_gives_expected_verdicts():

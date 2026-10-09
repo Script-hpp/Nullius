@@ -44,17 +44,19 @@ TRAIN_TIMEOUTS = {"velickovic_gat_2018": 660, "shchur_pitfalls_2018": 900}   # r
 # ---- Budget ------------------------------------------------------------------------------------------------------------------
 VAT = 0.19
 CAP_GROSS_USD = 9.00          # Kostendeckel (Entscheidung 2026-10-09)
-STOP_GROSS_USD = 8.75         # harter Stopp auf Aufruf-Ebene (LLM-Client verweigert jeden Aufruf ab hier)
+STOP_GROSS_USD = float(__import__("os").environ.get("RECALL_CG_V1_STOP_GROSS_USD", "8.75"))   # Verlaengerung nur nach Entscheidung der Nutzerin/des Nutzers, hoechstens 10.25 (Nachtrag 1)
+# harter Stopp auf Aufruf-Ebene (LLM-Client verweigert jeden Aufruf ab hier)
 ABORT_FRACTION = 0.95         # costs.ABORT_FRACTION
 BUDGET_TOTAL_FOR_STOP = STOP_GROSS_USD / ABORT_FRACTION   # BUDGET_TOTAL_USD fuer die Worker, zusammen mit BUDGET_SINCE = Start des Laufs
 MAX_COST_PER_RUN_USD = 0.75   # je Lauf (brutto); v2 bis v4: 0.50. Gen 0 enthaelt zwei Claims, cg-Prompts sind laenger
 RESERVE_GROSS_USD = {"placebo": 0.60, "real": 0.40}   # je laufendem Job: Reserve beim Start eines weiteren (konservativ gegen v4: Mittel 0.24, Max 0.36 mit Placebo)
 WORKERS = 5                   # parallele Laeufe; MAX_PARALLEL_SEEDS=3 je Lauf => hoechstens 15 Branches (16 getestet)
+REASONING_MODEL = "nvidia/nemotron-3-super-120b-a12b"   # Nachtrag 1: Ultra von Token Factory entfernt (404 ab ca. 01:52Z), Super fuer die Rolle reasoning wie in G0 und G1
 EX_OK, EX_FIXTURE, EX_BUDGET, EX_BILLING, EX_INFRA = 0, 2, 4, 3, 75
 
 
 def worker_env(since_iso: str) -> dict[str, str]:
-    return {"LLM_PROVIDER": "tokenfactory", "LLM_CACHE": "off", "SANDBOX_BACKEND": "nebius", "TAVILY_MODE": "fixture",
+    return {"LLM_PROVIDER": "tokenfactory", "TF_MODEL_REASONING": REASONING_MODEL, "LLM_CACHE": "off", "SANDBOX_BACKEND": "nebius", "TAVILY_MODE": "fixture",
             "MAX_PARALLEL_SEEDS": "3", "MAX_COST_PER_RUN_USD": str(MAX_COST_PER_RUN_USD),
             "BUDGET_TOTAL_USD": f"{BUDGET_TOTAL_FOR_STOP:.4f}", "BUDGET_SINCE": since_iso}
 

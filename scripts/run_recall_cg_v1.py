@@ -101,6 +101,8 @@ def fixtures_missing(unit: str, ids: list[str]) -> list[str]:
 def _is_infra(exc: BaseException) -> bool:
     import httpx
     from repro_agent.sandbox.base import SandboxSetupError
+    if str(exc).startswith("LLM-Aufruf fehlgeschlagen"):   # Nachtrag 1: API-Ausfall nach 5 Versuchen (z. B. 404 durch entferntes Modell) ist Infrastruktur, kein Agenten-Fehler
+        return True
     return isinstance(exc, (SandboxSetupError, httpx.TransportError)) or type(exc).__name__ in ("ApiTimeoutError", "ConnectionError", "TimeoutError")
 
 
@@ -268,6 +270,9 @@ def run_all() -> int:
     out = run_queue(R.stage1_jobs(), since)
     rows = R.load_rows()
     g = R.gate(rows, refs)
+    if out == "budget":   # Nachtrag 1: Stopp erreicht, bevor alle vorgesehenen Laeufe fertig sind => PAUSIERT, nicht finalisiert
+        print(f"[{now_iso()}] PAUSIERT: Budget-Stopp in Stufe 1 ({spent_since(since):.2f} $ brutto). Keine Auswertung, Meldung an die Koordination.", flush=True)
+        return 0
     GATEFILE.write_text(json.dumps({**g, "ts": now_iso(), "spent_gross": spent_since(since), "stage1_outcome": out}, indent=1))
     print(f"[{now_iso()}] Stufe 1 fertig ({out}). Gate: F={g['F']} U={g['U']} vollstaendig={g['complete']} weiter={g['continue']}", flush=True)
     if out in ("billing", "stop") or not g["complete"] or not g["continue"]:
@@ -280,8 +285,8 @@ def run_all() -> int:
             break
         out = run_queue(jobs, since)
         if out != "ok":
-            print(f"[{now_iso()}] Stufe 2 beendet vorzeitig ({out}).", flush=True)
-            break
+            print(f"[{now_iso()}] " + ("PAUSIERT: Budget-Stopp in Stufe 2, nicht finalisiert, Meldung an die Koordination." if out == "budget" else f"Stufe 2 beendet vorzeitig ({out})."), flush=True)
+            return 0
     print(f"[{now_iso()}] Fertig. Verbrauch {spent_since(since):.2f} $ brutto. Auswertung: scripts/eval_recall_cg_v1.py", flush=True)
     return 0
 
