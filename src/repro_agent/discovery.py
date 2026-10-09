@@ -282,6 +282,44 @@ def _parse_abs_page(arxiv_id: str, html: str) -> dict:
             "abstract": " ".join(htmllib.unescape(abstract[0]).split()) if abstract else "", "authors": authors}
 
 
+
+def _fetch_arxiv_source(arxiv_id: str) -> str:
+    import httpx
+    import tarfile
+    import io
+    import gzip
+    import re
+    url = f"https://export.arxiv.org/e-print/{arxiv_id}"
+    try:
+        response = httpx.get(url, headers={'User-Agent': 'Mozilla/5.0'}, follow_redirects=True, timeout=10.0)
+        response.raise_for_status()
+        data = response.content
+    except Exception:
+        return ""
+    
+    latex_files = []
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+            for member in tar.getmembers():
+                if member.name.endswith(".tex"):
+                    f = tar.extractfile(member)
+                    if f:
+                        latex_files.append(f.read().decode('utf-8', errors='ignore'))
+    except tarfile.ReadError:
+        try:
+            with gzip.open(io.BytesIO(data), 'rt', encoding='utf-8', errors='ignore') as f:
+                latex_files.append(f.read())
+        except OSError:
+            latex_files.append(data.decode('utf-8', errors='ignore'))
+            
+    tex = "\n".join(latex_files)
+    if tex:
+        tex = re.sub(r'(?m)^%.*$', '', tex)
+        tex = re.sub(r'\\section\*?\{([^}]+)\}', r'# \1', tex)
+        tex = re.sub(r'\\subsection\*?\{([^}]+)\}', r'## \1', tex)
+        tex = re.sub(r'\\subsubsection\*?\{([^}]+)\}', r'### \1', tex)
+    return tex
+
 class DiscoveryAgent:
     def __init__(self, llm: LLMClient | None = None, tavily: TavilyTools | None = None, cache_path=None):
         self.cache_path = cache_path
@@ -770,7 +808,7 @@ class DiscoveryAgent:
                 import re
                 # Seeded: the user chose the paper, the abstract keyword filter (a search-noise filter) is skipped;
                 # claim, quote, number, protocol and repo checks below still apply.
-                if not seeded and (ds.lower() not in abstract or not re.search(r"\d+\.\d+|\d+%", abstract)):
+                if not seeded and (ds.lower() not in abstract):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"})
                     reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"}.get("reason", "")
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
@@ -784,17 +822,18 @@ class DiscoveryAgent:
                     
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
                 extracts_count += 1
-                try:
-                    text = ""
-                    for _attempt in range(2):
-                        html_data = self._tavily("curate_extract", 2, "extract", html_url, html_url,
-                                                 EXTRACT_QUERIES.get(ds, ds), top_title=p["title"], purpose="read_paper")
-                        results = html_data.get("results") or [{}]
-                        text = results[0].get("raw_content") or ""
-                        if len(text) >= MIN_FULLTEXT_CHARS:
-                            break
-                except Exception:
-                    text = ""
+                text = _fetch_arxiv_source(cache_key)
+                if len(text) < MIN_FULLTEXT_CHARS:
+                    try:
+                        for _attempt in range(2):
+                            html_data = self._tavily("curate_extract", 2, "extract", html_url, html_url,
+                                                     EXTRACT_QUERIES.get(ds, ds), top_title=p["title"], purpose="read_paper")
+                            results = html_data.get("results") or [{}]
+                            text = results[0].get("raw_content") or ""
+                            if len(text) >= MIN_FULLTEXT_CHARS:
+                                break
+                    except Exception:
+                        pass
 
                 # Ohne Volltext ist das Protokoll nicht beurteilbar (Abstract reicht nicht).
                 # Nicht cachen: ein spaeterer Lauf kann den Volltext bekommen.
@@ -803,7 +842,16 @@ class DiscoveryAgent:
                     continue
 
                 full_text = text   # Code-Links stehen oft in Fussnoten, die die Abschnittswahl weglaesst
+                import re
+                tables = re.findall(r"\\begin\{table\*?\}(.*?)\\end\{table\*?\}", full_text, re.DOTALL)
+                relevant_tables = []
+                for t in tables:
+                    if ds.lower() in t.lower():
+                        relevant_tables.append(f"\\begin{{table}}{t}\\end{{table}}")
+                table_str = "\n\n".join(relevant_tables)
                 text = _select_sections("Abstract: " + p["abstract"] + "\n\n" + text, p["abstract"])
+                if table_str:
+                    text = f"IMPORTANT RELEVANT TABLES:\n{table_str}\n\n---\n\n" + text
 
                 claim = self._extract_claim(text, ds, emit_func=emit)
                 claim_data = claim or {}
