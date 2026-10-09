@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle, Search } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -34,6 +34,9 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
         <span>Claim <span className="text-fg-3">{e.claim.method ?? '–'}</span></span>
         <span>{STATUS_TEXT[e.status]}</span>
       </div>
+      {e.origin !== 'reference' && e.checked_at && (
+        <p className="m-0 mt-3 flex items-center gap-1.5 text-[12px] text-muted"><Search className="h-3 w-3" aria-hidden /><span>Found by Tavily · {new Date(e.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span></p>
+      )}
       {e.origin === 'reference' && (
         <div className="mt-3 space-y-1">
           <Badge tone="gray" icon={<Library className="w-4 h-4" />} title="A paper from our benchmark with a known reference result">Reference paper</Badge>
@@ -120,7 +123,7 @@ export function Catalog() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
-        what="Papers run through the full loop: claimed number next to measured."
+        what="Papers found and read with Tavily, each run end to end."
         look="Open an entry marked Jury ready, or start a quick check." />
 
       <details className="group mb-10 border-t border-line pt-6">

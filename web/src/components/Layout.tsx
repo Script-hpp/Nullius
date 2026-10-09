@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, Search, X } from 'lucide-react'
 import { ThemeToggle } from './ThemeSwitch'
 import { SiteFooter } from './SiteFooter'
 import { Wordmark } from './Wordmark'
 
+const DISCOVER_TIP = 'Papers found live by Tavily'
 const REPO = 'https://github.com/Script-hpp/Nullius'
 
 // App bar in the style of the landing page (wordmark, quiet links, one outlined "Try it"). The page scrolls inside <main>.
@@ -11,6 +12,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
   const [menuOpen, setMenuOpen] = useState(false)
   const links: { label: string; href: string; active: boolean }[] = [
     { label: 'Catalog', href: '#catalog', active: currentHash === 'catalog' },
+    { label: 'Discover', href: '#discover', active: currentHash === 'discover' },
     { label: 'Benchmark', href: '#benchmark', active: currentHash === 'benchmark' },
   ]
   const link = (active: boolean) => `text-sm no-underline transition-colors ${active ? 'text-fg underline decoration-fg-4 decoration-1 underline-offset-[6px]' : 'text-fg-4 hover:text-fg'}`
@@ -21,7 +23,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-5 px-5 md:px-8">
           <Wordmark />
           <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
-            {links.map((l) => <a key={l.label} href={l.href} className={link(l.active)} aria-current={l.active ? 'page' : undefined}>{l.label}</a>)}
+            {links.map((l) => <a key={l.label} href={l.href} className={link(l.active)} aria-current={l.active ? 'page' : undefined} title={l.label === 'Discover' ? DISCOVER_TIP : undefined}>{l.label}{l.label === 'Discover' && <Search className="ml-1.5 inline h-3 w-3 align-[-1px]" aria-hidden />}</a>)}
             <a href={REPO} target="_blank" rel="noreferrer" className={link(false)}>GitHub</a>
           </nav>
           <div className="flex items-center gap-4">
@@ -36,7 +38,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
         {menuOpen && (
           <div className="border-t border-line-faint px-5 pb-5 pt-3 md:hidden" onClick={() => setMenuOpen(false)}>
             <nav className="flex flex-col gap-1" aria-label="Main">
-              {links.map((l) => <a key={l.label} href={l.href} className={`py-2 ${link(l.active)}`}>{l.label}</a>)}
+              {links.map((l) => <a key={l.label} href={l.href} className={`py-2 ${link(l.active)}`}>{l.label}{l.label === 'Discover' && <span className="ml-2 text-[11px] text-muted">papers found live by Tavily</span>}</a>)}
               <a href={REPO} target="_blank" rel="noreferrer" className={`py-2 ${link(false)}`}>GitHub</a>
             </nav>
           </div>

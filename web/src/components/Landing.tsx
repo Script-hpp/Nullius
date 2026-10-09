@@ -18,6 +18,7 @@ function TopBar() {
       <Wordmark />
       <div className="flex items-center gap-3 sm:gap-7">
         <a href="#catalog" className={link}>Catalog</a>
+        <a href="#discover" className={link} title="Papers found live by Tavily">Discover</a>
         <a href="#benchmark" className={link}>Benchmark</a>
         <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
         <a href="#catalog" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>

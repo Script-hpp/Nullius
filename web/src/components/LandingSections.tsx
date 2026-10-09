@@ -197,7 +197,8 @@ export function TavilySection() {
           <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
         </ul>
       </details>
-      <p className="mb-0 mt-6 text-[14px]">
+      <p className="mb-0 mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px]">
+        <a href="#discover" className={link}>Find new papers with Tavily <ArrowRight className="h-3 w-3" aria-hidden /></a>
         <a href={README_TAVILY} {...ext} className={link}>How Nullius uses Tavily <ExternalLink className="h-3 w-3" aria-hidden /></a>
       </p>
     </Block>

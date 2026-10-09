@@ -6,7 +6,8 @@ import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
 import { translateReason } from '../labels'
-import { useLiveStatus } from '../live'
+import { fetchJobInfo, useLiveStatus } from '../live'
+import { TavilyMark } from './TavilyMark'
 import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
@@ -64,7 +65,7 @@ function FeedCard({ call }: { call: FeedCall }) {
           {call.purpose === 'find_code' || call.purpose === 'community' ? <span className="text-subtle">Paper: </span> : null}
           {shorten(call.query, 110)}
         </p>
-        <p className="mt-2 text-[10px] uppercase tracking-wider text-subtle">Live Tavily API call</p>
+        <p className="mt-2"><TavilyMark kind="live" title="A live Tavily API call, as recorded in the run" /></p>
       </button>
       {open && call.topHits.length > 0 && (
         <ul className="border-t border-line/60 px-4 py-3 space-y-2">
@@ -303,6 +304,7 @@ export function Discovery() {
   const [mode, setMode] = useState<Mode>('idle')
   const [events, setEvents] = useState<DEvent[]>([])
   const [recorded, setRecorded] = useState(false)
+  const [offline, setOffline] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const speedRef = useRef(1)
@@ -381,6 +383,15 @@ export function Discovery() {
     }
   }
 
+  // No API here (static mirror) or live search paused: open on the last stored run instead of an empty page.
+  const autoTried = useRef(false)
+  useEffect(() => {
+    if (autoTried.current) return
+    autoTried.current = true
+    fetchJobInfo().then((info) => { if (info === null) { setOffline(true); startReplay() } })
+  }, [startReplay])
+  useEffect(() => { if (paused && mode === 'idle' && !events.length) startReplay() }, [paused, mode, events.length, startReplay])
+
   const toggle = (d: string) => setDatasets((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
   const status = mode === 'live' ? 'Live' : mode === 'replay' ? 'Replay' : mode === 'done' ? 'Finished' : 'Ready'
   const papers = [...view.papers].reverse()
@@ -405,7 +416,7 @@ export function Discovery() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={startLive} disabled={running || !datasets.length || paused} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+            <button onClick={startLive} disabled={running || !datasets.length || paused || offline} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               <Play className="w-4 h-4" />Start live run
             </button>
             <button onClick={startReplay} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
@@ -442,6 +453,12 @@ export function Discovery() {
           {recorded && events.length > 0 && <span>Recorded run from {fmtDate(events[0].ts)}</span>}
         </div>
 
+        {recorded && (offline || paused) && (
+          <p role="status" className="mb-0 mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-fg-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+            <span>{offline ? 'Live search is not available on this site.' : 'Live search is paused.'} Showing the last stored run{events.length ? `, recorded ${fmtDate(events[0].ts)}` : ''}.</span>
+          </p>
+        )}
         {error && (
           <div className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-tone-amber">
             <span className="inline-flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</span>
@@ -460,7 +477,7 @@ export function Discovery() {
         </div>
       ) : (
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <Section title="Tavily research feed" hint="live API calls">
+        <Section title="Tavily research feed" hint={recorded ? 'recorded live calls' : 'live API calls'}>
           <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted">
             <span>Tavily calls <span className="font-mono text-fg-3">{view.tavilyCalls}</span></span>
             <span>Model calls <span className="font-mono text-fg-3">{view.llmCalls}</span>

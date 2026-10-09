@@ -6,6 +6,7 @@ import { Hint } from '../Hint'
 import { Badge, Section } from '../ui'
 import { PreliminaryChip } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
+import { TavilyMark } from '../TavilyMark'
 import { ACTOR_LABEL, buildRunModel, fmtClock, fmtValue, planMapping, type Actor, type Expand, type Phase, type PhaseId, type Row } from './phases'
 import { TONE_TEXT, catalogLabel, isPreliminary, resultHint, translateClaim, translateWarning, PRELIMINARY } from '../../labels'
 import type { Event } from '../../data'
@@ -27,6 +28,7 @@ const TERM_HINT = {
 }
 
 function ActorChip({ row }: { row: Row }) {
+  if (row.actor === 'tavily') return <span className="inline-flex shrink-0 self-start rounded-md border border-line px-1.5 py-0.5"><TavilyMark kind={row.tavily} className="text-[10px] uppercase tracking-wider" /></span>
   const Icon = ACTOR_ICON[row.actor]
   return (
     <span className="inline-flex shrink-0 flex-col gap-0.5">
@@ -144,6 +146,7 @@ function PhaseCard({ phase, index, open, onToggle, t0, loader, planFull, waiting
             <span className="text-sm font-medium text-fg"><span className="font-mono text-[11px] text-subtle mr-2">{index + 1}</span>{phase.title}</span>
             <span className="flex gap-1">{phase.actors.map((a) => {
               const Icon = ACTOR_ICON[a]
+              if (a === 'tavily') return <span key={a} className="inline-flex rounded-md border border-line px-1.5 py-0.5"><TavilyMark kind={phase.rows.find((r) => r.actor === 'tavily')?.tavily} className="!text-[10px] uppercase tracking-wider !text-muted" title={ACTOR_HINT[a]} /></span>
               return <span key={a} title={ACTOR_HINT[a]} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted"><Icon className="w-3 h-3" />{ACTOR_LABEL[a]}</span>
             })}</span>
             {hintFor}
@@ -273,7 +276,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
         <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-muted">
           <span>Runtime <span className="font-mono text-fg-3">{elapsed == null ? '–' : fmtClock(elapsed)}</span></span>
           {m.costNet != null && <span>Model cost (net) <span className="font-mono text-fg-3">${m.costNet.toFixed(3)}</span></span>}
-          <span>Tavily calls <span className="font-mono text-fg-3">{m.tavilyCalls}</span></span>
+          <span className="inline-flex items-center gap-2"><TavilyMark kind={m.tavilyKind ?? undefined} /><span className="font-mono text-fg-3">{m.tavilyCalls} {m.tavilyCalls === 1 ? 'call' : 'calls'}</span></span>
           {m.llmCalls > 0 && <span>Nemotron calls <span className="font-mono text-fg-3">{m.llmCalls}</span>{m.llmCached > 0 ? <span className="text-tone-amber"> ({m.llmCached} cached)</span> : <span> live</span>}</span>}
           {m.seedsTotal != null && <span>Seeds <span className="font-mono text-fg-3">{m.stats?.n ?? 0} of {m.seedsTotal}</span><Hint text={TERM_HINT.seed} /></span>}
         </div>

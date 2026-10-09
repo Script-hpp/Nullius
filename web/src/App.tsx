@@ -165,6 +165,7 @@ export default function App() {
   const live = hash.match(/^\/live\/([^?]+)$/)
   
   if (hash === '' || hash === '/' || hash === '/jury') return <Landing />   // full-screen start page, no sidebar
+  if (hash === '/tavily') return <Landing scrollTo="tavily" />   // footer link: the Tavily section of the start page
   if (hash === '/lesson') return <Landing scrollTo="lesson" />   // same page, opened on the bitter-lesson section
 
   return (

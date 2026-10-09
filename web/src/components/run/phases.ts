@@ -19,6 +19,7 @@ export type Row = {
   actor: Actor
   role?: 'fast' | 'code' | 'reasoning'
   model?: string
+  tavily?: 'live' | 'stored'   // actor tavily only: fetched live in this run or loaded from a stored copy
   title: string
   detail?: string
   tone: Tone
@@ -54,6 +55,7 @@ export type RunModel = {
   attempts: Attempt[]          // valid measurements of the code the seeds ran with (discarded graph-repair codes removed)
   stats: Stats | null
   tavilyCalls: number
+  tavilyKind: 'live' | 'stored' | null
   warnings: string[]
   verdict: Event | null
   startTs: number | null
@@ -181,12 +183,13 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         const read = chars != null ? `${chars.toLocaleString('en-US')} characters read` : ''
         if (existing) {
           existing.detail = [existing.detail, read].filter(Boolean).join(' · ')
+          if (typeof e.mode === 'string') existing.tavily = e.mode === 'live' ? 'live' : 'stored'
           existing.raw.push(e)
         } else if (e.kind === 'community') {
-          push('community', { actor: 'tavily', tone: 'amber', title: e.mode === 'live' ? 'Tavily read a discussion page' : 'Discussion page loaded from the 7-day cache', detail: [host(url), read].filter(Boolean).join(' · ') })
+          push('community', { actor: 'tavily', tavily: e.mode === 'live' ? 'live' : 'stored', tone: 'amber', title: e.mode === 'live' ? 'Tavily read a discussion page' : 'Discussion page loaded from the 7-day cache', detail: [host(url), read].filter(Boolean).join(' · ') })
         } else {
           push(e.kind === 'readme' ? 'setup' : 'claim', {
-            actor: 'tavily', tone: 'amber', title: e.mode === 'live' ? `Tavily Extract: ${e.kind === 'readme' ? 'README' : 'paper page'}` : `Saved copy of the ${e.kind === 'readme' ? 'README' : 'paper page'} loaded`,
+            actor: 'tavily', tavily: e.mode === 'live' ? 'live' : 'stored', tone: 'amber', title: e.mode === 'live' ? `Tavily Extract: ${e.kind === 'readme' ? 'README' : 'paper page'}` : `Saved copy of the ${e.kind === 'readme' ? 'README' : 'paper page'} loaded`,
             detail: [host(url), read].filter(Boolean).join(' · '),
           })
         }
@@ -455,12 +458,17 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     return { id, title: t.title, short: SHORT[id], actors: t.actors, what, why, state, summary: summaries[id], rows: rows[id] }
   })
 
+  // The tavily_call event carries no mode; the source events do. A run that read any source live counts as live, otherwise stored.
+  const srcModes = events.filter((e) => e.type === 'source' && typeof e.mode === 'string').map((e) => e.mode)
+  const tavilyKind: 'live' | 'stored' | null = srcModes.length ? (srcModes.includes('live') ? 'live' : 'stored') : null
+  if (tavilyKind) for (const ph of Object.values(rows)) for (const r of ph) if (r.actor === 'tavily' && !r.tavily) r.tavily = tavilyKind
+
   const cost = [...events].reverse().find((e) => e.type === 'llm_call')
   const end = events.find((e) => e.type === 'run_end')
 
   return {
     title: (runStart?.title as string | undefined) ?? null, claimText: (claimStart?.text as string | undefined) ?? null, metric, target,
-    tolerance: num(claimStart?.tolerance), seedsTotal, models, phases, attempts, stats, tavilyCalls, warnings, verdict: verdictEv,
+    tolerance: num(claimStart?.tolerance), seedsTotal, models, phases, attempts, stats, tavilyCalls, tavilyKind, warnings, verdict: verdictEv,
     startTs: first, endTs: last, costNet: num(end?.cost_net_usd) ?? num(cost?.total_net_usd), graphTask, waiting, firstMeasurement: attempts.length > 0,
     llmCalls: events.filter((e) => e.type === 'llm_call').length, llmCached: events.filter((e) => e.type === 'llm_call' && e.cached === true).length,
   }
