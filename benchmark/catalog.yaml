@@ -374,3 +374,123 @@ candidates:
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_2412_03864
+  arxiv_id: '2412.03864'
+  title: Training MLPs on Graphs without Supervision
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: Cora
+    claim:
+      method: SimMLP
+      quote: SimMLP | 81.4±1.2 | 72.3±0.9 | 86.5±0.3 | 70.2±0.5
+      metric: accuracy
+      target: 81.4
+      protocol: unklar
+      matched_task: null
+      protocol_quote: null
+      protocol_reason: The text does not specify which split or protocol was used for the inductive setting on Cora.
+      column_check: ok
+      protocol_evidence: Protokoll nicht belegt
+    github_url: null
+    feasibility: no_repo
+    source_url: https://arxiv.org/pdf/2412.03864
+    protocol: unklar
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community: []
+- id: disc_2603_13702
+  arxiv_id: '2603.13702'
+  title: Routing Channel-Patch Dependencies in Time Series Forecasting with Graph Spectral Decomposition
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: xCPD
+      quote: '| Model | | TSMixer | | + xCPD | | DLinear | | + xCPD | | PatchTST | | + xCPD | | TimesNet | | + xCPD | |
+
+        | Metric | | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE |
+
+        | ETTh1 | 96 | 0.361 | 0.392 | 0.357 | 0.388 | 0.384 | 0.397 | 0.381 | 0.392 | 0.414 | 0.419 | 0.402 | 0.404 | 0.384
+        | 0.402 | 0.378 | 0.398 |'
+      metric: mse
+      target: 0.357
+      horizon: 96
+      input_length: 96
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: '| ETTh1 | Multivariate | 7 | 96 | {96, 192, 336, 720} | 17,420 | Hourly | Electricity |'
+      protocol_reason: The text specifies ETTh1 with lookback length 96 and prediction horizon 96, matching the ETTh1 protocol.
+      column_check: unchecked
+      protocol_evidence: 'Protokoll: Zitat im Text belegt'
+    github_url: null
+    feasibility: no_repo
+    source_url: https://arxiv.org/html/2603.13702v1
+    protocol: passt
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community: []
+- id: disc_2303_06053
+  arxiv_id: '2303.06053'
+  title: 'TSMixer: An All-MLP Architecture for Time Series Forecasting'
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: TSMixer
+      quote: '| Models | TSMixer | TFT | FEDformer | Autoformer | Informer | TMix-Only | Linear | PatchTST |
+
+        | Metric | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE |
+
+        | ETTh1 | 96 | 0.361 | 0.392 | 0.674 | 0.634 | 0.376 | 0.415 | 0.435 | 0.446 | 0.941 | 0.769 | 0.359 | 0.391 | 0.368
+        | 0.392 | 0.370 | 0.400'
+      metric: mse
+      target: 0.361
+      horizon: 96
+      input_length: 512
+      protocol: unklar
+      matched_task: null
+      protocol_quote: We set the input length L=512 as suggested inNie et al. (2023) and evaluate the results for prediction
+        lengths of T={96,192,336,720}.
+      protocol_reason: Protokoll-Zitat fehlt oder steht nicht im Text
+      column_check: unchecked
+      protocol_evidence: Protokoll nicht belegt
+    github_url: null
+    feasibility: no_repo
+    source_url: https://arxiv.org/pdf/2303.06053
+    protocol: unklar
+    found_by: tavily
+    reason: kein passendes Repo gefunden
+    community:
+    - url: https://github.com/giuliomattolin/tsmixer-pytorch
+      title: 'GitHub - giuliomattolin/tsmixer-pytorch: PyTorch Implementation of "TSMixer: An All-MLP Architecture for Time
+        Series Forecasting" · GitHub'
+      snippet: 'Title: GitHub - giuliomattolin/tsmixer-pytorch: PyTorch Implementation of "TSMixer: An All-MLP Architecture
+        for Time Series Forecasting" · GitHub
+
+        ## Navigation Menu. # Search code, repositories, users, issues, pull requests... You signed in with another tab or
+        window. Reload to refresh your session.'
+    - url: https://github.com/anthony-wss/tsmixer-reproduce
+      title: 'GitHub - anthony-wss/tsmixer-reproduce: The repo for reproducing the main results in TSMixer: An all-MLP Architecture
+        for Time Series Forecasting. · GitHub'
+      snippet: "| Name | Name | Last commit message | Last commit date |\n ---  --- |\n| tsmixer | tsmixer |  |  |\n| .gitignore\
+        \ | .gitignore |  |  |\n| README.md | README.md |  |  |\n| main.py | main.py |  |  |\n|  |\n\n## Repository files\
+        \ navigation\n\n# TSMixer: reproduce\n\nThis repo contains codes to reproduce the main re"
+    - url: https://openreview.net/forum?id=wbpxTuXgm0
+      title: 'TSMixer: An All-MLP Architecture for Time Series Forecast-ing | OpenReview'
+      snippet: 'Title: TSMixer: An All-MLP Architecture for Time Series Forecast-ing | OpenReview
+
+        back arrowGo to **TMLR** homepage. ## TSMixer: An All-MLP Architecture for Time Series Forecast-ing. ### Si-An Chen,
+        Chun-Liang Li, Sercan O Arik, Nathanael Christian Yoder, Tomas Pfister. Published: 11 Sept 2023, Last'
+    - url: https://github.com/remigenet/TLN
+      title: 'GitHub - remigenet/TLN: Temporal Linear Network · GitHub'
+      snippet: The implementation is made in Keras3 in a backend-agnostic way, to be compatible with TensorFlow, JAX, and
+        Torch. The package also includes implementations of comparison models from the literature, such as CLinear, NLinear,
+        DLinear from "Are Transformers Effective for Time Series Forecasting?" and T
+    - url: https://github.com/state-spaces/s4/issues/113
+      title: 'Unable to reproduce univariate and multivariate time series forecasting · Issue #113 · state-spaces/s4 · GitHub'
+      snippet: "For this setup I got an final MSE of 0.2863. The paper states a MSE of 0.061.  \n For all the setups the MSE\
+        \ values I got never came close to the ones stated in the paper.\n\nWas someone able to reproduce the results and\
+        \ can share the configuration to the setup?\n\nBest Regards\n\nReactions are currently u"
