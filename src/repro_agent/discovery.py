@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -205,6 +206,7 @@ DISCOVERY_QUERIES = {
     "ETTh1": [
         "long-term time series forecasting ETTh1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
         "linear MLP lightweight forecaster ETTh1 look-back window 336 horizon 96 MSE MAE official code github",
+        "PyTorch long-term forecasting ETTh1 built on the LTSF-Linear DLinear codebase horizon 96 MSE official implementation",
     ],
     "CiteSeer": [
         "node classification CiteSeer Planetoid public split 120 training nodes test accuracy results table",
@@ -214,7 +216,7 @@ DISCOVERY_QUERIES = {
 MAX_SEARCHES_PER_DATASET = 3
 SEARCH_START_DATE = "2023-01-01"   # Jahre 2023-2026 (tavily_tools.curate_papers)
 MAX_EXTRACTS_PER_DATASET = 3
-MAX_CANDIDATES_PER_DATASET = 2
+MAX_CANDIDATES_PER_DATASET = int(os.environ.get("DISCOVERY_MAX_CANDIDATES", "2"))   # Demo: 2 (Tavily-Kontingent); eigene Kuratier-Runden duerfen hoeher setzen
 CODE_HINT_RE = __import__("re").compile(r"github\.com|code (?:is |are )?(?:publicly )?available|open[- ]source|our code|official (?:code|implementation)", __import__("re").I)
 INFEASIBLE_REASON = "not CPU-feasible: pretraining/foundation model/external data"
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
