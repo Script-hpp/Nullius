@@ -29,7 +29,8 @@ ARXIV_HTML_MIN_ID = "2312"  # arXiv-HTML gibt es erst fuer Einreichungen ab ca. 
 
 EXTRACT_SYSTEM = (
     "You read a paper's text and report ONE number exactly as printed. Reply with a single JSON "
-    "object and nothing else."
+    "object and nothing else. IMPORTANT: You must double-escape all LaTeX backslashes in your JSON strings "
+    "(e.g. use \\\\textbf instead of \\textbf)."
 )
 
 

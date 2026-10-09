@@ -442,7 +442,8 @@ class DiscoveryAgent:
             "if it matches another supported protocol, answer \"passt\" with that task. Quote the stated protocol in protocol_quote. "
             "\"unklar\" = the text does not mention the protocol or does not state it clearly. "
             "Not mentioned means \"unklar\", never \"passt_nicht\". "
-            "If you find no clear numerical claim, return an empty JSON object {}."
+            "If you find no clear numerical claim, return an empty JSON object {}. "
+            "IMPORTANT: You must double-escape all LaTeX backslashes in your JSON strings (e.g. use \\\\textbf instead of \\textbf, and \\\\multicolumn instead of \\multicolumn) so that the JSON is strictly valid."
         )
         messages = [
             {"role": "system", "content": system_prompt},
