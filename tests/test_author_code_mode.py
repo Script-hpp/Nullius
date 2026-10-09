@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_product_kwargs_default_is_author_code_and_switch_turns_it_off():
     on, off = product_kwargs(), product_kwargs(author_code=False)
     assert on["code_grounded"] is True and on["io_helper"] is True and on["graph_repair"] and on["setup_v2"]
-    assert "code_grounded" not in off and "io_helper" not in off and off == {"graph_repair": True, "setup_v2": True}   # = Produktkonfiguration von v4
+    assert "code_grounded" not in off and "io_helper" not in off and off == {"graph_repair": True, "setup_v2": True, "repo_verify": True}   # = Produktkonfiguration von v4
     assert AUTHOR_CODE_KWARGS == {"code_grounded": True, "io_helper": True}
 
 

@@ -47,7 +47,10 @@ from .llm import BillingBlocked, LLMClient, LLMResponse
 from .report import render_markdown
 from .sandbox.base import Branch, SandboxSetupError, SandboxUnavailable, get_sandbox
 from .repo_diff import find_deviations, repair_message, as_dicts
-from .repo_source import fetch_readme, find_repo_url, read_repo, search_repo_url
+from .repo_source import (
+    clone_plan, fetch_readme, find_repo_links, find_repo_url, read_repo, repo_evidence, repo_status,
+    search_repo_candidates, search_repo_url,
+)
 from .setup_details import (
     Doc, SetupDetail, extract_setup_details, extract_setup_details_v2, format_conflicts, format_conflicts_v2, format_for_prompt,
     format_for_prompt_v2)
@@ -281,6 +284,7 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
 
 
 MODE_PAPER = "nachbau"                    # Nachbau aus Paper: der Agent kennt nur belegte Angaben aus Paper, README und Repo-Zitaten
+MAX_REPO_CANDIDATES = 4   # Lesezugriffe (Tavily Extract) auf Repo-Kandidaten je Lauf
 MODE_AUTHOR_CODE = "nachbau_autorencode"  # Nachbau aus Paper und Autorencode: roher Repo-Ausschnitt im Prompt, nie ausgefuehrt
 
 
@@ -293,7 +297,7 @@ def product_kwargs(author_code: bool = True) -> dict:
     Schalter zurueck auf den reinen Paper-Nachbau (die Produktkonfiguration von v4).
     Gewollt KEIN Default des Orchestrators: Benchmark- und Experiment-Skripte legen ihre Konfiguration vorab fest und bauen
     `Orchestrator(...)` ohne diese Funktion, damit ihre Laeufe reproduzierbar bleiben."""
-    kw: dict = dict(graph_repair=True, setup_v2=True)
+    kw: dict = dict(graph_repair=True, setup_v2=True, repo_verify=True)
     if author_code:
         kw.update(AUTHOR_CODE_KWARGS)
     return kw
@@ -306,8 +310,12 @@ class Orchestrator:
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
         objection_experiments: bool = False, objection_quick: bool = False,
-        spec_mode: bool = False, code_grounded: bool = False, io_helper: bool = False,
+        spec_mode: bool = False, code_grounded: bool = False, io_helper: bool = False, repo_verify: bool = False,
     ) -> None:
+        # repo_verify (nur Produktpfad, product_kwargs): Repo-Wahl mit Pruefung. Paper-Link zuerst, dann mehrere Suchtreffer; ein Repo zaehlt nur,
+        # wenn sein README Modellname, Titel oder arXiv-ID nennt; inoffizielle Repos werden nie als Autorencode gelesen. Aus: alte Wahl
+        # (erster Link, erster Treffer), damit Benchmark- und Experiment-Skripte unveraendert bleiben.
+        self.repo_verify = repo_verify
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
@@ -394,7 +402,7 @@ class Orchestrator:
         if not (getattr(self, "use_setup_details", False) and self.paper_text is not None):
             reason = "setup details switched off or paper text not read"
         elif repo_info is None:
-            reason = "no repository found or clone failed"
+            reason = getattr(self, "_repo_fallback_reason", None) or "no repository found or clone failed"
         elif spec is None or not spec.excerpt:
             reason = "no model code found in the repository"
         else:
@@ -959,7 +967,7 @@ class Orchestrator:
         spec = ((paper.get("claims") or [{}])[0].get("extract") or {})
         method, dataset = spec.get("method"), spec.get("dataset") or dataset   # aus dem Claim (Methode, Datensatz des Papers)
         deviating = [v.claim_id for v in dossier.verdicts if v.urteil in community.DEVIATING]
-        repo_url = (dossier.repo or {}).get("url")
+        repo_url = (dossier.repo or {}).get("root") or (dossier.repo or {}).get("url")
         try:
             entry = community.cache_get(arxiv_id)
             mode = "cache" if entry else "live"
@@ -1003,22 +1011,30 @@ class Orchestrator:
         docs = [Doc("paper", self.paper_text.text)]
         if self.paper_only:
             return docs, None
-        url = find_repo_url(self.paper_text.text)
         get_tavily = self._tavily_getter()
-        if not url and getattr(self, "graph_repair", False) and getattr(self, "_paper_title", None):
-            try:   # Rolle 1 (Produktpfad): Paper ohne Code-Link, Repo per Tavily-Suche; Treffer muss Paper nennen
-                calls_before = self._tavily_calls
-                url = search_repo_url(self._paper_title, self.paper_text.arxiv_id, get_tavily, mode=self.tavily_mode)
-                self._emit("repo_search", title=self._paper_title, url=url, live=self._tavily_calls > calls_before)
-            except Exception as exc:
-                self._warn(f"Rolle 1 (Repo-Suche) fehlgeschlagen: {exc}")
-        if not url:
-            return docs, None
-        calls_before = self._tavily_calls
-        readme = fetch_readme(url, get_tavily, mode=self.tavily_mode)
+        self._repo_fallback_reason = None
+        status = {}
+        if getattr(self, "repo_verify", False):
+            url, readme, status = self._resolve_repo(claim_text, get_tavily)
+            if not url:
+                return docs, None
+        else:
+            url = find_repo_url(self.paper_text.text)
+            if not url and getattr(self, "graph_repair", False) and getattr(self, "_paper_title", None):
+                try:   # Rolle 1 (Produktpfad): Paper ohne Code-Link, Repo per Tavily-Suche; Treffer muss Paper nennen
+                    calls_before = self._tavily_calls
+                    url = search_repo_url(self._paper_title, self.paper_text.arxiv_id, get_tavily, mode=self.tavily_mode)
+                    self._emit("repo_search", title=self._paper_title, url=url, live=self._tavily_calls > calls_before)
+                except Exception as exc:
+                    self._warn(f"Rolle 1 (Repo-Suche) fehlgeschlagen: {exc}")
+            if not url:
+                return docs, None
+            calls_before = self._tavily_calls
+            readme = fetch_readme(url, get_tavily, mode=self.tavily_mode)
+            if readme:
+                self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         if readme:
             docs.append(Doc("repo-readme", readme))
-            self._record_source("readme", url, readme, self._tavily_calls > calls_before)
         try:
             unit = getattr(self, "_paper_id", None) if getattr(self, "spec_mode", False) else None   # S4: Fixture je Einheit
             dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False),
@@ -1032,7 +1048,78 @@ class Orchestrator:
         self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
-        return docs, {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
+        info = {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
+        if dump.subdir:   # Unterordner eines Sammel-Repos: Issues, Sterne usw. gehoeren zur Wurzel
+            info["subdir"], info["root"] = dump.subdir, clone_plan(url)[0]
+        if status:
+            info.update(status)
+        return docs, info
+
+    def _resolve_repo(self, claim_text: str, get_tavily) -> tuple[str | None, str, dict]:
+        """Repo-Wahl mit Pruefung (repo_verify). Reihenfolge: (1) Code-Link im Paper-Text (starke Hinweise zuerst, Unterordner in Sammel-Repos
+        bleiben erhalten), (2) mehrere Tavily-Treffer. Jeder Kandidat wird ueber sein README geprueft (hoechstens MAX_REPO_CANDIDATES Lesezugriffe):
+        es muss Modellname, Titel(teil) oder arXiv-ID nennen. Ist das README nicht lesbar, zaehlt nur ein Link, den das Paper selbst setzt.
+        Offizielle Repos vor inoffiziellen; ein inoffizielles ist nie Autorencode (Modus bleibt Nachbau aus dem Paper, mit Hinweis).
+        Rueckgabe (URL | None, README-Text, Statusangaben fuer Dossier und Ereignis)."""
+        text = self.paper_text.text
+        title = getattr(self, "_paper_title", None) or ""
+        arxiv_id = self.paper_text.arxiv_id
+        model = model_name_of(claim_text)
+        paper_urls = [u for u in dict.fromkeys([find_repo_url(text), *[l.target for l in find_repo_links(text)][:2]]) if u][:2]
+        searched = False
+        tried: list[str] = []
+        unofficial: dict | None = None
+
+        def consider(url: str, source: str):
+            calls_before = self._tavily_calls
+            readme = fetch_readme(url, get_tavily, mode=self.tavily_mode)
+            live = self._tavily_calls > calls_before
+            kind, why = repo_evidence(readme, url, title, arxiv_id, model)
+            linked = source == "paper"
+            if readme.strip() and not kind:
+                verdict, reason = "rejected", "README names neither the model, the paper title nor the arXiv id"
+            elif not readme.strip() and not linked:
+                verdict, reason = "rejected", "README not readable and the paper does not link this repository"
+            else:
+                verdict, reason = "accepted", why or "linked in the paper text (README not readable)"
+            st, st_why = repo_status(url, readme, linked, kind, text) if verdict == "accepted" else ("", "")
+            self._emit("repo_candidate", url=url, source=source, verdict=verdict, reason=reason, status=st, status_reason=st_why,
+                       evidence=kind, live=live)
+            return verdict, readme, st, st_why, why, live
+
+        queue = [(u, "paper") for u in paper_urls]
+        while len(tried) < MAX_REPO_CANDIDATES:
+            if not queue and not searched and getattr(self, "graph_repair", False) and title:
+                searched = True
+                try:   # Rolle 1 (Produktpfad): Suche mit mehreren Treffern
+                    calls_before = self._tavily_calls
+                    found = search_repo_candidates(title, arxiv_id, get_tavily, mode=self.tavily_mode, model=model)
+                    self._emit("repo_search", title=title, url=found[0] if found else None, urls=found, live=self._tavily_calls > calls_before)
+                    queue = [(u, "search") for u in found]
+                except Exception as exc:
+                    self._warn(f"Rolle 1 (Repo-Suche) fehlgeschlagen: {exc}")
+            queue = [(u, src) for u, src in queue if u not in tried]
+            if not queue:
+                break
+            url, source = queue.pop(0)
+            tried.append(url)
+            verdict, readme, st, st_why, why, live = consider(url, source)
+            if verdict != "accepted":
+                continue
+            status = {"status": st, "status_reason": st_why, "source": source, "evidence": why}
+            if st == "official":
+                if readme:
+                    self._record_source("readme", url, readme, live)
+                return url, readme, status
+            if unofficial is None:
+                unofficial = {"url": url, **status}
+        if unofficial:
+            self._repo_fallback_reason = f"only an unofficial repository was found ({unofficial['url']})"
+            self._warn(f"Inoffizielles Repo {unofficial['url']} gefunden, nicht als Autorencode gelesen: {unofficial['status_reason']}. "
+                       "Lauf als reiner Nachbau aus dem Paper.")
+        elif tried:
+            self._repo_fallback_reason = "no repository matching the paper found"
+        return None, "", {}
 
     def _tavily_getter(self):
         if not hasattr(self, "_tavily"):

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -23,12 +24,19 @@ MAX_FILES = 12
 MAX_FILE_CHARS = 30_000
 MAX_IMPORTED = 6   # zusaetzliche, von den gewaehlten Dateien importierte lokale Module
 MAX_LISTING = 600
+MAX_SUBDIR_FILE_BYTES = 1_000_000   # Unterordner-Klon: groessere Dateien (Daten, Gewichte) kommen nicht in die Dateiliste
+MAX_SUBDIR_TOTAL_BYTES = 200_000_000   # Unterordner groesser als das: Klon wird abgelehnt (SandboxSetupError)
 
-GITHUB_RE = re.compile(r"https?://github\.com/([\w.-]+)/([\w.-]+?)(?:\.git)?(?=[\s)\]>.,;\"']|$)")
-STRONG_HINT = re.compile(   # PDF-Extraktion trennt Woerter ("avail-able"), daher "-?"
-    r"avail-?able\s+(at|on|from)|(code|implementation)\s+(is|are|will be)\s+(publicly\s+)?"
-    r"(avail-?able|released)|open-?sourced?\s+(at|on)|code:", re.I)
+GITHUB_URL_RE = re.compile(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)((?:/[\w.%~+-]+)*)", re.I)   # mit Unterpfad
+STRONG_HINT = re.compile(   # PDF-Extraktion trennt Woerter ("avail-able"), daher "-?\s*"
+    r"avail-?\s*able\s+(at|on|from|in)|(code|implementation|implementations)\s+(is|are|will be)\s+(publicly\s+)?"
+    r"(avail-?\s*able|released|provided)|open-?sourced?\s+(at|on)|code:|(code|implementation)\s+(can be found|link)", re.I)
 WEAK_HINT = re.compile(r"code|implementation|source", re.I)
+NON_REPO_SEGMENTS = {"issues", "pull", "pulls", "wiki", "releases", "actions", "discussions", "blob", "raw", "commit", "commits", "compare"}
+# Infrastruktur-Repos, die in arXiv-HTML-Texten stehen (Fehlerformular, Konverter), nie das Repo des Papers
+INFRA_REPOS = {("arxiv", "html_feedback"), ("brucemiller", "latexml")}
+GENERIC_NAMES = {"model", "models", "method", "methods", "ours", "our", "proposed", "baseline", "baselines", "network", "networks", "net",
+                 "frozen", "this", "paper", "the", "and", "all"}
 
 
 @dataclass
@@ -37,55 +45,188 @@ class RepoDump:
     commit: str
     files: dict[str, str] = field(default_factory=dict)   # Pfad -> Inhalt (gelesene Auswahl)
     n_tracked: int = 0
+    subdir: str = ""   # gelesener Unterordner eines Sammel-Repos (Pfade in `files` bleiben relativ zur Repo-Wurzel)
+
+
+@dataclass(frozen=True)
+class RepoLink:
+    owner: str
+    repo: str
+    subdir: str      # Unterordner in Sammel-Repos ("tsmixer" bei google-research/google-research/tree/master/tsmixer), sonst ""
+    strength: str    # "strong" (Hinweis wie "available at"), "weak" (Hinweiswort davor), "single" (einziges Repo im Text)
+    pos: int
+
+    @property
+    def root(self) -> str:
+        return f"https://github.com/{self.owner}/{self.repo}"
+
+    @property
+    def target(self) -> str:
+        return f"{self.root}/tree/HEAD/{self.subdir}" if self.subdir else self.root
+
+
+def normalize_pdf_text(text: str) -> str:
+    """PDF-Extraktion setzt Leerzeichen in URLs ("https: // github. com/x/y", "tree/master/ tsmixer"). Nur fuer die Linksuche."""
+    text = re.sub(r"https?:\s*//\s*", lambda m: m.group(0).split(":")[0] + "://", text)
+    text = re.sub(r"github\.\s+com", "github.com", text)
+    return re.sub(r"(github\.com/[^\s]*?/(?:tree|blob)/[\w.-]+/)\s+(?=[\w.-]+(?:[/\s.,;)]|$))", r"\1", text)
+
+
+def parse_github_url(url: str, lenient: bool = False) -> tuple[str, str, str] | None:
+    """(owner, repo, subdir) einer GitHub-URL; None bei Nicht-Repo-Links (Issue, Blob-Datei, Wiki). `.../tree/<branch>/<pfad>` ergibt den Unterordner.
+    lenient (Suchtreffer): Issue-/Blob-/Wiki-Seiten eines Repos zaehlen als das Repo selbst (Wurzel), Links im Paper-Text nicht."""
+    m = GITHUB_URL_RE.match((url or "").strip())
+    if not m:
+        return None
+    owner, repo, rest = m.group(1), re.sub(r"\.git$", "", m.group(2)), m.group(3)
+    segs = [x for x in rest.split("/") if x]
+    subdir = ""
+    if segs:
+        if segs[0] == "tree" and len(segs) >= 2:
+            subdir = "/".join(segs[2:])
+        elif segs[0] in NON_REPO_SEGMENTS and not lenient:
+            return None
+    if not repo or (owner.lower(), repo.lower()) in INFRA_REPOS or subdir.startswith(".") or ".." in subdir.split("/"):
+        return None
+    return owner, repo, subdir
+
+
+def find_repo_links(paper_text: str) -> list[RepoLink]:
+    """Code-Links im Paper-Text, beste zuerst: (1) starker Hinweis ("The implementation is available at: ...", Reihenfolge im Text,
+    Abstract vor Fussnoten), (2) schwacher Hinweis (naechstes Hinweiswort), (3) genau ein Repo im Text. Mehrere Repos ohne Hinweis
+    ergeben keinen Link. Unterordner von Sammel-Repos bleiben erhalten; Blob-/Issue-Links und Infrastruktur-Repos fallen weg."""
+    text = normalize_pdf_text(paper_text)
+    found: list[tuple[int, str, str, str]] = []   # pos, owner, repo, subdir
+    for m in GITHUB_URL_RE.finditer(text):
+        raw = m.group(0).rstrip(".,;:)>]'\"/")
+        parsed = parse_github_url(raw)
+        if parsed:
+            found.append((m.start(), *parsed))
+    out: list[RepoLink] = []
+    seen: set[tuple[str, str, str]] = set()
+    weak: list[tuple[int, RepoLink]] = []
+    for pos, owner, repo, subdir in found:
+        key = (owner.lower(), repo.lower(), subdir.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        if STRONG_HINT.search(text[max(0, pos - 40): pos]):
+            out.append(RepoLink(owner, repo, subdir, "strong", pos))
+            continue
+        window = text[max(0, pos - 120): pos]
+        hits = [h.start() for h in WEAK_HINT.finditer(window)]
+        if hits:
+            weak.append((len(window) - max(hits), RepoLink(owner, repo, subdir, "weak", pos)))
+    out += [link for _, link in sorted(weak, key=lambda x: x[0])]
+    if not out and len({(f[1].lower(), f[2].lower()) for f in found}) == 1:   # genau ein Repo (Fussnote ohne Hinweiswort)
+        pos, owner, repo, subdir = found[0]
+        out.append(RepoLink(owner, repo, subdir, "single", pos))
+    return out
 
 
 def find_repo_url(paper_text: str) -> str | None:
-    """GitHub-Link zum Code des Papers.
-
-    Zuerst Links direkt hinter einer starken Formulierung ("Code is available at ..."), erster
-    Treffer im Text gewinnt (Abstract vor Fussnoten). Sonst schwacher Hinweis, naechster Treffer.
-    """
-    for m in GITHUB_RE.finditer(paper_text):
-        if STRONG_HINT.search(paper_text[max(0, m.start() - 40): m.start()]):
-            return f"https://github.com/{m.group(1)}/{m.group(2)}"
-    best: tuple[int, str] | None = None
-    for m in GITHUB_RE.finditer(paper_text):
-        window = paper_text[max(0, m.start() - 120): m.start()]
-        hits = [h.start() for h in WEAK_HINT.finditer(window)]
-        if hits and (best is None or len(window) - max(hits) < best[0]):
-            best = (len(window) - max(hits), f"https://github.com/{m.group(1)}/{m.group(2)}")
-    if best:
-        return best[1]
-    repos = {(m.group(1), m.group(2)) for m in GITHUB_RE.finditer(paper_text)}
-    if len(repos) == 1:   # genau ein Repo im Text (z. B. Fussnote ohne Hinweiswort): eindeutig genug
-        owner, name = repos.pop()
-        return f"https://github.com/{owner}/{name}"
-    return None
+    """Bestes Code-Ziel aus dem Paper (Repo-URL, bei Unterordner `.../tree/HEAD/<pfad>`), sonst None. Siehe find_repo_links."""
+    links = find_repo_links(paper_text)
+    return links[0].target if links else None
 
 
-def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path | None = None, mode: str = "fixture") -> str | None:
-    """Rolle 1, wenn das Paper keinen Code-Link hat: Tavily-Suche auf github.com. Ein Treffer zaehlt nur, wenn sein
-    Text die arXiv-ID oder den vollen Titel nennt. Ergebnis wird als Fixture gespeichert (gleicher Treffer fuer jede Generierung);
-    mode="live" schreibt nie nach `fixture_dir`."""
+def _alnum(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
+
+
+def model_tokens(title: str, model: str = "") -> list[str]:
+    """Namen, die ein Repo des Papers nennen sollte: Modell des Claims (ohne Klammerzusatz/Variante) und Akronym vor dem Doppelpunkt des Titels."""
+    names = []
+    for raw in (model, title.split(":")[0] if ":" in title else ""):
+        cand = re.sub(r"\([^)]*\)", "", raw).split(",")[0].split("/")[0].strip()
+        if len(cand) >= 3 and " " not in cand and _alnum(cand) not in GENERIC_NAMES and cand.lower() not in {n.lower() for n in names}:
+            names.append(cand)
+    return names
+
+
+def repo_evidence(readme: str, url: str, title: str, arxiv_id: str, model: str = "") -> tuple[str, str]:
+    """Belegt der README-Text (oder der Pfad der URL), dass das Repo zu DIESEM Paper gehoert? Rueckgabe (Staerke, Beschreibung):
+    ("paper", ...) bei arXiv-ID oder Titel(teil); ("model", ...) bei Modellname; ("", "") ohne Beleg. Dateinamen/Pfad zaehlen fuer den Modellnamen."""
+    hay = _alnum(readme)
+    base = re.sub(r"v\d+$", "", arxiv_id or "")
+    if base and re.search(rf"(?<!\d){re.escape(base)}(?!\d)", readme or ""):
+        return "paper", f"arXiv id {base} in README"
+    parts = [title] + [p for p in re.split(r"[:\u2013\u2014]", title) if len(p.strip()) >= 12]
+    for part in parts:
+        n = _alnum(part)
+        if len(n) >= 12 and n in hay:
+            return "paper", f"title '{part.strip()[:60]}' in README"
+    path = _alnum(" ".join(re.findall(r"[\w.-]+", url.split("github.com/")[-1])))
+    for name in model_tokens(title, model):
+        n = _alnum(name)
+        if n and (re.search(rf"(?<![a-z0-9]){re.escape(n)}(?![a-z0-9])", hay) or re.search(rf"(?<![a-z0-9]){re.escape(n)}(?![a-z0-9])", path)):
+            return "model", f"model name {name} in README or path"
+    return "", ""
+
+
+UNOFFICIAL_RE = re.compile(r"unofficial|un-official|re-?implementation|reimplementation|not (?:the )?official|community implementation", re.I)
+OFFICIAL_RE = re.compile(r"(?<![a-z-])official\s+(?:[\w-]+\s+){0,2}(?:implementation|code|repo|repository|pytorch|tensorflow)|(?<![a-z-])official(?:ly)?\s+released", re.I)
+
+
+def repo_status(url: str, readme: str, linked_by_paper: bool, evidence: str, paper_text: str = "", authors: list[str] | None = None) -> tuple[str, str]:
+    """("official"|"unofficial", Begruendung). Offiziell: der Paper-Text verlinkt das Repo selbst (`linked_by_paper`), ODER Beleg auf das Paper
+    (arXiv-ID/Titel im README) plus Besitzer passt zu Autor/Organisation, ODER README nennt sich offiziell und belegt das Paper. Alles andere ist
+    "unofficial", ebenso ein README, das sich inoffiziell nennt. Ein inoffizielles Repo ist nie Autorencode."""
+    owner = (parse_github_url(url) or ("",))[0].lower()
+    if UNOFFICIAL_RE.search(readme or ""):
+        return "unofficial", "README calls itself unofficial or a re-implementation"
+    if linked_by_paper:
+        return "official", "linked in the paper text"
+    if evidence == "paper":
+        front = paper_text[:2500]
+        names = [a.split()[-1] for a in (authors or []) if a.split()] or re.findall(r"\b[A-Z][a-z]{3,}\b", front)
+        owner_tokens = [t for t in re.split(r"[^a-z0-9]+", owner) if len(t) >= 4 and t not in {"research", "labs", "group", "team", "official"}]
+        if any(len(n) >= 4 and n.lower() in owner for n in names) or any(t in front.lower() for t in owner_tokens):
+            return "official", "owner matches an author or organisation and the README names the paper"
+        if OFFICIAL_RE.search(readme or ""):
+            return "official", "README states it is the official implementation and names the paper"
+    return "unofficial", "no link in the paper, no owner/author match, README does not claim to be official"
+
+
+def search_repo_candidates(title: str, arxiv_id: str, get_tavily, fixture_dir: Path | None = None, mode: str = "fixture",
+                           model: str = "") -> list[str]:
+    """Rolle 1, wenn das Paper keinen (brauchbaren) Code-Link hat: Tavily-Suche auf github.com, ALLE passenden Treffer (nicht nur der erste).
+    Ein Treffer zaehlt nur, wenn sein Text/Titel/URL die arXiv-ID, den vollen Titel oder (mit `model`) den Modellnamen nennt; die eigentliche
+    Pruefung (README) folgt im Aufrufer. Treffer mit arXiv-ID oder Titel zuerst. Ergebnis wird als Fixture gespeichert (gleiche Treffer fuer jede
+    Generierung); mode="live" schreibt nie nach `fixture_dir`. Rueckgabe: Ziel-URLs (bei Unterordner `.../tree/HEAD/<pfad>`)."""
     fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"search_{arxiv_id}.json"
     if fixture.exists():
-        return json.loads(fixture.read_text()).get("url")
+        data = json.loads(fixture.read_text())
+        return list(data["urls"]) if "urls" in data else ([data["url"]] if data.get("url") else [])
     res = get_tavily().find_material(title, domains=["github.com"])
-    norm = lambda t: re.sub(r"[^a-z0-9]+", " ", (t or "").lower()).strip()
-    url = None
+    norm = _alnum
+    names = [n.lower() for n in model_tokens(title, model)] if model else []
+    strong, weaker = [], []
     for r in (res or {}).get("results", []):
-        m = re.match(r"https?://github\.com/([\w.-]+)/([\w.-]+)", r.get("url", ""))
-        text = norm(r.get("content", "") + " " + r.get("title", ""))
-        if m and (arxiv_id in (r.get("content", "") + r.get("url", "")) or norm(title) in text):
-            url = f"https://github.com/{m.group(1)}/{m.group(2)}"
-            break
+        parsed = parse_github_url(r.get("url", ""), lenient=True)
+        if not parsed:
+            continue
+        target = f"https://github.com/{parsed[0]}/{parsed[1]}" + (f"/tree/HEAD/{parsed[2]}" if parsed[2] else "")
+        raw = r.get("content", "") + " " + r.get("title", "") + " " + r.get("url", "")
+        text = norm(raw)
+        if (arxiv_id and arxiv_id in raw) or norm(title) in text:
+            strong.append(target)
+        elif names and any(re.search(rf"(?<![a-z0-9]){re.escape(norm(n))}(?![a-z0-9])", text) for n in names):
+            weaker.append(target)
+    urls = list(dict.fromkeys(strong + weaker))
     if mode == "live":
-        return url
+        return urls
     fixture_dir.mkdir(parents=True, exist_ok=True)
-    fixture.write_text(json.dumps({"title": title, "arxiv_id": arxiv_id, "url": url, "mode": mode,
+    fixture.write_text(json.dumps({"title": title, "arxiv_id": arxiv_id, "url": urls[0] if urls else None, "urls": urls, "mode": mode,
                                    "candidates": [r.get("url") for r in (res or {}).get("results", [])]}, indent=1))
-    return url
+    return urls
+
+
+def search_repo_url(title: str, arxiv_id: str, get_tavily, fixture_dir: Path | None = None, mode: str = "fixture") -> str | None:
+    """Erster Treffer von search_repo_candidates (Repo-Wurzel-URL bei Alt-Aufrufern ohne Unterordner)."""
+    urls = search_repo_candidates(title, arxiv_id, get_tavily, fixture_dir, mode)
+    return urls[0] if urls else None
 
 
 IMPORT_RE = re.compile(r"^\s*(?:from\s+([\w.]+)\s+import\s+([\w, ]+)|import\s+([\w.]+))", re.M)
@@ -149,6 +290,17 @@ def model_config_in_listing(listing: list[str], model: str) -> list[str]:
 
 def _repo_key(url: str) -> str:
     return url.rstrip("/").split("github.com/")[-1].replace("/", "_")
+
+
+def clone_plan(url: str) -> tuple[str, str]:
+    """(Klon-URL der Repo-Wurzel, Unterordner) fuer ein Ziel aus find_repo_url/Suche. Ohne GitHub-Struktur: (url, "")."""
+    parsed = parse_github_url(url)
+    if not parsed:
+        return url, ""
+    owner, repo, subdir = parsed
+    if subdir and not re.fullmatch(r"[\w./-]+", subdir):
+        raise ValueError(f"unsafe subfolder in repository URL: {subdir!r}")
+    return f"https://github.com/{owner}/{repo}", subdir
 
 
 def _last_string_list(content: str) -> list[str]:
@@ -254,6 +406,26 @@ def heuristic_files(listing: list[str], model: str, dataset: str) -> list[str]:
 IMPORT_CHAR_BUDGET = 120_000   # Steckbrief-Modus: importierte Dateien bis zu diesem Gesamtumfang statt fester Anzahl
 
 
+def subdir_listing(ls_tree_out: str) -> list[str]:
+    """Dateiliste aus `git ls-tree -r -l` ("<mode> blob <sha> <size>\\t<pfad>"): Dateien ueber MAX_SUBDIR_FILE_BYTES fallen weg; ist der Unterordner
+    insgesamt groesser als MAX_SUBDIR_TOTAL_BYTES, scheitert der Klon mit SandboxSetupError (Groessenlimit fuer Sammel-Repos)."""
+    from .sandbox.base import SandboxSetupError
+
+    paths, total = [], 0
+    for line in ls_tree_out.splitlines():
+        meta, _, path = line.partition("\t")
+        parts = meta.split()
+        if len(parts) < 4 or not path:
+            continue
+        size = int(parts[3]) if parts[3].isdigit() else 0
+        total += size
+        if size <= MAX_SUBDIR_FILE_BYTES:
+            paths.append(path)
+    if total > MAX_SUBDIR_TOTAL_BYTES:
+        raise SandboxSetupError(f"subfolder too large ({total // 1_000_000} MB > {MAX_SUBDIR_TOTAL_BYTES // 1_000_000} MB)")
+    return paths
+
+
 def unit_fixture_name(url: str, unit_key: str) -> str:
     return f"{_repo_key(url)}__{re.sub(r'[^A-Za-z0-9_.-]+', '_', unit_key)}.json"
 
@@ -278,18 +450,27 @@ def read_repo(
             dump.files = {p: t for p, t in dump.files.items() if is_source_text(p, t)}
         return dump
 
+    clone_url, subdir = clone_plan(url)
+    if subdir:   # Sammel-Repo (google-research/google-research/tree/.../tsmixer): nur der Unterordner (sparse, ohne Blobs ausserhalb)
+        clone_cmd = (f"git clone -q --depth 1 --filter=blob:none --sparse {shlex.quote(clone_url)} /repo && "
+                     f"cd /repo && git sparse-checkout set {shlex.quote(subdir)}")
+    else:
+        clone_cmd = f"git clone -q --depth 1 {shlex.quote(clone_url)} /repo"
     snap = sandbox.base_snapshot(
         "python:3.11-slim",
         [
             "apt-get update -qq && apt-get install -y -qq git > /dev/null",
-            f"git clone -q --depth 1 {url} /repo",
+            clone_cmd,
             "cd /repo && git rev-parse HEAD > /repo/.head_commit",
         ],
-        label=f"repo-{_repo_key(url).lower()}",
+        label=f"repo-{_repo_key(url).lower()}"[:60],
     )
     branch = sandbox.branch(snap)
     commit = sandbox.get_file(branch, "/repo/.head_commit").decode().strip()
-    listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
+    if subdir:
+        listing = subdir_listing(sandbox.run(branch, f"cd /repo && git ls-tree -r -l HEAD -- {shlex.quote(subdir)}", 60).stdout)
+    else:
+        listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
     chosen = select_files(llm, listing, claim_text, dataset, focus_model)
     if not chosen:   # beide Antworten ohne gueltigen Pfad: Namensheuristik statt leerem Ausschnitt, sichtbar gemacht
         chosen = heuristic_files(listing, model or "", dataset)
@@ -333,7 +514,7 @@ def read_repo(
     else:
         read(chosen)
         read(imported_files(files, listing)[:MAX_IMPORTED])
-    dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing))
+    dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing), subdir=subdir)
     if mode == "live":
         return dump
     fixture_dir.mkdir(parents=True, exist_ok=True)

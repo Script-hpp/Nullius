@@ -18,6 +18,8 @@ from .llm import LLMClient
 
 MAX_TEXT_CHARS = 60_000
 CHUNK_CHARS = 5_000
+HPARAM_CAPTION_RE = re.compile(r"hyper-?\s?param\w*|hy\w{1,4}param\w*|search space|tuning space|best configurations?|training details|implementation details", re.I)
+TAIL_WINDOW = 3_000   # Zeichen hinter einer Hyperparameter-Ueberschrift hinter MAX_TEXT_CHARS
 
 SYSTEM = (
     "You extract experimental-setup facts from a research paper so someone else can reproduce a "
@@ -37,6 +39,21 @@ class SetupDetail:
     value: str
     quote: str
     source: str = "paper"
+
+
+def extraction_text(text: str, limit: int = MAX_TEXT_CHARS) -> str:
+    """Text fuer die Extraktion: die ersten `limit` Zeichen, dazu Ausschnitte hinter dem Limit, die eine Hyperparameter-Ueberschrift oder
+    -Tabelle enthalten (Anhang). Vorher wurde alles hinter `limit` abgeschnitten, auch die Hyperparameter-Tabellen am Ende des Anhangs."""
+    if len(text) <= limit:
+        return text
+    spans: list[tuple[int, int]] = []
+    for m in HPARAM_CAPTION_RE.finditer(text, limit):
+        lo, hi = max(limit, m.start() - 200), min(len(text), m.start() + TAIL_WINDOW)
+        if spans and lo <= spans[-1][1]:
+            spans[-1] = (spans[-1][0], max(spans[-1][1], hi))
+        else:
+            spans.append((lo, hi))
+    return text[:limit] + "".join("\n\n" + text[a:b] for a, b in spans)
 
 
 def _chunks(text: str, size: int = CHUNK_CHARS) -> list[str]:
@@ -115,7 +132,17 @@ def _extract_chunk(llm: LLMClient, chunk: str, claim_text: str, dataset: str, v2
 
 
 
-def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, paper_title: str = "") -> list[dict]:
+TABLE_TOPIC = "hyperparameter table"
+TABLE_HINT = (
+    "The excerpt may contain hyperparameter tables flattened into one line: column names first, then the rows. Map each number to the column "
+    "by position (same order as the column names), choose the block of the target dataset and the row of the target model (and of its "
+    "prediction length T when the table has one), and report every setting of that row (learning rate, number of blocks/layers, dropout, hidden "
+    "size, batch size, epochs, patience, ...) as its own item. The quote must contain the column names and the row, copied verbatim; you may join "
+    "the two parts with '...'. Typos in column names ('Learing rate') are the paper's own. Skip rows of other models or datasets. "
+    "If the excerpt has no such row, answer [].\n")
+
+
+def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, paper_title: str = "", table_job: bool = True) -> list[dict]:
     family = family_for(dataset)
     mandatory = MANDATORY[family]
     
@@ -137,6 +164,17 @@ def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, data
                     continue
             jobs.append((doc, chunk, topic_name))
             
+    # Hyperparameter-Tabellen des Anhangs (eine Zeile im PDF-Text): eigener Auftrag mit den Ausschnitten um erkannte Kopfzeilen, damit sie
+    # nicht an Fenstergrenzen oder Tippfehlern der Spaltennamen ("Learing rate") scheitern. Nur wenn der deterministische Leser
+    # (hparam_table.table_details) die Tabelle nicht selbst zuordnen konnte (`table_job`).
+    for doc in docs if table_job else []:
+        if doc.name == "paper":
+            from .hparam_table import header_windows
+
+            chunk = header_windows(doc.text)
+            if chunk.strip():
+                jobs.append((doc, chunk, TABLE_TOPIC))
+
     # Now ask the LLM
     def _ask(job):
         doc, chunk, topic_name = job
@@ -147,9 +185,10 @@ def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, data
                 f"Goal: reproduce this result: {claim_text} (dataset: {dataset}).\n"
                 f"Target Model/Method: {claim_method}\n\n"
                 f"Topic to extract: {topic_name}\n\n"
-                "From the excerpt below, list only statements or settings that belong to this topic "
-                "for the target model and dataset. If a table is shown, ensure you trace the values to the "
-                "column/row headers to verify they belong to the target model and dataset.\n"
+                + (TABLE_HINT if topic_name == TABLE_TOPIC else
+                   "From the excerpt below, list only statements or settings that belong to this topic "
+                   "for the target model and dataset. If a table is shown, ensure you trace the values to the "
+                   "column/row headers to verify they belong to the target model and dataset.\n") +
                 "If it's for the transductive setting (e.g., Cora), ignore inductive batch sizes.\n"
                 "If the excerpt has no relevant information for this topic, answer [].\n\n"
                 + ANSWER_FORMAT_V2 + f"EXCERPT from {excerpt_label(doc.name)}:\n{chunk}"
@@ -165,7 +204,7 @@ def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, data
     return [{"doc": doc.name, "item": item} for (doc, _, _), lst in zip(jobs, raw_lists) for item in lst]
 def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, v2: bool = False) -> list[dict]:
     """Rohangaben des Modells je Dokument, noch ungeprueft: [{"doc": Name, "item": Objekt}]."""
-    jobs = [(doc, chunk) for doc in docs for chunk in _chunks(doc.text[:MAX_TEXT_CHARS])]
+    jobs = [(doc, chunk) for doc in docs for chunk in _chunks(extraction_text(doc.text))]
     with ThreadPoolExecutor(max_workers=4) as pool:
         raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2, j[0].name), jobs))
     return [{"doc": doc.name, "item": item} for (doc, _), lst in zip(jobs, raw_lists) for item in lst]
@@ -305,7 +344,7 @@ MANDATORY: dict[str, list[tuple[str, str, str]]] = {
     "graph": [
         ("feature normalisation", r"(feature|attribute|input|row|preprocess|standardi)", r"adjacen|laplacian|propagat|graph normali"),
         ("adjacency normalisation", r"adjacen|laplacian|propagat|renormali|symmetric|graph normali", ""),
-        ("learning rate", r"learning.?rate|\blr\b", "schedule|decay"),
+        ("learning rate", r"lear(?:n)?(?:ing)?.?rate|\blr\b", "schedule|decay"),
         ("weight decay", r"weight.?decay|\bl2\b|regulari[sz]", ""),
         ("dropout", r"dropout", ""),
         ("hidden size / heads", r"hidden|head|units|width|channels", ""),
@@ -314,7 +353,7 @@ MANDATORY: dict[str, list[tuple[str, str, str]]] = {
     ],
     "forecast": [
         ("input length", r"input|seq.?len|look.?back|window|history", "label|pred|horizon"),
-        ("learning rate", r"learning.?rate|\blr\b", "schedule|decay|adjust"),
+        ("learning rate", r"lear(?:n)?(?:ing)?.?rate|\blr\b", "schedule|decay|adjust"),
         ("learning-rate schedule", r"schedule|lradj|decay|halv|adjust|anneal", ""),
         ("batch size", r"batch", ""),
         ("epochs", r"epoch|iteration", ""),
@@ -623,8 +662,14 @@ def extract_setup_details_v2(
     family = family_for(dataset)
     paper_text = next((d.text for d in docs if d.name == "paper"), "")
     scope = lambda ds: apply_scope(ds, claim_text, dataset, paper_text)
-    details, dropped = verify_raw_v2(collect_middle_ground(llm, docs, claim_text, dataset, paper_title), docs)
+    from .hparam_table import table_details
+    from .spec import model_name_of
+
+    tables = table_details(docs, model_name_of(claim_text), dataset)   # deterministisch, mit Zitat (Hyperparameter-Tabellen im Anhang)
+    details, dropped = verify_raw_v2(collect_middle_ground(llm, docs, claim_text, dataset, paper_title, table_job=not tables), docs)
     details = scope(details)
+    seen_table = {(d.source, _norm(d.quote)) for d in details}
+    details.extend(scope([t for t in tables if (t.source, _norm(t.quote)) not in seen_table]))
     info = {"family": family, "targeted_docs": [], "added": 0, "bodies": [], "literals": 0}
     n_dropped = len(dropped)
 
@@ -649,7 +694,7 @@ def extract_setup_details_v2(
     if missing:
         targets = target_docs(docs)
         info["targeted_docs"] = [d.name for d in targets]
-        jobs = [(d, c) for d in targets for c in _chunks(d.text[:MAX_TEXT_CHARS])]
+        jobs = [(d, c) for d in targets for c in _chunks(extraction_text(d.text))]
         if jobs:
             with ThreadPoolExecutor(max_workers=4) as pool:
                 lists = list(pool.map(lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing, j[0].name), jobs))

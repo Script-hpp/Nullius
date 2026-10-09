@@ -851,14 +851,24 @@ def _run_with_cache(monkeypatch, arxiv_xml, cache_file):
 
 # ---- D: Repo-Beleg, E: Methode, F: messbare Metrik ----
 
-def _repo_agent(monkeypatch, arxiv_xml, tmp_path, urls, readme):
+def _repo_agent(monkeypatch, arxiv_xml, tmp_path, urls, readme, paper_text="", method="", readmes=None):
+    searched = []
+
     def mock_get(url, *a, **k):
         if "raw.githubusercontent.com" in url:
-            return FakeResponse(readme)
+            for part, text in (readmes or {}).items():
+                if part in url:
+                    return FakeResponse(text)
+            return FakeResponse(readme) if not readmes else FakeResponse("", 404)
         return FakeResponse(arxiv_xml)
     monkeypatch.setattr("httpx.get", mock_get)
-    agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(repos=urls), cache_path=str(tmp_path / "c.json"))
-    return agent._find_repo_and_context("Sample Paper Title", "Cora", ["John Doe"], "2101.12345")
+    tavily = FakeTavily(repos=urls)
+    real = tavily.curate_repo
+    tavily.curate_repo = lambda title: (searched.append(title), real(title))[1]
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=tavily, cache_path=str(tmp_path / "c.json"))
+    out = agent._find_repo_and_context("Sample Paper Title", "Cora", ["John Doe"], "2101.12345", paper_text=paper_text, method=method)
+    _repo_agent.searched = searched
+    return out
 
 
 def test_repo_dataset_match_alone_is_no_evidence(monkeypatch, arxiv_xml, tmp_path):
@@ -878,14 +888,40 @@ def test_repo_author_surname_in_body_is_not_author_match(monkeypatch, arxiv_xml,
 def test_repo_blob_url_normalized_and_paper_link(monkeypatch, arxiv_xml, tmp_path):
     url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path,
                             ["https://github.com/DaoSword/Repo/blob/main/README.md"],
-                            "code for the paper sample paper title (cora)")
+                            "official implementation: code for the paper sample paper title (cora)")
     assert url == "https://github.com/DaoSword/Repo"
 
 
 def test_repo_arxiv_id_is_paper_link(monkeypatch, arxiv_xml, tmp_path):
     url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/a/b/issues/3"],
-                            "see arxiv 2101.12345 (cora)")
+                            "official code, see arxiv 2101.12345 (cora)")
     assert url == "https://github.com/a/b"
+
+
+def test_unofficial_repo_is_never_returned_as_authors_code(monkeypatch, arxiv_xml, tmp_path):
+    url, reason, alts = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/someone/sample-reimpl"],
+                                    "unofficial pytorch re-implementation of sample paper title (cora), arxiv 2101.12345")
+    assert url is None and "unofficial" in reason and reason.startswith("kein passendes Repo gefunden")
+    assert alts[0]["url"] == "https://github.com/someone/sample-reimpl" and alts[0]["status"] == "unofficial"
+    # Paper-Beleg ohne Autor-/Besitzer-Treffer und ohne "official": ebenfalls nur inoffiziell
+    url2, _, alts2 = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/someone/else"], "implements sample paper title (cora)")
+    assert url2 is None and alts2[0]["status"] == "unofficial"
+
+
+def test_code_link_in_paper_text_beats_search_and_keeps_subfolder(monkeypatch, arxiv_xml, tmp_path):
+    text = "Abstract ... The implementation is available at: https://github.com/big-lab/collection/tree/master/ tsm . 1 Introduction"
+    url, reason, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/someone/sample-reimpl"], "",
+                                 paper_text=text, method="TSM", readmes={"big-lab/collection/master/tsm/README.md": "TSM, see arXiv 2101.12345"})
+    assert url == "https://github.com/big-lab/collection/tree/HEAD/tsm" and "linked in the paper text" in reason
+    assert _repo_agent.searched == []   # offizieller Treffer aus dem Paper: keine Suche noetig
+
+
+def test_wrong_repo_linked_in_paper_footnote_is_rejected(monkeypatch, arxiv_xml, tmp_path):
+    """TSMixer-Fund: Fussnote verweist auf das M5-Wettbewerbs-Repo; README nennt weder Modell noch Titel noch arXiv-ID."""
+    text = "we use the repository of the third place solution 3 https://github.com/devmofl/M5_Accuracy_3rd 21"
+    url, reason, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, [], "", paper_text=text, method="TSM",
+                                 readmes={"devmofl/M5_Accuracy_3rd/main/README.md": "M5 forecasting accuracy, 3rd place solution with LightGBM"})
+    assert url is None and reason == "kein passendes Repo gefunden"
 
 
 def test_repo_author_in_owner_plus_dataset_ok(monkeypatch, arxiv_xml, tmp_path):
@@ -954,7 +990,7 @@ def test_readme_collection_is_no_repo(monkeypatch, arxiv_xml, tmp_path):
 
 
 def test_readme_few_links_is_repo(monkeypatch, arxiv_xml, tmp_path):
-    readme = "cora sample paper title\n" + "\n".join(f"- https://arxiv.org/abs/2101.{i:05d}" for i in range(5))
+    readme = "official code: cora sample paper title\n" + "\n".join(f"- https://arxiv.org/abs/2101.{i:05d}" for i in range(5))
     url, _, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/a/b"], readme)
     assert url == "https://github.com/a/b"
 
@@ -1156,7 +1192,7 @@ def test_llm_call_event_cached_costs_nothing(monkeypatch, arxiv_xml, tmp_path):
 
 
 def test_fresh_candidate_event_carries_card_fields(monkeypatch, tmp_path):
-    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse("Official implementation of Sample Paper Title (cora)" if "raw.githubusercontent" in url else ATOM_ONE))
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
     events = []
     agent.discover(["Cora"], on_event=events.append)
