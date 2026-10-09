@@ -17,3 +17,11 @@ export function tavilySummary(events: Event[]): { total: number; parts: string[]
   const parts = [...by.entries()].sort((a, b) => a[0] - b[0]).map(([r, n]) => `${TAVILY_ROLE[r] ?? `role ${r}`} ×${n}`)
   return { total, parts }
 }
+
+// Text of the chip on the verdict card. "live" only when the dossier holds at least one source fetched live (mode "live"), never for stored copies.
+export function tavilyChip(events: Event[], sources: { mode?: string }[] | undefined): string | null {
+  const { total } = tavilySummary(events)
+  if (total === 0) return null
+  const live = (sources ?? []).some((x) => x.mode === 'live')
+  return `${total} ${live ? 'live ' : ''}Tavily ${total === 1 ? 'call' : 'calls'}`
+}

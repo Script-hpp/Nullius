@@ -38,7 +38,7 @@ function Hero() {
           <span className="block text-fg">we measure them.</span>
         </h1>
         <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
-          Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. When it says a target was reached, it was.
+          Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. Tavily researches the paper live. When it says a target was reached, it was.
         </p>
       </div>
       <div className="mt-10 flex flex-col items-center gap-3">
@@ -68,7 +68,7 @@ function Hero() {
 const BUILT_WITH: { name: string; product: string; logo?: { light: string; dark: string; h: string } }[] = [
   { name: 'NVIDIA', product: 'Nemotron' },
   { name: 'Nebius', product: 'Token Factory, Sandboxes', logo: { light: 'logos/nebius-black.svg', dark: 'logos/nebius-white.svg', h: 'h-5 sm:h-6' } },
-  { name: 'Tavily', product: 'Search and extraction', logo: { light: 'logos/tavily-full.svg', dark: 'logos/tavily-full-offwhite.svg', h: 'h-6 sm:h-7' } },
+  { name: 'Tavily', product: 'Live research', logo: { light: 'logos/tavily-full.svg', dark: 'logos/tavily-full-offwhite.svg', h: 'h-6 sm:h-7' } },
 ]
 
 function BuiltWith() {
@@ -111,9 +111,9 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
       <Problem run={run} />
       <Steps />
       <CertificatePreview run={run} />
+      <TavilySection />
       <Proof />
       <Lesson />
-      <TavilySection />
       <Limits />
       <TryIt />
       <SiteFooter className="pb-16" />
