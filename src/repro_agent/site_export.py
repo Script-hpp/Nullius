@@ -163,6 +163,8 @@ def export_live_run(run_dir: Path, catalog_yaml: Path, out: Path, note: str, see
     """Live-Lauf der API: Lauf nach out kopieren, index.json-Eintrag mit note und live=true. catalog.yaml bleibt unberuehrt."""
     catalog = catalog_entries(catalog_yaml)
     ref = export_run(run_dir, out, {e["id"]: e["title"] for e in catalog})
+    from . import web_guard   # oeffentlich ausgelieferte Textdateien: keine Geheimnisse, keine Pfade mit Nutzernamen
+    web_guard.redact_tree(out / ref["paper_id"] / ref["timestamp"], str(REPO_ROOT))
     ref.update({"note": note, "live": True, "seeds": seeds})
     add_to_index(ref, catalog, out)
     return next(r for r in read_index(out) if r["id"] == ref["id"])

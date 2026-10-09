@@ -9,7 +9,10 @@ Start: uvicorn deploy.serve:app --host 0.0.0.0 --port 8000 (genau ein Worker: Jo
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -34,10 +37,24 @@ def seed_export_dir(export_dir: Path = EXPORT_DIR, image_data: Path | None = Non
     return True
 
 
+def page_csp(dist: Path = DIST) -> str:
+    """CSP fuer die HTML-Seite. Der Theme-Schnipsel in index.html ist inline: sein Hash wird beim Start aus der gebauten Datei gelesen,
+    so bleibt script-src ohne 'unsafe-inline' und folgt jeder Aenderung am Schnipsel."""
+    hashes = []
+    index = dist / "index.html"
+    if index.exists():
+        for body in re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", index.read_text(), flags=re.S):
+            hashes.append("'sha256-" + base64.b64encode(hashlib.sha256(body.encode()).digest()).decode() + "'")
+    return ("default-src 'self'; script-src 'self' " + " ".join(hashes) + "; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; "
+            "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'")
+
+
 def mount_static() -> None:
     if not DIST.is_dir():
         raise RuntimeError(f"{DIST} fehlt: zuerst `npm run build` in web/ (im Container erledigt das Dockerfile)")
     seed_export_dir()
+    app.state.page_csp = page_csp()
     app.mount("/data", StaticFiles(directory=EXPORT_DIR), name="data")
     app.mount("/", StaticFiles(directory=DIST, html=True), name="web")
 

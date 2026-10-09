@@ -144,7 +144,8 @@ def test_full_run_streams_events_and_exports_without_touching_catalog(env):
     assert not list(data.glob("*.tmp"))
 
 
-def test_full_run_note_and_seeds(env):
+def test_full_run_note_and_seeds(env, monkeypatch):
+    monkeypatch.setenv("ALLOW_FULL_RUNS", "1")
     job = start(env, quick=False).json()["job_id"]
     read_stream(env, job)
     (ref,) = json.loads((env.tmp / "data" / "index.json").read_text())
@@ -236,3 +237,39 @@ def test_ip_limit_one_reproduction_per_day(env, monkeypatch):
     read_stream(env, start(env).json()["job_id"])
     r = start(env)
     assert r.status_code == 429 and r.json()["reason"] == "daily_limit"
+
+
+def test_quick_check_is_enforced_unless_full_runs_are_allowed(env):
+    read_stream(env, start(env, quick=False).json()["job_id"])
+    assert FakeOrch.instances[0].seeds == 3                                   # quick=false wird auf die Schnellpruefung gesetzt
+
+
+def test_catalog_id_length_is_limited(env):
+    assert start(env, catalog_id="x" * 500).status_code == 422
+
+
+def test_watchdog_frees_the_lock_and_tells_the_stream(env, monkeypatch):
+    monkeypatch.setattr(api, "JOB_TIMEOUT_S", 0.3)
+    FakeOrch.gate = threading.Event()
+    job = start(env).json()["job_id"]
+    evts = read_stream(env, job)                                               # endet, obwohl der Worker haengt
+    assert evts[-1]["type"] == "error" and evts[-1]["status"] == "timeout"
+    assert api.current_job == {} and not api.job_semaphore.locked()
+    FakeOrch.gate.set()                                                        # Worker endet spaeter: kein doppeltes Freigeben
+    time.sleep(0.5)
+    assert api.job_semaphore._value == 1
+
+
+def test_stream_slot_limit_returns_429(env, monkeypatch):
+    job = start(env).json()["job_id"]
+    read_stream(env, job)
+    monkeypatch.setenv("MAX_SSE_STREAMS", "0")
+    assert env.client.get(f"/api/reproduce/{job}/stream").status_code == 429
+
+
+def test_last_event_id_garbage_does_not_crash(env):
+    job = start(env).json()["job_id"]
+    read_stream(env, job)
+    for bad in ("9" * 30, "-1", "x"):
+        with env.client.stream("GET", f"/api/reproduce/{job}/stream", headers={"Last-Event-ID": bad}) as r:
+            assert r.status_code == 200

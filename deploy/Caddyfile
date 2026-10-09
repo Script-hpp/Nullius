@@ -1,6 +1,16 @@
 # Hostname-Variante: {$SITE_ADDRESS} = z. B. 203-0-113-7.sslip.io, Caddy holt automatisch ein Let's-Encrypt-Zertifikat (Port 80 und 443 offen).
+# Security-Header (CSP, nosniff, frame-ancestors) setzt die App selbst; Caddy ergaenzt HSTS und das Body-Limit.
 {$SITE_ADDRESS} {
-	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	request_body {
+		max_size 64KB
+	}
+	# SSE (/api/*) nie komprimieren; alles andere gzip
+	@static not path /api/*
+	encode @static gzip
 	# SSE (Live-Lauf): nicht puffern, langer Lese-Timeout (Laeufe bis ca. 20 Minuten)
 	reverse_proxy app:8000 {
 		flush_interval -1
