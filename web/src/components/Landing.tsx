@@ -1,31 +1,27 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, ChevronDown, Gavel, Play } from 'lucide-react'
-import { ThemeSwitch } from './ThemeSwitch'
+import { ChevronDown, Play } from 'lucide-react'
+import { ThemeToggle } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
+import { SiteFooter } from './SiteFooter'
 import { REPO } from '../data/benchmark'
-import { EXAMPLE_RUN, TIMELAPSE_RUN, Kicker, Proof, Lesson, SeeForYourself, TavilySection, Limits, Links } from './LandingSections'
+import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 
-// Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke, then one sentence and two buttons.
-// Further down: claim vs. measurement, three steps, limits. The example numbers come from a real, earlier run
-// (GCN on Cora, web/public/data/kipf_gcn_2017) and are labelled as such. Benchmark numbers stay TBD until the evaluation exists.
-
+// Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke, then one sentence, one button and one quiet link.
+// Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
 
 function TopBar() {
   const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
   return (
-    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-3 px-4 sm:gap-5 sm:px-10">
+    <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-3 px-4 sm:px-10">
       <Wordmark />
       <div className="flex items-center gap-3 sm:gap-7">
-        <a href="#/jury" className="hidden text-sm font-medium text-fg no-underline underline decoration-fg-4 decoration-1 underline-offset-[6px] transition-colors hover:decoration-fg sm:inline">For judges</a>
-        <a href="#discover" className={link}>Discover</a>
         <a href="#catalog" className={link}>Catalog</a>
-        <a href="#overview" className={link}>Runs</a>
         <a href="#benchmark" className={link}>Benchmark</a>
         <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
-        <a href="#discover" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
-        <ThemeSwitch />
+        <a href="#catalog" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
+        <ThemeToggle />
       </div>
     </header>
   )
@@ -44,27 +40,19 @@ function Hero() {
       <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
         <div className="min-h-0 overflow-hidden">
           <div className="mx-auto mt-12 max-w-4xl sm:mt-16" {...fade()}>
-            <h1 className="font-grotesk m-0 text-[2.6rem] font-semibold leading-[0.98] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
+            <h1 className="font-grotesk m-0 text-[2.2rem] font-semibold leading-[0.98] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
               <span className="block text-muted">papers make claims.</span>
               <span className="block text-fg">we measure them.</span>
             </h1>
-            <p className="mx-auto mb-0 mt-7 max-w-xl text-base leading-relaxed text-fg-4 sm:text-lg">
-              Whether a paper&rsquo;s claim holds is usually known only after someone has spent days rebuilding it. Nullius rebuilds the experiment in a sandbox and lets an independent harness measure it. When it says a target was reached, it was; it has never confirmed a wrong claim.
+            <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
+              Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. When it says a target was reached, it was.
             </p>
           </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4" {...fade(150)}>
-            <a href="#discover" className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-              Try it <ArrowRight className="h-4 w-4" />
+          <div className="mt-10 flex flex-col items-center gap-3" {...fade(150)}>
+            <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
+              <Play className="h-4 w-4" aria-hidden />See it in action
             </a>
-            <a href={EXAMPLE_RUN} className="inline-flex items-center gap-2 rounded-full border border-line-strong px-6 py-3 text-sm font-medium text-fg no-underline transition-colors hover:bg-raised/60">
-              See a finished check
-            </a>
-            <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-fg-4 no-underline transition-colors hover:text-fg">
-              <Play className="h-4 w-4" />Watch one in 30 seconds
-            </a>
-            <a href="#/jury" className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-fg-4 no-underline transition-colors hover:text-fg">
-              <Gavel className="h-4 w-4" />For judges: start here
-            </a>
+            <a href="#catalog" className="text-sm text-fg-4 no-underline transition-colors hover:text-fg">Try it live</a>
           </div>
         </div>
       </div>
@@ -79,7 +67,7 @@ function Hero() {
   )
 }
 
-// "Built with" strip. Logos come only from the companies' own brand kits, unmodified, light and dark variant as the kit ships them:
+// "Built with" strip, kept small. Logos come only from the companies' own brand kits, unmodified, light and dark variant as the kit ships them:
 // - Nebius: https://nebius.com/media-kit (NEBIUS-logos 07.25.zip, SVGs/NEBIUS-outline-black.svg and -white.svg). The page states no usage terms; used
 //   unaltered and with clear space, to name the services we use.
 // - Tavily: https://tavily.com/brand (/logos/tavily-full.svg and tavily-full-offwhite.svg). Terms: unaltered proportions, clear space at least the icon
@@ -88,25 +76,25 @@ function Hero() {
 //   outside its listed cases, so NVIDIA stays text until approved.
 const BUILT_WITH: { name: string; product: string; logo?: { light: string; dark: string; h: string } }[] = [
   { name: 'NVIDIA', product: 'Nemotron' },
-  { name: 'Nebius', product: 'Token Factory, Sandboxes', logo: { light: 'logos/nebius-black.svg', dark: 'logos/nebius-white.svg', h: 'h-6 sm:h-7' } },
-  { name: 'Tavily', product: 'Search and extraction', logo: { light: 'logos/tavily-full.svg', dark: 'logos/tavily-full-offwhite.svg', h: 'h-7 sm:h-8' } },
+  { name: 'Nebius', product: 'Token Factory, Sandboxes', logo: { light: 'logos/nebius-black.svg', dark: 'logos/nebius-white.svg', h: 'h-5 sm:h-6' } },
+  { name: 'Tavily', product: 'Search and extraction', logo: { light: 'logos/tavily-full.svg', dark: 'logos/tavily-full-offwhite.svg', h: 'h-6 sm:h-7' } },
 ]
 
 function BuiltWith() {
   return (
-    <div className="flex flex-col items-center gap-4" aria-label="Built with">
+    <div className="flex flex-col items-center gap-3" aria-label="Built with">
       <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Built with</div>
-      <ul className="m-0 flex list-none flex-wrap items-start justify-center gap-x-7 gap-y-4 sm:gap-x-12 p-0">
+      <ul className="m-0 flex list-none flex-wrap items-start justify-center gap-x-7 gap-y-3 p-0 sm:gap-x-10">
         {BUILT_WITH.map((b) => (
-          <li key={b.name} className="flex flex-col items-center gap-2">
-            <div className="flex h-8 items-center">
+          <li key={b.name} className="flex flex-col items-center gap-1.5">
+            <div className="flex h-7 items-center">
               {b.logo ? (
                 <>
                   <img src={b.logo.light} alt={b.name} className={`logo-light w-auto ${b.logo.h}`} />
                   <img src={b.logo.dark} alt={b.name} className={`logo-dark w-auto ${b.logo.h}`} />
                 </>
               ) : (
-                <span className="font-grotesk text-xl font-semibold tracking-[0.04em] text-fg-3">{b.name}</span>
+                <span className="font-grotesk text-lg font-semibold tracking-[0.04em] text-fg-3">{b.name}</span>
               )}
             </div>
             <span className="text-[10.5px] tracking-wide text-muted">{b.product}</span>
@@ -117,80 +105,9 @@ function BuiltWith() {
   )
 }
 
-function ClaimVsMeasurement() {
-  return (
-    <section id="claim" className="mx-auto max-w-5xl scroll-mt-8 px-6 py-24 sm:py-32">
-      <Kicker n="01">The problem</Kicker>
-      <p className="font-grotesk m-0 mb-14 mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-        A result in a paper is a claim in words. Checking it costs days of broken code and missing hyperparameters.
-      </p>
-      <div className="grid gap-14 md:grid-cols-2 md:gap-0">
-        <div className="md:pr-14">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">The paper reports</div>
-          <div className="mt-6 font-mono text-6xl font-light tracking-tight text-fg-3 sm:text-7xl">81.5%</div>
-          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
-            Kipf &amp; Welling (2017) report 81.5% accuracy for their GCN model on the Cora benchmark (Table 2). A claim in words, paraphrased. Anyone can write it down.
-          </p>
-        </div>
-        <div className="border-t border-line pt-14 md:border-l md:border-t-0 md:pl-14 md:pt-0">
-          <div className="flex items-baseline justify-between gap-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-            <span>We measured</span>
-            <span className="font-normal normal-case tracking-normal">Example, earlier run</span>
-          </div>
-          <div className="mt-6 font-mono text-6xl font-light tracking-tight text-tone-green sm:text-7xl">82.1%</div>
-          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-fg-4">
-            <span className="text-fg">± 0.7</span> over 10 runs, scored by a program the agent cannot touch. Reproduced with our setup (target value reached); method fidelity not checked.
-          </p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-const STEPS = [
-  { n: '01', title: 'Pick a claim', text: 'Choose a paper from the catalog or find new ones. Tavily reads the paper; we keep only numbers that appear word for word in the text.' },
-  { n: '02', title: 'Rebuild it', text: 'An agent reads the paper and the authors’ code as text (never run), writes its own version, and runs it in isolated Nebius Sandboxes, one run per random seed.' },
-  { n: '03', title: 'Measure it', text: 'An independent harness, which the agent cannot change, loads the true labels itself, scores the predictions and compares them with the claim.' },
-]
-
-function Steps() {
-  return (
-    <section id="how" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="02">How it works</Kicker>
-      <ol className="m-0 mt-8 grid list-none gap-0 border-t border-line p-0 md:grid-cols-3">
-        {STEPS.map((s, i) => (
-          <li key={s.n} className={`py-10 md:py-12 ${i > 0 ? 'border-t border-line md:border-l md:border-t-0 md:pl-10' : ''} ${i < 2 ? 'md:pr-10' : ''}`}>
-            <div className="font-mono text-4xl font-light text-fg-4">{s.n}</div>
-            <h3 className="font-grotesk m-0 mt-5 text-2xl font-semibold tracking-[-0.04em] text-fg">{s.title}</h3>
-            <p className="mb-0 mt-3 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )
-}
-
-function Footer() {
-  return (
-    <section className="mx-auto max-w-5xl px-6 pb-28">
-      <div className="border-t border-line pt-14">
-        <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Built with</h2>
-        <ul className="m-0 mt-5 grid list-none gap-3 p-0 text-[15px] leading-relaxed text-fg-4 md:grid-cols-3 md:gap-10">
-          <li><span className="font-medium text-fg">NVIDIA Nemotron</span> on Nebius Token Factory plans the experiment and writes the code.</li>
-          <li><span className="font-medium text-fg">Nebius Sandboxes</span> run every experiment in isolation.</li>
-          <li><span className="font-medium text-fg">Tavily</span> finds and reads the papers, live.</li>
-        </ul>
-      </div>
-      <div className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-8 text-sm text-muted">
-        <span>Nullius in verba: take nobody&rsquo;s word for it.</span>
-        <a href="#discover" className="inline-flex items-center gap-2 text-fg no-underline hover:text-fg-max">Try it <ArrowRight className="h-4 w-4" /></a>
-      </div>
-    </section>
-  )
-}
-
 // scrollTo: id of a section to open on (route #/lesson), so a link can point into the start page.
 export function Landing({ scrollTo }: { scrollTo?: string }) {
+  const run = useFeatured()
   useEffect(() => {
     if (!scrollTo) return
     const t = setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'auto' }), 50)
@@ -200,15 +117,15 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
     <div className="landing relative min-h-screen font-sans">
       <TopBar />
       <Hero />
-      <ClaimVsMeasurement />
+      <Problem run={run} />
       <Steps />
+      <CertificatePreview run={run} />
       <Proof />
       <Lesson />
-      <SeeForYourself />
       <TavilySection />
       <Limits />
-      <Links />
-      <Footer />
+      <TryIt />
+      <SiteFooter className="pb-16" />
     </div>
   )
 }

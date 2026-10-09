@@ -21,3 +21,17 @@ export function ThemeSwitch() {
     </div>
   )
 }
+
+// One quiet icon button for the app bars: each click moves on to the next setting (system, light, dark).
+export function ThemeToggle() {
+  const [pref, setPref] = useTheme()
+  const i = OPTIONS.findIndex((o) => o.id === pref)
+  const cur = OPTIONS[i]
+  const next = OPTIONS[(i + 1) % OPTIONS.length]
+  return (
+    <button type="button" onClick={() => setPref(next.id)} title={`Theme: ${cur.label}. Click for ${next.label}.`} aria-label={`Color theme: ${cur.label}. Switch to ${next.label}.`}
+      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-fg-4 transition-colors hover:text-fg">
+      <cur.icon className="h-4 w-4" aria-hidden />
+    </button>
+  )
+}

@@ -84,21 +84,21 @@ Placebo claims in the same run: **0 of 9 confirmed** (8 rejected, 1 without a ve
 
 Each page below is a screenshot of the current web app (`web/`, light and dark theme; mobile views in [`docs/screenshots`](docs/screenshots)).
 
-**Start page and "For judges".** The start page follows one line: the problem, how it works (pick a claim, rebuild in a Nebius sandbox from paper and authors' code, measure with an independent harness), the proof, our small bitter lesson, links to look for yourself, what Tavily adds, and the limits. `#/jury` lists five places to click, one sentence each.
+**Start page.** One calm hero (one button: the 30-second replay of a finished check) and a story that flows while scrolling: the problem, how Nullius works (read, rebuild, measure), one real certificate (claimed against measured; a click opens it), the proof and our small bitter lesson (2 of 8 from the paper alone, 7 of 8 in-sample with the authors' code, held-out 0 of 1), what Tavily adds, the limits (folded), and a way to try it. The old `#/jury` page is gone; the address redirects to the start page.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/landing-dark.jpg">
-  <img src="docs/img/landing.jpg" alt="Start page: 'papers make claims, we measure them', one sentence on the problem, buttons including For judges: start here">
+  <img src="docs/img/landing.jpg" alt="Start page hero: 'papers make claims, we measure them', one sentence, one button, one quiet link">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/landing-full-dark.jpg">
+  <img src="docs/img/landing-full.jpg" alt="The whole start page: problem, three steps, a real certificate, proof, bitter lesson, Tavily, limits, try it">
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/lesson-dark.jpg">
-  <img src="docs/img/lesson.jpg" alt="Start page section 'Our own small bitter lesson': 2 of 8 from the paper alone, 7 of 8 in-sample with the authors' code, per-unit table with the held-out paper">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/jury-dark.jpg">
-  <img src="docs/img/jury.jpg" alt="For judges page: five numbered click targets">
+  <img src="docs/img/lesson.jpg" alt="Start page, proof and lesson: no wrong claim confirmed, 2 of 8 from the paper alone, 7 of 8 in-sample with the authors' code, per-unit table with the held-out paper">
 </picture>
 
 **Discover.** Tavily searches the web for new papers on supported benchmarks, reads only the protocol and results sections and keeps claims it can quote word for word. The screenshot is the replay of a recorded run (30 Sep 2026); a live run is limited (one at a time, daily and per-IP limits).

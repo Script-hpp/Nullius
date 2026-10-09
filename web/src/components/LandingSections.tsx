@@ -1,177 +1,230 @@
-import type { ReactNode } from 'react'
-import { ArrowRight, BookOpen, ExternalLink, FileCheck, GitBranch, LayoutGrid, Play, Search } from 'lucide-react'
-import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO, REPO_BLOB, SCOPE_LIMIT, SOURCES, SUBMISSION_LINKS, SUTTON_URL } from '../data/benchmark'
+import { useEffect, useState, type ReactNode } from 'react'
+import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react'
+import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES } from '../data/benchmark'
 import { FEATURED_RUN_ID } from '../featured'
-import { Headline, Matrix, Precision } from './TwoModes'
+import { loadIndex, loadRun, type RunData } from '../data'
+import { showValue } from '../format'
+import { RESULT, de2en, resultHint, translateClaim } from '../labels'
+import { useLiveStatus } from '../live'
+import { statusFor } from '../livestatus'
+import { Matrix } from './TwoModes'
+import { Badge } from './ui'
 
-// The sections of the start page after the hero. They follow one line, numbered in the kicker:
-// problem, how it works, proof, the lesson, see for yourself, Tavily, limits, links. Every number is read from data/benchmark.ts.
+// The sections of the start page after the hero. They read as one story while scrolling: problem, how it works,
+// one real certificate, proof and lesson, Tavily, limits, try it. One thought per section, at most one link.
+// Every benchmark number is read from data/benchmark.ts; the certificate numbers come from the exported run.
 
 export const EXAMPLE_RUN = `#/run/${FEATURED_RUN_ID}`
 export const TIMELAPSE_RUN = `#/run/${FEATURED_RUN_ID}?play=1`
 
-export function Kicker({ n, children }: { n: string; children: ReactNode }) {
+const ext = { target: '_blank', rel: 'noreferrer' } as const
+const link = 'inline-flex items-center gap-1.5 text-fg underline underline-offset-4 hover:text-fg-max'
+const lead = 'font-grotesk m-0 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl'
+const body = 'm-0 max-w-2xl text-[16px] leading-relaxed text-fg-4'
+
+export function Block({ id, label, children }: { id?: string; label: string; children: ReactNode }) {
   return (
-    <h2 className="m-0 flex items-baseline gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-      <span className="font-mono text-fg-4">{n}</span>{children}
-    </h2>
+    <section id={id} aria-label={label} className="mx-auto max-w-4xl scroll-mt-8 px-6 py-16 sm:py-24">
+      {children}
+    </section>
   )
 }
 
-const ext = { target: '_blank', rel: 'noreferrer' } as const
-const ul = 'text-fg underline underline-offset-4 hover:text-fg-max'
+// The exported example run, loaded once; the numbers on the page come from its dossier, not from this file.
+let featured: Promise<RunData | null> | null = null
+function loadFeatured(): Promise<RunData | null> {
+  featured ??= loadIndex().then((runs) => {
+    const ref = runs.find((r) => r.id === FEATURED_RUN_ID)
+    return ref ? loadRun(ref) : null
+  }).catch(() => null)
+  return featured
+}
+export function useFeatured(): RunData | null {
+  const [run, setRun] = useState<RunData | null>(null)
+  useEffect(() => { loadFeatured().then(setRun) }, [])
+  return run
+}
+
+export function Problem({ run }: { run: RunData | null }) {
+  const claim = run?.dossier?.claims?.[0]
+  return (
+    <Block id="claim" label="The problem">
+      <div className="grid items-end gap-10 md:grid-cols-5">
+        <p className={`${lead} md:col-span-3`}>
+          A result in a paper is a claim in words. Checking it costs days of broken code and missing hyperparameters.
+        </p>
+        <div className="md:col-span-2 md:pl-6">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Kipf &amp; Welling report</div>
+          <div className="mt-3 font-mono text-6xl font-light tracking-tight text-fg-3 sm:text-7xl">{claim ? showValue(claim.metric, claim.target) : ' '}</div>
+        </div>
+      </div>
+    </Block>
+  )
+}
+
+const STEPS = [
+  { title: 'Read', text: 'Tavily reads the paper. We keep only numbers that appear word for word in the text.' },
+  { title: 'Rebuild', text: 'An agent reads the paper and the authors’ code as text, never run, writes its own version and runs it in isolated Nebius Sandboxes, one run per random seed.' },
+  { title: 'Measure', text: 'An independent harness the agent cannot change loads the true labels itself, scores the predictions and compares them with the claim.' },
+]
+
+export function Steps() {
+  return (
+    <Block id="how" label="How Nullius works">
+      <h2 className={lead}>Read. Rebuild. Measure.</h2>
+      <ol className="m-0 mt-12 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-12">
+        {STEPS.map((s) => (
+          <li key={s.title}>
+            <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg">{s.title}</h3>
+            <p className="mb-0 mt-3 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
+          </li>
+        ))}
+      </ol>
+    </Block>
+  )
+}
+
+// A real finished check as a small certificate. The whole card opens it.
+export function CertificatePreview({ run }: { run: RunData | null }) {
+  const claim = run?.dossier?.claims?.[0]
+  const v = run?.dossier?.verdicts?.[0]
+  if (!claim || !v) return <Block id="certificate" label="A real certificate"><h2 className={lead}>Every check ends in a certificate.</h2><div className="mt-10 h-48 rounded-2xl border border-line" aria-hidden /></Block>
+  const res = de2en(RESULT, v.urteil)
+  const seeds = new Set<number>((run!.dossier.attempts ?? []).filter((a: { measured: number | null }) => a.measured != null).map((a: { seed: number }) => a.seed)).size
+  const std = claim.metric === 'accuracy' ? `${(v.measured_std * 100).toFixed(1)}` : v.measured_std.toFixed(3)
+  return (
+    <Block id="certificate" label="A real certificate">
+      <h2 className={lead}>Every check ends in a certificate: claimed against measured.</h2>
+      <a href={EXAMPLE_RUN} className="group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline transition-colors hover:border-line-strong sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Badge tone={res.tone} title={resultHint(v.urteil)}>{res.label}</Badge>
+          <span className="text-[12px] text-muted">Finished run, {run!.ref.title}</span>
+        </div>
+        <p className="font-grotesk mb-0 mt-5 max-w-xl text-lg font-semibold leading-snug tracking-[-0.02em] text-fg">{translateClaim(claim.text)}</p>
+        <dl className="m-0 mt-8 grid grid-cols-2 gap-6">
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Claimed</dt>
+            <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-fg-3 sm:text-5xl">{showValue(claim.metric, claim.target)}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Measured</dt>
+            <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-tone-green sm:text-5xl">{showValue(claim.metric, v.measured_mean)}</dd>
+            <div className="mt-1 font-mono text-[13px] text-fg-4">± {std} over {seeds} seeds</div>
+          </div>
+        </dl>
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[13px] text-fg-4">
+          <span>Target value reached with our setup; method fidelity not checked.</span>
+          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open the certificate <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
+        </div>
+      </a>
+    </Block>
+  )
+}
 
 export function Proof() {
-  const { paperOnly, withCode } = FIGURES
+  const { paperOnly, withCode, placebo, reproducedAgree } = FIGURES
+  const num = 'font-mono text-3xl font-light tracking-tight text-fg sm:text-4xl'
   return (
-    <section id="proof" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="03">Proof</Kicker>
-      <p className="font-grotesk m-0 mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-        When Nullius says a target was reached, it was. It never confirmed a wrong claim.
-      </p>
-      <div className="mt-8"><Precision /></div>
-      <p className="mb-0 mt-8 max-w-3xl text-[15px] leading-relaxed text-fg-4">
+    <Block id="proof" label="Proof">
+      <h2 className={lead}>When Nullius says a target was reached, it was.</h2>
+      <div className="mt-10 grid gap-8 sm:grid-cols-2">
+        <div>
+          <div className={num}>{placebo.v4[0]} of {placebo.v4[1]}</div>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">deliberately wrong claims reported as reproduced (benchmark v4; also {placebo.v2[0]} of {placebo.v2[1]} in v2 and {placebo.v3[0]} of {placebo.v3[1]} in v3)</p>
+        </div>
+        <div>
+          <div className={num}>{reproducedAgree.v4[0]} of {reproducedAgree.v4[1]}</div>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">&lsquo;reproduced&rsquo; verdicts in v4 agree with the reference (post hoc, small sample)</p>
+        </div>
+      </div>
+      <p className={`${body} mt-10`}>
         How often it reaches the target depends on what the agent may read: <span className="font-mono text-fg">{paperOnly.matched} of {paperOnly.of}</span> units
-        from the paper alone, <span className="font-mono text-fg">{withCode.matched} of {withCode.of}</span> with the authors&rsquo; code (in-sample; held-out {HELD_OUT.matched} of {HELD_OUT.of}).
-        Two measurements, never added up. A match means the target value was reached; method fidelity is not checked.{' '}
-        <a href="#benchmark" className={ul}>The full benchmark</a>
+        from the paper alone, <span className="font-mono text-fg">{withCode.matched} of {withCode.of}</span> with the authors&rsquo; code.
       </p>
-    </section>
+      <div className="mt-8"><Matrix /></div>
+      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
+        A match means the target value was reached; method fidelity is not checked. <a href="#benchmark" className={link}>The full benchmark</a>
+      </p>
+    </Block>
   )
 }
 
 export function Lesson() {
   return (
-    <section id="lesson" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="04">Our own small bitter lesson</Kicker>
-      <p className="font-grotesk m-0 mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-        Days of cleverness left the count at {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}. The authors&rsquo; code moved it.
-      </p>
-      <div className="mt-8 grid gap-10 lg:grid-cols-5">
-        <div className="flex flex-col gap-4 text-[15px] leading-relaxed text-fg-4 lg:col-span-2">
-          <p className="m-0">
-            For days we made the agent cleverer: better code extraction, repair loops, a fidelity checker. Agreement with the reference verdicts stayed at{' '}
-            <span className="font-mono text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</span>.
-          </p>
-          <p className="m-0">
-            Then we let the code model read the authors&rsquo; public code, as text, never run. Same units, same harness:{' '}
-            <span className="font-mono text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</span> matched. The missing details, such as a learning-rate schedule, sat in the authors&rsquo; repository, not in the paper and not in a cleverer prompt.
-          </p>
-          <p className="m-0">
-            Rich Sutton&rsquo;s <a href={SUTTON_URL} {...ext} className={ul}>The Bitter Lesson</a> says computation beats hand-built knowledge. Ours is related, not the same: we did not add computation, we added <em>information</em>.
-          </p>
-          <p className="m-0 text-fg-3">
-            In-sample, one held-out miss ({HELD_OUT.matched} of {HELD_OUT.of}): an observation, not a proof.{' '}
-            <a href={`${REPO_BLOB}/${SOURCES.readme}`} {...ext} className={`inline-flex items-center gap-1 whitespace-nowrap ${ul}`}>Read the full lesson <ExternalLink className="h-3 w-3" aria-hidden /></a>
-          </p>
-        </div>
-        <div className="min-w-0 space-y-6 lg:col-span-3">
-          <Headline />
-          <Matrix />
-        </div>
+    <Block id="lesson" label="Our own small bitter lesson">
+      <h2 className={lead}>Days of cleverness left the count at {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}. The authors&rsquo; code moved it.</h2>
+      <div className="mt-8 flex max-w-2xl flex-col gap-4 text-[16px] leading-relaxed text-fg-4">
+        <p className="m-0">
+          We made the agent cleverer for days: better code extraction, repair loops, a fidelity checker. Agreement with the reference stayed at {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}.
+          Then the code model read the authors&rsquo; public code, as text, never run: {FIGURES.withCode.matched} of {FIGURES.withCode.of}. The missing details sat in their repository, not in a cleverer prompt.
+        </p>
+        <p className="m-0">
+          Related to Rich Sutton&rsquo;s Bitter Lesson, not the same: we added information, not computation. In-sample, with one held-out miss ({HELD_OUT.matched} of {HELD_OUT.of}): an observation, not a proof.
+        </p>
+        <p className="m-0">
+          <a href={`${REPO_BLOB}/${SOURCES.readme}`} {...ext} className={link}>Read the full lesson <ExternalLink className="h-3 w-3" aria-hidden /></a>
+        </p>
       </div>
-    </section>
-  )
-}
-
-const LOOK: { icon: typeof FileCheck; title: string; text: string; href: string; ext?: boolean }[] = [
-  { icon: FileCheck, title: 'Read a certificate', text: 'One finished check: claimed against measured, every seed, sources, branch tree.', href: EXAMPLE_RUN },
-  { icon: Play, title: 'Watch it in 30 seconds', text: 'The same run replayed step by step.', href: TIMELAPSE_RUN },
-  { icon: LayoutGrid, title: 'Open the catalog', text: 'Curated papers. Start a quick check, or replay a finished one if the demo is busy.', href: '#catalog' },
-  { icon: Search, title: 'Discover new papers', text: 'Tavily searches for papers on benchmarks we can rebuild and proposes claims with a quote.', href: '#discover' },
-]
-
-export function SeeForYourself() {
-  return (
-    <section id="see" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="05">See for yourself</Kicker>
-      <ul className="m-0 mt-8 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4">
-        {LOOK.map((l) => (
-          <li key={l.title}>
-            <a href={l.href} className="group flex h-full flex-col rounded-xl border border-line bg-surface p-5 no-underline transition-colors hover:border-line-strong">
-              <l.icon className="h-5 w-5 text-fg-4" aria-hidden />
-              <h3 className="font-grotesk m-0 mt-4 text-lg font-semibold tracking-[-0.02em] text-fg">{l.title}</h3>
-              <p className="mb-0 mt-2 flex-1 text-[13px] leading-relaxed text-fg-4">{l.text}</p>
-              <span className="mt-4 inline-flex items-center gap-1.5 text-[12px] text-fg-3 group-hover:text-fg">Open <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
+    </Block>
   )
 }
 
 export function TavilySection() {
-  const roles = [
-    'Discovery: finds new papers on supported benchmarks and proposes claims, each with a verbatim quote.',
-    'Target value and setup details from the paper, README and repository, each with a quote.',
-    'Error search while the agent repairs its code.',
-    'Community check: what others found, with sources.',
-  ]
   return (
-    <section id="tavily" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="06">Tavily</Kicker>
-      <p className="font-grotesk m-0 mt-5 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-        Findings become experiments.
+    <Block id="tavily" label="Tavily">
+      <h2 className={lead}>What Tavily finds becomes an experiment.</h2>
+      <p className={`${body} mt-6`}>
+        A normal run calls Tavily live and stores every source with a timestamp and a hash. A finding that names something we can repeat runs in its own sandbox branch. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.
       </p>
-      <div className="mt-8 grid gap-10 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <p className="m-0 text-[15px] leading-relaxed text-fg-4">
-            A normal run calls Tavily live; every source is stored with a timestamp and a hash. Here Tavily does four jobs:
-          </p>
-          <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
-            {roles.map((r) => <li key={r} className="flex gap-3"><GitBranch className="mt-1 h-3.5 w-3.5 shrink-0 text-fg-4" aria-hidden /><span>{r}</span></li>)}
-          </ul>
-          <p className="mb-0 mt-5 text-[15px] leading-relaxed text-fg-4">
-            What it finds is not only reported. A finding that names something we can repeat runs in its own sandbox branch, and the harness measures it. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted, and a GitHub issue&rsquo;s MSE was compared with our own measurement, which supported the paper&rsquo;s value.
-          </p>
-          <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">
-            Not every run finds something testable, and this never changes the verdict. Tavily&rsquo;s effect on the benchmark is small; its role is discovery and traceable sources.{' '}
-            <a href={README_TAVILY} {...ext} className={ul}>Details</a>
-          </p>
-        </div>
-        <figure className="m-0 min-w-0 lg:col-span-3">
-          <img src="img/findings-experiments-dark.jpg" alt="Findings that became experiments: three Tavily findings, each with its sandbox experiment and measurement" className="logo-dark w-full rounded-xl border border-line" loading="lazy" />
-          <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
-          <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Words on the left, experiment in the middle, measurement on the right. A live DLinear run, 8 Oct 2026, paper-only mode.</figcaption>
-        </figure>
-      </div>
-    </section>
+      <figure className="m-0 mt-10">
+        <img src="img/findings-experiments-dark.jpg" alt="Findings that became experiments: three Tavily findings, each with its sandbox experiment and measurement" className="logo-dark w-full rounded-xl border border-line" loading="lazy" />
+        <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
+        <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Words on the left, experiment in the middle, measurement on the right. Live DLinear run, 8 Oct 2026, paper-only mode.</figcaption>
+      </figure>
+      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
+        Not every run finds something testable, and this never changes the verdict. Tavily&rsquo;s effect on the benchmark is small; its role is discovery and traceable sources.{' '}
+        <a href={README_TAVILY} {...ext} className={link}>How we use Tavily</a>
+      </p>
+    </Block>
   )
 }
 
 export function Limits() {
   const items = [...LIMITS, SCOPE_LIMIT]
   return (
-    <section id="limits" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-24 sm:pb-32">
-      <Kicker n="07">Honest limits</Kicker>
-      <ul className="m-0 mt-8 grid list-none gap-x-10 gap-y-6 border-t border-line p-0 pt-8 md:grid-cols-2">
-        {items.map((l) => (
-          <li key={l.title}>
-            <h3 className="m-0 text-[14px] font-semibold text-fg">{l.title}</h3>
-            <p className="mb-0 mt-1 text-[14px] leading-relaxed text-fg-4">{l.text}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Block id="limits" label="Limits">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+          <h2 className={lead}>What this does not show</h2>
+          <ChevronDown className="h-5 w-5 shrink-0 text-fg-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <ul className="m-0 mt-8 grid list-none gap-x-10 gap-y-6 p-0 md:grid-cols-2">
+          {items.map((l) => (
+            <li key={l.title}>
+              <h3 className="m-0 text-[14px] font-semibold text-fg">{l.title}</h3>
+              <p className="mb-0 mt-1 text-[14px] leading-relaxed text-fg-4">{l.text}</p>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </Block>
   )
 }
 
-export function Links() {
+// The Discover sentence appears only when the live API answers and discovery is open; on the static mirror it is left out.
+export function TryIt() {
+  const { status } = useLiveStatus()
+  const discovery = statusFor(status, 'discovery')
   return (
-    <section id="links" className="mx-auto max-w-5xl scroll-mt-8 px-6 pb-28">
-      <Kicker n="08">Links</Kicker>
-      <ul className="m-0 mt-6 flex list-none flex-wrap gap-x-10 gap-y-3 border-t border-line p-0 pt-6 text-[15px]">
-        <li><a href={REPO} {...ext} className={`inline-flex items-center gap-1.5 ${ul}`}>GitHub <ExternalLink className="h-3.5 w-3.5" aria-hidden /></a></li>
-        <li><a href={`${REPO_BLOB}/README.md`} {...ext} className={`inline-flex items-center gap-1.5 ${ul}`}><BookOpen className="h-3.5 w-3.5" aria-hidden />README</a></li>
-        {SUBMISSION_LINKS.map((l) => (
-          <li key={l.label}>
-            {l.href
-              ? <a href={l.href} {...ext} className={`inline-flex items-center gap-1.5 ${ul}`}>{l.label} <ExternalLink className="h-3.5 w-3.5" aria-hidden /></a>
-              : <span className="text-fg-4">{l.label}: <span className="font-mono text-[13px] text-muted">TBD</span></span>}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Block id="try" label="Try it">
+      <h2 className={lead}>Check a claim yourself.</h2>
+      <p className={`${body} mt-6`}>Pick a curated paper and start a quick check, or replay a finished one if the demo is busy.</p>
+      <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+        <a href="#catalog" className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
+          Open the catalog <ArrowRight className="h-4 w-4" aria-hidden />
+        </a>
+        {discovery?.live && <span className="text-[14px] text-fg-4">or <a href="#discover" className={link}>let Tavily find new papers</a></span>}
+      </div>
+    </Block>
   )
 }
