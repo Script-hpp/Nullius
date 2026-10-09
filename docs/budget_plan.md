@@ -1,5 +1,7 @@
 # Budgetplan Token Factory bis 15.12.2026
 
+> **Stand 2026-10-09:** Ultra (`nvidia/Nemotron-3-Ultra-550b-a55b`) wurde von Token Factory entfernt (404). Rolle `reasoning` läuft auf Super (`TF_MODEL_REASONING=nvidia/nemotron-3-super-120b-a12b`), Kosten je Plan und Urteil damit niedriger als unten mit Ultra gerechnet. Die Ultra-Zeile unten ist der Abgleich vom 02.10. und bleibt als Historie.
+
 Stand 2026-10-02 abends. Alle Beträge brutto (netto × 1,19), aus `logs/costs.jsonl`. Maßgeblich bleibt die Nebius-Konsole; letzter Abgleich am 02.10. 19:43 UTC (siehe unten). **Vor dem Deployment erneut in der Konsole prüfen**; die Vergleichswerte in `scripts/cost_report.py` sind älter und dort noch nicht nachgetragen.
 
 ## Abgleich mit der Nebius-Konsole (2026-10-02, 19:43 UTC)

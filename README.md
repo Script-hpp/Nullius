@@ -39,15 +39,17 @@ Every reasoning and coding step is a call to an NVIDIA Nemotron model through on
 | `fast` | table and target-value extraction from paper text | Nemotron 3.5 Lightning (`nvidia/Nemotron-3_5-Lightning`) |
 | `code` | writes and repairs the experiment script | Nemotron 3 Super 120B-A12B (`nvidia/nemotron-3-super-120b-a12b`) |
 | `extract` | setup details with verbatim quotes from paper, README and repository files (same model as `code`) | Nemotron 3 Super |
-| `reasoning` | research plan | Nemotron 3 Ultra 550B-A55B (`nvidia/Nemotron-3-Ultra-550b-a55b`) |
+| `reasoning` | research plan | Nemotron 3 Super 120B-A12B (`nvidia/nemotron-3-super-120b-a12b`), same model as `code` |
 
 Nemotron plans and writes code; it never runs it. The sandbox runs it, the harness measures it. Every quote a model returns is re-checked against the source text and dropped if it does not occur there. Model IDs and routing are environment variables (`.env.example`).
+
+**Note on Ultra.** Plan and verdict ran on Nemotron 3 Ultra 550B-A55B until 2026-10-09. Token Factory removed that model on 2026-10-09 (about 01:52 UTC; it is no longer listed and `chat/completions` returns HTTP 404), so `reasoning` now runs on Super. The benchmark v2 to v4 runs used Ultra for `reasoning`; the recall runs (cg v1) and the G0/G1 runs used Super for every role. Results are reported per model as run; none was re-run.
 
 ## Where Nebius Token Factory helped
 
 Stated only where the repository shows it:
 
-- **One endpoint for every role.** Lightning, Super and Ultra sit behind the same OpenAI-compatible API, so switching provider is an environment change; provider-specific code lives only in the LLM client.
+- **One endpoint for every role.** Lightning, Super (and, until 2026-10-09, Ultra) sit behind the same OpenAI-compatible API, so switching provider is an environment change; provider-specific code lives only in the LLM client.
 - **Usage you can reconcile.** Token counts from the API's `usage` field agreed with the console within its rounding (net 1.256 $ in our log vs 1.26 $ in the console on 29 Sep 2026; [`docs/research_log.md`](docs/research_log.md), "Cost tracking").
 - **Cost control that worked.** Per-run limit, global budget with a cut-off (warning at 80 %, abort at 95 % before the call), retries with back-off, hard stop on billing or authentication errors.
 - **Low cost per paper.** Catalog runs, gross incl. VAT (30 Sep 2026): SL-GCN on Cora-LCC 0.028 $ and 0.025 $ (10 seeds each), MoHETS on ETTh1 0.093 $ (3 seeds), from the `run_end` events in `web/public/data/disc_*/*/events.jsonl` (model cost only, Tavily excluded). The whole v4 benchmark (48 runs) cost 7.78 $ gross.

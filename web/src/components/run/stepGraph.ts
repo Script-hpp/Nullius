@@ -221,7 +221,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     }),
     one({
       id: 'plan', kind: 'plan', title: 'Plan', sub: planEv ? 'written' : null, state: st(!!planEv && (has('code_written') || has('attempt')), !planEv || !has('code_written') ? active('plan') || active('setup') : false), tone: 'violet',
-      what: 'Nemotron (Ultra) writes a short plan for the experiment from the paper and the setup details. Details without a matching quote are dropped.',
+      what: 'Nemotron (Super) writes a short plan for the experiment from the paper and the setup details. Details without a matching quote are dropped.',
       why: 'A written plan keeps the code close to the paper’s method and makes the experiment easy to check.',
       facts: [...(setup ? [{ label: 'Setup details', value: `${setup.n ?? '?'} confirmed by quotes${num(setup.dropped) ? `, ${setup.dropped} dropped` : ''}` }] : []), ...planFacts],
       expand: planRow?.expand, row: 3,

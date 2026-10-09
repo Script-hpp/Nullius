@@ -19,7 +19,7 @@ import httpx
 from .config import Settings, load_settings
 from .costs import BudgetExceeded, budget_status, gross, logged_gross_total
 
-# "extract": strukturierte Extraktion (Rollen 2/4). Braucht kein Ultra, nutzt das code-Modell (Super).
+# "extract": strukturierte Extraktion (Rollen 2/4). Nutzt das code-Modell (Super).
 Role = Literal["fast", "code", "reasoning", "extract"]
 
 # USD pro Token (Token Factory, GET /v1/models am 2026-09-28). OpenRouter meldet Kosten selbst.
@@ -27,6 +27,7 @@ TF_PRICES = {
     "nvidia/Nemotron-3_5-Lightning": (0.06e-6, 0.24e-6),
     "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B": (0.06e-6, 0.24e-6),
     "nvidia/nemotron-3-super-120b-a12b": (0.3e-6, 0.9e-6),
+    # Ultra: seit 2026-10-09 nicht mehr auf Token Factory (404). Preis bleibt, damit alte Log-Eintraege (Benchmark v2-v4) weiter bewertet werden.
     "nvidia/Nemotron-3-Ultra-550b-a55b": (1.0e-6, 3.0e-6),
 }
 
