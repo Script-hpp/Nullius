@@ -84,6 +84,23 @@ Placebo claims in the same run: **0 of 9 confirmed** (8 rejected, 1 without a ve
 
 Each page below is a screenshot of the current web app (`web/`, light and dark theme; mobile views in [`docs/screenshots`](docs/screenshots)).
 
+**Start page and "For judges".** The start page follows one line: the problem, how it works (pick a claim, rebuild in a Nebius sandbox from paper and authors' code, measure with an independent harness), the proof, our small bitter lesson, links to look for yourself, what Tavily adds, and the limits. `#/jury` lists five places to click, one sentence each.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/landing-dark.jpg">
+  <img src="docs/img/landing.jpg" alt="Start page: 'papers make claims, we measure them', one sentence on the problem, buttons including For judges: start here">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/lesson-dark.jpg">
+  <img src="docs/img/lesson.jpg" alt="Start page section 'Our own small bitter lesson': 2 of 8 from the paper alone, 7 of 8 in-sample with the authors' code, per-unit table with the held-out paper">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/jury-dark.jpg">
+  <img src="docs/img/jury.jpg" alt="For judges page: five numbered click targets">
+</picture>
+
 **Discover.** Tavily searches the web for new papers on supported benchmarks, reads only the protocol and results sections and keeps claims it can quote word for word. The screenshot is the replay of a recorded run (30 Sep 2026); a live run is limited (one at a time, daily and per-IP limits).
 
 ![Discover: Tavily research feed, funnel from found papers to checkable claims](docs/img/discover.jpg)

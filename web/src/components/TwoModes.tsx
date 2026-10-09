@@ -5,12 +5,12 @@ const link = (path: string) => `${REPO_BLOB}/${path}`
 
 function Mark({ ok, label }: { ok: boolean; label: string }) {
   return ok
-    ? <span role="img" aria-label={label} className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-tone-green-solid text-white"><Check className="h-4 w-4" strokeWidth={3} aria-hidden /></span>
-    : <span role="img" aria-label={label} className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line-stronger text-subtle"><Minus className="h-4 w-4" aria-hidden /></span>
+    ? <span role="img" aria-label={label} className="inline-flex h-6 w-6 items-center sm:h-7 sm:w-7 justify-center rounded-full bg-tone-green-solid text-white"><Check className="h-4 w-4" strokeWidth={3} aria-hidden /></span>
+    : <span role="img" aria-label={label} className="inline-flex h-6 w-6 items-center sm:h-7 sm:w-7 justify-center rounded-full border border-line-stronger text-subtle"><Minus className="h-4 w-4" aria-hidden /></span>
 }
 
 // Two separate measurements. The headline numbers sit side by side and are never added up.
-function Headline() {
+export function Headline() {
   const cols = [
     { m: MODES.paperOnly, big: `${FIGURES.paperOnly.matched} of ${FIGURES.paperOnly.of}`, note: `${FIGURES.paperOnly.runs} runs, pre-registered primary metric` },
     { m: MODES.withCode, big: `${FIGURES.withCode.matched} of ${FIGURES.withCode.of}`, note: `development units, in-sample · held-out RLinear ${HELD_OUT.matched} of ${HELD_OUT.of}` },
@@ -30,7 +30,7 @@ function Headline() {
   )
 }
 
-function Precision() {
+export function Precision() {
   const p = FIGURES.placebo
   const rows = [
     { v: `${p.v4[0]} of ${p.v4[1]}`, t: 'deliberately wrong claims reported as reproduced in v4', s: `also ${p.v2[0]} of ${p.v2[1]} in v2 and ${p.v3[0]} of ${p.v3[1]} in v3 · pre-registered negative control` },
@@ -53,35 +53,35 @@ function Precision() {
   )
 }
 
-function Matrix() {
+export function Matrix() {
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full min-w-[420px] border-collapse text-left" aria-label="Same eight units in two modes">
+      <table className="w-full min-w-[320px] border-collapse text-left" aria-label="Same eight units in two modes">
         <caption className="sr-only">Matches with the reference verdict per unit, paper only versus paper and authors&rsquo; code</caption>
         <thead>
           <tr className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-            <th scope="col" className="px-5 py-3 font-semibold">Unit</th>
-            <th scope="col" className="px-3 py-3 text-center font-semibold">Paper only</th>
-            <th scope="col" className="px-3 py-3 text-center font-semibold">Paper + code</th>
+            <th scope="col" className="px-3 py-3 font-semibold sm:px-5">Unit</th>
+            <th scope="col" className="px-1 py-3 text-center text-[10px] font-semibold sm:px-3 sm:text-[11px]">Paper only</th>
+            <th scope="col" className="px-1 py-3 text-center text-[10px] font-semibold sm:px-3 sm:text-[11px]">Paper + code</th>
           </tr>
         </thead>
         <tbody>
           {UNITS.map((u) => (
             <tr key={u.id} className="border-t border-line">
-              <th scope="row" className="px-5 py-3 text-[14px] font-medium text-fg">{u.author} <span className="font-normal text-fg-4">{u.model}</span></th>
+              <th scope="row" className="px-3 py-3 text-[14px] font-medium text-fg sm:px-5">{u.author} <span className="font-normal text-fg-4">{u.model}</span></th>
               <td className="px-3 py-3 text-center"><Mark ok={u.paperOnly} label={`${u.author} ${u.model}, paper only: ${u.paperOnly ? 'matched' : 'missed'}`} /></td>
               <td className="px-3 py-3 text-center"><Mark ok={u.withCode} label={`${u.author} ${u.model}, paper and authors' code: ${u.withCode ? 'matched' : 'missed'}`} /></td>
             </tr>
           ))}
           <tr className="border-t border-line-strong bg-surface-2">
             <th scope="row" className="px-5 py-3 text-[14px] font-semibold text-fg">Development units</th>
-            <td className="px-3 py-3 text-center font-mono text-lg text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</td>
-            <td className="px-3 py-3 text-center font-mono text-lg text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</td>
+            <td className="px-3 py-3 text-center font-mono text-lg whitespace-nowrap text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</td>
+            <td className="px-3 py-3 text-center font-mono text-lg whitespace-nowrap text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</td>
           </tr>
           <tr className="border-t border-line">
             <th scope="row" className="px-5 py-3 text-[14px] font-medium text-fg">{HELD_OUT.author} <span className="font-normal text-fg-4">{HELD_OUT.model}</span> <span className="ml-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-tone-amber-fg">held-out</span></th>
             <td className="px-3 py-3 text-center text-[12px] text-muted">not in v4</td>
-            <td className="px-3 py-3 text-center"><span className="inline-flex items-center gap-2"><Mark ok={false} label={`${HELD_OUT.model} held-out: missed`} /><span className="font-mono text-[13px] text-fg-3">{HELD_OUT.matched} of {HELD_OUT.of}</span></span></td>
+            <td className="px-3 py-3 text-center"><span className="inline-flex items-center gap-2 whitespace-nowrap"><Mark ok={false} label={`${HELD_OUT.model} held-out: missed`} /><span className="font-mono text-[13px] text-fg-3">{HELD_OUT.matched} of {HELD_OUT.of}</span></span></td>
           </tr>
         </tbody>
       </table>

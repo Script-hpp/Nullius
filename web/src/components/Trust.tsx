@@ -1,17 +1,16 @@
 import { Eye, FlaskConical, ShieldCheck } from 'lucide-react'
 import { Glossed } from './Glossed'
-import { useBenchmark } from '../benchmark'
+import { FIGURES } from '../data/benchmark'
 
-// "Why you can trust this number": three plain reasons, then the limits. Placebo numbers come from the benchmark file when it exists.
+// "Why you can trust this number": three plain reasons, then the limits. The placebo number is the fixed v4 figure in data/benchmark.ts.
 export function Trust({ fidelityUnchecked }: { fidelityUnchecked: boolean }) {
-  const bench = useBenchmark()
-  const latest = bench?.versions[0]
+  const [acceptedWrong, ofWrong] = FIGURES.placebo.v4   // benchmark v4, results/benchmark_v4.md
   const points = [
     { icon: Eye, title: 'The agent only predicts', text: 'The agent writes a program that outputs predictions. It never computes or reports a score itself.' },
     { icon: ShieldCheck, title: 'The true answers stay with the harness', text: 'The true labels are never in the agent’s data. The harness loads them itself after the agent has finished, and the agent’s code runs without network access.' },
     {
       icon: FlaskConical, title: 'Wrong claims are rejected',
-      text: `We test the checker with placebo claims: targets that are deliberately wrong. A trustworthy checker must reject them.${latest ? ` In benchmark ${latest.id}, ${latest.summary.placebo_passed} placebo ${latest.summary.placebo_passed === 1 ? 'claim was' : 'claims were'} accepted as reproduced.` : ''}`,
+      text: `We test the checker with placebo claims: targets that are deliberately wrong. A trustworthy checker must reject them. In benchmark v4, ${acceptedWrong} of ${ofWrong} placebo claims were accepted as reproduced.`,
     },
   ]
   return (

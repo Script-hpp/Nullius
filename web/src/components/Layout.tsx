@@ -10,6 +10,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
   const [menuOpen, setMenuOpen] = useState(false)
   const runs = currentHash === 'overview' || currentHash.startsWith('/run/') || currentHash.startsWith('/live/')
   const links: { label: string; href: string; active: boolean }[] = [
+    { label: 'For judges', href: '#/jury', active: currentHash === '/jury' },
     { label: 'Discover', href: '#discover', active: currentHash === 'discover' },
     { label: 'Catalog', href: '#catalog', active: currentHash === 'catalog' },
     { label: 'Runs', href: '#overview', active: runs },
