@@ -104,3 +104,4 @@ Grenzen der Regel (zusaetzlich zu G0): niedrige Huerde (ein Treffer Vorsprung), 
 ## Nachtraege
 
 - *(G0-Endergebnis, sobald die letzten vier Shchur-GAT-Proben fertig sind: hier eintragen; bis dahin „50 von 54, laufend“.)*
+- *(2026-10-09, nach dem Lauf: G1-Ergebnis `results/recall_cg_gate_g1.md`, Entscheidung nach Regel: bestanden, Kosten 0,6053 $ brutto. Dieser Text der Vorab-Festlegung ist sonst unveraendert; ein nach dem Lauf gefundener Fehler in F2 (a) steht im Ergebnisdokument.)*
