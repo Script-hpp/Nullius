@@ -10,6 +10,7 @@ import httpx
 from .costs import BudgetExceeded
 from .llm import BillingBlocked, LLMClient
 from .claims_source import _norm as _table_norm
+from .repo_source import find_repo_links, parse_github_url, repo_evidence, repo_status
 from .table_check import check_columns
 from .tavily_tools import TavilyTools
 
@@ -173,6 +174,7 @@ class CandidatePaper:
     community: list[dict] = __import__('dataclasses').field(default_factory=list)   # Tavily-Hinweise, kein Urteil
     protocol: str = "unklar"                # "passt" (Zitat belegt) | "unklar" (Protokoll nicht belegt)
     feasibility: str = "ok"                 # "ok" | "no_repo" (kein oeffentlicher Code: nur Paper-Nachbau)
+    repo_status: str = ""                   # "official" (github_url ist Autorencode) | "unofficial" (nur Fremd-Implementierung, nie als Autorencode) | ""
 
     def to_dict(self):
         return {
@@ -189,6 +191,7 @@ class CandidatePaper:
             "community": self.community or [],
             "protocol": self.protocol,
             "feasibility": self.feasibility,
+            "repo_status": self.repo_status,
         }
 
 
@@ -455,10 +458,10 @@ class DiscoveryAgent:
                 "dataset": paper.dataset, "claim": paper.claim, "reason": paper.reason, "found_by": paper.found_by,
                 "community_hits": len(paper.community), "protocol": paper.protocol,
                 "github_url": paper.github_url, "source_url": paper.source_url,
-                "feasibility": "ok" if paper.github_url else "no_repo"}
+                "feasibility": "ok" if paper.github_url else "no_repo", "repo_status": paper.repo_status}
 
-    def _fetch_readme(self, repo_url: str) -> str:
-        """Fetch README from github repo."""
+    def _fetch_readme(self, repo_url: str, subdir: str = "") -> str:
+        """Fetch README from github repo (bei Unterordner eines Sammel-Repos: das README des Unterordners)."""
         # Convert https://github.com/user/repo to raw URLs
         if not repo_url.startswith("https://github.com/"):
             return ""
@@ -466,9 +469,10 @@ class DiscoveryAgent:
         if len(parts) < 5:
             return ""
         user, repo = parts[3], parts[4]
+        prefix = f"{subdir.strip('/')}/" if subdir else ""
         
         for branch in ["main", "master"]:
-            raw_url = f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/README.md"
+            raw_url = f"https://raw.githubusercontent.com/{user}/{repo}/{branch}/{prefix}README.md"
             try:
                 resp = httpx.get(raw_url, timeout=5.0)
                 if resp.status_code == 200:
@@ -477,32 +481,62 @@ class DiscoveryAgent:
                 pass
         return ""
 
-    def _find_repo_and_context(self, title: str, dataset: str, authors: list[str], arxiv_id: str = "") -> tuple[str | None, str, list[dict]]:
-        """Find Github repos and score them based on author, paper link, and dataset."""
+    def _find_repo_and_context(self, title: str, dataset: str, authors: list[str], arxiv_id: str = "", paper_text: str = "",
+                               method: str = "") -> tuple[str | None, str, list[dict]]:
+        """Find the paper's Github repo. Order: (1) code link in the paper text itself (abstract, footnotes; subfolders of collection
+        repos are kept), (2) Tavily search with several hits. A repo counts only if its README names the paper (arXiv id or title) or,
+        for a link the paper sets itself, does not contradict it. Official repos (linked by the paper, owner matches an author or
+        organisation, README says official) come before unofficial ones; an unofficial repo is never returned as `github_url`
+        (authors' code), it appears in `alternatives` with status "unofficial"."""
         import httpx
-        
+        import re
+
+        def norm_title(t): return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
         candidates = []
+
+        def stars_of(url: str) -> int:
+            try:
+                parts = url.split("github.com/")[-1].rstrip("/").split("/")
+                if len(parts) >= 2:
+                    resp = httpx.get(f"https://api.github.com/repos/{parts[0]}/{parts[1]}", timeout=3.0)
+                    if resp.status_code == 200:
+                        return resp.json().get("stargazers_count", 0)
+            except Exception:
+                pass
+            return 0
+
+        # (1) Code-Link im Paper-Text: das Paper selbst nennt das Repo
         try:
-            query = f'"{title}" github implementation'
-            search_code = self._curate_repo(title)
-            results = search_code.get("results", [])
-            
-            import re
-            def norm_title(t): return re.sub(r"[^a-z0-9]+", " ", t.lower()).strip()
+            for link in find_repo_links(paper_text)[:2] if paper_text else []:
+                readme = self._fetch_readme(link.root, link.subdir)
+                kind, why = repo_evidence(readme, link.target, title, arxiv_id, method)
+                if readme.strip() and not kind:
+                    continue   # README nennt weder Modell, Titel noch arXiv-ID: anderes Repo (Datensatz, Baseline, Wettbewerb)
+                status, st_why = repo_status(link.target, readme, True, kind, paper_text, authors)
+                candidates.append({"url": link.root if not link.subdir else link.target, "score": 4, "stars": 0, "author_match": False,
+                                   "paper_link": True, "dataset_match": False, "status": status, "basis": "linked in the paper text",
+                                   "status_reason": st_why})
+                break
+        except Exception as e:
+            print(f"Paper link check error: {e}")
+
+        try:
+            if not any(c["status"] == "official" for c in candidates):
+                results = self._curate_repo(title).get("results", [])
+            else:
+                results = []
             for r in results:
+                parsed = parse_github_url(r.get("url", ""), lenient=True)
                 url = _normalize_repo_url(r.get("url", ""))
-                if url:
-                    readme = self._fetch_readme(url).lower()
+                if url and parsed:
+                    readme_raw = self._fetch_readme(url, parsed[2])
+                    readme = readme_raw.lower()
                     if not readme:
                         continue
 
                     # Sammlung (Awesome-/Paper-Liste) ist keine Implementierung, auch wenn sie den Titel nennt
                     if (len(re.findall(r"arxiv\.org/(?:abs|pdf|html)/", readme)) > MAX_README_ARXIV_LINKS
                             or len(re.findall(r"github\.com/", readme)) > MAX_README_GITHUB_LINKS):
-                        continue
-
-                    keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "ogb", "ett", "movielens"]
-                    if not any(re.search(r"\b" + re.escape(k) + r"\b", readme) for k in keywords):
                         continue
 
                     # 1. Autor-Match: Owner-Name oder Autorenzeile, nicht beliebiges Vorkommen im README
@@ -522,33 +556,31 @@ class DiscoveryAgent:
                     # 3. Datensatz im README
                     dataset_match = dataset.lower() in readme
 
-                    score = int(author_match) + int(paper_link) + int(dataset_match)
                     # Datensatz allein ist kein Beleg (Live-Lauf: TTS-Repo, Sammel-Repo)
                     if not (paper_link or (author_match and dataset_match)):
                         continue
+                    if not paper_link:   # ohne Paper-Beleg muss der README das Benchmark-Umfeld nennen (wie bisher)
+                        keywords = [dataset.lower(), "cora", "citeseer", "pytorch geometric", "dgl", "ogb", "ett", "movielens"]
+                        if not any(re.search(r"\b" + re.escape(k) + r"\b", readme) for k in keywords):
+                            continue
 
-                    # Get stars
-                    stars = 0
-                    try:
-                        repo_path = url.split("github.com/")[-1]
-                        if repo_path.endswith("/"):
-                            repo_path = repo_path[:-1]
-                        parts = repo_path.split("/")
-                        if len(parts) >= 2:
-                            api_url = f"https://api.github.com/repos/{parts[0]}/{parts[1]}"
-                            resp = httpx.get(api_url, timeout=3.0)
-                            if resp.status_code == 200:
-                                stars = resp.json().get("stargazers_count", 0)
-                    except Exception:
-                        pass
-                        
+                    score = int(author_match) + int(paper_link) + int(dataset_match)
+                    kind = "paper" if paper_link else repo_evidence(readme_raw, url, title, arxiv_id, method)[0]
+                    status, st_why = repo_status(url, readme_raw, False, kind, paper_text, authors)
+                    if status != "official" and author_match and owner and any(
+                            len(a.split(" ")[-1]) > 2 and a.split(" ")[-1].lower() in owner for a in authors):
+                        status, st_why = "official", "owner name matches an author"
+                    target = url if not parsed[2] else f"{url}/tree/HEAD/{parsed[2]}"
                     candidates.append({
-                        "url": url,
+                        "url": target,
                         "score": score,
-                        "stars": stars,
+                        "stars": stars_of(url),
                         "author_match": author_match,
                         "paper_link": paper_link,
-                        "dataset_match": dataset_match
+                        "dataset_match": dataset_match,
+                        "status": status,
+                        "basis": "Tavily search hit",
+                        "status_reason": st_why,
                     })
         except Exception as e:
             print(f"Tavily search error: {e}")
@@ -565,16 +597,20 @@ class DiscoveryAgent:
                 deduped.append(c)
         candidates = deduped
         
-        # Sort by score desc, then stars desc
-        candidates.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
-        
-        chosen = candidates[0]
+        # Offizielle zuerst, dann Paper-Link vor Suchtreffer, Score, Sterne
+        candidates.sort(key=lambda x: (x["status"] == "official", x["basis"].startswith("linked"), x["score"], x["stars"]), reverse=True)
+
+        official = [c for c in candidates if c["status"] == "official"]
+        if not official:   # nur inoffizielle Implementierungen: kein Autorencode, Rueckfall auf Paper-Nachbau
+            best = candidates[0]
+            alternatives = [{"url": c["url"], "status": "unofficial", "summary": c["status_reason"][:200]} for c in candidates[:4]]
+            return None, f"{NO_REPO_REASON} (only an unofficial implementation: {best['url']})", alternatives
+
+        chosen = official[0]
         chosen_url = chosen["url"]
-        
-        # Check for controversy for the chosen one
-        reason = f"Chosen over {len(candidates)-1} alternatives (Score: {chosen['score']}/3)." if len(candidates) > 1 else "Code found, validated via README."
-            
-        alternatives = [{"url": c["url"], "summary": c.get("content", "")[:200]} for c in candidates[1:4]]
+        reason = (f"Official code ({chosen['basis']}; {chosen['status_reason']})."
+                  + (f" Chosen over {len(candidates)-1} other candidates (score {chosen['score']}/3)." if len(candidates) > 1 else ""))
+        alternatives = [{"url": c["url"], "status": c["status"], "summary": c.get("status_reason", "")[:200]} for c in candidates if c is not chosen][:3]
         return chosen_url, reason, alternatives
         
     def discover(self, datasets: list[str], max_papers: int = 10, on_event=None) -> list[CandidatePaper]:
@@ -707,6 +743,7 @@ class DiscoveryAgent:
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Volltext nicht lesbar", "stage": "extract", "text_length": len(text)})
                     continue
 
+                full_text = text   # Code-Links stehen oft in Fussnoten, die die Abschnittswahl weglaesst
                 text = _select_sections("Abstract: " + p["abstract"] + "\n\n" + text, p["abstract"])
 
                 claim = self._extract_claim(text, ds, emit_func=emit)
@@ -839,7 +876,8 @@ class DiscoveryAgent:
                     
                 emit({"type": "searching", "arxiv_id": cache_key, "claim": {"text": json.dumps(claim), "target": target_val}})
                     
-                github_url, reason, alternatives = self._find_repo_and_context(p["title"], ds, p.get("authors", []), p["arxiv_id"])
+                github_url, reason, alternatives = self._find_repo_and_context(p["title"], ds, p.get("authors", []), p["arxiv_id"],
+                                                                                paper_text=full_text, method=str(claim_data.get("method") or ""))
                 # Community-Hinweise (Issues, Reviews): nur als Belege, das Urteil faellt im Loop.
                 community = []
                 if hasattr(self.tavily, "curate_discussion"):
@@ -867,6 +905,7 @@ class DiscoveryAgent:
                     community=community,
                     protocol=protocol,
                     feasibility="ok" if github_url else "no_repo",
+                    repo_status="official" if github_url else ("unofficial" if any(a.get("status") == "unofficial" for a in alternatives) else ""),
                 )
                 emit(self._candidate_event(paper, cached=False))
                 candidates.append(paper)

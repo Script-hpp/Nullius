@@ -64,7 +64,13 @@ TRAIN_RE = re.compile(r"\.backward\(\)|optimizer\.step\(\)|\.minimize\(|\.fit\("
 CONFIG_STEMS = {"train", "default", "config", "base", "params", "hparams"}   # allgemeine Trainingskonfiguration neben der des Modells
 QUOTE_SHOW = 160            # Zitatlaenge im Prompt
 NUM_RE = re.compile(r"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$")
-MODEL_SEL_RE = re.compile(r"\bmodel(?:_name|_type)?\b\s*(?:=|:|\s)\s*['\"]?([A-Za-z][\w-]*)", re.I)
+MODEL_SEL_RE = re.compile(r"(--)?\bmodel(?:_name|_type)?\b(\s*(?:={1,2}|:)\s*|\s+)['\"]?([A-Za-z][\w-]*)", re.I)
+# Woerter hinter "model" in Fliesstext ("We train each model with a maximum 100 epochs", "each model w/ dropout"): nie ein Modellname
+MODEL_PROSE_WORDS = frozenset(
+    "a an the this that these those each every all any both with without w and or but nor is are was were be been being has have had do does did "
+    "for on in at of to from by as if than then so it its we our us they their can could will would shall should may might must not no "
+    "per via using use used uses trained train training tested test evaluated achieves achieved performs performed gets got reaches reached "
+    "converges converged selected chosen based type name size selection size weights parameters params layers".split())
 BINARY_EXT = re.compile(r"\.(pkl|pickle|npz|npy|pt|pth|bin|h5|hdf5|zip|gz|tar|png|jpe?g|gif|pdf|so|pyc|ckpt|mat|csv|tsv|parquet)$", re.I)
 DATA_DIR = re.compile(r"(^|/)(data|dataset|datasets|checkpoints?|logs?|results?|figures?|pics?|img|images)/", re.I)
 
@@ -307,7 +313,11 @@ def _number_in_quote(value: str, quote: str) -> bool:
 def other_model_selected(quote: str, model: str) -> str:
     """Modellname-Regel: setzt das Zitat eine Modellwahl auf ein anderes Modell (model_name=DLinear bei NLinear), gilt es nicht."""
     for m in MODEL_SEL_RE.finditer(quote):
-        name = m.group(1)
+        flag, sep, name = m.group(1), m.group(2), m.group(3)
+        if name.lower() in MODEL_PROSE_WORDS or len(name) < 2:
+            continue
+        if not flag and not re.search(r"[=:]", sep) and not (re.search(r"[A-Z0-9_]", name) or "-" in name):
+            continue   # "model gcn" im Fliesstext ohne Zuweisung/Flag: nur Namen mit Grossbuchstabe/Ziffer ("model DLinear") zaehlen
         if name.lower() != model.lower() and not name.lower().startswith(("str", "int", "float", "none", "args", "self")):
             return name
     return ""

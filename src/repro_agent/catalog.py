@@ -98,7 +98,7 @@ def read_event_candidates(path: Path) -> list[tuple[dict, str]]:
 
 
 def entry_from_candidate(c: dict, source: str) -> dict:
-    keep = ("dataset", "claim", "github_url", "feasibility", "source_url", "protocol", "found_by", "reason", "community")
+    keep = ("dataset", "claim", "github_url", "repo_status", "feasibility", "source_url", "protocol", "found_by", "reason", "community")
     return {
         "id": catalog_id(c["arxiv_id"]), "arxiv_id": c["arxiv_id"], "title": c["title"],
         "status": UNCHECKED, "imported_from": source,
