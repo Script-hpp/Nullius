@@ -114,4 +114,7 @@ def test_committed_catalog_json_matches_benchmark_json():
         e = data[cat.catalog_id(arxiv_id)]
         assert e["origin"] == "reference" and e["benchmark"]["version"] == "v4" and e["benchmark"]["units"] == 8
     assert data["disc_1609_02907"]["benchmark"]["reached"] == 3 and data["disc_1811_05868"]["benchmark"]["reached"] == 2
-    assert all(e["origin"] == "discovery" and e["benchmark"] is None for e in data.values() if e["id"] not in {cat.catalog_id(a) for a in REFERENCES})
+    # Other entries carry no benchmark line; a second claim of a reference paper (Kipf on CiteSeer) keeps origin "reference".
+    others = [e for e in data.values() if e["id"] not in {cat.catalog_id(a) for a in REFERENCES}]
+    assert all(e["benchmark"] is None for e in others)
+    assert all(e["origin"] == "discovery" or e.get("arxiv_id") in REFERENCES for e in others)
