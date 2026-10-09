@@ -101,6 +101,13 @@ papers:
         tolerance: 0.01
         source: "Tabelle 2, arXiv (b1_candidates.md), zur Laufzeit per Tavily belegt"
         extract: {method: "RLinear", dataset: "ETTh1", metric: "MSE for prediction length 96", percent: false}
+      - id: rlinear_etth1_96_mse_placebo   # recall cg v1 (recall_cg_v1.md): Negativkontrolle wie bei NLinear/DLinear, Abstand zur Referenz 0,0704 > 3 x Toleranz
+        text: "RLinear erreicht MSE 0,300 auf ETTh1 bei Vorhersagehorizont 96 (Eingabefenster 336)"
+        metric: mse
+        target: 0.3
+        tolerance: 0.01
+        origin: placebo
+        source: "PLACEBO: konstruierter falscher Zielwert, kein Paper-Wert"
 
   # ---- Neue Einheiten fuer die Pruefung des Modus Nachlauf (benchmark/experiments/nachlauf_v1.md). Nicht Teil von Benchmark v4. ----
   - id: sparsetsf_2024

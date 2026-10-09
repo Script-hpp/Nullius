@@ -1,0 +1,47 @@
+[2026-10-09T02:02:07Z] recall cg v1, Beginn der Kostenzaehlung 2026-10-09T01:21:24Z, Stopp 8.75 $ brutto (Deckel 9.0 $)
+[2026-10-09T02:02:07Z] Start ('shchur_gat_2018', 0, True) (Versuch 1), laufend 1, Verbrauch 1.96 $ brutto
+[2026-10-09T02:02:07Z] Start ('shchur_pitfalls_2018', 0, True) (Versuch 1), laufend 2, Verbrauch 1.96 $ brutto
+[2026-10-09T02:02:07Z] Start ('velickovic_gat_2018', 0, True) (Versuch 1), laufend 3, Verbrauch 1.96 $ brutto
+[2026-10-09T02:02:07Z] Start ('velickovic_dgi_2019', 0, True) (Versuch 1), laufend 4, Verbrauch 1.96 $ brutto
+[2026-10-09T02:02:07Z] Start ('kipf_gcn_2017', 0, True) (Versuch 1), laufend 5, Verbrauch 1.96 $ brutto
+[2026-10-09T02:17:47Z] fertig ('kipf_gcn_2017', 0, True)
+[2026-10-09T02:17:47Z] Start ('wu_sgc_2019', 0, True) (Versuch 1), laufend 5, Verbrauch 3.16 $ brutto
+[2026-10-09T02:27:07Z] fertig ('shchur_pitfalls_2018', 0, True)
+[2026-10-09T02:27:07Z] Start ('zeng_nlinear_2023', 0, True) (Versuch 1), laufend 5, Verbrauch 3.21 $ brutto
+[2026-10-09T02:42:47Z] fertig ('zeng_nlinear_2023', 0, True)
+[2026-10-09T02:42:47Z] Start ('zeng_dlinear_2023', 0, True) (Versuch 1), laufend 5, Verbrauch 3.83 $ brutto
+[2026-10-09T02:43:27Z] fertig ('wu_sgc_2019', 0, True)
+[2026-10-09T02:43:27Z] Start ('shchur_gat_2018', 1, False) (Versuch 1), laufend 5, Verbrauch 3.88 $ brutto
+[2026-10-09T02:53:47Z] fertig ('zeng_dlinear_2023', 0, True)
+[2026-10-09T02:53:48Z] Start ('shchur_pitfalls_2018', 1, False) (Versuch 1), laufend 5, Verbrauch 4.34 $ brutto
+[2026-10-09T02:54:08Z] fertig ('velickovic_dgi_2019', 0, True)
+[2026-10-09T02:54:08Z] Start ('velickovic_gat_2018', 1, False) (Versuch 1), laufend 5, Verbrauch 4.38 $ brutto
+[2026-10-09T03:07:08Z] fertig ('shchur_pitfalls_2018', 1, False)
+[2026-10-09T03:07:08Z] Start ('velickovic_dgi_2019', 1, False) (Versuch 1), laufend 5, Verbrauch 4.82 $ brutto
+[2026-10-09T03:09:48Z] fertig ('velickovic_gat_2018', 0, True)
+[2026-10-09T03:09:48Z] Start ('kipf_gcn_2017', 1, False) (Versuch 1), laufend 5, Verbrauch 4.95 $ brutto
+[2026-10-09T03:25:08Z] fertig ('shchur_gat_2018', 0, True)
+[2026-10-09T03:25:08Z] Start ('wu_sgc_2019', 1, False) (Versuch 1), laufend 5, Verbrauch 5.45 $ brutto
+[2026-10-09T03:29:08Z] fertig ('kipf_gcn_2017', 1, False)
+[2026-10-09T03:29:08Z] Start ('zeng_nlinear_2023', 1, False) (Versuch 1), laufend 5, Verbrauch 5.62 $ brutto
+[2026-10-09T03:31:28Z] fertig ('velickovic_dgi_2019', 1, False)
+[2026-10-09T03:31:28Z] Start ('zeng_dlinear_2023', 1, False) (Versuch 1), laufend 5, Verbrauch 5.75 $ brutto
+[2026-10-09T03:32:48Z] fertig ('wu_sgc_2019', 1, False)
+[2026-10-09T03:35:08Z] fertig ('zeng_nlinear_2023', 1, False)
+[2026-10-09T03:38:28Z] fertig ('zeng_dlinear_2023', 1, False)
+[2026-10-09T03:41:08Z] fertig ('shchur_gat_2018', 1, False)
+[2026-10-09T04:06:08Z] fertig ('velickovic_gat_2018', 1, False)
+[2026-10-09T04:06:08Z] Stufe 1 fertig (ok). Gate: F=4 U=4 vollstaendig=True weiter=True
+[2026-10-09T04:06:08Z] Start ('rlinear_2023', 0, True) (Versuch 1), laufend 1, Verbrauch 6.05 $ brutto
+[2026-10-09T04:06:08Z] Start ('rlinear_2023', 1, False) (Versuch 1), laufend 2, Verbrauch 6.05 $ brutto
+[2026-10-09T04:06:08Z] Start ('shchur_gat_2018', 2, False) (Versuch 1), laufend 3, Verbrauch 6.05 $ brutto
+[2026-10-09T04:06:08Z] Start ('velickovic_gat_2018', 2, False) (Versuch 1), laufend 4, Verbrauch 6.05 $ brutto
+[2026-10-09T04:06:08Z] Start ('velickovic_dgi_2019', 2, False) (Versuch 1), laufend 5, Verbrauch 6.05 $ brutto
+[2026-10-09T04:16:08Z] fertig ('rlinear_2023', 1, False)
+[2026-10-09T04:21:49Z] fertig ('rlinear_2023', 0, True)
+[2026-10-09T04:21:49Z] Start ('zeng_nlinear_2023', 2, False) (Versuch 1), laufend 4, Verbrauch 7.14 $ brutto
+[2026-10-09T04:28:49Z] fertig ('zeng_nlinear_2023', 2, False)
+[2026-10-09T04:30:09Z] fertig ('velickovic_dgi_2019', 2, False)
+[2026-10-09T05:34:09Z] fertig ('velickovic_gat_2018', 2, False)
+[2026-10-09T05:49:29Z] fertig ('shchur_gat_2018', 2, False)
+[2026-10-09T05:49:29Z] Fertig. Verbrauch 7.45 $ brutto. Auswertung: scripts/eval_recall_cg_v1.py
