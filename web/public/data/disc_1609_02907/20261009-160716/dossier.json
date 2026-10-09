@@ -1,0 +1,1840 @@
+{
+  "paper_id": "disc_1609_02907",
+  "claims": [
+    {
+      "id": "disc_1609_02907_accuracy",
+      "text": "GCN (this paper) erreicht 81.5 % Accuracy auf Cora (Standard-Split)",
+      "metric": "accuracy",
+      "target": 0.815,
+      "tolerance": 0.01,
+      "source": "Table 2, arXiv v4 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1609.02907v4"
+      ],
+      "target_evidence": {
+        "value": 0.815,
+        "quote": "GCN (this paper) 70.3 (7s) 81.5 (4s) 79.0 (38s) 66.0 (48s)",
+        "table": "Table 2",
+        "url": "https://arxiv.org/pdf/1609.02907v4",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-10-09T14:07:17+00:00",
+        "sha256": "c919b23efc1dcdf2463acd7fee694ef7bd690de722538e84badbd9ff4c2b525a",
+        "arxiv_version": "v4",
+        "caveat": null,
+        "column_check": "ok",
+        "from_store": false
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-37f4ff23",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "a15a5b022c42",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:62: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(idx, vals, size=(num_nodes, num_nodes)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 191, in <module>\n    main()\n  File \"/work/train.py\", line 183, in main\n    val_acc = accuracy(val_logits, labels_tensor, val_idx)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 114, in accuracy\n    pred = logits[mask].argmax(dim=1)\n           ~~~~~~^^^^^^\nIndexError: index 500 is out of bounds for dimension 0 with size 500\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.12087767999999996,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-0c9b0fac",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.822,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.12633287999999995,
+      "metrics": {
+        "accuracy": 0.822
+      },
+      "coverage": {
+        "executed": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          27,
+          28,
+          31,
+          32,
+          33,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          47,
+          49,
+          50,
+          51,
+          54,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          64,
+          66,
+          67,
+          70,
+          72,
+          73,
+          74,
+          77,
+          78,
+          79,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          89,
+          91,
+          92,
+          93,
+          94,
+          96,
+          97,
+          98,
+          101,
+          103,
+          104,
+          107,
+          108,
+          109,
+          112,
+          113,
+          116,
+          122,
+          128,
+          129,
+          131,
+          132,
+          133,
+          136,
+          137,
+          138,
+          139,
+          140,
+          141,
+          142,
+          145,
+          146,
+          147,
+          148,
+          149,
+          152,
+          153,
+          154,
+          155,
+          157,
+          159,
+          160,
+          162,
+          167,
+          168,
+          171,
+          172,
+          173,
+          174,
+          177,
+          180,
+          183,
+          184
+        ],
+        "missing": [
+          163,
+          164
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.794,
+        "baselines": {
+          "majority": 0.316
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-cc8c84a9",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "9422cf406eae",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:60: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(idx, vals, size=(num_nodes, num_nodes)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 191, in <module>\n    main()\n  File \"/work/train.py\", line 176, in main\n    model = training_loop(X, adj_norm, labels_tensor, train_idx, val_idx)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 152, in training_loop\n    val_acc = accuracy(val_logits, labels, val_idx)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 116, in accuracy\n    return correct / mask.numel()\n                     ^^^^^^^^^^\nAttributeError: 'numpy.ndarray' object has no attribute 'numel'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.12633287999999995,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-72cba9cf",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "9179dfaec068",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.808,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.13204277999999994,
+      "metrics": {
+        "accuracy": 0.808
+      },
+      "coverage": {
+        "executed": [
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          27,
+          29,
+          30,
+          31,
+          32,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          72,
+          73,
+          74,
+          75,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          105,
+          106,
+          107,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          124,
+          125,
+          126,
+          127,
+          129,
+          130,
+          131,
+          132,
+          134,
+          136,
+          139,
+          141,
+          142,
+          143,
+          145,
+          146,
+          148,
+          149,
+          151,
+          152,
+          153,
+          154,
+          155,
+          156,
+          158,
+          159,
+          161,
+          164,
+          167,
+          168,
+          169,
+          170,
+          172,
+          173,
+          174,
+          176,
+          177,
+          178,
+          180,
+          184,
+          185,
+          187,
+          188,
+          190,
+          191,
+          192,
+          193,
+          194,
+          196,
+          197
+        ],
+        "missing": [
+          137,
+          138,
+          162,
+          165
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.784,
+        "baselines": {
+          "majority": 0.316
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-91e26042",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "0787daf2484e",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:60: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(idx, vals, size=(num_nodes, num_nodes)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 196, in <module>\n    main()\n  File \"/work/train.py\", line 188, in main\n    val_acc = accuracy(val_logits, labels_tensor, val_idx)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 117, in accuracy\n    selected_logits = logits[mask]\n                      ~~~~~~^^^^^^\nIndexError: index 500 is out of bounds for dimension 0 with size 500\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.13204277999999994,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-512ec5ce",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "e6fe9f61c538",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.796,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.13969187999999993,
+      "metrics": {
+        "accuracy": 0.796
+      },
+      "coverage": {
+        "executed": [
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          26,
+          35,
+          36,
+          37,
+          38,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          50,
+          51,
+          52,
+          53,
+          55,
+          57,
+          58,
+          59,
+          60,
+          61,
+          63,
+          64,
+          65,
+          66,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          78,
+          79,
+          80,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          90,
+          91,
+          92,
+          94,
+          96,
+          97,
+          98,
+          99,
+          101,
+          102,
+          103,
+          105,
+          106,
+          107,
+          108,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          119,
+          121,
+          122,
+          123,
+          130,
+          135,
+          136,
+          137,
+          139,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          147,
+          149,
+          150,
+          151,
+          152,
+          153,
+          155,
+          156,
+          157,
+          158,
+          162,
+          166,
+          167,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          177,
+          179,
+          180,
+          181,
+          183,
+          184,
+          187,
+          188,
+          190,
+          191
+        ],
+        "missing": [
+          160,
+          163
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.774,
+        "baselines": {
+          "majority": 0.316
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-8a997d54",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.814,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.14616047999999993,
+      "metrics": {
+        "accuracy": 0.814
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-47bdbc73",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.802,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.14616047999999993,
+      "metrics": {
+        "accuracy": 0.802
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-559d32ed",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.807,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.14616047999999993,
+      "metrics": {
+        "accuracy": 0.807
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-41554c61",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 4,
+      "status": "stabil",
+      "measured": 0.812,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.14616047999999993,
+      "metrics": {
+        "accuracy": 0.812
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-d93df6ee",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 5,
+      "status": "ungueltig",
+      "measured": null,
+      "error_summary": "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig",
+      "tavily_queries": [],
+      "cost_usd": 0.14616047999999993,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-a8ac90d8",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 7,
+      "status": "stabil",
+      "measured": 0.824,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15163847999999994,
+      "metrics": {
+        "accuracy": 0.824
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-ebe6fcec",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 6,
+      "status": "stabil",
+      "measured": 0.818,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15163847999999994,
+      "metrics": {
+        "accuracy": 0.818
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-5a3004b7",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 8,
+      "status": "stabil",
+      "measured": 0.809,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15163847999999994,
+      "metrics": {
+        "accuracy": 0.809
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-df38be52",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "f3fd662c7915",
+      "seed": 9,
+      "status": "stabil",
+      "measured": 0.823,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15163847999999994,
+      "metrics": {
+        "accuracy": 0.823
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-313ffdd3",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "4cdc1fe066f4",
+      "seed": 5,
+      "status": "ungueltig",
+      "measured": null,
+      "error_summary": "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig",
+      "tavily_queries": [],
+      "cost_usd": 0.15163847999999994,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-afc57923",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "4cdc1fe066f4",
+      "seed": 5,
+      "status": "ungueltig",
+      "measured": null,
+      "error_summary": "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig",
+      "tavily_queries": [],
+      "cost_usd": 0.15658067999999994,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "branch_id": "repro-branch-dab3938d",
+      "parent_snapshot": "repro-snapshot-disc-1609-02907-20261009-160716",
+      "code_hash": "4cdc1fe066f4",
+      "seed": 5,
+      "status": "ungueltig",
+      "measured": null,
+      "error_summary": "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig",
+      "tavily_queries": [],
+      "cost_usd": 0.15658067999999994,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_1609_02907_accuracy",
+      "urteil": "reproduziert",
+      "measured_mean": 0.8145555555555556,
+      "measured_std": 0.0077477595327795955,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0077. Mit unserem Setup gemessen (9 von 10 Seeds, Zielwert 0.815 +/- 0.01, Table 2, arXiv v4 (pdf)): Mittel 0.8146. Code-Kandidaten: 3, gewaehlt Kandidat 1 (Code f3fd662c7915) nach Validierungs-Metrik (0: accuracy 0.7740, 1: accuracy 0.7940, 2: accuracy 0.7840); Rueckfall ohne Val-Wert; Repo-Abgleich: keine geprueften Abweichungen; Seed 5: kein gueltiger Lauf nach 4 Versuchen (letzter Fehler: Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig)",
+      "sources": [
+        "https://arxiv.org/pdf/1609.02907v4"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "feature_normalisation",
+      "value": "preprocess_features applied to feature matrix",
+      "quote": "features = preprocess_features(features)",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "all",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "feature normalisation",
+      "value": "row-normalize feature matrix (divide each row by its sum)",
+      "quote": "\"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"",
+      "source": "repo:gcn/utils.py@39a4089",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "\"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\""
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency normalisation",
+      "value": "support = [preprocess_adj(adj)]",
+      "quote": "support = [preprocess_adj(adj)]",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "if FLAGS.model == 'gcn':\n    support = [preprocess_adj(adj)]\n    num_supports = 1\n    model_func = GCN"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.01",
+      "quote": "We train all models for a maximum of 200 epochs (training iterations) using Adam (Kingma & Ba, 2015) with a learning rate of 0.01 and early stopping with a window size of 10, i.e. we stop training if the validation loss does not decrease for 10 consecutive epochs.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "For the citation network datasets, we optimize hyperparameters on Cora only and use the same set of parameters for Citeseer and Pubmed."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.01",
+      "quote": "flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'\nflags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "5·10−4",
+      "quote": "5 · 10−4 (L2 regularization)",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We used the following sets of hyperparameters for Citeseer, Cora and Pubmed: 0.5 (dropout rate), 5 · 10−4 (L2 regularization) and 16 (number of hidden units); and for NELL: 0.1 (dropout rate), 1 · 10−5 (L2 regularization) and 64 (number of hidden units)."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight_decay",
+      "value": "5e-4",
+      "quote": "flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'\nflags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "used (applied via dropout)",
+      "quote": "Stochasticity in the training process is introduced via dropout (Srivastava et al., 2014).",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500 labeled examples for hyperparameter optimization (dropout rate for all layers, L2 regularization factor for the first GCN layer and number of hidden units)."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "0.5",
+      "quote": "flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": null,
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "True",
+      "quote": "dropout=True,",
+      "source": "repo:gcn/models.py@39a4089",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "class GCN(Model):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hidden size",
+      "value": "16",
+      "quote": "We used the following sets of hyperparameters for Citeseer, Cora and Pubmed: 0.5 (dropout rate), 5 · 10−4 (L2 regularization) and 16 (number of hidden units);",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We used the following sets of hyperparameters for Citeseer, Cora and Pubmed: 0.5 (dropout rate), 5 · 10−4 (L2 regularization) and 16 (number of hidden units);"
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hidden_size",
+      "value": "16",
+      "quote": "flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'\nflags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "epochs",
+      "value": "200",
+      "quote": "flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": null,
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "two-layer GCN",
+      "quote": "Unless otherwise noted, we train a two-layer GCN as described in Section 3.1 and evaluate prediction accuracy on a test set of 1,000 labeled examples.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "Unless otherwise noted, we train a two-layer GCN as described in Section 3.1 and evaluate prediction accuracy on a test set of 1,000 labeled examples."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "500 labeled examples validation set",
+      "quote": "We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500 labeled examples for hyperparameter optimization (dropout rate for all layers, L2 regularization factor for the first GCN layer and number of hidden units).",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500 labeled examples for hyperparameter optimization (dropout rate for all layers, L2 regularization factor for the first GCN layer and number of hidden units)."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "validation set labels not used for training",
+      "quote": "We do not use the validation set labels for training.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We do not use the validation set labels for training."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "hyperparameters optimized on Cora only",
+      "quote": "For the citation network datasets, we optimize hyperparameters on Cora only and use the same set of parameters for Citeseer and Pubmed.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "For the citation network datasets, we optimize hyperparameters on Cora only and use the same set of parameters for Citeseer and Pubmed."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "Glorot & Bengio weight initialization",
+      "quote": "We initialize weights using the initialization described in Glorot & Bengio (2010) and accordingly (row-)normalize input feature vectors.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn (this paper)",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We initialize weights using the initialization described in Glorot & Bengio (2010) and accordingly (row-)normalize input feature vectors."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "package_version",
+      "value": "networkx==2.2",
+      "quote": "networkx==2.2",
+      "source": "repo:requirements.txt@39a4089",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "networkx==2.2"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "seed",
+      "value": "123",
+      "quote": "seed = 123",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dataset",
+      "value": "'cora'",
+      "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "model",
+      "value": "'gcn'",
+      "quote": "flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping",
+      "value": "10",
+      "quote": "flags.DEFINE_integer('early_stopping', 10, 'Tolerance for early stopping (# of epochs).')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "max_degree",
+      "value": "3",
+      "quote": "flags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')",
+      "source": "repo:gcn/train.py@39a4089",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora",
+        "setting": "transductive",
+        "quote": "flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "learning_rate",
+      "quote": "self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)",
+      "source": "repo:gcn/models.py@39a4089",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(Model):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "weight_decay",
+      "quote": "self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)",
+      "source": "repo:gcn/models.py@39a4089",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(Model):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "hidden1",
+      "quote": "output_dim=FLAGS.hidden1",
+      "source": "repo:gcn/models.py@39a4089",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(Model):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/tkipf/gcn",
+    "commit": "39a4089fe72ad9f055ed6fdb9746abdcfebc4d81",
+    "files": [
+      "README.md",
+      "gcn/inits.py",
+      "gcn/layers.py",
+      "gcn/metrics.py",
+      "gcn/models.py",
+      "gcn/train.py",
+      "gcn/utils.py",
+      "requirements.txt"
+    ]
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.319
+    },
+    "no_graph": {
+      "accuracy": 0.506
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/pdf/1609.02907v4",
+      "mode": "live",
+      "n_chars": 43369,
+      "retrieved_at": "2026-10-09T14:07:17+00:00",
+      "sha256": "c919b23efc1dcdf2463acd7fee694ef7bd690de722538e84badbd9ff4c2b525a"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/tkipf/gcn",
+      "mode": "live",
+      "n_chars": 16967,
+      "retrieved_at": "2026-10-09T14:07:23+00:00",
+      "sha256": "f76f2f285f7e95b6d7b5127457f476dd024693144d525eab4889922fa518762d"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/pytorch/examples/blob/main/gcn",
+      "mode": "live",
+      "n_chars": 2769,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "2c71a98a1ef95e50db696b86327487f29056d6f76ca4dd2725b4add4e69bc9fb"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/tkipf/gcn/issues/14",
+      "mode": "live",
+      "n_chars": 2198,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "322729feffdb884397cec6dcab181a781c9609321028dfa00f9a8d4384660d8f"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/andrejmiscic/gcn-pytorch",
+      "mode": "live",
+      "n_chars": 4482,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "12eaf3e0d9a619c25333d12ea99dcd171d1e55bd7fe6db9fe4b1b8d56037fa39"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/abs/1609.02907?context=stat",
+      "mode": "live",
+      "n_chars": 1288,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "e6a7210f483189d7e1e1124e66e09c0ba45f4b637d332b2c1ef2bcc009288b9e"
+    },
+    {
+      "kind": "community",
+      "url": "http://arxiv.org/abs/1609.02907?context=stat.ML",
+      "mode": "live",
+      "n_chars": 1288,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "e6a7210f483189d7e1e1124e66e09c0ba45f4b637d332b2c1ef2bcc009288b9e"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/Lizhuoling/GCN_Cora",
+      "mode": "live",
+      "n_chars": 2366,
+      "retrieved_at": "2026-10-09T14:21:17+00:00",
+      "sha256": "5d1d1b1580ebc269713a0dd7dd7f755af466995717f9d4d2abefc6b337acdd56"
+    }
+  ],
+  "ablations": {
+    "disc_1609_02907_accuracy": {
+      "accuracy_full": 0.822,
+      "accuracy_ablated": 0.552,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau_autorencode",
+  "graph_repairs": {},
+  "fault_repairs": {},
+  "droplast_notes": {},
+  "community": {
+    "findings": [],
+    "dropped": 1,
+    "pages": [
+      {
+        "url": "https://github.com/pytorch/examples/blob/main/gcn",
+        "n_chars": 2769,
+        "sha256": "2c71a98a1ef95e50db696b86327487f29056d6f76ca4dd2725b4add4e69bc9fb"
+      },
+      {
+        "url": "https://github.com/tkipf/gcn/issues/14",
+        "n_chars": 2198,
+        "sha256": "322729feffdb884397cec6dcab181a781c9609321028dfa00f9a8d4384660d8f"
+      },
+      {
+        "url": "https://github.com/andrejmiscic/gcn-pytorch",
+        "n_chars": 4482,
+        "sha256": "12eaf3e0d9a619c25333d12ea99dcd171d1e55bd7fe6db9fe4b1b8d56037fa39"
+      },
+      {
+        "url": "https://arxiv.org/abs/1609.02907?context=stat",
+        "n_chars": 1288,
+        "sha256": "e6a7210f483189d7e1e1124e66e09c0ba45f4b637d332b2c1ef2bcc009288b9e"
+      },
+      {
+        "url": "http://arxiv.org/abs/1609.02907?context=stat.ML",
+        "n_chars": 1288,
+        "sha256": "e6a7210f483189d7e1e1124e66e09c0ba45f4b637d332b2c1ef2bcc009288b9e"
+      },
+      {
+        "url": "https://github.com/Lizhuoling/GCN_Cora",
+        "n_chars": 2366,
+        "sha256": "5d1d1b1580ebc269713a0dd7dd7f755af466995717f9d4d2abefc6b337acdd56"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "search",
+        "title": "Semi-Supervised Classification with Graph Convolutional Networks"
+      },
+      {
+        "kind": "method_search",
+        "method": "GCN (this paper)",
+        "dataset": "Cora"
+      },
+      {
+        "kind": "critique_search",
+        "method": "GCN (this paper)",
+        "dataset": "Cora",
+        "queries": [
+          "GCN (this paper) Cora reproduce results differ",
+          "GCN (this paper) bug evaluation",
+          "GCN (this paper) baseline re-evaluation fixed",
+          "we re-run GCN (this paper) on Cora and compare with the reported numbers"
+        ]
+      },
+      {
+        "kind": "repo_search",
+        "repo": "tkipf/gcn"
+      }
+    ],
+    "reused_discovery": false,
+    "calls": [
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search"
+    ],
+    "hits": [
+      {
+        "url": "https://arxiv.org/abs/1609.02907?context=stat",
+        "title": "[1609.02907] Semi-Supervised Classification with Graph Convolutional Networks",
+        "n_chars": 1288
+      },
+      {
+        "url": "https://arxiv.org/abs/1609.02907?context=stat.ML",
+        "title": "[1609.02907] Semi-Supervised Classification with Graph Convolutional Networks",
+        "n_chars": 1288
+      },
+      {
+        "url": "https://arxiv.org/abs/1609.02907?context=cs",
+        "title": "[1609.02907] Semi-Supervised Classification with Graph Convolutional Networks",
+        "n_chars": 1288
+      },
+      {
+        "url": "http://arxiv.org/abs/1609.02907?context=stat.ML",
+        "title": "[1609.02907] Semi-Supervised Classification with Graph Convolutional Networks",
+        "n_chars": 1288
+      },
+      {
+        "url": "https://arxiv.org/pdf/1811.05868",
+        "title": "[PDF] Pitfalls of Graph Neural Network Evaluation - arXiv",
+        "n_chars": 24444
+      },
+      {
+        "url": "https://arxiv.org/html/1811.05868v2",
+        "title": "Pitfalls of Graph Neural Network Evaluation",
+        "n_chars": 23326
+      },
+      {
+        "url": "https://arxiv.org/html/2409.05755v1",
+        "title": "Are Heterophilic GNNs and Homophily Metrics Really Effective? Evaluation Pitfalls and New Benchmarks",
+        "n_chars": 61966
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "title": "[PDF] PITFALLS IN EVALUATING GNNS - OpenReview",
+        "n_chars": 30770
+      },
+      {
+        "url": "https://openreview.net/pdf/e09ac157f8dd68bdb4982dd429aeade4b4460564.pdf",
+        "title": "[PDF] [RE] A Reproducibility Study on Scene-Graph Generation from 3D ...",
+        "n_chars": 40911
+      },
+      {
+        "url": "https://github.com/tkipf/keras-gcn/issues/24",
+        "title": "Differences on the Cora dataset · Issue #24 · tkipf/keras-gcn · GitHub",
+        "n_chars": 5892
+      },
+      {
+        "url": "https://github.com/ycq091044/GCN-Oversmooth",
+        "title": "GitHub - ycq091044/GCN-Oversmooth: Complete codebase and datasets for \"revisiting oversmoothing in deep gcns\" · GitHub",
+        "n_chars": 4930
+      },
+      {
+        "url": "https://github.com/pytorch/examples/blob/main/gcn",
+        "title": "examples/gcn at main · pytorch/examples · GitHub",
+        "n_chars": 2769
+      },
+      {
+        "url": "https://github.com/huangwb/AS-GCN",
+        "title": "GitHub - huangwb/AS-GCN: tensorflow-as-gcn · GitHub",
+        "n_chars": 2913
+      },
+      {
+        "url": "https://github.com/andrejmiscic/gcn-pytorch",
+        "title": "GitHub - andrejmiscic/gcn-pytorch: Implementation of the Graph Convolutional Networks in Pytorch · GitHub",
+        "n_chars": 4482
+      },
+      {
+        "url": "https://github.com/ChandlerBang/SimP-GCN",
+        "title": "GitHub - ChandlerBang/SimP-GCN: Implementation of the WSDM 2021 paper \"Node Similarity Preserving Graph Convolutional Networks\" · GitHub",
+        "n_chars": 4312
+      },
+      {
+        "url": "https://github.com/Lizhuoling/GCN_Cora",
+        "title": "GitHub - Lizhuoling/GCN_Cora: This program tackles the Cora dataset using graph convolution neural (GCN) · GitHub",
+        "n_chars": 2366
+      },
+      {
+        "url": "https://github.com/Vamsi995/gcn-smooth",
+        "title": "GitHub - Vamsi995/gcn-smooth · GitHub",
+        "n_chars": 8212
+      },
+      {
+        "url": "https://github.com/nasa-gcn/circulars-nlp-paper",
+        "title": "GitHub - nasa-gcn/circulars-nlp-paper: Large Language Model Driven Analysis of General Coordinates Network (GCN) Circulars · GitHub",
+        "n_chars": 2659
+      },
+      {
+        "url": "https://github.com/RomeoSajina/GCN-Transformer",
+        "title": "GitHub - RomeoSajina/GCN-Transformer: Official repository for paper with title \"GCN-Transformer: Multi-task Graph Convolutional Network and Transformer for Multi-person Pose Forecasting\" · GitHub",
+        "n_chars": 2832
+      },
+      {
+        "url": "https://github.com/KimMeen/GCN",
+        "title": "GitHub - KimMeen/GCN: A PyTorch implementation of the (GCN) paper https://arxiv.org/abs/1609.02907 · GitHub",
+        "n_chars": 1737
+      },
+      {
+        "url": "https://github.com/1zgh/st-gcn",
+        "title": "GitHub - 1zgh/st-gcn: ST-GCN-5-25 · GitHub",
+        "n_chars": 6473
+      },
+      {
+        "url": "https://github.com/liyaguang/st-gcn",
+        "title": "GitHub - liyaguang/st-gcn: Spatial Temporal Graph Convolutional Networks (ST-GCN) for Skeleton-Based Action Recognition in PyTorch · GitHub",
+        "n_chars": 6001
+      },
+      {
+        "url": "https://github.com/leila-you/bug-localization-GCN",
+        "title": "GitHub - leila-you/bug-localization-GCN · GitHub",
+        "n_chars": 1613
+      },
+      {
+        "url": "https://github.com/yysijie/st-gcn/blob/master/OLD_README.md",
+        "title": "st-gcn/OLD_README.md at master · yysijie/st-gcn · GitHub",
+        "n_chars": 5312
+      },
+      {
+        "url": "https://github.com/TeamLab/bert-gcn-for-paper-citation",
+        "title": "GitHub - TeamLab/bert-gcn-for-paper-citation · GitHub",
+        "n_chars": 3546
+      },
+      {
+        "url": "https://arxiv.org/html/2502.14546v1",
+        "title": "Position: Graph Learning Will Lose Relevance Due To Poor Benchmarks",
+        "n_chars": 70114
+      },
+      {
+        "url": "https://arxiv.org/html/2604.19514v1",
+        "title": "When Graph Structure Becomes a Liability:A Critical Re-Evaluation of Graph Neural Networks forBitcoin Fraud Detection under Temporal Distribution Shift",
+        "n_chars": 86419
+      },
+      {
+        "url": "https://arxiv.org/html/2502.15142v1",
+        "title": "AccessFixer: Enhancing GUI Accessibility for Low Vision Users with R-GCN Model",
+        "n_chars": 88099
+      },
+      {
+        "url": "https://arxiv.org/html/2502.09263v2",
+        "title": "Can Classic GNNs Be Strong Baselines for Graph-level Tasks? Simple Architectures Meet Excellence",
+        "n_chars": 74255
+      },
+      {
+        "url": "https://arxiv.org/html/2601.19449v2",
+        "title": "Fixed Aggregation Features Can Rival GNNs",
+        "n_chars": 98977
+      },
+      {
+        "url": "https://arxiv.org/html/2610.08823v1",
+        "title": "HCPN-GCN: Scaling Hierarchical Prototype Networks with Cone Geometry for Continual Graph Learning",
+        "n_chars": 41838
+      },
+      {
+        "url": "https://arxiv.org/html/2411.03845v3",
+        "title": "Reconsidering the Performance of GAE in Link Prediction",
+        "n_chars": 56347
+      },
+      {
+        "url": "https://arxiv.org/html/2608.20980v1",
+        "title": "A Critical Audit of Spatiotemporal Forecasting Benchmark Datasets and Baselines",
+        "n_chars": 50401
+      },
+      {
+        "url": "https://arxiv.org/html/2505.02020v1",
+        "title": "Wide & Deep Learning for Node Classification",
+        "n_chars": 75360
+      },
+      {
+        "url": "https://arxiv.org/html/2306.10280v4",
+        "title": "OpenGSL: A Comprehensive Benchmark for Graph Structure Learning",
+        "n_chars": 67424
+      },
+      {
+        "url": "https://arxiv.org/html/1907.02237v3",
+        "title": "Dimensional Reweighting Graph Convolutional Networks",
+        "n_chars": 65499
+      },
+      {
+        "url": "https://arxiv.org/html/2609.37650v1",
+        "title": "RACE: Relation-Level Counterfactual Explanations for Heterogeneous Graph Neural Networks",
+        "n_chars": 54904
+      },
+      {
+        "url": "https://github.com/MengjieChan/GCN_for_Node_Classification_Task",
+        "title": "GitHub - MengjieChan/GCN_for_Node_Classification_Task: An implementation of the Graph Convolution Networks for the Cora, Citeseer, PubMed dataset. · GitHub",
+        "n_chars": 5505
+      },
+      {
+        "url": "https://github.com/tkipf/keras-gcn/blob/master/kegra/data/cora/README",
+        "title": "keras-gcn/kegra/data/cora/README at master · tkipf/keras-gcn · GitHub",
+        "n_chars": 2154
+      },
+      {
+        "url": "https://arxiv.org/html/2407.07457v2",
+        "title": "GLBench: A Comprehensive Benchmark for Graph with ...",
+        "n_chars": 140
+      },
+      {
+        "url": "https://github.com/tkipf/gcn/issues/14",
+        "title": "Can't run on Nell dataset · Issue #14 · tkipf/gcn · GitHub",
+        "n_chars": 2198
+      },
+      {
+        "url": "https://github.com/tkipf/gcn/issues/14?timeline_page=1",
+        "title": "Can't run on Nell dataset · Issue #14 · tkipf/gcn · GitHub",
+        "n_chars": 2290
+      }
+    ],
+    "not_read": [
+      "https://arxiv.org/abs/1609.02907?context=stat.ML",
+      "https://arxiv.org/abs/1609.02907?context=cs",
+      "https://arxiv.org/pdf/1811.05868",
+      "https://arxiv.org/html/1811.05868v2",
+      "https://arxiv.org/html/2409.05755v1",
+      "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+      "https://openreview.net/pdf/e09ac157f8dd68bdb4982dd429aeade4b4460564.pdf",
+      "https://github.com/tkipf/keras-gcn/issues/24",
+      "https://github.com/ycq091044/GCN-Oversmooth",
+      "https://github.com/huangwb/AS-GCN",
+      "https://github.com/ChandlerBang/SimP-GCN",
+      "https://github.com/Vamsi995/gcn-smooth",
+      "https://github.com/nasa-gcn/circulars-nlp-paper",
+      "https://github.com/RomeoSajina/GCN-Transformer",
+      "https://github.com/KimMeen/GCN",
+      "https://github.com/1zgh/st-gcn",
+      "https://github.com/liyaguang/st-gcn",
+      "https://github.com/leila-you/bug-localization-GCN",
+      "https://github.com/yysijie/st-gcn/blob/master/OLD_README.md",
+      "https://github.com/TeamLab/bert-gcn-for-paper-citation",
+      "https://arxiv.org/html/2502.14546v1",
+      "https://arxiv.org/html/2604.19514v1",
+      "https://arxiv.org/html/2502.15142v1",
+      "https://arxiv.org/html/2502.09263v2",
+      "https://arxiv.org/html/2601.19449v2",
+      "https://arxiv.org/html/2610.08823v1",
+      "https://arxiv.org/html/2411.03845v3",
+      "https://arxiv.org/html/2608.20980v1",
+      "https://arxiv.org/html/2505.02020v1",
+      "https://arxiv.org/html/2306.10280v4",
+      "https://arxiv.org/html/1907.02237v3",
+      "https://arxiv.org/html/2609.37650v1",
+      "https://github.com/MengjieChan/GCN_for_Node_Classification_Task",
+      "https://github.com/tkipf/keras-gcn/blob/master/kegra/data/cora/README",
+      "https://arxiv.org/html/2407.07457v2",
+      "https://github.com/tkipf/gcn/issues/14?timeline_page=1"
+    ],
+    "not_extracted": [],
+    "dropped_items": [
+      {
+        "url": "https://github.com/pytorch/examples/blob/main/gcn",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "reproducibility",
+        "statement": "Results can vary due to randomness of the train/val/test split.",
+        "quote": "However, the results can vary due to the randomness of the train/val/test split."
+      }
+    ],
+    "candidates": [
+      {
+        "url": "https://github.com/pytorch/examples/blob/main/gcn",
+        "topic": "reproducibility",
+        "statement": "Results can vary due to randomness of the train/val/test split.",
+        "quote": "However, the results can vary due to the randomness of the train/val/test split.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      }
+    ],
+    "mode": "live",
+    "queried_at": "2026-10-09T14:21:17+00:00"
+  },
+  "summary": null,
+  "explanations": {},
+  "setup_missing": [],
+  "val_label_check": {
+    "disc_1609_02907_accuracy": {
+      "0": {
+        "code_hash": "e6fe9f61c538",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.774,
+        "val_masked": 0.22,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "1": {
+        "code_hash": "f3fd662c7915",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.794,
+        "val_masked": 0.368,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "2": {
+        "code_hash": "9179dfaec068",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.784,
+        "val_masked": 0.24,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      }
+    }
+  },
+  "edge_direction": {
+    "disc_1609_02907_accuracy": [
+      {
+        "code_hash": "f3fd662c7915",
+        "verdict": "beide Richtungen",
+        "acc_side_a": 0.5612648221343873,
+        "acc_side_b": 0.548582995951417,
+        "detail": null
+      }
+    ]
+  },
+  "repo_diff": {
+    "disc_1609_02907_accuracy": {
+      "deviations": [],
+      "dropped": 1,
+      "truncation": [],
+      "from_hash": "f3fd662c7915",
+      "result": "no_deviation"
+    }
+  },
+  "warnings": [],
+  "nachlauf": {},
+  "objection_checks": [],
+  "spec": {
+    "model": "GCN",
+    "family": "graph",
+    "items": [
+      {
+        "key": "lr",
+        "value": "0.01",
+        "quote": "We train all models for a maximum of 200 epochs (training iterations) using Adam (Kingma & Ba, 2015) with a learning rate of 0.01 and early stopping with a window size of 10, i.e. we stop training if the validation loss does not decrease for 10 consecutive epochs.",
+        "source": "paper",
+        "rank": "paper",
+        "number": 0.01,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "weight_decay",
+        "value": "5 · 10−4",
+        "quote": "5 · 10−4 (L2 regularization)",
+        "source": "paper",
+        "rank": "paper",
+        "number": null,
+        "enforce": false,
+        "alternatives": [
+          {
+            "value": "0.0005",
+            "source": "repo:gcn/train.py@39a4089",
+            "rank": "argparse default",
+            "quote": "flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')"
+          }
+        ],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "epochs",
+        "value": "200",
+        "quote": "We train all models for a maximum of 200 epochs (training iterations) using Adam (Kingma & Ba, 2015) with a learning rate of 0.01 and early stopping with a window size of 10, i.e. we stop training if the validation loss does not decrease for 10 consecutive epochs.",
+        "source": "paper",
+        "rank": "paper",
+        "number": 200,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "dropout",
+        "value": "0.5",
+        "quote": "flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')",
+        "source": "repo:gcn/train.py@39a4089",
+        "rank": "argparse default",
+        "number": 0.5,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "hidden",
+        "value": "16",
+        "quote": "We used the following sets of hyperparameters for Citeseer, Cora and Pubmed: 0.5 (dropout rate), 5 · 10−4 (L2 regularization) and 16 (number of hidden units);",
+        "source": "paper",
+        "rank": "paper",
+        "number": 16,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "patience",
+        "value": "10",
+        "quote": "We train all models for a maximum of 200 epochs (training iterations) using Adam (Kingma & Ba, 2015) with a learning rate of 0.01 and early stopping with a window size of 10, i.e. we stop training if the validation loss does not decrease for 10 consecutive epochs.",
+        "source": "paper",
+        "rank": "paper",
+        "number": 10,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      }
+    ],
+    "dropped": [
+      {
+        "item": {
+          "key": "layers",
+          "value": 2,
+          "quote": "Unless otherwise noted, we train a two-layer GCN as described in Section 3.1 and evaluate prediction accuracy on a test set of 1,000 labeled examples.",
+          "source": "paper"
+        },
+        "reason": "Zahl des Werts nicht im Zitat"
+      }
+    ],
+    "excerpt_docs": [
+      "repo:gcn/models.py@39a4089",
+      "repo:gcn/train.py@39a4089",
+      "repo:gcn/utils.py@39a4089 (function body)",
+      "repo:gcn/utils.py@39a4089 (function body)",
+      "repo:gcn/utils.py@39a4089 (function body)",
+      "repo:gcn/layers.py@39a4089"
+    ],
+    "missing": [
+      "batch_size",
+      "layers",
+      "heads"
+    ],
+    "excerpt_chars": 15264
+  }
+}

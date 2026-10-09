@@ -30,19 +30,20 @@ candidates:
     found_by: benchmark
     reason: Referenz-Paper aus dem Benchmark (Kipf, Planetoid-Split)
     community: []
-  checked_at: '2026-10-04T19:25:23Z'
-  cost_gross_usd: 0.0743
+  checked_at: '2026-10-09T14:21:41Z'
+  cost_gross_usd: 0.1884
   verdict:
     urteil: reproduziert
-    measured_mean: 0.8153
-    measured_std: 0.010646
-    seeds: 10
+    measured_mean: 0.814556
+    measured_std: 0.007748
+    seeds: 9
     target: 0.815
     tolerance: 0.01
     gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
     graph_repairs: 0
     fault_repairs: 0
-    run_dir: runs/disc_1609_02907/20261004-211550
+    run_dir: runs/disc_1609_02907/20261009-160716
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
@@ -71,19 +72,20 @@ candidates:
     found_by: benchmark
     reason: Referenz-Paper (Kipf, Planetoid-Split), CiteSeer-Spalte aus Tabelle 2
     community: []
-  checked_at: '2026-10-08T09:56:21Z'
-  cost_gross_usd: 0.1073
+  checked_at: '2026-10-09T14:37:00Z'
+  cost_gross_usd: 0.1527
   verdict:
-    urteil: teilweise
-    measured_mean: 0.714
-    measured_std: 0.008794
+    urteil: reproduziert
+    measured_mean: 0.7086
+    measured_std: 0.007471
     seeds: 10
     target: 0.703
     tolerance: 0.01
     gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
     graph_repairs: 0
     fault_repairs: 0
-    run_dir: runs/disc_1609_02907_citeseer/20261008-114435
+    run_dir: runs/disc_1609_02907_citeseer/20261009-162142
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
@@ -117,19 +119,20 @@ candidates:
     found_by: benchmark
     reason: Referenz-Paper aus dem Benchmark (Shchur, zufaellige Splits, groesste Komponente)
     community: []
-  checked_at: '2026-10-04T19:35:09Z'
-  cost_gross_usd: 0.1129
+  checked_at: '2026-10-09T14:52:48Z'
+  cost_gross_usd: 0.2325
   verdict:
     urteil: teilweise
-    measured_mean: 0.804934
-    measured_std: 0.015829
+    measured_mean: 0.799781
+    measured_std: 0.016359
     seeds: 30
     target: 0.815
     tolerance: 0.01
     gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
     graph_repairs: 0
     fault_repairs: 0
-    run_dir: runs/disc_1811_05868/20261004-212533
+    run_dir: runs/disc_1811_05868/20261009-163701
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
@@ -337,18 +340,20 @@ candidates:
     protocol: passt
     found_by: tavily
     reason: Code found, validated via README.
-  checked_at: '2026-09-30T18:19:19Z'
-  cost_gross_usd: 0.0246
+  checked_at: '2026-10-09T15:16:12Z'
+  cost_gross_usd: 0.2904
   verdict:
     urteil: nicht reproduziert
-    measured_mean: 0.782998
-    measured_std: 0.017567
-    seeds: 10
+    measured_mean: 0.595129
+    measured_std: 0.04211
+    seeds: 5
     target: 0.8292
     tolerance: 0.01
     gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
     graph_repairs: 0
-    run_dir: runs/disc_2511_08094/20260930-200050
+    fault_repairs: 2
+    run_dir: runs/disc_2511_08094/20261009-165248
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'

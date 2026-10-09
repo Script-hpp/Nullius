@@ -1,0 +1,2111 @@
+{
+  "paper_id": "disc_2511_08094",
+  "claims": [
+    {
+      "id": "disc_2511_08094_accuracy",
+      "text": "SL-GCN erreicht 82.92 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)",
+      "metric": "accuracy",
+      "target": 0.8292,
+      "tolerance": 0.01,
+      "source": "Table 2, arXiv v2 (arxiv_html)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/html/2511.08094v2"
+      ],
+      "target_evidence": {
+        "value": 0.8292,
+        "quote": "SL-GCN 82.92 ± 1.39 73.29 ± 2.04 79.21 ± 1.30",
+        "table": "Table 2",
+        "url": "https://arxiv.org/html/2511.08094v2",
+        "source_kind": "arxiv_html",
+        "retrieved_at": "2026-09-30T18:00:54+00:00",
+        "sha256": "d2924fd2ef1b993c72c6e2f821e1d79b0ec8c82e118e2a2ebdd6709cc8f9ce7a",
+        "arxiv_version": "v2",
+        "caveat": null,
+        "column_check": "ok",
+        "from_store": true
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-c15a8b78",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "caf2fd3163b0",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:46: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(idx, vals, size=(num_nodes, num_nodes), dtype=torch.float32)\nTraceback (most recent call last):\n  File \"/work/train.py\", line 193, in <module>\n    train()\n  File \"/work/train.py\", line 126, in train\n    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: ReduceLROnPlateau.__init__() got an unexpected keyword argument 'verbose'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.1436150999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-375dd5b7",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "671473f94793",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:82: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(\nTraceback (most recent call last):\n  File \"/work/train.py\", line 273, in <module>\n    main()\n  File \"/work/train.py\", line 226, in main\n    out = model(features_t)  # full forward pass\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 168, in forward\n    out_dim = hidden * self.heads\n              ^^^^^^\nNameError: name 'hidden' is not defined\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.1436150999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-60790e1f",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "78a7608dd104",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:59: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(edge_index, values, size=(N, N))\nTraceback (most recent call last):\n  File \"/work/train.py\", line 202, in <module>\n    train_function()\n  File \"/work/train.py\", line 154, in train_function\n    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=CONFIG[\"lr_decay_factor\"],\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: ReduceLROnPlateau.__init__() got an unexpected keyword argument 'verbose'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.1623305999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-26c4d5fa",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "43bbb4aa5e8f",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:73: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(\nTraceback (most recent call last):\n  File \"/work/train.py\", line 249, in <module>\n    main()\n  File \"/work/train.py\", line 206, in main\n    out = model(features_t)  # full forward pass\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 143, in forward\n    h = self._propagate(h)\n        ^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 127, in _propagate\n    dh_real = self.deg_inv_sqrt.view(-1, 1) * h.real\n              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~\nRuntimeError: The size of tensor a (2485) must match the size of tensor b (4970) at non-singleton dimension 0\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.16817039999999991,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-ab79f18f",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "d612933f3aaa",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 205, in <module>\n    train_function()\n  File \"/work/train.py\", line 157, in train_function\n    scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=CONFIG[\"lr_decay_factor\"],\n                                                                ~~~~~~^^^^^^^^^^^^^^^^^^^\nKeyError: 'lr_decay_factor'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.1741988999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-e9b2e199",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "49be1ef2015f",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.6196721311475409,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.18059009999999992,
+      "metrics": {
+        "accuracy": 0.6196721311475409
+      },
+      "coverage": {
+        "executed": [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          19,
+          31,
+          32,
+          33,
+          35,
+          36,
+          37,
+          38,
+          41,
+          43,
+          44,
+          45,
+          46,
+          48,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          66,
+          67,
+          69,
+          72,
+          75,
+          77,
+          78,
+          79,
+          81,
+          82,
+          84,
+          85,
+          86,
+          87,
+          90,
+          91,
+          93,
+          94,
+          95,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          106,
+          107,
+          108,
+          109,
+          110,
+          111,
+          113,
+          115,
+          125,
+          130,
+          135,
+          136,
+          138,
+          139,
+          140,
+          141,
+          143,
+          144,
+          146,
+          147,
+          148,
+          149,
+          150,
+          151,
+          152,
+          153,
+          155,
+          156,
+          157,
+          158,
+          160,
+          161,
+          162,
+          163,
+          165,
+          166,
+          167,
+          169,
+          170,
+          171,
+          173,
+          175,
+          176,
+          179,
+          180,
+          185,
+          186,
+          188,
+          189,
+          190,
+          191,
+          193,
+          194,
+          196,
+          197
+        ],
+        "missing": [
+          39,
+          177
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.6523809523809524,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-f25aaa8d",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "9f467cddc247",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "oc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(\nTraceback (most recent call last):\n  File \"/work/train.py\", line 249, in <module>\n    main()\n  File \"/work/train.py\", line 206, in main\n    out = model(features_t)  # full forward pass\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 146, in forward\n    h_real = lin(h_real)\n             ^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: mat1 and mat2 shapes cannot be multiplied (2485x128 and 256x256)\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.18059009999999992,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-6ac953a7",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "1c802c74b27e",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.5737704918032787,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.1875857999999999,
+      "metrics": {
+        "accuracy": 0.5737704918032787
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          23,
+          45,
+          46,
+          47,
+          48,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          63,
+          64,
+          67,
+          68,
+          69,
+          70,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          80,
+          89,
+          90,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          98,
+          100,
+          101,
+          102,
+          103,
+          104,
+          106,
+          108,
+          110,
+          111,
+          113,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          125,
+          126,
+          127,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          137,
+          153,
+          154,
+          156,
+          158,
+          159,
+          161,
+          162,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          172,
+          173,
+          174,
+          175,
+          176,
+          178,
+          179,
+          181,
+          182,
+          183,
+          185,
+          189,
+          190,
+          192,
+          193,
+          194,
+          196,
+          197,
+          199,
+          201,
+          202
+        ],
+        "missing": [
+          49,
+          186
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.5857142857142857,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-034fda7f",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "ee510f09bf21",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.2585480093676815,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.1875857999999999,
+      "metrics": {
+        "accuracy": 0.2585480093676815
+      },
+      "coverage": {
+        "executed": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          20,
+          22,
+          36,
+          38,
+          39,
+          40,
+          43,
+          44,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          56,
+          57,
+          58,
+          61,
+          62,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          73,
+          74,
+          75,
+          81,
+          82,
+          83,
+          86,
+          87,
+          88,
+          91,
+          92,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          107,
+          109,
+          111,
+          112,
+          114,
+          115,
+          119,
+          120,
+          121,
+          124,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          138,
+          139,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          147,
+          148,
+          151,
+          152,
+          153,
+          155,
+          156,
+          158,
+          174,
+          179,
+          182,
+          183,
+          185,
+          186,
+          188,
+          190,
+          191,
+          192,
+          193,
+          194,
+          195,
+          196,
+          197,
+          198,
+          199,
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          213,
+          214,
+          215,
+          217,
+          218,
+          219,
+          221,
+          223,
+          224,
+          227,
+          228,
+          229,
+          230,
+          232,
+          235,
+          237,
+          238
+        ],
+        "missing": [
+          117,
+          122,
+          140,
+          149,
+          150,
+          220
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.3,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-c0cda924",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "b0897fc2cf75",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.22576112412177987,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.1937822999999999,
+      "metrics": {
+        "accuracy": 0.22576112412177987
+      },
+      "coverage": {
+        "executed": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          20,
+          32,
+          49,
+          51,
+          52,
+          53,
+          56,
+          57,
+          60,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          70,
+          71,
+          72,
+          75,
+          76,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          87,
+          90,
+          91,
+          94,
+          95,
+          96,
+          99,
+          106,
+          107,
+          108,
+          110,
+          111,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          138,
+          140,
+          142,
+          143,
+          145,
+          146,
+          150,
+          151,
+          152,
+          155,
+          158,
+          159,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          169,
+          170,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          182,
+          185,
+          188,
+          190,
+          191,
+          193,
+          209,
+          214,
+          217,
+          218,
+          220,
+          221,
+          223,
+          227,
+          228,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          238,
+          239,
+          240,
+          241,
+          243,
+          244,
+          245,
+          246,
+          248,
+          249,
+          252,
+          253,
+          254,
+          258,
+          259,
+          260,
+          262,
+          264,
+          265,
+          268,
+          269,
+          270,
+          271,
+          273,
+          276,
+          279,
+          280
+        ],
+        "missing": [
+          148,
+          153,
+          171,
+          180,
+          181,
+          261
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.30952380952380953,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-04ddc77b",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "c260358dad4d",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "is warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(\nTraceback (most recent call last):\n  File \"/work/train.py\", line 284, in <module>\n    main()\n  File \"/work/train.py\", line 239, in main\n    out = model(features_t)  # [N, num_classes]\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 184, in forward\n    h = self.linears[0](x)  # [N, hidden*heads]\n        ^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 120, in forward\n    imag = input.imag\n           ^^^^^^^^^^\nRuntimeError: imag is not implemented for tensors with non-complex dtypes.\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.2022887999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-70f6846b",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "e8b8a3595597",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(edge_index, values, size=(N, N)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 267, in <module>\n    main()\n  File \"/work/train.py\", line 223, in main\n    out = model(features_t)  # [N, num_classes]\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 174, in forward\n    h = self.linears[0](x)  # [N, hidden*heads]\n        ^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 116, in forward\n    imag = input.imag\n           ^^^^^^^^^^\nRuntimeError: imag is not implemented for tensors with non-complex dtypes.\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.21057569999999992,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-27f1f3a8",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "0a07779066f6",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "ariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sp = torch.sparse_coo_tensor(edge_index, values, size=(N, N)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 267, in <module>\n    main()\n  File \"/work/train.py\", line 223, in main\n    out = model(features_t)  # [N, num_classes]\n          ^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 177, in forward\n    h = self._propagate(h)\n        ^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 167, in _propagate\n    Lh = h - norm_adj_mul(h)\n             ^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 123, in norm_adj_mul\n    Ah = torch.sparse.mm(adj_sp, h_scaled)  # supports complex\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: expected scalar type Float but found ComplexFloat\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.21653519999999993,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-2a7d0fc9",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "e37896303b11",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) exceeded 90s: the script ignores SMOKE=1. With SMOKE=1 use the tiny subset and 1 epoch as described.",
+      "tavily_queries": [],
+      "cost_usd": 0.22273439999999992,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-f748c87c",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "49be1ef2015f",
+      "seed": 1,
+      "status": "abweichung",
+      "measured": 0.629976580796253,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.24176999999999993,
+      "metrics": {
+        "accuracy": 0.629976580796253
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-aafea39d",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "49be1ef2015f",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.6046838407494145,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.24176999999999993,
+      "metrics": {
+        "accuracy": 0.6046838407494145
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-91e1d173",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "49be1ef2015f",
+      "seed": 2,
+      "status": "abweichung",
+      "measured": 0.5231850117096019,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.24176999999999993,
+      "metrics": {
+        "accuracy": 0.5231850117096019
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "branch_id": "repro-branch-0e6fda4c",
+      "parent_snapshot": "repro-snapshot-disc-2511-08094-20261009-165248",
+      "code_hash": "49be1ef2015f",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.5981264637002341,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.24176999999999993,
+      "metrics": {
+        "accuracy": 0.5981264637002341
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_2511_08094_accuracy",
+      "urteil": "nicht reproduziert",
+      "measured_mean": 0.5951288056206089,
+      "measured_std": 0.04210978625924648,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0421. Mit unserem Setup gemessen (5 von 5 Seeds, Zielwert 0.8292 +/- 0.01, Table 2, arXiv v2 (arxiv_html)): Mittel 0.5951. Code-Kandidaten: 3, gewaehlt Kandidat 0 (Code 49be1ef2015f) nach Validierungs-Metrik (0: accuracy 0.6524, 1: accuracy 0.3095, 2: accuracy 0.5857); Rueckfall ohne Val-Wert; Repo-Abgleich: keine geprueften Abweichungen",
+      "sources": [
+        "https://arxiv.org/html/2511.08094v2"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "learning rate",
+      "value": "0.001",
+      "quote": "parser.add_argument('--learning_rate', type=float, default=0.001)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--learning_rate', type=float, default=0.001)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "args.weight_decay",
+      "quote": "self.optimizer = getattr(\n    torch.optim, args.optimizer\n    )(\n    self.model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay\n    )",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "self.optimizer = getattr(\n    torch.optim, args.optimizer\n    )(\n    self.model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay\n    )"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "1e-5",
+      "quote": "parser.add_argument('--weight_decay', type=float, default=1e-5)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--weight_decay', type=float, default=1e-5)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "args.dropout",
+      "quote": "self.dropout = args.dropout",
+      "source": "repo:src/slmodel.py@40944b1",
+      "applies_to": {
+        "model": "slgcn",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "self.dropout = args.dropout"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "args.input_dropout",
+      "quote": "self.input_dropout = args.input_dropout",
+      "source": "repo:src/slmodel.py@40944b1",
+      "applies_to": {
+        "model": "slgcn",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "self.input_dropout = args.input_dropout"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "0.0",
+      "quote": "parser.add_argument('--dropout', type=float, default=0.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--dropout', type=float, default=0.0)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "input_dropout",
+      "value": "0.0",
+      "quote": "parser.add_argument('--input_dropout', type=float, default=0.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--input_dropout', type=float, default=0.0)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hidden size",
+      "value": "128",
+      "quote": "parser.add_argument('--nhid', type=int, default=128)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "slgcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--dataset', type=str, default='Cora')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "heads",
+      "value": "2",
+      "quote": "parser.add_argument('--nhead', type=int, default=2)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "slgcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--dataset', type=str, default='Cora')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "epochs",
+      "value": "100",
+      "quote": "def train(self, max_epoch=100, disable_tqdm=False):",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "def train(self, max_epoch=100, disable_tqdm=false):"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "epochs",
+      "value": "1000",
+      "quote": "parser.add_argument('--max_epoch', type=int, default=1000)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": null,
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "self.tol",
+      "quote": "if torch.max(torch.abs(update)) < self.tol:",
+      "source": "repo:src/slmodel.py@40944b1",
+      "applies_to": {
+        "model": "slgcn",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "def solve_implicit_r(self, r_prev, max_iter=20):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "self.lr_stop = self.args.learning_rate * 0.9",
+      "quote": "self.lr_stop = self.args.learning_rate * 0.9",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "loss = F.cross_entropy(out[self.data.train_mask], self.data.y[self.data.train_mask])"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "self.scheduler = ReduceLROnPlateau(self.optimizer, 'max', patience=self.args.lr_decay_patience, factor=self.args.lr_decay_factor,)",
+      "quote": "self.scheduler = ReduceLROnPlateau(self.optimizer, 'max', patience=self.args.lr_decay_patience, factor=self.args.lr_decay_factor,)",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "loss = F.cross_entropy(out[self.data.train_mask], self.data.y[self.data.train_mask])"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "if new_lr < self.lr_stop: break",
+      "quote": "if new_lr < self.lr_stop: break",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "loss = F.cross_entropy(out[self.data.train_mask], self.data.y[self.data.train_mask])"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "100 random dataset splits and initialization",
+      "quote": "The means and standard deviations are computed over 100 random dataset splits and initialization.",
+      "source": "paper",
+      "applies_to": null,
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "device",
+      "quote": "self.device = args.device",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "def train(self, max_epoch=100, disable_tqdm=False):"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "scheduler mode (max)",
+      "quote": "ReduceLROnPlateau(self.optimizer, 'max', patience=self.args.lr_decay_patience, factor=self.args.lr_decay_factor,)",
+      "source": "repo:src/experiment.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "def train(self, max_epoch=100, disable_tqdm=False):"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "False",
+      "quote": "parser.add_argument('--bias', type=bool, default=False)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "80",
+      "quote": "parser.add_argument('--natt', type=int, default=80)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "10",
+      "quote": "parser.add_argument('--nlayer', type=int, default=10)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.3",
+      "quote": "parser.add_argument('--k', type=int, default=0.3)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "2.",
+      "quote": "parser.add_argument('--p', type=float, default=2.)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "1.0",
+      "quote": "parser.add_argument('--dt', type=float, default=1.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.0",
+      "quote": "parser.add_argument('--zeta_real', type=float, default=0.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "1.0",
+      "quote": "parser.add_argument('--zeta_imag', type=float, default=1.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "1.0",
+      "quote": "parser.add_argument('--nu_real', type=float, default=1.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "1.0",
+      "quote": "parser.add_argument('--nu_imag', type=float, default=1.0)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "1e-3",
+      "quote": "parser.add_argument('--tol', type=float, default=1e-3)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.3",
+      "quote": "parser.add_argument('--leaky_relu_slope', type=float, default=0.3)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "NAdam",
+      "quote": "parser.add_argument('--optimizer', type=str, default='NAdam')",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.1",
+      "quote": "parser.add_argument('--lr_decay_factor', type=float, default=0.1)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "100",
+      "quote": "parser.add_argument('--lr_decay_patience', type=int, default=100)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "64",
+      "quote": "parser.add_argument('--batch_size', type=int, default=64)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "cuda",
+      "quote": "parser.add_argument('--device', type=str, default='cuda')",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "-1",
+      "quote": "parser.add_argument('--seed', type=int, default=-1)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "-1",
+      "quote": "parser.add_argument('--dataset_seed', type=int, default=-1)",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "10",
+      "quote": "parser.add_argument('--test_repeats', type=int, default=10, help='Number of test repeats')",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.0",
+      "quote": "parser.add_argument('--alpha', type=float, default=0.0, help='Alpha for GraphhCON model')",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "0.0",
+      "quote": "parser.add_argument('--gamma', type=float, default=0.0, help='Gamma for GraphhCON model')",
+      "source": "repo:src/run.py@40944b1",
+      "applies_to": {
+        "model": "SLGCN",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "else: # node-level tasks\n        model = getattr(slmodel, args.model)(args, dataset)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "default seed=12345",
+      "quote": "def get_dataset(dataset_name, data_dir='./data/', use_lcc=False, seed=12345, split=-1) -> InMemoryDataset:",
+      "source": "repo:src/data.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "if dataset_name in ['Cora', 'Citeseer', 'Pubmed']:"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "num_development=1500 for train/val/test split",
+      "quote": "dataset._data = set_train_val_test_split(\n            seed,\n            dataset._data,\n            num_development=1500)",
+      "source": "repo:src/data.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "if dataset_name in ['Cora', 'Citeseer', 'Pubmed']:"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "num_per_class=20 for per‑class training samples",
+      "quote": "def set_train_val_test_split(\n        seed,\n        data: Data,\n        num_development = 1500,\n        num_per_class = 20) -> Data:",
+      "source": "repo:src/data.py@40944b1",
+      "applies_to": {
+        "model": "all",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "if dataset_name in ['Cora', 'Citeseer', 'Pubmed']:"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/kevvzhang/StuartLandauGNN",
+    "commit": "40944b1e0d2b954de6b46f31b6a9a6f3dc04f095",
+    "files": [
+      "README.md",
+      "requirements.txt",
+      "src/best_params.py",
+      "src/data.py",
+      "src/experiment.py",
+      "src/function_transformer_attention.py",
+      "src/layer.py",
+      "src/run.py",
+      "src/slmodel.py",
+      "src/utils.py",
+      "yml/run.sh",
+      "yml/run_simple.sh"
+    ]
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.1377049180327869
+    },
+    "no_graph": {
+      "accuracy": 0.5587822014051522
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/html/2511.08094v2",
+      "mode": "live",
+      "n_chars": 78027,
+      "retrieved_at": "2026-10-09T14:52:52+00:00",
+      "sha256": "d2924fd2ef1b993c72c6e2f821e1d79b0ec8c82e118e2a2ebdd6709cc8f9ce7a"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/kevvzhang/StuartLandauGNN",
+      "mode": "live",
+      "n_chars": 16767,
+      "retrieved_at": "2026-10-09T14:52:52+00:00",
+      "sha256": "686bce9ecc0c2c0325945b97b0384576450150fa2f0e154c40b0fb65b03cc702"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/kevvzhang/StuartLandauGNN",
+      "mode": "live",
+      "n_chars": 6755,
+      "retrieved_at": "2026-10-09T15:15:26+00:00",
+      "sha256": "b512921d691c701deef424701bfe655bcb6ff9fb80df75be43aad38024b95d11"
+    }
+  ],
+  "ablations": {
+    "disc_2511_08094_accuracy": {
+      "accuracy_full": 0.6196721311475409,
+      "accuracy_ablated": null,
+      "verdict": "nicht messbar",
+      "detail": "Nur eine einzige Vorhersage-Klasse ueber alle IDs -- verdaechtig"
+    }
+  },
+  "mode": "nachbau_autorencode",
+  "graph_repairs": {},
+  "fault_repairs": {
+    "disc_2511_08094_accuracy": 2
+  },
+  "droplast_notes": {},
+  "community": {
+    "findings": [],
+    "dropped": 0,
+    "pages": [
+      {
+        "url": "https://github.com/kevvzhang/StuartLandauGNN",
+        "n_chars": 6755,
+        "sha256": "b512921d691c701deef424701bfe655bcb6ff9fb80df75be43aad38024b95d11"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "search",
+        "title": "Stuart-Landau Oscillatory Graph Neural Network"
+      },
+      {
+        "kind": "method_search",
+        "method": "SL-GCN",
+        "dataset": "Cora"
+      },
+      {
+        "kind": "critique_search",
+        "method": "SL-GCN",
+        "dataset": "Cora",
+        "queries": [
+          "SL-GCN Cora reproduce results differ",
+          "SL-GCN bug evaluation",
+          "SL-GCN baseline re-evaluation fixed",
+          "we re-run SL-GCN on Cora and compare with the reported numbers"
+        ]
+      },
+      {
+        "kind": "repo_search",
+        "repo": "kevvzhang/StuartLandauGNN"
+      },
+      {
+        "kind": "crawl",
+        "url": "https://github.com/kevvzhang/StuartLandauGNN/issues"
+      }
+    ],
+    "reused_discovery": false,
+    "calls": [
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "crawl"
+    ],
+    "hits": [
+      {
+        "url": "https://arxiv.org/pdf/2403.08438",
+        "title": "Reproducibility and Geometric Intrinsic Dimensionality",
+        "n_chars": 131885
+      },
+      {
+        "url": "https://arxiv.org/html/2605.25662v1",
+        "title": "Closed-Form Node Classification with Exact Graph Unlearning",
+        "n_chars": 81801
+      },
+      {
+        "url": "https://arxiv.org/pdf/2011.09900",
+        "title": "MG-GCN: Fast and Effective Learning with Mix-grained ...",
+        "n_chars": 43973
+      },
+      {
+        "url": "https://arxiv.org/html/2606.10249v1",
+        "title": "When Design Rules Break: Benchmark Composition Determines Whether Label Informativeness Predicts GNN Aggregator Choice",
+        "n_chars": 76681
+      },
+      {
+        "url": "https://openreview.net/legal/terms",
+        "title": "OpenReview",
+        "n_chars": 45281
+      },
+      {
+        "url": "https://arxiv.org/pdf/2306.10280",
+        "title": "A Comprehensive Benchmark for Graph Structure Learning",
+        "n_chars": 78643
+      },
+      {
+        "url": "https://arxiv.org/pdf/2011.09900",
+        "title": "MG-GCN: Fast and Effective Learning with Mix-grained ...",
+        "n_chars": 43973
+      },
+      {
+        "url": "https://arxiv.org/html/2606.10249v1",
+        "title": "When Design Rules Break: Benchmark Composition Determines Whether Label Informativeness Predicts GNN Aggregator Choice",
+        "n_chars": 76681
+      },
+      {
+        "url": "https://github.com/blazef104",
+        "title": "blazef104 (Giulio Ginesi) · GitHub",
+        "n_chars": 1660
+      },
+      {
+        "url": "https://github.com/FilleDev",
+        "title": "FilleDev (Filip) · GitHub",
+        "n_chars": 2026
+      },
+      {
+        "url": "https://github.com/ejrydhfs",
+        "title": "ejrydhfs · GitHub",
+        "n_chars": 1277
+      },
+      {
+        "url": "https://github.com/hajar9495",
+        "title": "hajar9495 (hajar) · GitHub",
+        "n_chars": 683
+      },
+      {
+        "url": "https://github.com/praveenorugantitech",
+        "title": "praveenorugantitech (Praveen Oruganti Tech) · GitHub",
+        "n_chars": 493
+      },
+      {
+        "url": "https://arxiv.org/html/2401.05680v1",
+        "title": "Use of Graph Neural Networks in Aiding Defensive Cyber Operations",
+        "n_chars": 121550
+      },
+      {
+        "url": "https://arxiv.org/html/2411.19392v3",
+        "title": "Scale-aware Message Passing For Graph Node Classification",
+        "n_chars": 127648
+      },
+      {
+        "url": "https://arxiv.org/pdf/2403.08438",
+        "title": "Reproducibility and Geometric Intrinsic Dimensionality",
+        "n_chars": 131885
+      },
+      {
+        "url": "https://arxiv.org/html/2605.10529v1",
+        "title": "PrimeKG-CL: A Continual Graph Learning Benchmarkon Evolving Biomedical Knowledge Graphs",
+        "n_chars": 49401
+      },
+      {
+        "url": "https://arxiv.org/html/2402.13264v1",
+        "title": "KGroot: Enhancing Root Cause Analysis through Knowledge Graphs and Graph Convolutional Neural Networks",
+        "n_chars": 41595
+      },
+      {
+        "url": "https://arxiv.org/html/2410.07537v1",
+        "title": "Understanding the AI-powered Binary Code Similarity ...",
+        "n_chars": 136
+      },
+      {
+        "url": "https://openreview.net/attachment?id=SJeLO34KwS&name=original_pdf",
+        "title": "DIMENSIONAL REWEIGHTING GRAPH CONVOLU",
+        "n_chars": 147
+      },
+      {
+        "url": "https://openreview.net/pdf?id=JyKNuoZGux",
+        "title": "Calibrate and Debias Layer-wise Sampling for Graph ...",
+        "n_chars": 188
+      },
+      {
+        "url": "https://github.com/kevvzhang/StuartLandauGNN",
+        "title": "GitHub - kevvzhang/StuartLandauGNN: Official implementation of \"Stuart-Landau Oscillatory Graph Neural Network\", accepted at TheWebConf 2026",
+        "n_chars": 6755
+      }
+    ],
+    "not_read": [
+      "https://arxiv.org/pdf/2403.08438",
+      "https://arxiv.org/html/2605.25662v1",
+      "https://arxiv.org/pdf/2011.09900",
+      "https://arxiv.org/html/2606.10249v1",
+      "https://openreview.net/legal/terms",
+      "https://arxiv.org/pdf/2306.10280",
+      "https://arxiv.org/pdf/2011.09900",
+      "https://arxiv.org/html/2606.10249v1",
+      "https://github.com/blazef104",
+      "https://github.com/FilleDev",
+      "https://github.com/ejrydhfs",
+      "https://github.com/hajar9495",
+      "https://github.com/praveenorugantitech",
+      "https://arxiv.org/html/2401.05680v1",
+      "https://arxiv.org/html/2411.19392v3",
+      "https://arxiv.org/pdf/2403.08438",
+      "https://arxiv.org/html/2605.10529v1",
+      "https://arxiv.org/html/2402.13264v1",
+      "https://arxiv.org/html/2410.07537v1",
+      "https://openreview.net/attachment?id=SJeLO34KwS&name=original_pdf",
+      "https://openreview.net/pdf?id=JyKNuoZGux"
+    ],
+    "not_extracted": [],
+    "dropped_items": [],
+    "candidates": [],
+    "mode": "live",
+    "queried_at": "2026-10-09T15:15:26+00:00"
+  },
+  "summary": null,
+  "explanations": {
+    "disc_2511_08094_accuracy": {
+      "items": [
+        {
+          "topic": "hyperparameters that the paper does not state",
+          "explanation": "The implementation loads tuned hyperparameters from best_params.py automatically, which may not be disclosed in the paper.",
+          "quote": "Note:run.py automatically loads tuned hyperparameters from best_params.py when available.",
+          "url": "https://github.com/kevvzhang/StuartLandauGNN",
+          "status": "unverified hypothesis"
+        }
+      ],
+      "dropped": 0,
+      "mode": "live"
+    }
+  },
+  "setup_missing": [
+    "feature normalisation",
+    "adjacency normalisation"
+  ],
+  "val_label_check": {
+    "disc_2511_08094_accuracy": {
+      "0": {
+        "code_hash": "49be1ef2015f",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.6523809523809524,
+        "val_masked": 0.5380952380952381,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "1": {
+        "code_hash": "b0897fc2cf75",
+        "verdict": "unklar",
+        "val_full": 0.30952380952380953,
+        "val_masked": 0.2571428571428571,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "2": {
+        "code_hash": "1c802c74b27e",
+        "verdict": "unklar",
+        "val_full": 0.5857142857142857,
+        "val_masked": 0.5571428571428572,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      }
+    }
+  },
+  "edge_direction": {},
+  "repo_diff": {
+    "disc_2511_08094_accuracy": {
+      "deviations": [],
+      "dropped": 1,
+      "truncation": [
+        {
+          "file": "src/best_params.py",
+          "kept_chars": 16966,
+          "of_chars": 30000
+        },
+        {
+          "file": "yml/run.sh",
+          "kept_chars": 0,
+          "of_chars": 3062
+        },
+        {
+          "file": "yml/run_simple.sh",
+          "kept_chars": 0,
+          "of_chars": 1029
+        },
+        {
+          "file": "README.md",
+          "kept_chars": 0,
+          "of_chars": 3258
+        },
+        {
+          "file": "requirements.txt",
+          "kept_chars": 0,
+          "of_chars": 172
+        },
+        {
+          "file": "src/function_transformer_attention.py",
+          "kept_chars": 0,
+          "of_chars": 2918
+        },
+        {
+          "file": "src/layer.py",
+          "kept_chars": 0,
+          "of_chars": 17049
+        }
+      ],
+      "from_hash": "49be1ef2015f",
+      "result": "no_deviation"
+    }
+  },
+  "warnings": [
+    "Info: Das Paper nennt Streuung +-1.39 (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); die Toleranz +-0.01 bleibt fest.",
+    "Steckbrief: Datei des Modells SL-GCN nicht im Repo-Ausschnitt"
+  ],
+  "nachlauf": {},
+  "objection_checks": [],
+  "spec": {
+    "model": "SL-GCN",
+    "family": "graph",
+    "items": [
+      {
+        "key": "lr",
+        "value": "0.001",
+        "quote": "parser.add_argument('--learning_rate', type=float, default=0.001)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 0.001,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "weight_decay",
+        "value": "1e-5",
+        "quote": "parser.add_argument('--weight_decay', type=float, default=1e-5)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 1e-05,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "epochs",
+        "value": "100",
+        "quote": "def train(self, max_epoch=100, disable_tqdm=False):",
+        "source": "repo:src/experiment.py@40944b1",
+        "rank": "start script",
+        "number": 100,
+        "enforce": true,
+        "alternatives": [
+          {
+            "value": "1000",
+            "source": "repo:src/run.py@40944b1",
+            "rank": "argparse default",
+            "quote": "parser.add_argument('--max_epoch', type=int, default=1000)"
+          }
+        ],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "batch_size",
+        "value": "64",
+        "quote": "parser.add_argument('--batch_size', type=int, default=64)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 64,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "dropout",
+        "value": "0.0",
+        "quote": "parser.add_argument('--dropout', type=float, default=0.0)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 0.0,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "hidden",
+        "value": "128",
+        "quote": "parser.add_argument('--nhid', type=int, default=128)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 128,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "layers",
+        "value": "10",
+        "quote": "parser.add_argument('--nlayer', type=int, default=10)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 10,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "patience",
+        "value": "100",
+        "quote": "parser.add_argument('--lr_decay_patience', type=int, default=100)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 100,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "heads",
+        "value": "2",
+        "quote": "parser.add_argument('--nhead', type=int, default=2)",
+        "source": "repo:src/run.py@40944b1",
+        "rank": "argparse default",
+        "number": 2,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      }
+    ],
+    "dropped": [],
+    "excerpt_docs": [
+      "repo:src/run.py@40944b1",
+      "repo:src/experiment.py@40944b1 (function body)",
+      "repo:src/data.py@40944b1 (function body)",
+      "repo:src/data.py@40944b1 (function body)"
+    ],
+    "missing": [],
+    "excerpt_chars": 9551
+  }
+}

@@ -1,0 +1,2793 @@
+{
+  "paper_id": "disc_1811_05868",
+  "claims": [
+    {
+      "id": "disc_1811_05868_accuracy",
+      "text": "GCN erreicht 81.5 % Accuracy auf Cora (groesste Komponente, zufaellige 20/30/Rest-Splits)",
+      "metric": "accuracy",
+      "target": 0.815,
+      "tolerance": 0.01,
+      "source": "Table 1, arXiv v2 (pdf)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "target_evidence": {
+        "value": 0.815,
+        "quote": "CORA CiteSeer PubMed CORA Full GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6",
+        "table": "Table 1",
+        "url": "https://arxiv.org/pdf/1811.05868v2",
+        "source_kind": "pdf",
+        "retrieved_at": "2026-10-09T14:37:04+00:00",
+        "sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056",
+        "arxiv_version": "v2",
+        "caveat": null,
+        "column_check": "nicht pruefbar",
+        "from_store": false
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-5761028e",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "eedfcfdc4dc0",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7793911007025761,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.12881916,
+      "metrics": {
+        "accuracy": 0.7793911007025761
+      },
+      "coverage": {
+        "executed": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          22,
+          24,
+          25,
+          26,
+          27,
+          30,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          39,
+          41,
+          42,
+          43,
+          44,
+          45,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          54,
+          56,
+          59,
+          60,
+          62,
+          63,
+          64,
+          65,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          75,
+          76,
+          77,
+          78,
+          80,
+          82,
+          83,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          96,
+          97,
+          98,
+          101,
+          104,
+          107,
+          116,
+          120,
+          121,
+          122,
+          123,
+          126,
+          127,
+          128,
+          129,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          148,
+          149,
+          150,
+          152,
+          153,
+          154,
+          155,
+          157,
+          158,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          169,
+          170,
+          171,
+          172,
+          174,
+          175
+        ],
+        "missing": [
+          28,
+          57
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8380952380952381,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-4f515e04",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "552c9aba6de7",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:49: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_tensor = torch.sparse_coo_tensor(indices, values, size=adj_norm.shape).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 170, in <module>\n    main()\n  File \"/work/train.py\", line 124, in main\n    logits = model(feat_tensor, adj_tensor)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 73, in forward\n    support = torch.mm(x, lin.weight) + lin.bias\n              ^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: mat1 and mat2 shapes cannot be multiplied (2485x1433 and 64x1433)\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.12881916,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-5057995b",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "79465cf16a84",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:48: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj_sparse = torch.sparse_coo_tensor(\nTraceback (most recent call last):\n  File \"/work/train.py\", line 184, in <module>\n    main()\n  File \"/work/train.py\", line 124, in main\n    adj_norm = build_normalized_adjacency(edges, num_nodes)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 51, in build_normalized_adjacency\n    adj_sparse.coalesce_()\n    ^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'Tensor' object has no attribute 'coalesce_'. Did you mean: 'coalesce'?\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.13434845999999998,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-b023b639",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "7db69525ecd9",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7915690866510539,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.13999836,
+      "metrics": {
+        "accuracy": 0.7915690866510539
+      },
+      "coverage": {
+        "executed": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          23,
+          25,
+          28,
+          30,
+          33,
+          36,
+          38,
+          39,
+          40,
+          41,
+          42,
+          44,
+          45,
+          46,
+          47,
+          48,
+          50,
+          51,
+          53,
+          54,
+          55,
+          56,
+          57,
+          59,
+          60,
+          61,
+          62,
+          63,
+          67,
+          68,
+          70,
+          72,
+          74,
+          76,
+          77,
+          79,
+          80,
+          81,
+          83,
+          85,
+          86,
+          87,
+          90,
+          91,
+          92,
+          93,
+          94,
+          95,
+          96,
+          98,
+          99,
+          102,
+          103,
+          104,
+          107,
+          115,
+          118,
+          119,
+          120,
+          121,
+          122,
+          123,
+          125,
+          126,
+          127,
+          128,
+          130,
+          132,
+          133,
+          134,
+          135,
+          138,
+          139,
+          140,
+          141,
+          142,
+          143,
+          146,
+          147,
+          148,
+          149,
+          151,
+          152,
+          153,
+          156,
+          157,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          168,
+          169,
+          170,
+          171,
+          173,
+          174
+        ],
+        "missing": [
+          65
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.861904761904762,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-ca33e849",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "f13d1ca4c050",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7868852459016393,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.13999836,
+      "metrics": {
+        "accuracy": 0.7868852459016393
+      },
+      "coverage": {
+        "executed": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          22,
+          25,
+          26,
+          27,
+          30,
+          32,
+          33,
+          34,
+          36,
+          38,
+          39,
+          40,
+          42,
+          43,
+          44,
+          45,
+          46,
+          49,
+          50,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          62,
+          63,
+          64,
+          66,
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          76,
+          77,
+          79,
+          80,
+          81,
+          82,
+          83,
+          85,
+          89,
+          94,
+          97,
+          99,
+          100,
+          104,
+          105,
+          106,
+          109,
+          110,
+          111,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          121,
+          122,
+          125,
+          126,
+          135,
+          137,
+          138,
+          141,
+          142,
+          143,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          151,
+          152,
+          153,
+          155,
+          156,
+          157,
+          158,
+          159,
+          160,
+          162,
+          163,
+          164,
+          166,
+          167,
+          168,
+          169,
+          172,
+          173,
+          174,
+          175,
+          177,
+          178,
+          181,
+          182
+        ],
+        "missing": [
+          90,
+          101,
+          102,
+          103,
+          139
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8523809523809524,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-3d45882a",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.7793911007025761,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7793911007025761
+      },
+      "coverage": {
+        "executed": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          22,
+          24,
+          25,
+          26,
+          27,
+          30,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          39,
+          41,
+          42,
+          43,
+          44,
+          45,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          54,
+          56,
+          59,
+          60,
+          62,
+          63,
+          64,
+          65,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          75,
+          76,
+          77,
+          78,
+          80,
+          82,
+          83,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          92,
+          93,
+          96,
+          97,
+          98,
+          101,
+          104,
+          107,
+          108,
+          111,
+          120,
+          124,
+          125,
+          126,
+          127,
+          130,
+          131,
+          132,
+          133,
+          134,
+          136,
+          137,
+          138,
+          139,
+          140,
+          141,
+          142,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          153,
+          154,
+          155,
+          156,
+          158,
+          159,
+          160,
+          161,
+          163,
+          164,
+          167,
+          168,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          179,
+          180,
+          181,
+          182,
+          184,
+          185
+        ],
+        "missing": [
+          28,
+          57
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.8380952380952381,
+        "baselines": {
+          "majority": 0.14285714285714285
+        }
+      }
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-b6523d16",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.8107728337236534,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8107728337236534
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-d8b06f3c",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.8079625292740047,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8079625292740047
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-8b24dbf4",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 3,
+      "status": "abweichung",
+      "measured": 0.7967213114754098,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7967213114754098
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-0551838c",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 4,
+      "status": "abweichung",
+      "measured": 0.7789227166276347,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7789227166276347
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-666b4796",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 5,
+      "status": "abweichung",
+      "measured": 0.7873536299765808,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7873536299765808
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-09eebd25",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 6,
+      "status": "stabil",
+      "measured": 0.8173302107728337,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8173302107728337
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-082a302c",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 7,
+      "status": "abweichung",
+      "measured": 0.785480093676815,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.785480093676815
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-ef893799",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 8,
+      "status": "abweichung",
+      "measured": 0.7939110070257611,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7939110070257611
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-35a9ce08",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 9,
+      "status": "stabil",
+      "measured": 0.8168618266978923,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8168618266978923
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-7bb4c566",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 11,
+      "status": "stabil",
+      "measured": 0.819672131147541,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.819672131147541
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-e84d5f99",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 10,
+      "status": "stabil",
+      "measured": 0.818735362997658,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.818735362997658
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-3e57b1dd",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 12,
+      "status": "abweichung",
+      "measured": 0.7765807962529274,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7765807962529274
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-38fb60c5",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 13,
+      "status": "abweichung",
+      "measured": 0.7985948477751756,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7985948477751756
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-4fe527ff",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 15,
+      "status": "stabil",
+      "measured": 0.805152224824356,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.805152224824356
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-ac415f6b",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 14,
+      "status": "abweichung",
+      "measured": 0.795784543325527,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.795784543325527
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-123b95e9",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 16,
+      "status": "abweichung",
+      "measured": 0.7985948477751756,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7985948477751756
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-d6ba2e43",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 17,
+      "status": "abweichung",
+      "measured": 0.7943793911007025,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7943793911007025
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-928c5ed7",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 18,
+      "status": "abweichung",
+      "measured": 0.7981264637002342,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7981264637002342
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-df2e1923",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 19,
+      "status": "stabil",
+      "measured": 0.8234192037470726,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8234192037470726
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-b14bb39e",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 20,
+      "status": "abweichung",
+      "measured": 0.8009367681498829,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8009367681498829
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-7f1544ce",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 21,
+      "status": "abweichung",
+      "measured": 0.7971896955503512,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7971896955503512
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-79f178da",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 22,
+      "status": "abweichung",
+      "measured": 0.7995316159250585,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7995316159250585
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-0c0a7e7b",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 23,
+      "status": "stabil",
+      "measured": 0.8206088992974239,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8206088992974239
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-d40f2545",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 24,
+      "status": "abweichung",
+      "measured": 0.7480093676814988,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7480093676814988
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-9bc8baef",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 25,
+      "status": "abweichung",
+      "measured": 0.8023419203747073,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8023419203747073
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-e2a59996",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 26,
+      "status": "stabil",
+      "measured": 0.8177985948477752,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8177985948477752
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-0b202c4a",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 28,
+      "status": "abweichung",
+      "measured": 0.7934426229508197,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7934426229508197
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-33e3de9b",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 27,
+      "status": "stabil",
+      "measured": 0.8159250585480093,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.8159250585480093
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "branch_id": "repro-branch-213f6def",
+      "parent_snapshot": "repro-snapshot-disc-1811-05868-20261009-163701",
+      "code_hash": "8f9e0d049f38",
+      "seed": 29,
+      "status": "abweichung",
+      "measured": 0.7939110070257611,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15825606,
+      "metrics": {
+        "accuracy": 0.7939110070257611
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_1811_05868_accuracy",
+      "urteil": "teilweise",
+      "measured_mean": 0.7997814207650273,
+      "measured_std": 0.016359366683208726,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0164. Mit unserem Setup gemessen (30 von 30 Seeds, Zielwert 0.815 +/- 0.01, Table 1, arXiv v2 (pdf)): Mittel 0.7998. Code-Kandidaten: 3, gewaehlt Kandidat 1 (Code eedfcfdc4dc0) nach Validierungs-Metrik (0: accuracy 0.8619, 1: accuracy 0.8381, 2: accuracy 0.8524); Rueckfall ohne Val-Wert; Repo-Abgleich: 1 Abweichungen, Code eedfcfdc4dc0 durch 8f9e0d049f38 ersetzt",
+      "sources": [
+        "https://arxiv.org/pdf/1811.05868v2"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "feature normalisation",
+      "value": "normalize_features flag: when True, features are row‑normalized via row_normalize(); when False, no normalization is applied",
+      "quote": "def _preprocess_features(self, features):\n        if self.normalize_features:\n            features = row_normalize(features)\n        return to_sparse_tensor(features)",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(GNNModel):\n    def __init__(self, features, graph_adj, targets, nodes_to_consider,\n                 num_layers, hidden_size, dropout_prob, weight_decay, normalize_features):\n        self.normalize_features = normalize_features\n        ...\n    def _preprocess_features(self, features):\n        if self.normalize_features:\n            features = row_normalize(features)\n        return to_sparse_tensor(features)"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency normalisation",
+      "value": "symmetric normalization with added self-loops (as in the original GCN)",
+      "quote": "We keep the model architectures as they are in the original papers / reference implementations.",
+      "source": "paper",
+      "applies_to": {
+        "model": "all",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "For all datasests, we treat the graphs as undirected and only consider the largest connected component."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency normalisation",
+      "value": "apply renormalize_adj to adjacency matrix before converting to sparse tensor",
+      "quote": "return to_sparse_tensor(renormalize_adj(graph_adj))",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "def _preprocess_adj(self, graph_adj):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.01",
+      "quote": "GCN 64 0.01 0.8 0.001 92 K",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "The chosen best-performing configurations were used for all subsequent experiments and are listed in Table 4."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.01",
+      "quote": "learning_rate: 0.01",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "not stated",
+        "setting": "transductive",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.01",
+      "quote": "learning_rate: 0.01",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "not stated",
+        "setting": "not stated",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "0.001",
+      "quote": "weight_decay: 0.001",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "model_name: \"GCN\"\nnum_layers: 2\nhidden_size: 64\ndropout_prob: 0.8\n\nlearning_rate: 0.01\nweight_decay: 0.001"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight_decay",
+      "value": "5e-4",
+      "quote": "weight_decay: !!float 5e-4",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "weight_decay: !!float 5e-4"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "weight_decay parameter passed to GCN constructor and stored as self.weight_decay",
+      "quote": "self.weight_decay = weight_decay",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "self.weight_decay = weight_decay"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "L2 regularization (weight decay) applied only to the first GCN layer",
+      "quote": "# original implementation uses L2 regularization only on first layer",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "# original implementation uses L2 regularization only on first layer"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "weight decay",
+      "value": "weight_decay set to 0.0 for all layers after the first (including the final layer)",
+      "quote": "weight_decay=self.weight_decay if i == 0 else 0.0,",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "weight_decay=self.weight_decay if i == 0 else 0.0,"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "0.8",
+      "quote": "dropout_prob: 0.8",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "0.5",
+      "quote": "dropout_prob: 0.5",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "dropout_prob: 0.5"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hidden size",
+      "value": "64",
+      "quote": "hidden_size: 64",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hidden_size",
+      "value": "16",
+      "quote": "hidden_size: 16",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "hidden_size: 16"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "epochs",
+      "value": "200",
+      "quote": "• Maximum number of epochs: 200.",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "GCN\n• Early stopping: stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs.\n• Full-batch training.\n• Maximum number of epochs: 200.\n• Train set: 20 per class; validation set: 500 nodes; test set: 1000 (as in the Planetoid split)."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "same early stopping criterion, patience and validation frequency (display step) used for all models",
+      "quote": "...same maximum number of training epochs, early stopping criterion, patience and validation frequency (display step) for all models (Appendix C).",
+      "source": "paper",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "2CORA CiteSeer PubMed CORA Full GCN 81 .5 ± 1.3 71.9 ± 1.9 77 .8 ± 2.9 62.2 ± 0.6"
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping_rule",
+      "value": "if early_stopping_criterion == 'gcn': early_stopping = GCNCriterion(early_stopping_tolerance, sess, _log)",
+      "quote": "if early_stopping_criterion == 'gcn':\n        early_stopping = GCNCriterion(early_stopping_tolerance, sess, _log)",
+      "source": "repo:gnnbench/train.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "if early_stopping_criterion == 'gcn':\n        early_stopping = GCNCriterion(early_stopping_tolerance, sess, _log)"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping_rule",
+      "value": "if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):",
+      "quote": "if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):",
+      "source": "repo:gnnbench/train.py@1e72912",
+      "applies_to": {
+        "model": "gcn",
+        "dataset": "cora-lcc",
+        "setting": "transductive",
+        "quote": "if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "100 random train/validation/test splits",
+      "quote": "For each dataset we use 100 random train/validation/test splits and perform 20 random initializations for each split.",
+      "source": "paper",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "For each dataset we use 100 random train/validation/test splits and perform 20 random initializations for each split."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "standardized training and hyperparameter selection procedure",
+      "quote": "We use a standardized training and hyperparameter selection procedure for all models.",
+      "source": "paper",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "We use a standardized training and hyperparameter selection procedure for all models."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hyperparameter",
+      "value": "GCN",
+      "quote": "model_name: \"GCN\"",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "not stated",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hyperparameter",
+      "value": "2",
+      "quote": "num_layers: 2",
+      "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "not stated",
+        "quote": "num_layers: 2"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hyperparameter",
+      "value": "model_name: \"GCN\"",
+      "quote": "model_name: \"GCN\"",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "model_name: \"GCN\""
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "hyperparameter",
+      "value": "num_layers: 2",
+      "quote": "num_layers: 2",
+      "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "Cora-LCC",
+        "setting": "transductive",
+        "quote": "num_layers: 2"
+      },
+      "source_rank": "config",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "Dropout is applied to the inputs conditionally based on the dropout probability placeholder",
+      "quote": "# Apply dropout to inputs if required\n        inputs = tf.cond(\n            tf.cast(dropout_prob, tf.bool),\n            true_fn=(lambda: dropout_supporting_sparse_tensors(inputs, 1 - dropout_prob)),\n            false_fn=(lambda: inputs),\n        )",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(GNNModel):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other_settings",
+      "value": "Feature normalization is controlled by the normalize_features flag; when True, features are row-normalized",
+      "quote": "if self.normalize_features:\n            features = row_normalize(features)",
+      "source": "repo:gnnbench/models/gcn.py@1e72912",
+      "applies_to": {
+        "model": "GCN",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "class GCN(GNNModel):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "Adam optimizer used for training",
+      "quote": "optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)",
+      "source": "repo:gnnbench/models/base_model.py@1e72912",
+      "applies_to": null,
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "Regularization losses are added to the total loss",
+      "quote": "regularization_losses = tf.losses.get_regularization_losses()\n            if not regularization_losses:\n                return loss\n            return loss + tf.add_n(regularization_losses)",
+      "source": "repo:gnnbench/models/base_model.py@1e72912",
+      "applies_to": null,
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/shchur/gnn-benchmark",
+    "commit": "1e72912a0810cdf27ae54fd589a3b43358a2b161",
+    "files": [
+      "README.md",
+      "config/optimized/gcn.conf.yaml",
+      "config/reference/gcn.conf.yaml",
+      "gnnbench/early_stopping.py",
+      "gnnbench/metrics.py",
+      "gnnbench/models/base_model.py",
+      "gnnbench/models/gcn.py",
+      "gnnbench/train.py",
+      "gnnbench/util.py"
+    ]
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.1377049180327869
+    },
+    "no_graph": {
+      "accuracy": 0.448711943793911
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://arxiv.org/pdf/1811.05868v2",
+      "mode": "live",
+      "n_chars": 25012,
+      "retrieved_at": "2026-10-09T14:37:04+00:00",
+      "sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/shchur/gnn-benchmark",
+      "mode": "live",
+      "n_chars": 18017,
+      "retrieved_at": "2026-10-09T14:38:18+00:00",
+      "sha256": "3d2f03572d9fb5a90a13329d7882357914b92ef366e0745e5c34c09484beaf2e"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/html/2207.05669v1",
+      "mode": "live",
+      "n_chars": 57035,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "58afa522e31b181402fc05aaef313e7e1a58e551e19a19339b4713085d2cb74c"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/html/2610.08823v1",
+      "mode": "live",
+      "n_chars": 41838,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "896467905be2270ced0c031c3c59cfa87847ff949eedefd4108ffcf03ab52e84"
+    },
+    {
+      "kind": "community",
+      "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+      "mode": "live",
+      "n_chars": 30770,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "e02ba6fdc15d69cd9b27a8170335e7904ec16545a93b994fe477cc46b7d27118"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/html/1911.04129v2",
+      "mode": "live",
+      "n_chars": 37659,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "e17e0fb926a8dc20f12e00667f62cca74996a67c9d8f16b1146ceb5325df743c"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/html/2609.37650v1",
+      "mode": "live",
+      "n_chars": 54904,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "cd4070824700ebc9cabc999bc0e7d734c7cec48361d0cce4e016ce075b0b2c4d"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/fixed_configs.conf.yaml",
+      "mode": "live",
+      "n_chars": 4212,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "dc9044b4d05b53ac1dbde09845abb6974e7ae1e5a0d3b7ef57c70afe1a4b4a4f"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+      "mode": "live",
+      "n_chars": 3190,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "1279be037fb1ac3c80bd66e65918c1b94a8fbac532a0bf0ebd67bb20acd964a3"
+    },
+    {
+      "kind": "community",
+      "url": "https://arxiv.org/html/2102.12557v1",
+      "mode": "live",
+      "n_chars": 23255,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "fb9ae3b175c99337764d5898065ccc893085ccb39d12282b388574457c531cf4"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/README.md",
+      "mode": "live",
+      "n_chars": 12465,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "1d5966efd66dabb579af74c2bfe1696ff1f3dce61b2c4ed21438c2d78a4b8b69"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark",
+      "mode": "live",
+      "n_chars": 12936,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "15048d1ecc28a68df6e8424b74a43fdd4818ea2d6198725edee136b0c2a81510"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+      "mode": "live",
+      "n_chars": 2317,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "3b15a23ded690c4246d60cf1992ef546d23ec4a688ff4cd6e83696f42871b414"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/gnnbench/models/gcn.py",
+      "mode": "live",
+      "n_chars": 5429,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "d8514dcd41b9c04f559d854add13f6ebb1b99a8e01125f367a3a2abfc02f1967"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/searchspace/gcn.searchspace.yaml",
+      "mode": "live",
+      "n_chars": 2255,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "3991230f0ed69bf2f3680a90f867c7ae66218f15d16edbfd9241bb3fb7619c39"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/10",
+      "mode": "live",
+      "n_chars": 2308,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "845c7209628d947b8958a2ef1dc72b43d7799561f76962df1084cab31110d352"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/12",
+      "mode": "live",
+      "n_chars": 2613,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "c7a76e6f78667619076a45c88980138ae548f74c8048b268149912d444fa39a4"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/shchur/gnn-benchmark/issues/13",
+      "mode": "live",
+      "n_chars": 2360,
+      "retrieved_at": "2026-10-09T14:51:57+00:00",
+      "sha256": "5493b728538317d9027015f76cbaf6cdca30c86d6196f90e93623e84efead90c"
+    }
+  ],
+  "ablations": {
+    "disc_1811_05868_accuracy": {
+      "accuracy_full": 0.7793911007025761,
+      "accuracy_ablated": 0.5451990632318501,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau_autorencode",
+  "graph_repairs": {},
+  "fault_repairs": {},
+  "droplast_notes": {},
+  "community": {
+    "findings": [
+      {
+        "topic": "reproducibility",
+        "statement": "The authors were unable to replicate the reported improvement of SIGN over GCN.",
+        "quote": "On the other hand, the authors of SIGN  report an improvement over GCN , which we were not able to replicate in our experiments.",
+        "url": "https://arxiv.org/html/2207.05669v1",
+        "kind": "reproduction report",
+        "repo_check": "nicht pruefbar",
+        "label": "Reproduction report",
+        "pass_reason": "statement_names_method"
+      },
+      {
+        "topic": "Large validation set unrealistic",
+        "statement": "Existing attacks use a validation set much larger than the training set and assume it is clean, which is unrealistic.",
+        "quote": "All existing label poisoning attacks (LPATTACK, LAFAK, MG) evaluate on data splits with validation (val) set size much larger than that of training (train) set. To substantiate, in the default setting as tabulated in Table 1 in the Appendix, the val set contains 500 nodes and the train set contains 20 nodes per class (e.g. 140 nodes in the Cora-ML dataset). Moreover, the labels of the validation set are assumed to be clean – not poisoned.",
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "kind": "protocol note",
+        "repo_check": "nicht pruefbar",
+        "label": "Protocol note",
+        "pass_reason": "page_names_method"
+      },
+      {
+        "topic": "Default hyperparameters tuned on clean labels",
+        "statement": "All label‑poisoning attacks use default hyper‑parameters that were tuned for clean labels, ignoring the effect of poisoning.",
+        "quote": "Despite establishing this, all the label-poisoning attacks for GNNs still use default h-params to evaluate the effectiveness of the proposed attack. The default h-params were tuned to work with clean labels (unpoisoned).",
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "kind": "other",
+        "repo_check": "nicht pruefbar",
+        "label": "Note",
+        "pass_reason": "page_names_method"
+      },
+      {
+        "topic": "Clean validation set assumption unrealistic",
+        "statement": "Assuming a clean validation set separate from training data is unrealistic because the defender cannot know which labels are corrupted.",
+        "quote": "It is an unrealistic assumption for an attacker to treat train and val sets as separate entities. In other words, the current evaluation setup in literature for label-poisoning attacks training nodes while the val set is untouched and remains sanitized.",
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "kind": "protocol note",
+        "repo_check": "nicht pruefbar",
+        "label": "Protocol note",
+        "pass_reason": "page_names_method"
+      },
+      {
+        "topic": "Different split used in repo",
+        "statement": "The repository uses a different split for Cora to avoid overfitting, raising concerns about reproducibility with the official split.",
+        "quote": "You are correct that we use a different split for Cora here, since SplineConv overfits when using the fixed split, but it starts outperforming GCN/Cheby when increasing the label rate.",
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "kind": "reproduction report",
+        "repo_check": "nicht pruefbar",
+        "label": "Reproduction report",
+        "pass_reason": "statement_names_method"
+      },
+      {
+        "topic": "Proof‑of‑concept limitation",
+        "statement": "The PyGCN re‑implementation is described as only a proof of concept and not intended for reproducing the official GCN results.",
+        "quote": "Furthermore, Thomas states that his PyGCN re-implementation only serves as a proof of concept and is not intended for reproduction of the official results.",
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "kind": "reproduction report",
+        "repo_check": "nicht pruefbar",
+        "label": "Reproduction report",
+        "pass_reason": "statement_names_method"
+      },
+      {
+        "topic": "Evaluation protocol reliance on official split",
+        "statement": "Using the official split is claimed to make the implementation correct, implying other splits may yield unreliable evaluations.",
+        "quote": "Here, we use the official split, and hence I believe that our implementation is the correct one :)",
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "kind": "other",
+        "repo_check": "nicht pruefbar",
+        "label": "Note",
+        "pass_reason": "page_names_method"
+      }
+    ],
+    "dropped": 8,
+    "pages": [
+      {
+        "url": "https://arxiv.org/html/2207.05669v1",
+        "n_chars": 57035,
+        "sha256": "58afa522e31b181402fc05aaef313e7e1a58e551e19a19339b4713085d2cb74c"
+      },
+      {
+        "url": "https://arxiv.org/html/2610.08823v1",
+        "n_chars": 41838,
+        "sha256": "896467905be2270ced0c031c3c59cfa87847ff949eedefd4108ffcf03ab52e84"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "n_chars": 30770,
+        "sha256": "e02ba6fdc15d69cd9b27a8170335e7904ec16545a93b994fe477cc46b7d27118"
+      },
+      {
+        "url": "https://arxiv.org/html/1911.04129v2",
+        "n_chars": 37659,
+        "sha256": "e17e0fb926a8dc20f12e00667f62cca74996a67c9d8f16b1146ceb5325df743c"
+      },
+      {
+        "url": "https://arxiv.org/html/2609.37650v1",
+        "n_chars": 54904,
+        "sha256": "cd4070824700ebc9cabc999bc0e7d734c7cec48361d0cce4e016ce075b0b2c4d"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/fixed_configs.conf.yaml",
+        "n_chars": 4212,
+        "sha256": "dc9044b4d05b53ac1dbde09845abb6974e7ae1e5a0d3b7ef57c70afe1a4b4a4f"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "n_chars": 3190,
+        "sha256": "1279be037fb1ac3c80bd66e65918c1b94a8fbac532a0bf0ebd67bb20acd964a3"
+      },
+      {
+        "url": "https://arxiv.org/html/2102.12557v1",
+        "n_chars": 23255,
+        "sha256": "fb9ae3b175c99337764d5898065ccc893085ccb39d12282b388574457c531cf4"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/README.md",
+        "n_chars": 12465,
+        "sha256": "1d5966efd66dabb579af74c2bfe1696ff1f3dce61b2c4ed21438c2d78a4b8b69"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark",
+        "n_chars": 12936,
+        "sha256": "15048d1ecc28a68df6e8424b74a43fdd4818ea2d6198725edee136b0c2a81510"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "n_chars": 2317,
+        "sha256": "3b15a23ded690c4246d60cf1992ef546d23ec4a688ff4cd6e83696f42871b414"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/gnnbench/models/gcn.py",
+        "n_chars": 5429,
+        "sha256": "d8514dcd41b9c04f559d854add13f6ebb1b99a8e01125f367a3a2abfc02f1967"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/searchspace/gcn.searchspace.yaml",
+        "n_chars": 2255,
+        "sha256": "3991230f0ed69bf2f3680a90f867c7ae66218f15d16edbfd9241bb3fb7619c39"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/10",
+        "n_chars": 2308,
+        "sha256": "845c7209628d947b8958a2ef1dc72b43d7799561f76962df1084cab31110d352"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/12",
+        "n_chars": 2613,
+        "sha256": "c7a76e6f78667619076a45c88980138ae548f74c8048b268149912d444fa39a4"
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/13",
+        "n_chars": 2360,
+        "sha256": "5493b728538317d9027015f76cbaf6cdca30c86d6196f90e93623e84efead90c"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "search",
+        "title": "Pitfalls of Graph Neural Network Evaluation"
+      },
+      {
+        "kind": "method_search",
+        "method": "GCN",
+        "dataset": "Cora"
+      },
+      {
+        "kind": "critique_search",
+        "method": "GCN",
+        "dataset": "Cora",
+        "queries": [
+          "GCN Cora reproduce results differ",
+          "GCN bug evaluation",
+          "GCN baseline re-evaluation fixed",
+          "we re-run GCN on Cora and compare with the reported numbers"
+        ]
+      },
+      {
+        "kind": "repo_search",
+        "repo": "shchur/gnn-benchmark"
+      },
+      {
+        "kind": "crawl",
+        "url": "https://github.com/shchur/gnn-benchmark/issues"
+      }
+    ],
+    "reused_discovery": false,
+    "calls": [
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "crawl"
+    ],
+    "hits": [
+      {
+        "url": "https://github.com/microsoft/gated-graph-neural-network-samples/security",
+        "title": "Overview · microsoft/gated-graph-neural-network-samples · GitHub",
+        "n_chars": 2691
+      },
+      {
+        "url": "https://github.com/zrimseku/Reproducibility-Challenge",
+        "title": "GitHub - zrimseku/Reproducibility-Challenge: Reproducing paper \"Learning Unknown from Correlations: Graph Neural Network for Inter-novel-protein Interaction Prediction\", for ML Reproducibility Challenge 2021 · GitHub",
+        "n_chars": 7598
+      },
+      {
+        "url": "https://github.com/open-mmlab/FoleyCrafter/issues/15",
+        "title": "Cannot Reproduce Results. Release Evaluation Code · Issue #15 · open-mmlab/FoleyCrafter · GitHub",
+        "n_chars": 1566
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "title": "[PDF] PITFALLS IN EVALUATING GNNS - OpenReview",
+        "n_chars": 30770
+      },
+      {
+        "url": "https://arxiv.org/html/2409.05755v1",
+        "title": "Are Heterophilic GNNs and Homophily Metrics Really Effective? Evaluation Pitfalls and New Benchmarks",
+        "n_chars": 61966
+      },
+      {
+        "url": "https://openreview.net/pdf/e09ac157f8dd68bdb4982dd429aeade4b4460564.pdf",
+        "title": "[PDF] [RE] A Reproducibility Study on Scene-Graph Generation from 3D ...",
+        "n_chars": 40911
+      },
+      {
+        "url": "https://arxiv.org/html/2207.05669v1",
+        "title": "From Spectral Graph Convolutions to Large Scale Graph Convolutional Networks",
+        "n_chars": 57035
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "title": "Different Split of Cora Dataset · Issue #891 · pyg-team/pytorch_geometric · GitHub",
+        "n_chars": 2317
+      },
+      {
+        "url": "https://arxiv.org/html/1911.04129v2",
+        "title": "Higher-order Weighted Graph Convolutional Networks",
+        "n_chars": 37659
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "title": "Reprecudebility of the Cora results with GraphUNet · Issue #893 · pyg-team/pytorch_geometric · GitHub",
+        "n_chars": 3190
+      },
+      {
+        "url": "https://arxiv.org/html/2306.10280v4",
+        "title": "OpenGSL: A Comprehensive Benchmark for Graph Structure Learning",
+        "n_chars": 67424
+      },
+      {
+        "url": "https://arxiv.org/html/2505.02020v1",
+        "title": "Wide & Deep Learning for Node Classification",
+        "n_chars": 75360
+      },
+      {
+        "url": "https://arxiv.org/html/2102.12557v1",
+        "title": "Benchmarking Graph Neural Networks on Link Prediction",
+        "n_chars": 23255
+      },
+      {
+        "url": "https://arxiv.org/html/2503.00476v1",
+        "title": "G-OSR: A Comprehensive Benchmark for Graph Open-Set Recognition",
+        "n_chars": 73824
+      },
+      {
+        "url": "https://arxiv.org/html/2207.00623v1",
+        "title": "Is this bug severe? A text-cum-graphbased model for bug severity prediction",
+        "n_chars": 42237
+      },
+      {
+        "url": "https://arxiv.org/html/2501.10542v1",
+        "title": "Improved IR-based Bug Localization with Intelligent Relevance Feedback",
+        "n_chars": 55353
+      },
+      {
+        "url": "https://arxiv.org/html/2512.09216v1",
+        "title": "Bug Priority Change Prediction: An Exploratory Study on Apache Software",
+        "n_chars": 149933
+      },
+      {
+        "url": "https://arxiv.org/html/2505.08263v1",
+        "title": "LLM-Based Detection of Tangled Code Changes for Higher-Quality Method-Level Bug Datasets",
+        "n_chars": 58252
+      },
+      {
+        "url": "https://arxiv.org/html/2508.20911v1",
+        "title": "Deep Learning Based Concurrency Bug Detection and Localization",
+        "n_chars": 41404
+      },
+      {
+        "url": "https://arxiv.org/html/2204.09368v1",
+        "title": "BugListener: Identifying and Synthesizing Bug Reports from Collaborative Live Chats",
+        "n_chars": 68644
+      },
+      {
+        "url": "https://arxiv.org/html/2409.12519v1",
+        "title": "Multi-View Adaptive Contrastive Learning for Information Retrieval Based Fault Localization",
+        "n_chars": 88501
+      },
+      {
+        "url": "https://arxiv.org/html/2505.00144v1",
+        "title": "When Deep Learning Meets Information Retrieval-based Bug Localization: A Survey",
+        "n_chars": 134203
+      },
+      {
+        "url": "https://arxiv.org/html/2502.15142v1",
+        "title": "AccessFixer: Enhancing GUI Accessibility for Low Vision Users with R-GCN Model",
+        "n_chars": 88099
+      },
+      {
+        "url": "https://github.com/1zgh/st-gcn",
+        "title": "GitHub - 1zgh/st-gcn: ST-GCN-5-25 · GitHub",
+        "n_chars": 6473
+      },
+      {
+        "url": "https://github.com/yysijie/st-gcn/blob/master/OLD_README.md",
+        "title": "st-gcn/OLD_README.md at master · yysijie/st-gcn · GitHub",
+        "n_chars": 5312
+      },
+      {
+        "url": "https://github.com/wanjinchang/st-gcn",
+        "title": "GitHub - wanjinchang/st-gcn: Spatial Temporal Graph Convolutional Networks (ST-GCN) for Skeleton-Based Action Recognition in PyTorch · GitHub",
+        "n_chars": 5655
+      },
+      {
+        "url": "https://github.com/liyaguang/st-gcn/blob/master/README.md",
+        "title": "st-gcn/README.md at master · liyaguang/st-gcn · GitHub",
+        "n_chars": 5428
+      },
+      {
+        "url": "https://github.com/liyaguang/st-gcn",
+        "title": "GitHub - liyaguang/st-gcn: Spatial Temporal Graph Convolutional Networks (ST-GCN) for Skeleton-Based Action Recognition in PyTorch · GitHub",
+        "n_chars": 6001
+      },
+      {
+        "url": "https://github.com/linovives/bitcoin-fraud-gnn",
+        "title": "GitHub - linovives/bitcoin-fraud-gnn: Fraud detection on Bitcoin transaction graphs using GNNs (GCN, GAT) with PyTorch Geometric. Temporal split evaluation on the Elliptic dataset. · GitHub",
+        "n_chars": 4551
+      },
+      {
+        "url": "https://github.com/nec-research/TKG-Forecasting-Evaluation",
+        "title": "GitHub - nec-research/TKG-Forecasting-Evaluation: Evaluation of Methods for Temporal Knowledge Graph Forecasting · GitHub",
+        "n_chars": 2401
+      },
+      {
+        "url": "https://arxiv.org/html/2610.08823v1",
+        "title": "HCPN-GCN: Scaling Hierarchical Prototype Networks with Cone Geometry for Continual Graph Learning",
+        "n_chars": 41838
+      },
+      {
+        "url": "https://arxiv.org/html/1907.02237v3",
+        "title": "Dimensional Reweighting Graph Convolutional Networks",
+        "n_chars": 65499
+      },
+      {
+        "url": "https://arxiv.org/html/2609.37650v1",
+        "title": "RACE: Relation-Level Counterfactual Explanations for Heterogeneous Graph Neural Networks",
+        "n_chars": 54904
+      },
+      {
+        "url": "https://arxiv.org/html/1912.09592v1",
+        "title": "Graph Convolutional Networks: analysis, improvements ...",
+        "n_chars": 159
+      },
+      {
+        "url": "https://arxiv.org/html/1908.10834v10",
+        "title": "AWB-GCN: A Graph Convolutional Network Accelerator ...",
+        "n_chars": 139
+      },
+      {
+        "url": "https://openreview.net/pdf?id=mhp4wLwiAI-",
+        "title": "Better Gradient Flow can Make Vanilla-GCNs Great Again",
+        "n_chars": 193
+      },
+      {
+        "url": "https://arxiv.org/html/1905.07953v2",
+        "title": "Cluster-GCN: An Efficient Algorithm for Training Deep and ...",
+        "n_chars": 135
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/fixed_configs.conf.yaml",
+        "title": "gnn-benchmark/config/fixed_configs.conf.yaml at master · shchur/gnn-benchmark · GitHub",
+        "n_chars": 4212
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/README.md",
+        "title": "gnn-benchmark/README.md at master · shchur/gnn-benchmark · GitHub",
+        "n_chars": 12465
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark",
+        "title": "GitHub - shchur/gnn-benchmark: Framework for evaluating Graph Neural Network models on semi-supervised node classification task · GitHub",
+        "n_chars": 12936
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/gnnbench/models/gcn.py",
+        "title": "gnn-benchmark/gnnbench/models/gcn.py at master · shchur/gnn-benchmark · GitHub",
+        "n_chars": 5429
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/blob/master/config/searchspace/gcn.searchspace.yaml",
+        "title": "gnn-benchmark/config/searchspace/gcn.searchspace.yaml at master · shchur/gnn-benchmark · GitHub",
+        "n_chars": 2255
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/10",
+        "title": "",
+        "n_chars": 2308
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/12",
+        "title": "",
+        "n_chars": 2613
+      },
+      {
+        "url": "https://github.com/shchur/gnn-benchmark/issues/13",
+        "title": "",
+        "n_chars": 2360
+      }
+    ],
+    "not_read": [
+      "https://github.com/microsoft/gated-graph-neural-network-samples/security",
+      "https://github.com/zrimseku/Reproducibility-Challenge",
+      "https://github.com/open-mmlab/FoleyCrafter/issues/15",
+      "https://arxiv.org/html/2409.05755v1",
+      "https://openreview.net/pdf/e09ac157f8dd68bdb4982dd429aeade4b4460564.pdf",
+      "https://arxiv.org/html/2306.10280v4",
+      "https://arxiv.org/html/2505.02020v1",
+      "https://arxiv.org/html/2503.00476v1",
+      "https://arxiv.org/html/2207.00623v1",
+      "https://arxiv.org/html/2501.10542v1",
+      "https://arxiv.org/html/2512.09216v1",
+      "https://arxiv.org/html/2505.08263v1",
+      "https://arxiv.org/html/2508.20911v1",
+      "https://arxiv.org/html/2204.09368v1",
+      "https://arxiv.org/html/2409.12519v1",
+      "https://arxiv.org/html/2505.00144v1",
+      "https://arxiv.org/html/2502.15142v1",
+      "https://github.com/1zgh/st-gcn",
+      "https://github.com/yysijie/st-gcn/blob/master/OLD_README.md",
+      "https://github.com/wanjinchang/st-gcn",
+      "https://github.com/liyaguang/st-gcn/blob/master/README.md",
+      "https://github.com/liyaguang/st-gcn",
+      "https://github.com/linovives/bitcoin-fraud-gnn",
+      "https://github.com/nec-research/TKG-Forecasting-Evaluation",
+      "https://arxiv.org/html/1907.02237v3",
+      "https://arxiv.org/html/1912.09592v1",
+      "https://arxiv.org/html/1908.10834v10",
+      "https://openreview.net/pdf?id=mhp4wLwiAI-",
+      "https://arxiv.org/html/1905.07953v2"
+    ],
+    "not_extracted": [
+      "https://github.com/shchur/gnn-benchmark/blob/master/config/searchspace/gcn.searchspace.yaml",
+      "https://github.com/shchur/gnn-benchmark/issues/10",
+      "https://github.com/shchur/gnn-benchmark/issues/12",
+      "https://github.com/shchur/gnn-benchmark/issues/13"
+    ],
+    "dropped_items": [
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "reason": "quote_not_in_page",
+        "topic": "Dataset split inconsistency",
+        "statement": "The Cora train split differs across PYG, DGL and pyGCN implementations, leading to different results.",
+        "quote": "I compared the train split provided by Cora of Pytorch_Geometric (PYG), Deep Graph Library (DGL) and the Pytorch code of the GCN paper (pyGCN), and found that the result of PYG is different of that of DGL and pyGCN."
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Latent flaws in evaluation",
+        "statement": "The latent flaws in the evaluation setup cloud the true effectiveness of the attacks.",
+        "quote": "While several such attacks were pro-posed, the latent flaws in the evaluation setup cloud the true effectiveness of the attacks."
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Class equalized split not preserving distribution",
+        "statement": "The class-equalized split does not preserve the global class distribution and treats each class equally.",
+        "quote": "However, this setting does not preserve global class distribution and treats each class equally."
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Missing variance reporting",
+        "statement": "Previous works omit variance statistics, making it hard to judge the significance of reported improvements.",
+        "quote": "An important statistic that is missing in previous works is variance. We visually depict the variance in all our plots to check for statistical significance across attacks."
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Missing comparison with defenses",
+        "statement": "No thorough comparison against GNN defense models has been performed for label‑poisoning attacks.",
+        "quote": "While the effect of label poisoning attacks was studied for vanilla or unvaccinated GNN models, a thorough comparison against GNN defense models is missing."
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Split regime mismatch",
+        "statement": "The user followed a different split regime than the official Cora split, leading to lower accuracy.",
+        "quote": "I'm sorry as it seems you follow a different split regime, which is different than the official cora regime."
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "Claim of reproducibility under official split",
+        "statement": "The maintainer claims they achieved 88% accuracy with the official split as done in the paper.",
+        "quote": "With the official one, as it is done in the paper :)"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "reason": "names_neither_method_title_nor_arxiv_id",
+        "topic": "User unable to reproduce reported performance",
+        "statement": "The user reports being unable to reach the reported performance, obtaining only 78% versus the claimed 84%.",
+        "quote": "So you've been very lucky, as I'm far from the 84% you reached with unet (i'm around 78)."
+      }
+    ],
+    "candidates": [
+      {
+        "url": "https://arxiv.org/html/2207.05669v1",
+        "topic": "reproducibility",
+        "statement": "The authors were unable to replicate the reported improvement of SIGN over GCN.",
+        "quote": "On the other hand, the authors of SIGN  report an improvement over GCN , which we were not able to replicate in our experiments.",
+        "quote_in_page": true,
+        "outcome": "kept_statement_names_method"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Latent flaws in evaluation",
+        "statement": "The latent flaws in the evaluation setup cloud the true effectiveness of the attacks.",
+        "quote": "While several such attacks were pro-posed, the latent flaws in the evaluation setup cloud the true effectiveness of the attacks.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Large validation set unrealistic",
+        "statement": "Existing attacks use a validation set much larger than the training set and assume it is clean, which is unrealistic.",
+        "quote": "All existing label poisoning attacks (LPATTACK, LAFAK, MG) evaluate on data splits with validation (val) set size much larger than that of training (train) set. To substantiate, in the default setting as tabulated in Table 1 in the Appendix, the val set contains 500 nodes and the train set contains ",
+        "quote_in_page": true,
+        "outcome": "kept_page_names_method"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Class equalized split not preserving distribution",
+        "statement": "The class-equalized split does not preserve the global class distribution and treats each class equally.",
+        "quote": "However, this setting does not preserve global class distribution and treats each class equally.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Default hyperparameters tuned on clean labels",
+        "statement": "All label‑poisoning attacks use default hyper‑parameters that were tuned for clean labels, ignoring the effect of poisoning.",
+        "quote": "Despite establishing this, all the label-poisoning attacks for GNNs still use default h-params to evaluate the effectiveness of the proposed attack. The default h-params were tuned to work with clean labels (unpoisoned).",
+        "quote_in_page": true,
+        "outcome": "kept_page_names_method"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Clean validation set assumption unrealistic",
+        "statement": "Assuming a clean validation set separate from training data is unrealistic because the defender cannot know which labels are corrupted.",
+        "quote": "It is an unrealistic assumption for an attacker to treat train and val sets as separate entities. In other words, the current evaluation setup in literature for label-poisoning attacks training nodes while the val set is untouched and remains sanitized.",
+        "quote_in_page": true,
+        "outcome": "kept_page_names_method"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Missing variance reporting",
+        "statement": "Previous works omit variance statistics, making it hard to judge the significance of reported improvements.",
+        "quote": "An important statistic that is missing in previous works is variance. We visually depict the variance in all our plots to check for statistical significance across attacks.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://openreview.net/pdf/79e770b6f8016087b03a0131c7e2c33e8dba0aae.pdf",
+        "topic": "Missing comparison with defenses",
+        "statement": "No thorough comparison against GNN defense models has been performed for label‑poisoning attacks.",
+        "quote": "While the effect of label poisoning attacks was studied for vanilla or unvaccinated GNN models, a thorough comparison against GNN defense models is missing.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "topic": "Split regime mismatch",
+        "statement": "The user followed a different split regime than the official Cora split, leading to lower accuracy.",
+        "quote": "I'm sorry as it seems you follow a different split regime, which is different than the official cora regime.",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "topic": "Different split used in repo",
+        "statement": "The repository uses a different split for Cora to avoid overfitting, raising concerns about reproducibility with the official split.",
+        "quote": "You are correct that we use a different split for Cora here, since SplineConv overfits when using the fixed split, but it starts outperforming GCN/Cheby when increasing the label rate.",
+        "quote_in_page": true,
+        "outcome": "kept_statement_names_method"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "topic": "Claim of reproducibility under official split",
+        "statement": "The maintainer claims they achieved 88% accuracy with the official split as done in the paper.",
+        "quote": "With the official one, as it is done in the paper :)",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/893",
+        "topic": "User unable to reproduce reported performance",
+        "statement": "The user reports being unable to reach the reported performance, obtaining only 78% versus the claimed 84%.",
+        "quote": "So you've been very lucky, as I'm far from the 84% you reached with unet (i'm around 78).",
+        "quote_in_page": true,
+        "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "topic": "Dataset split inconsistency",
+        "statement": "The Cora train split differs across PYG, DGL and pyGCN implementations, leading to different results.",
+        "quote": "I compared the train split provided by Cora of Pytorch_Geometric (PYG), Deep Graph Library (DGL) and the Pytorch code of the GCN paper (pyGCN), and found that the result of PYG is different of that of DGL and pyGCN.",
+        "quote_in_page": false,
+        "outcome": "dropped_quote_not_in_page"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "topic": "Proof‑of‑concept limitation",
+        "statement": "The PyGCN re‑implementation is described as only a proof of concept and not intended for reproducing the official GCN results.",
+        "quote": "Furthermore, Thomas states that his PyGCN re-implementation only serves as a proof of concept and is not intended for reproduction of the official results.",
+        "quote_in_page": true,
+        "outcome": "kept_statement_names_method"
+      },
+      {
+        "url": "https://github.com/pyg-team/pytorch_geometric/issues/891",
+        "topic": "Evaluation protocol reliance on official split",
+        "statement": "Using the official split is claimed to make the implementation correct, implying other splits may yield unreliable evaluations.",
+        "quote": "Here, we use the official split, and hence I believe that our implementation is the correct one :)",
+        "quote_in_page": true,
+        "outcome": "kept_page_names_method"
+      }
+    ],
+    "mode": "live",
+    "queried_at": "2026-10-09T14:51:57+00:00"
+  },
+  "summary": null,
+  "explanations": {
+    "disc_1811_05868_accuracy": {
+      "items": [
+        {
+          "topic": "different protocol or split",
+          "explanation": "The paper evaluates models using many random data splits and multiple initializations, so a reimplementation using a single fixed split could obtain different results.",
+          "quote": "splitting the data in a different way results in a different performance of each method.",
+          "url": "https://medium.com/uci-nlp/summary-pitfalls-of-graph-neural-network-evaluation-16c1e0c02ceb",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "different protocol or split",
+          "explanation": "The authors report average performance over 2,000 random settings (100 splittings × 20 initializations), which differs from evaluations that use a single train/validation/test split.",
+          "quote": "they introduce 4 new datasets and find the average performance of each one of the methods on 2,000 random settings (100 random splittings of the datasets and for each one of them 20 random initializations of parameters)",
+          "url": "https://medium.com/uci-nlp/summary-pitfalls-of-graph-neural-network-evaluation-16c1e0c02ceb",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "different protocol or split",
+          "explanation": "The paper states that using the same train/validation/test splits and altering training procedures (e.g., early stopping) prevents fair comparison, and that different splits lead to dramatically different model rankings.",
+          "quote": "We show that using the same train/validation/test splits of the same datasets, as well as making significant changes to the training procedure (e.g. early stopping criteria) precludes a fair comparison of different architectures.",
+          "url": "https://www.alphaxiv.org/abs/1811.05868",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "hyperparameters that the paper does not state",
+          "explanation": "The paper notes that simpler GNN architectures can outperform more sophisticated ones only if hyperparameters and training procedures are tuned fairly for all models, implying that unstated hyperparameter choices affect results.",
+          "quote": "Even more importantly, our findings suggest that simpler GNN architectures are able to outperform the more sophisticated ones if the hyperparameters and the training procedure are tuned fairly for all models.",
+          "url": "https://www.alphaxiv.org/abs/1811.05868",
+          "status": "unverified hypothesis"
+        },
+        {
+          "topic": "results that others could not reproduce",
+          "explanation": "By showing that rankings change dramatically across different data splits, the paper indicates that reported numbers may not be reproducible when using alternative splits.",
+          "quote": "We perform a thorough empirical evaluation of four prominent GNN models and show that considering different splits of the data leads to dramatically different rankings of models.",
+          "url": "https://www.alphaxiv.org/abs/1811.05868",
+          "status": "unverified hypothesis"
+        }
+      ],
+      "dropped": 0,
+      "mode": "live"
+    }
+  },
+  "setup_missing": [],
+  "val_label_check": {
+    "disc_1811_05868_accuracy": {
+      "0": {
+        "code_hash": "7db69525ecd9",
+        "verdict": "Validierungslabels nicht genutzt",
+        "val_full": 0.861904761904762,
+        "val_masked": 0.8523809523809524,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "1": {
+        "code_hash": "eedfcfdc4dc0",
+        "verdict": "Validierungslabels nicht genutzt",
+        "val_full": 0.8380952380952381,
+        "val_masked": 0.8333333333333334,
+        "static": "training",
+        "static_hits": [
+          "Zeile 136: backward() auf einem Wert, der aus Validierungslabels/-indizes stammt"
+        ],
+        "excluded": false,
+        "detail": null
+      },
+      "2": {
+        "code_hash": "f13d1ca4c050",
+        "verdict": "Validierungslabels nicht genutzt",
+        "val_full": 0.8523809523809524,
+        "val_masked": 0.8428571428571429,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      }
+    }
+  },
+  "edge_direction": {
+    "disc_1811_05868_accuracy": [
+      {
+        "code_hash": "eedfcfdc4dc0",
+        "verdict": "beide Richtungen",
+        "acc_side_a": 0.5683720930232559,
+        "acc_side_b": 0.534466477809254,
+        "detail": null
+      }
+    ]
+  },
+  "repo_diff": {
+    "disc_1811_05868_accuracy": {
+      "deviations": [
+        {
+          "aspect": "stopping criterion",
+          "file": "gnnbench/early_stopping.py",
+          "repo_quote": "def after_stopping_ops(self):\n        self._log.debug(f\"Resetting to best state of variables which occurred at step {self.best_step + 1}.\")\n        self.sess.run(self.set_trainable_variables_op,\n                      feed_dict={placeholder: self.best_variable_state[i] for i, placeholder in\n                                 enumerate(self.variables_state)})",
+          "our_quote": "# Final validation accuracy (print to stdout)\n                model.eval()\n                with torch.no_grad():\n                    final_logits = model(feat_torch, adj_torch)\n                    final_pred = final_logits[val_idx].argmax(dim=1)\n                    final_acc = (final_pred == label_long[val_idx]).float().mean().item()\n                print(f\"Final Validation Accuracy: {final_acc:.4f}\")\n\n                # Predictions for all nodes\n                with torch.no_grad():\n                    all_logits = model(feat_torch, adj_torch)\n                    all_pred = all_logits.argmax(dim=1).cpu().numpy()\n                nio.write_predictions(all_pred)",
+          "difference": "The reproducer uses the model from the last epoch for testing, while the original restores the best model state (based on validation performance) before testing."
+        }
+      ],
+      "dropped": 0,
+      "truncation": [],
+      "from_hash": "eedfcfdc4dc0",
+      "result": "adopted",
+      "reason": "Fehler-Check, Ablation und Validierung bestanden",
+      "val_old": 0.8380952380952381,
+      "val_new": 0.8380952380952381,
+      "to_hash": "8f9e0d049f38"
+    }
+  },
+  "warnings": [
+    "Info: Das Paper nennt Streuung +-1.3 (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); die Toleranz +-0.01 bleibt fest."
+  ],
+  "nachlauf": {},
+  "objection_checks": [],
+  "spec": {
+    "model": "GCN",
+    "family": "graph",
+    "items": [
+      {
+        "key": "lr",
+        "value": "0.01",
+        "quote": "learning_rate: 0.01",
+        "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+        "rank": "config",
+        "number": 0.01,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "weight_decay",
+        "value": "0.001",
+        "quote": "weight_decay: 0.001",
+        "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+        "rank": "config",
+        "number": 0.001,
+        "enforce": true,
+        "alternatives": [
+          {
+            "value": "5e-4",
+            "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+            "rank": "config",
+            "quote": "weight_decay: !!float 5e-4"
+          },
+          {
+            "value": "5e-4",
+            "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+            "rank": "config",
+            "quote": "weight_decay: !!float 5e-4"
+          }
+        ],
+        "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "epochs",
+        "value": "200",
+        "quote": "• Maximum number of epochs: 200.",
+        "source": "paper",
+        "rank": "paper",
+        "number": 200,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "dropout",
+        "value": "0.8",
+        "quote": "dropout_prob: 0.8",
+        "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+        "rank": "config",
+        "number": 0.8,
+        "enforce": true,
+        "alternatives": [
+          {
+            "value": "0.5",
+            "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+            "rank": "config",
+            "quote": "dropout_prob: 0.5"
+          }
+        ],
+        "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+        "specific": true,
+        "origin": "raw",
+        "tie": []
+      },
+      {
+        "key": "hidden",
+        "value": "64",
+        "quote": "hidden_size: 64",
+        "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+        "rank": "config",
+        "number": 64,
+        "enforce": true,
+        "alternatives": [
+          {
+            "value": "16",
+            "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+            "rank": "config",
+            "quote": "hidden_size: 16"
+          }
+        ],
+        "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+        "specific": true,
+        "origin": "raw",
+        "tie": []
+      },
+      {
+        "key": "layers",
+        "value": "2",
+        "quote": "num_layers: 2",
+        "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+        "rank": "config",
+        "number": 2,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      }
+    ],
+    "dropped": [
+      {
+        "item": {
+          "key": "dropout",
+          "value": "0.8 (optimized) / 0.5 (reference)",
+          "quote": "dropout_prob: 0.8",
+          "source": "repo:config/optimized/gcn.conf.yaml"
+        },
+        "reason": "Zahl des Werts nicht im Zitat"
+      },
+      {
+        "item": {
+          "key": "hidden",
+          "value": "64 (optimized) / 16 (reference)",
+          "quote": "hidden_size: 64",
+          "source": "repo:config/optimized/gcn.conf.yaml"
+        },
+        "reason": "Zahl des Werts nicht im Zitat"
+      }
+    ],
+    "excerpt_docs": [
+      "repo:gnnbench/models/gcn.py@1e72912",
+      "repo:gnnbench/train.py@1e72912",
+      "repo:config/optimized/gcn.conf.yaml@1e72912",
+      "repo:config/reference/gcn.conf.yaml@1e72912",
+      "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+      "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+      "repo:gnnbench/models/base_model.py@1e72912"
+    ],
+    "missing": [
+      "batch_size",
+      "patience",
+      "heads"
+    ],
+    "excerpt_chars": 15177
+  }
+}
