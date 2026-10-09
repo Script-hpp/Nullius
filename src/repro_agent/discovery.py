@@ -430,7 +430,7 @@ class DiscoveryAgent:
             "exactly {\"infeasible\": \"<short reason>\"} and nothing else. "
             "Reply with keys: "
             "'method' (name of the proposed method exactly as written in the quote), "
-            "'quote' (a VERBATIM excerpt copied from the text that names the method and gives the number), "
+            "'quote' (a VERBATIM excerpt copied from the text that gives the number, it does not strictly need to name the method if the model is in the column header), "
             "'metric' (accuracy for node classification; mse or mae for forecasting), "
             "'target' (the numerical value as float), "
             + ("'horizon' (integer prediction horizon of the number; choose the number for horizon 96, "

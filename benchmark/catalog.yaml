@@ -674,50 +674,6 @@ candidates:
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
-- id: disc_2308_11200
-  arxiv_id: '2308.11200'
-  title: 'SegRNN: Segment Recurrent Neural Network for Long-Term Time Series Forecasting'
-  status: geprueft
-  imported_from: cache:discovery_cache.json
-  candidate:
-    dataset: ETTh1
-    claim:
-      method: SegRNN
-      quote: SegRNN & \textbf{0.341}
-      metric: mse
-      target: 0.341
-      horizon: 96
-      input_length: 720
-      protocol: passt
-      matched_task: ETTh1
-      protocol_quote: The datasets are split into training, validation, and test sets according to the standard protocols
-        (e.g., 6:2:2 for ETT datasets).
-      protocol_reason: Matches standard ETTh1 split.
-    github_url: https://github.com/lss-1138/SegRNN
-    repo_status: official
-    feasibility: ok
-    source_url: https://arxiv.org/abs/2308.11200
-    protocol: passt
-    found_by: arxiv
-    reason: Official code
-    community: []
-  checked_at: '2026-10-09T20:38:59Z'
-  cost_gross_usd: 0.0422
-  verdict:
-    urteil: nicht reproduziert
-    measured_mean: 0.416699
-    measured_std: 0.001919
-    seeds: 3
-    target: 0.341
-    tolerance: 0.01
-    gesamtaussage: vorlaeufig
-    mode: nachbau
-    graph_repairs: 0
-    fault_repairs: 2
-    run_dir: runs/disc_2308_11200/20261009-223055
-  jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
 - id: disc_2307_03756
   arxiv_id: '2307.03756'
   title: 'FITS: Modeling Time Series with $10k$ Parameters'
@@ -744,3 +700,91 @@ candidates:
     found_by: arxiv
     reason: Official code
     community: []
+- id: disc_2308_11200
+  arxiv_id: '2308.11200'
+  title: 'SegRNN: Segment Recurrent Neural Network for Long-Term Time Series Forecasting'
+  status: geprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: SegRNN
+      quote: \multicolumn{1}{c|}{96}  & \textbf{0.341}  & \textbf{0.376}
+      metric: mse
+      target: 0.341
+      horizon: 96
+      input_length: 720
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: Following previous research \cite{Autoformer, dlinear, patchtst}, the ETT datasets are split into proportions
+        of 6:2:2, while the other datasets are divided into proportions of 7:1:2.
+      protocol_reason: The paper states that ETT datasets use a 6:2:2 train/val/test split, which matches the ETTh1 protocol.
+      column_check: unchecked
+      protocol_evidence: 'Protokoll: Zitat im Text belegt'
+    github_url: https://github.com/lss-1138/SegRNN
+    repo_status: official
+    feasibility: ok
+    source_url: null
+    protocol: passt
+    found_by: seeded
+    reason: Official code (linked in the paper text; linked in the paper text).
+    community:
+    - url: https://github.com/lss-1138/SegRNN
+      title: 'GitHub - lss-1138/SegRNN: [IEEE IoT-J 2026] The official repository of the SegRNN paper: "Segment Recurrent
+        Neural Network for Long-Term Time Series Forecasting." This work is developed by the Lab of Professor Weiwei Lin (linww@scut.edu.cn),
+        South China University of Technology; Pengcheng Laboratory. · GitHub'
+      snippet: 'All the datasets needed for SegRNN can be obtained from the Google Drive provided in Autoformer.
+
+        Create a separate folder named `./dataset` and place all the CSV files in this directory.
+
+        Note: Place the CSV files directly into this directory, such as "./dataset/ETTh1.csv"
+
+
+        `./dataset`
+
+
+        ### Training '
+    - url: https://github.com/lss-1138/SegRNN/blob/main/README.md
+      title: SegRNN/README.md at main · lss-1138/SegRNN · GitHub
+      snippet: '```
+
+        @article{lin2026segrnn, title={Segrnn: Segment recurrent neural network for long-term time series forecasting}, author={Lin,
+        Shengsheng and Lin, Weiwei and Wu, Wentai and Zhao, Feiyu and Mo, Ruichao and Zhang, Haotong}, journal={IEEE Internet
+        of Things Journal}, year={2026}, volume={13}, number='
+    - url: https://github.com/ACAT-SCUT/SegRNN
+      title: 'GitHub - ACAT-SCUT/SegRNN: SegRNN: Segment Recurrent Neural Network for Long-Term Time Series Forecasting. Please
+        refer to https://github.com/lss-1138/SegRNN for the full code and details. · GitHub'
+      snippet: 'SegRNN is an innovative RNN-based model designed for Long-term Time Series Forecasting (LTSF). It incorporates
+        two fundamental strategies:
+
+
+        1. The replacement of point-wise iterations with segment-wise iterations
+
+        2. The substitution of Recurrent Multi-step Forecasting (RMF) with Parallel Multi-step '
+    - url: https://github.com/fyancy/Time-Series-Library
+      title: 'GitHub - fyancy/Time-Series-Library: A Library for Advanced Deep Time Series Models. · GitHub'
+      snippet: "Mamba - Mamba: Linear-Time Sequence Modeling with Selective State Spaces ( (\n SegRNN - SegRNN: Segment Recurrent\
+        \ Neural Network for Long-Term Time Series Forecasting ( (\n Koopa - Koopa: Learning Non-stationary Time Series Dynamics\
+        \ with Koopman Predictors ( (\n FreTS - Frequency-domain MLPs are More E"
+    - url: https://github.com/ericandl/Time-Series-Library
+      title: 'GitHub - ericandl/Time-Series-Library: A Library for Advanced Deep Time Series Models. · GitHub'
+      snippet: "Mamba - Mamba: Linear-Time Sequence Modeling with Selective State Spaces ( (\n SegRNN - SegRNN: Segment Recurrent\
+        \ Neural Network for Long-Term Time Series Forecasting ( (\n Koopa - Koopa: Learning Non-stationary Time Series Dynamics\
+        \ with Koopman Predictors ( (\n FreTS - Frequency-domain MLPs are More E"
+  checked_at: '2026-10-09T21:21:40Z'
+  cost_gross_usd: 0.3362
+  verdict:
+    urteil: nicht reproduziert
+    measured_mean: 0.390713
+    measured_std: 0.001097
+    seeds: 3
+    target: 0.341
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2308_11200/20261009-224634
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
