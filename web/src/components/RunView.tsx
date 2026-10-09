@@ -50,8 +50,12 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const barRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
+  const filmRef = useRef<HTMLDivElement>(null)
   const stored = useHead(ref_.paper_id)
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
+  // ?play=1: bring the whole player into view once it is on the page
+  const playing = timelapse && !!run && run.events.length > 0
+  useEffect(() => { if (playing) filmRef.current?.scrollIntoView({ block: 'start' }) }, [playing])
   // a link to the same run with another ?tab= (the hash changes, the page stays) switches the tab
   useEffect(() => {
     const f = () => { const q = location.hash.split('?')[1]; const n = parseTab(new URLSearchParams(q ?? '').get('tab')); setTab(n.tab); setHow(n.how) }
@@ -116,9 +120,9 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 md:px-8">
       {timelapse && run.events.length > 0 && (
-        <Film events={run.events} dossier={d} claim={claim} title={run.ref.title} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked}
+        <div ref={filmRef} className="scroll-mt-4"><Film events={run.events} dossier={d} claim={claim} title={run.ref.title} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked}
           overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={fmtSpread}
-          plan={run.plan} finalCode={run.code} codeLoader={codeLoader} autoplay />
+          plan={run.plan} finalCode={run.code} codeLoader={codeLoader} autoplay /></div>
       )}
       <div ref={topRef} className="scroll-mt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
