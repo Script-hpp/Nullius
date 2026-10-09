@@ -1415,3 +1415,59 @@ def test_search_covers_all_datasets_and_stays_bounded():
     assert all(1 <= len(q) <= MAX_SEARCHES_PER_DATASET <= 3 for q in DISCOVERY_QUERIES.values())
     assert any("github" in q for q in DISCOVERY_QUERIES["Cora"])
     assert any("linear" in q.lower() for q in DISCOVERY_QUERIES["ETTh1"])
+
+
+GOOD_CLAIM = ('{"protocol": "passt", "protocol_quote": "GraphNet achieves 95% accuracy", "matched_task": "Cora", '
+              '"method": "GraphNet", "quote": "GraphNet achieves 95% accuracy", "metric": "accuracy", "target": 95}')
+
+
+def _seed_agent(tmp_path, claim=GOOD_CLAIM, repos=None):
+    cache_file = tmp_path / "seed_cache.json"
+    return DiscoveryAgent(llm=FakeLLM(claim_content=claim), tavily=FakeTavily(repos=repos or ["https://github.com/foo/bar"]),
+                          cache_path=str(cache_file)), cache_file
+
+
+def test_seeded_found_by_and_cache(monkeypatch, arxiv_xml, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(arxiv_xml))
+    agent, cache_file = _seed_agent(tmp_path)
+    cands = agent.discover(["Cora"], seed_ids=["2101.12345"])
+    assert [c.found_by for c in cands] == ["seeded"]
+    cached = json.loads(cache_file.read_text())["2101.12345"]
+    assert cached["found_by"] == "seeded"
+
+
+def test_seeded_skips_search_but_keeps_checks(monkeypatch, arxiv_xml, tmp_path):
+    # Abstract does not name the dataset: search pre-filter would reject, seeded skips it.
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(arxiv_xml.replace("Cora dataset", "a graph dataset")))
+    agent, _ = _seed_agent(tmp_path)
+
+    def boom(*a, **k):
+        raise AssertionError("search must not run")
+    agent.tavily.curate_papers = boom
+    cands = agent.discover(["Cora"], seed_ids=["2101.12345"])
+    assert len(cands) == 1
+
+    # Quote check still applies
+    agent2, cache2 = _seed_agent(tmp_path, claim=GOOD_CLAIM.replace('"quote": "GraphNet achieves 95% accuracy"', '"quote": "invented 95"'))
+    cache2.unlink(missing_ok=True)
+    events = []
+    assert agent2.discover(["Cora"], seed_ids=["2101.12345"], on_event=events.append) == []
+    assert any(e.get("type") == "reject" and e.get("stage") == "quote" for e in events)
+
+
+def test_seeded_not_capped_by_search_limit(monkeypatch, tmp_path):
+    entries = "".join(f"<entry><id>http://arxiv.org/abs/2101.0000{i}v1</id><title>T{i}</title><summary>s</summary>"
+                      f"<author><name>A B</name></author></entry>" for i in range(5))
+    xml = f'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">{entries}</feed>'
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(xml))
+    agent, _ = _seed_agent(tmp_path)
+    cands = agent.discover(["Cora"], seed_ids=[f"2101.0000{i}" for i in range(5)])
+    assert len(cands) == 5
+
+
+def test_parse_abs_page():
+    from repro_agent.discovery import _parse_abs_page
+    html = ('<meta name="citation_title" content="My &amp; Paper" /><meta name="citation_author" content="Doe, John" />'
+            '<meta property="og:description" content="Abstract text." />')
+    p = _parse_abs_page("2101.00001", html)
+    assert p["title"] == "My & Paper" and p["authors"] == ["John Doe"] and p["abstract"] == "Abstract text."
