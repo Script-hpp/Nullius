@@ -1,0 +1,53 @@
+Basis-Snapshot bauen (rlinear-2023-20261009-024550) ...
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (31s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (32s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (21s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (21s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (22s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (21s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 timeout measured=None (94s)
+[rlinear_etth1_96_mse] seed=0 versuch=2 abweichung measured=1.2943705955099625 (19s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (20s)
+[rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (19s)
+[rlinear_etth1_96_mse] seed=1 versuch=1 abweichung measured=1.2943705955099625 (11s)
+Fertig. Bericht: /home/onuralp/orca/workspaces/research/tavily-ui/runs/rlinear_2023/20261009-024550/zeugnis.md | Kosten: 0.0000 $
+{
+ "verdict": "Agenten-Fehler vermutet",
+ "mean": 1.2943705955099625,
+ "std": 0.0,
+ "claims": [
+  "rlinear_etth1_96_mse"
+ ],
+ "event_types": [
+  "attempt",
+  "candidates",
+  "claim_start",
+  "code_written",
+  "fault_repair",
+  "plan",
+  "repair",
+  "repair_result",
+  "run_end",
+  "run_start",
+  "verdict"
+ ],
+ "code_calls": 10,
+ "attempts": 11,
+ "soft_timeouts": 1,
+ "repairs": 1,
+ "repairs_with_train_py_frame": 1,
+ "run_dir": "runs/rlinear_2023/20261009-024550",
+ "spent_usd": 0.0
+}
+--- Reparaturtext nach Timeout (Ende) ---
+ Voll-Lauf: weicher Timeout`.
+
+Python stack at the time limit (most recent call first):
+Fatal Python error: Aborted
+
+Current thread 0x00007ffff7fba340 (most recent call first):
+  File "/work/train.py", line 13 in <module>
+
+Extension modules: numpy._core._multiarray_umath, numpy.linalg._umath_linalg (total: 2)
+
+The script printed nothing before the limit (print progress per epoch to see the speed).
