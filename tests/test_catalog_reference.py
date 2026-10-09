@@ -18,7 +18,12 @@ REFERENCES = {   # arxiv_id -> (Task, Seeds, Fixture-Text)
 
 
 def reference_entries():
-    return {e["arxiv_id"]: e for e in cat.load_catalog() if cat.origin_of(e) == cat.REFERENCE}
+    # first entry per arXiv id wins: the Kipf CiteSeer entry (case-citeseer) shares the id with the Kipf Cora entry
+    out = {}
+    for e in cat.load_catalog():
+        if cat.origin_of(e) == cat.REFERENCE:
+            out.setdefault(e["arxiv_id"], e)
+    return out
 
 
 def test_origin_defaults_to_discovery():
