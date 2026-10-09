@@ -4,6 +4,8 @@ import type { PaperSummary } from './summaries'
 // A run is found by its paper id (kipf_gcn_2017, disc_2511_08094) or by the arXiv id.
 export function findHead(all: Record<string, PaperSummary>, key: string | undefined | null): (PaperSummary & { arxiv_id: string }) | undefined {
   if (!key) return undefined
+  const m = key.match(/^disc_(\d{4})_(\d{4,5})$/)   // discovery runs are named after their arXiv id
+  if (m && all[`${m[1]}.${m[2]}`]) return { ...all[`${m[1]}.${m[2]}`], arxiv_id: `${m[1]}.${m[2]}` }
   for (const [arxivId, e] of Object.entries(all)) if (arxivId === key || e.paper_ids?.includes(key)) return { ...e, arxiv_id: arxivId }
   return undefined
 }
