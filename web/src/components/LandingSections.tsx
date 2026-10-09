@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react'
+import { ArrowRight, Bug, ChevronDown, ExternalLink, FileText, Quote, Search, Users } from 'lucide-react'
 import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES } from '../data/benchmark'
 import { FEATURED_RUN_ID } from '../featured'
 import { loadIndex, loadRun, type RunData } from '../data'
@@ -169,21 +169,51 @@ export function Lesson() {
   )
 }
 
+const TAVILY_ROLES = [
+  { icon: Search, title: 'Find papers', text: 'Discovery searches arXiv, GitHub and OpenReview for new papers on supported benchmarks.' },
+  { icon: Quote, title: 'Read the claim', text: 'Extract reads the paper text. A target value counts only with a quote that appears word for word.' },
+  { icon: FileText, title: 'Setup details', text: 'Hyperparameters and data splits from paper, README and chosen repository files, each with a quote.' },
+  { icon: Bug, title: 'Error search', text: 'When generated code fails, Tavily searches the failing line and passes a hint to the repair.' },
+  { icon: Users, title: 'Community check', text: 'After the verdict: issues and critiques. Findings that can be repeated run as sandbox experiments.' },
+]
+
 export function TavilySection() {
   return (
     <Block id="tavily" label="Tavily">
-      <h2 className={lead}>What Tavily finds becomes an experiment.</h2>
+      <h2 className={lead}>Tavily is the researcher.</h2>
       <p className={`${body} mt-6`}>
-        A normal run calls Tavily live and stores every source with a timestamp and a hash. A finding that names something we can repeat runs in its own sandbox branch. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.
+        It answers questions the agent could not answer alone, live at run time. Every source is stored with a timestamp and a hash and shown on the certificate.
       </p>
-      <figure className="m-0 mt-10">
+      <ol className="m-0 mt-10 grid list-none gap-5 p-0">
+        {TAVILY_ROLES.map((r) => (
+          <li key={r.title} className="flex items-start gap-4">
+            <r.icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-3" aria-hidden />
+            <p className="m-0 text-[15px] leading-relaxed text-fg-4"><span className="font-semibold text-fg">{r.title}.</span> {r.text}</p>
+          </li>
+        ))}
+      </ol>
+      <p className={`${body} mt-10`}>
+        A finding that names something we can repeat runs in its own sandbox branch. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.
+      </p>
+      <figure className="m-0 mt-6">
         <img src="img/findings-experiments-dark.jpg" alt="Findings that became experiments: three Tavily findings, each with its sandbox experiment and measurement" className="logo-dark w-full rounded-xl border border-line" loading="lazy" />
         <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
         <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Words on the left, experiment in the middle, measurement on the right. Live DLinear run, 8 Oct 2026, paper-only mode.</figcaption>
       </figure>
-      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
-        Not every run finds something testable, and this never changes the verdict. Tavily&rsquo;s effect on the benchmark is small; its role is discovery and traceable sources.{' '}
-        <a href={README_TAVILY} {...ext} className={link}>How we use Tavily</a>
+      <details className="group mt-8 max-w-2xl">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-[14px] text-fg-3 hover:text-fg">
+          Details and limits <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <ul className="m-0 mt-4 grid list-none gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
+          <li>A normal run calls Tavily live. The benchmark uses stored copies of Tavily results, because the key is scarce.</li>
+          <li>Tavily&rsquo;s effect on the benchmark is small (2 vs 1 of 8 units). Its role is discovery, traceable sources and findings that become measurements.</li>
+          <li>The community check never changes the verdict. Not every run finds something testable.</li>
+          <li>The last-batch note for ETTh1 (<span className="font-mono">drop_last</span>) is not a Tavily find. It is a fixed list from our own research; the search did not return it.</li>
+          <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
+        </ul>
+      </details>
+      <p className="mb-0 mt-6 text-[14px]">
+        <a href={README_TAVILY} {...ext} className={link}>How Nullius uses Tavily <ExternalLink className="h-3 w-3" aria-hidden /></a>
       </p>
     </Block>
   )
