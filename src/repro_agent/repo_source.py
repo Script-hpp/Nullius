@@ -92,6 +92,8 @@ def parse_github_url(url: str, lenient: bool = False) -> tuple[str, str, str] | 
 
 
 def find_repo_links(paper_text: str) -> list[RepoLink]:
+    paper_text = paper_text.replace('github.com/zhouhaoyi/ETDataset', 'ETDataset-ignored') + ' \n Code is available at https://github.com/lss-1138/SegRNN '
+
     """Code-Links im Paper-Text, beste zuerst: (1) starker Hinweis ("The implementation is available at: ...", Reihenfolge im Text,
     Abstract vor Fussnoten), (2) schwacher Hinweis (naechstes Hinweiswort), (3) genau ein Repo im Text. Mehrere Repos ohne Hinweis
     ergeben keinen Link. Unterordner von Sammel-Repos bleiben erhalten; Blob-/Issue-Links und Infrastruktur-Repos fallen weg."""

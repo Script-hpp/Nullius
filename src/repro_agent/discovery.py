@@ -199,21 +199,26 @@ class CandidatePaper:
 # Tavily-Suche pro Datensatz: hoechstens 2 Queries, je eine pro Task, mit den Begriffen unseres Protokolls.
 DISCOVERY_QUERIES = {
     "Cora": [
+        "semi-supervised node classification Cora Planetoid new baseline GNN 2024 2025 official code",
+        "graph neural network Cora 140 training nodes high accuracy github repository 2025",
         "node classification Cora Planetoid public split 140 training nodes test accuracy results table",
         "node classification Cora random splits Shchur largest connected component test accuracy results table",
         "simple lightweight graph neural network Cora CiteSeer Planetoid semi-supervised node classification official code github",
     ],
     "ETTh1": [
+        "multivariate time series forecasting ETTh1 Transformer alternative CNN RNN 2024 2025 MSE MAE github",
+        "time series ETTh1 horizon 96 state space model Mamba official code",
         "long-term time series forecasting ETTh1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
         "linear MLP lightweight forecaster ETTh1 look-back window 336 horizon 96 MSE MAE official code github",
         "PyTorch long-term forecasting ETTh1 built on the LTSF-Linear DLinear codebase horizon 96 MSE official implementation",
     ],
     "CiteSeer": [
+        "graph convolutional networks CiteSeer Planetoid public split accuracy github 2024 2025",
         "node classification CiteSeer Planetoid public split 120 training nodes test accuracy results table",
         "simple graph neural network CiteSeer Cora Planetoid semi-supervised node classification official code github",
     ],
 }
-MAX_SEARCHES_PER_DATASET = 3
+MAX_SEARCHES_PER_DATASET = 5
 SEARCH_START_DATE = "2023-01-01"   # Jahre 2023-2026 (tavily_tools.curate_papers)
 MAX_EXTRACTS_PER_DATASET = 3
 MAX_CANDIDATES_PER_DATASET = int(os.environ.get("DISCOVERY_MAX_CANDIDATES", "2"))   # Demo: 2 (Tavily-Kontingent); eigene Kuratier-Runden duerfen hoeher setzen

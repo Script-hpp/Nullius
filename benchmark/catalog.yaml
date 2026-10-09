@@ -511,3 +511,236 @@ candidates:
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_2202_06491
+  arxiv_id: '2202.06491'
+  title: Adversarial Graph Contrastive Learning with Information Regularization
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: Cora
+    claim:
+      method: ARIEL
+      quote: \textbf{ARIEL}  & 84.28 $\pm$ 0.96
+      metric: accuracy
+      target: 84.28
+      protocol: unklar
+      matched_task: null
+      protocol_quote: For each dataset, we randomly select 10% nodes for training, 10% nodes for validation and the remaining
+        for testing.
+      protocol_reason: Abweichendes Protokoll ohne gueltiges Zitat
+      column_check: unchecked
+      protocol_evidence: Protokoll nicht belegt
+    github_url: https://github.com/Shengyu-Feng/ARIEL
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/pdf/2202.06491
+    protocol: unklar
+    found_by: tavily
+    reason: Official code (linked in the paper text; linked in the paper text).
+    community:
+    - url: https://github.com/topics/graph-contrastive-learning
+      title: graph-contrastive-learning · GitHub Topics · GitHub
+      snippet: "Star  32\n\n[SIGIR 2022] A Review-aware Graph Contrastive Learning Framework for Recommendation\n\nrecommender-system\
+        \ graph-contrastive-learning review-based-recommendation\n\n Updated Oct 6, 2022\n Python\n\n### CRIPAC-DIG / GETRAL\n\
+        \nStar  29\n\nThe source code of \"Adversarial Contrastive Learning for Evidence"
+    - url: https://openreview.net/forum?id=ioyq7NsR1KJ
+      title: Adversarial Graph Augmentation to Improve Graph Contrastive Learning | OpenReview
+      snippet: 'Title: Adversarial Graph Augmentation to Improve Graph Contrastive Learning | OpenReview
+
+        back arrowGo to **NeurIPS 2021 Conference** homepage. ## Adversarial Graph Augmentation to Improve Graph Contrastive
+        LearningDownload PDF. ### Susheel Suresh, Pan Li, Cong Hao, Jennifer Neville. Published: 09 No'
+    - url: https://openreview.net/forum?id=pvwZNPD9v7
+      title: Graph Contrastive Learning with Generative Adversarial Network | OpenReview
+      snippet: 'Graph Contrastive Learning with Generative Adversarial Network | OpenReview ### BibTeX Record _Click anywhere
+        on the box above to highlight complete record_ Graph Contrastive Learning with Generative Adversarial Network ###
+        Cheng Wu, Chaokun Wang, Jingcao Xu, Ziyang Liu, Kai Zheng, Xiaowei Wang, Yan'
+    - url: https://openreview.net/forum?id=zuXyQsXVLF&noteId=2kfAmpouAH
+      title: Enhancing Adversarial Contrastive Learning via Adversarial Invariant Regularization | OpenReview
+      snippet: 'Title: Enhancing Adversarial Contrastive Learning via Adversarial Invariant Regularization | OpenReview
+
+        Go to **NeurIPS 2023 Conference** homepage. ## Enhancing Adversarial Contrastive Learning via Adversarial Invariant
+        Regularization. ### Xilie Xu, Jingfeng Zhang, Feng Liu, Masashi Sugiyama, Mohan '
+- id: disc_2305_10721
+  arxiv_id: '2305.10721'
+  title: 'Revisiting Long-term Time Series Forecasting: An Investigation on Linear Mapping'
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: RLinear
+      quote: \multicolumn{2}{c|}{Method} & \multicolumn{2}{c|}{RLinear} & \multicolumn{2}{c||}{RMLP} & \multicolumn{2}{c|}{PatchTST}
+        & \multicolumn{2}{c|}{TimesNet} & \multicolumn{2}{c}{DLinear} \\ \midrule \multicolumn{2}{c|}{Metric} & MSE & MAE
+        & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE \\ \midrule \multirow{4}{*}{\rotatebox{90}{ETTh1}} & 96 & \textbf{0.366}
+        & \textbf{0.391} & 0.390 & 0.410 & 0.381 & 0.405 & 0.398 & 0.418 & \underline{0.375} & \underline{0.399} \\
+      metric: mse
+      target: 0.366
+      horizon: 96
+      input_length: 336
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: Data Partition & \multicolumn{2}{c|}{6:2:2 (month)} & \multicolumn{2}{c}{7:2:1}
+      protocol_reason: The paper states a 6:2:2 month split for ETTh1, which matches the ETTh1 protocol's training/validation/test
+        division.
+      column_check: unchecked
+      protocol_evidence: 'Protokoll: Zitat im Text belegt'
+    github_url: https://github.com/plumprc/RTSF
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/pdf/2305.10721
+    protocol: passt
+    found_by: tavily
+    reason: Official code (linked in the paper text; linked in the paper text).
+    community: []
+- id: disc_2410_05697
+  arxiv_id: '2410.05697'
+  title: 'Diffusing to the Top: Boost Graph Neural Networks with Minimal Hyperparameter Tuning'
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: CiteSeer
+    claim:
+      method: GNN-Diff
+      quote: 'Models   & \multicolumn{1}{c}{Grid} & \multicolumn{1}{c}{Random} & \multicolumn{1}{c}{Coarse} & \multicolumn{1}{c}{C2F}
+        & \multicolumn{1}{c|}{GNN-Diff} & \multicolumn{1}{c}{Grid} & \multicolumn{1}{c}{Random} & \multicolumn{1}{c}{Coarse}
+        & \multicolumn{1}{c}{C2F} & \multicolumn{1}{c}{GNN-Diff} \\ \midrule
+
+        GCN      & 82.04 $\pm$ 0.96         & 81.52 $\pm$ 0.71           & 81.89 $\pm$ 0.48           & 81.99 $\pm$ 0.95        &
+        \textbf{82.33 $\pm$ 0.17}             & 71.92 $\pm$ 1.10         & 72.04 $\pm$ 0.56           & 71.97 $\pm$ 0.67           &
+        72.13 $\pm$ 0.23        & \textbf{72.37 $\pm$ 0.29}            \\'
+      metric: accuracy
+      target: 72.37
+      protocol: unklar
+      matched_task: null
+      protocol_quote: null
+      protocol_reason: The text does not mention the specific split or protocol used for CiteSeer.
+      column_check: unchecked
+      protocol_evidence: Protokoll nicht belegt
+    github_url: https://github.com/lequanlin/GNN-Diff
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/pdf/2410.05697
+    protocol: unklar
+    found_by: tavily
+    reason: Official code (linked in the paper text; linked in the paper text).
+    community:
+    - url: https://openreview.net/forum?id=D756s2YQ6b
+      title: 'Diffusing to the Top: Boost Graph Neural Networks with Minimal Hyperparameter Tuning | OpenReview'
+      snippet: 'Title: Diffusing to the Top: Boost Graph Neural Networks with Minimal Hyperparameter Tuning | OpenReview
+
+        Go to **ICLR 2025 Conference** homepage. ## Diffusing to the Top: Boost Graph Neural Networks with Minimal Hyperparameter
+        Tuning. ### Lequan Lin, Dai Shi, Andi Han, Zhiyong Wang, Junbin Gao. Publ'
+- id: disc_2405_00946
+  arxiv_id: '2405.00946'
+  title: 'SparseTSF: Modeling Long-term Time Series Forecasting with 1k Parameters'
+  status: geprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: SparseTSF
+      quote: \multirow{2}{*}{SparseTSF (ours)} & \textbf{0.359} & \textbf{0.397} & \textbf{0.404} & \textbf{0.417}
+      metric: mse
+      target: 0.359
+      horizon: 96
+      input_length: 720
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: The dataset splitting follows the procedures of FITS and Autoformer, where the ETT datasets are divided
+        into proportions of 6:2:2
+      protocol_reason: The paper states that ETT datasets are split into 6:2:2 proportions, matching the ETTh1 protocol.
+    github_url: https://github.com/lzlptm/SparseTSF
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/abs/2405.00946
+    protocol: passt
+    found_by: arxiv
+    reason: Official code
+    community: []
+  checked_at: '2026-10-09T20:18:10Z'
+  cost_gross_usd: 0.2035
+  verdict:
+    urteil: reproduziert
+    measured_mean: 0.365314
+    measured_std: 0.003391
+    seeds: 3
+    target: 0.359
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2405_00946/20261009-220822
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_2308_11200
+  arxiv_id: '2308.11200'
+  title: 'SegRNN: Segment Recurrent Neural Network for Long-Term Time Series Forecasting'
+  status: geprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: SegRNN
+      quote: SegRNN & \textbf{0.341}
+      metric: mse
+      target: 0.341
+      horizon: 96
+      input_length: 720
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: The datasets are split into training, validation, and test sets according to the standard protocols
+        (e.g., 6:2:2 for ETT datasets).
+      protocol_reason: Matches standard ETTh1 split.
+    github_url: https://github.com/lss-1138/SegRNN
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/abs/2308.11200
+    protocol: passt
+    found_by: arxiv
+    reason: Official code
+    community: []
+  checked_at: '2026-10-09T20:38:59Z'
+  cost_gross_usd: 0.0422
+  verdict:
+    urteil: nicht reproduziert
+    measured_mean: 0.416699
+    measured_std: 0.001919
+    seeds: 3
+    target: 0.341
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau
+    graph_repairs: 0
+    fault_repairs: 2
+    run_dir: runs/disc_2308_11200/20261009-223055
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_2307_03756
+  arxiv_id: '2307.03756'
+  title: 'FITS: Modeling Time Series with $10k$ Parameters'
+  status: ungeprueft
+  imported_from: cache:discovery_cache.json
+  candidate:
+    dataset: ETTh1
+    claim:
+      method: FITS
+      quote: FITS & \textbf{0.372}
+      metric: mse
+      target: 0.372
+      horizon: 96
+      input_length: 720
+      protocol: passt
+      matched_task: ETTh1
+      protocol_quote: We follow the same experimental setup as previous works, splitting the ETT datasets into 6:2:2.
+      protocol_reason: Matches standard ETTh1 split.
+    github_url: https://github.com/VEWOXIC/FITS
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/abs/2307.03756
+    protocol: passt
+    found_by: arxiv
+    reason: Official code
+    community: []
