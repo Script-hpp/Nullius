@@ -17,13 +17,17 @@ REFERENCES = {   # arxiv_id -> (Task, Seeds, Fixture-Text)
 }
 
 
-def reference_entries():
+def refs_of(entries):
     # first entry per arXiv id wins: the Kipf CiteSeer entry (case-citeseer) shares the id with the Kipf Cora entry
     out = {}
-    for e in cat.load_catalog():
+    for e in entries:
         if cat.origin_of(e) == cat.REFERENCE:
             out.setdefault(e["arxiv_id"], e)
     return out
+
+
+def reference_entries():
+    return refs_of(cat.load_catalog())
 
 
 def test_origin_defaults_to_discovery():
@@ -71,7 +75,7 @@ def test_import_never_overwrites_or_duplicates_a_reference(tmp_path):
     clash = cand("1609.02907", "Cora", title="Other title", claim={"method": "GCN", "quote": "x 1", "metric": "accuracy", "target": 99})
     other = cand("1811.05868", "Cora")
     assert cat.import_candidates(entries, [(clash, "t"), (other, "t")]) == 0
-    assert len(entries) == n and json.dumps({e["arxiv_id"]: e for e in entries if cat.origin_of(e) == cat.REFERENCE}, sort_keys=True) == before
+    assert len(entries) == n and json.dumps(refs_of(entries), sort_keys=True) == before
 
 
 def test_unchecked_reference_is_not_jury_ready():
