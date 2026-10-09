@@ -268,6 +268,20 @@ def _parse_atom(xml_text: str) -> list[dict]:
     return papers
 
 
+def _parse_abs_page(arxiv_id: str, html: str) -> dict:
+    """Title, abstract and authors from the meta tags of an arxiv.org/abs page."""
+    import html as htmllib
+    def metas(name):
+        return [htmllib.unescape(m) for m in re.findall(rf'<meta name="{name}" content="([^"]*)"', html)]
+    title = metas("citation_title")
+    abstract = re.findall(r'<meta property="og:description" content="([^"]*)"', html)
+    if not title:
+        raise ValueError(f"no metadata for {arxiv_id}")
+    authors = [" ".join(reversed([x.strip() for x in a.split(",", 1)])) for a in metas("citation_author")]
+    return {"arxiv_id": arxiv_id, "title": " ".join(title[0].split()),
+            "abstract": " ".join(htmllib.unescape(abstract[0]).split()) if abstract else "", "authors": authors}
+
+
 class DiscoveryAgent:
     def __init__(self, llm: LLMClient | None = None, tavily: TavilyTools | None = None, cache_path=None):
         self.cache_path = cache_path
@@ -615,8 +629,37 @@ class DiscoveryAgent:
         alternatives = [{"url": c["url"], "status": c["status"], "summary": c.get("status_reason", "")[:200]} for c in candidates if c is not chosen][:3]
         return chosen_url, reason, alternatives
         
-    def discover(self, datasets: list[str], max_papers: int = 10, on_event=None) -> list[CandidatePaper]:
-        """Run the full discovery pipeline for the given datasets."""
+    def _fetch_seeded(self, arxiv_ids: list[str]) -> list[dict]:
+        """Seeded discovery: metadata for given arXiv ids from the free arXiv API (no Tavily search)."""
+        ids = [re.sub(r"v\d+$", "", i.strip()) for i in arxiv_ids if i.strip()]
+        if not ids:
+            return []
+        import time
+        try:
+            resp = httpx.get("https://export.arxiv.org/api/query",
+                             params={"id_list": ",".join(ids), "max_results": len(ids)}, timeout=30.0)
+            resp.raise_for_status()
+            papers = _parse_atom(resp.text)
+        except Exception:
+            # arXiv API rate-limits (429) and times out: read the public abs pages (same title, abstract, authors).
+            papers = []
+            for i in ids:
+                try:
+                    papers.append(_parse_abs_page(i, httpx.get(f"https://arxiv.org/abs/{i}", timeout=30.0, follow_redirects=True).text))
+                except Exception:
+                    pass
+                time.sleep(3)
+        for p in papers:
+            p["found_by"] = "seeded"
+        return papers
+
+    def discover(self, datasets: list[str], max_papers: int = 10, on_event=None,
+                 seed_ids: list[str] | None = None) -> list[CandidatePaper]:
+        """Run the full discovery pipeline for the given datasets.
+
+        seed_ids: arXiv ids given by the user. They replace the search step only (found_by="seeded");
+        text extract, claim, protocol, feasibility and repo checks are the same as for searched papers.
+        """
         import time
         seq = 0
         def emit(evt: dict):
@@ -669,15 +712,24 @@ class DiscoveryAgent:
             return []
 
         for ds in datasets:
-            emit({"type": "pending", "dataset": ds, "message": "Searching papers with Tavily..."})
-            try:
-                papers = self._find_papers_tavily(ds)
-            except (BillingBlocked, BudgetExceeded):
-                raise
-            except Exception as e:
-                emit({"type": "error", "dataset": ds, "message": f"Tavily paper search error: {e}"})
-                papers = []
-            if not papers:
+            seeded = bool(seed_ids)
+            if seeded:
+                emit({"type": "pending", "dataset": ds, "message": f"Seeded discovery: {len(seed_ids)} given arXiv ids"})
+                try:
+                    papers = self._fetch_seeded(seed_ids)
+                except Exception as e:
+                    emit({"type": "error", "dataset": ds, "message": f"arXiv API error: {e}"})
+                    continue
+            else:
+                emit({"type": "pending", "dataset": ds, "message": "Searching papers with Tavily..."})
+                try:
+                    papers = self._find_papers_tavily(ds)
+                except (BillingBlocked, BudgetExceeded):
+                    raise
+                except Exception as e:
+                    emit({"type": "error", "dataset": ds, "message": f"Tavily paper search error: {e}"})
+                    papers = []
+            if not papers and not seeded:
                 # Ersatzweg: arXiv-API (kostenlos), wenn Tavily nichts Brauchbares findet.
                 emit({"type": "pending", "dataset": ds, "message": "No Tavily hits, falling back to arXiv..."})
                 t0 = time.time()
@@ -691,11 +743,14 @@ class DiscoveryAgent:
                 emit({"type": "reject", "dataset": ds, "reason": "No results found on arXiv", "stage": "prefilter"})
                 continue
                 
-            papers = self._prefer_code(papers)
+            if not seeded:
+                papers = self._prefer_code(papers)
+            max_cand = len(papers) if seeded else MAX_CANDIDATES_PER_DATASET   # explicit seed list: no search caps
+            max_extracts = len(papers) if seeded else MAX_EXTRACTS_PER_DATASET
             dataset_candidates = 0
             extracts_count = 0
             for p in papers:
-                if dataset_candidates >= MAX_CANDIDATES_PER_DATASET:
+                if dataset_candidates >= max_cand:
                     break
                 cache_key = p["arxiv_id"]
                 if cache_key in cache:
@@ -713,7 +768,9 @@ class DiscoveryAgent:
                 # Tavily-Ausschnitt zaehlt mit: Ergebnisse stehen oft nur in Tabellen, nicht im Abstract.
                 abstract = (p["abstract"] + " " + p.get("snippet", "")).lower()
                 import re
-                if ds.lower() not in abstract or not re.search(r"\d+\.\d+|\d+%", abstract):
+                # Seeded: the user chose the paper, the abstract keyword filter (a search-noise filter) is skipped;
+                # claim, quote, number, protocol and repo checks below still apply.
+                if not seeded and (ds.lower() not in abstract or not re.search(r"\d+\.\d+|\d+%", abstract)):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"})
                     reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"}.get("reason", "")
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
@@ -721,8 +778,8 @@ class DiscoveryAgent:
                     
                 html_url = f"https://arxiv.org/html/{cache_key}"
                 
-                if extracts_count >= MAX_EXTRACTS_PER_DATASET:
-                    emit({"type": "warning", "dataset": ds, "message": f"Max {MAX_EXTRACTS_PER_DATASET} Tavily extracts reached."})
+                if extracts_count >= max_extracts:
+                    emit({"type": "warning", "dataset": ds, "message": f"Max {max_extracts} Tavily extracts reached."})
                     break
                     
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
