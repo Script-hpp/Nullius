@@ -43,7 +43,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
         )}
       </header>
 
-      <main className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-bg">
+      <main id="app-scroll" className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-bg">
         {children}
         <SiteFooter className="mt-10 max-w-6xl px-5 md:px-8" />
       </main>

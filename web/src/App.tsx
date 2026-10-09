@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Layout } from './components/Layout'
 import { Discovery } from './components/Discovery'
@@ -150,6 +150,14 @@ export default function App() {
     window.addEventListener(DATA_CHANGED, load)   // a live run finished: index.json has a new entry
     return () => window.removeEventListener(DATA_CHANGED, load)
   }, [])
+  // A new page opens at the top. Same path with another query (?tab=, ?play=) keeps the position; /lesson scrolls on its own.
+  const path = useRef(hash.split('?')[0])
+  useEffect(() => {
+    const p = hash.split('?')[0]
+    if (p === path.current) return
+    path.current = p
+    if (p !== '/lesson') { window.scrollTo(0, 0); document.getElementById('app-scroll')?.scrollTo(0, 0) }   // the start page scrolls the window, the other pages scroll inside Layout
+  }, [hash])
   useEffect(() => { if (hash === '/jury') location.replace('#/') }, [hash])   // the old judges page: the start page now tells that story
   const m = hash.match(/^\/run\/([^?]+)(?:\?(.*))?$/)
   const query = new URLSearchParams(m?.[2] ?? '')
