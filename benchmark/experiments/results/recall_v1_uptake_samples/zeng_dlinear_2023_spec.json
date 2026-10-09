@@ -1,0 +1,29 @@
+{
+ "formatted": "Reproduction spec for DLinear, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than DLinear, ignore that selection.\n- lr = 0.005   [start script: \"--learning_rate 0.005\"]\n- epochs = 10   [argparse default: \"parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')\"]\n- batch_size = 32   [start script: \"--batch_size 32\"]\n- dropout = 0.05   [argparse default: \"parser.add_argument('--dropout', type=float, default=0.05, help='dropout')\"]\n- patience = 3   [argparse default: \"parser.add_argument('--patience', type=int, default=3, help='early stopping patience')\"]\n- seq_len = 336   [start script: \"--seq_len 336\"]\n- optimizer = Adam   [start script: \"model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)\"]\n- lr_schedule = lr * (0.5 ** ((epoch - 1) // 1))   [code: \"lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}\"]\n- early_stopping = validation loss; restores best model weights   [start script: \"early_stopping(vali_loss, self.model, path)\"]\n- activation = gelu   [argparse default: \"parser.add_argument('--activation', type=str, default='gelu', help='activation')\"]\n- init = 1/L   [paper: \"we initialize the weights of the linear layers in DLinear as 1/L rather than random initialization. That is, we use the same weight for every forecasting tim...\"]\n- channel_mode = shared   [argparse default: \"parser.add_argument('--individual', action='store_true', default=False, help='DLinear: a linear layer for each variate(channel) individually')\"]\nNot stated in any source (choose a standard value and say so in a comment): weight_decay, hidden, layers, model_core, input_norm.",
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 2,
+    "quote": "LTSF-Linear is a linear model with two linear layers at most, it costs much lower memory and fewer parameters and has a faster inference speed than existing Transformers",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  },
+  {
+   "item": {
+    "key": "model_core",
+    "value": "    def forward(self, x):\n        # x: [Batch, Input length, Channel]\n        seasonal_init, trend_init = self.decompsition(x)\n        seasonal_init, trend_init = seasonal_init.permute(0,2,1), trend_init.permute(0,2,1)\n        if self.individual:\n            seasonal_output = torch.zeros([seasonal_init.size(0),seasonal_init.size(1),self.pred_len],dtype=seasonal_init.dtype).to(seasonal_init.device)\n            trend_output = torch.zeros([trend_init.size(0),trend_init.size(1),self.pred_len],dtype=trend_init.dtype).to(trend_init.device)\n            for i in range(self.channels):\n                seasonal_output[:,i,:] = self.Linear_Seasonal[i](seasonal_init[:,i,:])\n                trend_output[:,i,:] = self.Linear_Trend[i](trend_init[:,i,:])\n        else:\n            seasonal_output = self.Linear_Seasonal(seasonal_init)\n            trend_output = self.Linear_Trend(trend_init)\n\n        x = seasonal_output + trend_output\n        return x.permute(0,2,1) # to [Batch, Output length, Channel]",
+    "source": "repo:models/DLinear.py@0c11366"
+   },
+   "reason": "Feld fehlt"
+  }
+ ],
+ "missing": [
+  "weight_decay",
+  "hidden",
+  "layers",
+  "model_core",
+  "input_norm"
+ ]
+}

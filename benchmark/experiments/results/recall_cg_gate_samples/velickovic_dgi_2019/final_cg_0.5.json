@@ -1,0 +1,1 @@
+{"unit": "velickovic_dgi_2019", "arm": "cg", "temp": 0.5, "urteil": "teilweise", "mean": 0.8081, "std": 0.00909761873605759, "n_ok": 10, "n_seeds": 10, "code_missing": false, "attempts_seed0": 2, "target_reached": false, "seconds": 4050.3, "note": "", "facts": {"feat_row_l1": true, "graph_conv": true, "prelu": true, "hid512": true}}

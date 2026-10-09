@@ -1,0 +1,95 @@
+{
+ "formatted": "Reproduction spec for SGC, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than SGC, ignore that selection.\n- lr = 0.2   [paper: \"learning rate 0.2.\"]\n- epochs = 100   [paper: \"we train SGC for 100 epochs\"]\nNot stated in any source (choose a standard value and say so in a comment): weight_decay, batch_size, dropout, hidden, layers, patience, heads, optimizer, lr_schedule, early_stopping, activation, init, model_core, feature_norm, adj_norm, self_loops.",
+ "dropped": [
+  {
+   "item": {
+    "key": "dropout",
+    "value": 0,
+    "quote": "--dropout', type=float, default=0, help='Dropout rate (1 - keep probability).')",
+    "source": "args.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "hidden",
+    "value": 0,
+    "quote": "--hidden', type=int, default=0, help='Number of hidden units.')",
+    "source": "args.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "layers",
+    "value": 1,
+    "quote": "self.W = nn.Linear(nfeat, nclass)",
+    "source": "models.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "optimizer",
+    "value": "Adam",
+    "quote": "optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)",
+    "source": "citation.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "activation",
+    "value": "none",
+    "quote": "return self.W(x)",
+    "source": "models.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "model_core",
+    "value": "A Simple PyTorch Implementation of Logistic Regression. Assuming the features have been preprocessed with k-step graph propagation.",
+    "quote": "\"\"\"A Simple PyTorch Implementation of Logistic Regression. Assuming the features have been preprocessed with k-step graph propagation.\"\"\"",
+    "source": "models.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "feature_norm",
+    "value": "row-normalized",
+    "quote": "features = row_normalize(features)",
+    "source": "utils.py"
+   },
+   "reason": "Quelle unbekannt"
+  },
+  {
+   "item": {
+    "key": "adj_norm",
+    "value": "AugNormAdj",
+    "quote": "--normalization', type=str, default='AugNormAdj', choices=['AugNormAdj'], help='Normalization method for the adjacency matrix.')",
+    "source": "args.py"
+   },
+   "reason": "Quelle unbekannt"
+  }
+ ],
+ "missing": [
+  "weight_decay",
+  "batch_size",
+  "dropout",
+  "hidden",
+  "layers",
+  "patience",
+  "heads",
+  "optimizer",
+  "lr_schedule",
+  "early_stopping",
+  "activation",
+  "init",
+  "model_core",
+  "feature_norm",
+  "adj_norm",
+  "self_loops"
+ ]
+}

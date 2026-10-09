@@ -1,0 +1,15 @@
+- Model: NLinear (Normalization‑Linear) with seq_len=336, pred_len=96, enc_in=7, **individual=False** (shared linear layer) *(uncertain)*.  
+- Forward: subtract last timestep, apply Linear(seq_len→pred_len) (permuted to [B, C, T]), add back the subtracted value.  
+- Optimizer: **Adam** *(uncertain)*, lr=0.005, weight_decay=0 *(uncertain)*.  
+- Batch size = 32.  
+- Learning‑rate schedule: adjust_learning_rate with **lradj='type1'** (lr × 0.5^(epoch‑1)) *(uncertain)*.  
+- Early stopping: patience=7 on validation MSE, min_delta=0.  
+- Max epochs: 20 *(uncertain)* (stopped earlier by early stopping).  
+- No dropout, no hidden layers (model is purely linear).  
+- Input preprocessing: as in forward (subtract last timestep).  
+- Training data: train split [8640,7]; validation [2880,7]; each sample uses the last seq_len=336 steps.  
+- Inference: for each test window i, use the last 336 steps of test_inputs[i] to predict the next 96 steps of all 7 channels.  
+- Loss: MSE (standardised units).  
+- Seed: read env var SEED, set numpy.random.seed and torch.manual_seed.  
+- Output: write /output/predictions.csv with rows id="{window}_{step}_{channel}" and prediction float.  
+- Training stops when early stopping triggers or max epochs reached; the best validation model is used for final predictions.

@@ -1,0 +1,13 @@
+{
+ "formatted": "Reproduction spec for RLinear, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than RLinear, ignore that selection.\n- lr = 0.001   [argparse default: \"parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')\"]\n- epochs = 15   [argparse default: \"parser.add_argument('--train_epochs', type=int, default=15, help='train epochs')\"]\n- batch_size = 16   [argparse default: \"parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')\"]\n- dropout = 0.1   [argparse default: \"parser.add_argument('--drop', type=float, default=0.1, help='dropout ratio')\"]\n- patience = 10   [argparse default: \"parser.add_argument('--patience', type=int, default=10, help='early stopping patience')\"]\n- optimizer = Adam   [start script: \"model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)\"]\n- lr_schedule = args.learning_rate * (0.5 ** ((epoch - 1) // 1))   [code: \"lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}\"]\n- model_core = The model normalizes the input via RevIN (if enabled), applies dropout, then applies a shared linear projection (or per\u2011channel linear layers) mapping the sequence length to the prediction length, and finally denormalizes the output.   [code: \"def forward(self, x, y): # x: [B, L, D] x = self.rev(x, 'norm') if self.rev else x x = self.dropout(x) if self.individual: pred = torch.zeros_like(y) for idx...\"]\n- input_norm = RevIN (instance normalization)   [code: \"self.rev = RevIN(configs.channel) if configs.rev else None self.individual = configs.individual def forward_loss(self, pred, true): return F.mse_loss(pred, t...\"]\n- channel_mode = shared weights (jointly) unless individual flag set   [code: \"self.Linear = nn.ModuleList([ nn.Linear(configs.seq_len, configs.pred_len) for _ in range(configs.channel) ]) if configs.individual else nn.Linear(configs.se...\"]\nNot stated in any source (choose a standard value and say so in a comment): weight_decay, hidden, layers, seq_len, early_stopping, activation, init.",
+ "dropped": [],
+ "missing": [
+  "weight_decay",
+  "hidden",
+  "layers",
+  "seq_len",
+  "early_stopping",
+  "activation",
+  "init"
+ ]
+}

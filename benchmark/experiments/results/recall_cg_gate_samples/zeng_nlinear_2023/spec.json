@@ -1,0 +1,70 @@
+{
+ "model": "NLinear",
+ "family": "forecast",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.005",
+   "quote": "--learning_rate 0.005",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 0.005,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "batch_size",
+   "value": "32",
+   "quote": "--batch_size 32",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 32,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "seq_len",
+   "value": "336",
+   "quote": "seq_len=336",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 336,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 1,
+    "quote": "else:\n            self.Linear = nn.Linear(self.seq_len, self.pred_len)",
+    "source": "repo:models/NLinear.py@0c11366"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/NLinear.py@0c11366",
+  "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "repo:utils/tools.py@0c11366 (function body)",
+  "repo:data_provider/data_loader.py@0c11366 (function body)",
+  "repo:utils/timefeatures.py@0c11366 (function body)",
+  "repo:utils/tools.py@0c11366 (function body)",
+  "repo:models/NLinear.py@0c11366 (function body)"
+ ],
+ "missing": [
+  "weight_decay",
+  "epochs",
+  "dropout",
+  "hidden",
+  "layers",
+  "patience"
+ ],
+ "excerpt": "=== repo:models/NLinear.py@0c11366 ===\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport numpy as np\n\nclass Model(nn.Module):\n    \"\"\"\n    Normalization-Linear\n    \"\"\"\n    def __init__(self, configs):\n        super(Model, self).__init__()\n        self.seq_len = configs.seq_len\n        self.pred_len = configs.pred_len\n        \n        # Use this line if you want to visualize the weights\n        # self.Linear.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n        self.channels = configs.enc_in\n        self.individual = configs.individual\n        if self.individual:\n            self.Linear = nn.ModuleList()\n            for i in range(self.channels):\n                self.Linear.append(nn.Linear(self.seq_len,self.pred_len))\n        else:\n            self.Linear = nn.Linear(self.seq_len, self.pred_len)\n\n    def forward(self, x):\n        # x: [Batch, Input length, Channel]\n        seq_last = x[:,-1:,:].detach()\n        x = x - seq_last\n        if self.individual:\n            output = torch.zeros([x.size(0),self.pred_len,x.size(2)],dtype=x.dtype).to(x.device)\n            for i in range(self.channels):\n                output[:,:,i] = self.Linear[i](x[:,:,i])\n            x = output\n        else:\n            x = self.Linear(x.permute(0,2,1)).permute(0,2,1)\n        x = x + seq_last\n        return x # [Batch, Output length, Channel]\n\n=== repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366 ===\n\nif [ ! -d \"./logs\" ]; then\n    mkdir ./logs\nfi\n\nif [ ! -d \"./logs/LongForecasting\" ]; then\n    mkdir ./logs/LongForecasting\nfi\nseq_len=336\nmodel_name=DLinear\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 96 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'96.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'192 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 192 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'192.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'336 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 336 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'336.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'720 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 720 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'720.log\n\n=== repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366 ===\nif [ ! -d \"./logs\" ]; then\n    mkdir ./logs\nfi\n\nif [ ! -d \"./logs/LongForecasting\" ]; then\n    mkdir ./logs/LongForecasting\nfi\n\nif [ ! -d \"./logs/LongForecasting/univariate\" ]; then\n    mkdir ./logs/LongForecasting/univariate\nfi\nmodel_name=DLinear\n\n# ETTh1, univariate results, pred_len= 24 48 96 192 336 720\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_24 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 24 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_24.log\n \npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_48 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 48 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_48.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 96 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_96.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_192 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 192 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_192.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_336 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 336 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_336.log\n\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_720 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 720 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_720.log\n\n\n\n=== repo:utils/tools.py@0c11366 (function body) ===\n    def transform(self, data):\n        return (data - self.mean) / self.std\n\n\n=== repo:data_provider/data_loader.py@0c11366 (function body) ===\n    def inverse_transform(self, data):\n        return self.scaler.inverse_transform(data)\n\n\n\n=== repo:utils/timefeatures.py@0c11366 (function body) ===\ndef time_features(dates, freq='h'):\n    return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)])\n\n\n=== repo:utils/tools.py@0c11366 (function body) ===\ndef adjust_learning_rate(optimizer, epoch, args):\n    # lr = args.learning_rate * (0.2 ** (epoch // 2))\n    if args.lradj == 'type1':\n        lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}\n    elif args.lradj == 'type2':\n        lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }\n    elif args.lradj == '3':\n        lr_adjust = {epoch: args.learning_rate if epoch < 10 else args.learning_rate*0.1}\n    elif args.lradj == '4':\n        lr_adjust = {epoch: args.learning_rate if epoch < 15 else args.learning_rate*0.1}\n    elif args.lradj == '5':\n        lr_adjust = {epoch: args.learning_rate if epoch < 25 else args.learning_rate*0.1}\n    elif args.lradj == '6':\n        lr_adjust = {epoch: args.learning_rate if epoch < 5 else args.learning_rate*0.1}  \n    if epoch in lr_adjust.keys():\n        lr = lr_adjust[epoch]\n        for param_group in optimizer.param_groups:\n            param_group['lr'] = lr\n        print('Updating learning rate to {}'.format(lr))\n\n\n\n=== repo:models/NLinear.py@0c11366 (function body) ===\n    def __init__(self, configs):\n        super(Model, self).__init__()\n        self.seq_len = configs.seq_len\n        self.pred_len = configs.pred_len\n        \n        # Use this line if you want to visualize the weights\n        # self.Linear.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n        self.channels = configs.enc_in\n        self.individual = configs.individual\n        if self.individual:\n            self.Linear = nn.ModuleList()\n            for i in range(self.channels):\n                self.Linear.append(nn.Linear(self.seq_len,self.pred_len))\n        else:\n            self.Linear = nn.Linear(self.seq_len, self.pred_len)\n",
+ "dropped_defaults": []
+}

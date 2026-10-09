@@ -1,0 +1,98 @@
+{
+ "model": "GCN",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.01",
+   "quote": "flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 0.01,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.0005",
+   "quote": "flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 0.0005,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "epochs",
+   "value": "200",
+   "quote": "flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 200,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0.5",
+   "quote": "flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 0.5,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "hidden",
+   "value": "16",
+   "quote": "flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 16,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "10",
+   "quote": "flags.DEFINE_integer('early_stopping', 10, 'Tolerance for early stopping (# of epochs).')",
+   "source": "repo:gcn/train.py@39a4089",
+   "rank": "argparse default",
+   "number": 10,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 2,
+    "quote": "Unless otherwise noted, we train a two-layer GCN as described in Section 3.1",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:gcn/models.py@39a4089",
+  "repo:gcn/train.py@39a4089",
+  "repo:gcn/utils.py@39a4089 (function body)",
+  "repo:gcn/utils.py@39a4089 (function body)",
+  "repo:gcn/utils.py@39a4089 (function body)",
+  "repo:gcn/layers.py@39a4089"
+ ],
+ "missing": [
+  "batch_size",
+  "layers",
+  "heads"
+ ],
+ "excerpt": "=== repo:gcn/models.py@39a4089 ===\nfrom gcn.layers import *\nfrom gcn.metrics import *\n\nflags = tf.app.flags\nFLAGS = flags.FLAGS\n\n\nclass Model(object):\n    def __init__(self, **kwargs):\n        allowed_kwargs = {'name', 'logging'}\n        for kwarg in kwargs.keys():\n            assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg\n        name = kwargs.get('name')\n        if not name:\n            name = self.__class__.__name__.lower()\n        self.name = name\n\n        logging = kwargs.get('logging', False)\n        self.logging = logging\n\n        self.vars = {}\n        self.placeholders = {}\n\n        self.layers = []\n        self.activations = []\n\n        self.inputs = None\n        self.outputs = None\n\n        self.loss = 0\n        self.accuracy = 0\n        self.optimizer = None\n        self.opt_op = None\n\n    def _build(self):\n        raise NotImplementedError\n\n    def build(self):\n        \"\"\" Wrapper for _build() \"\"\"\n        with tf.variable_scope(self.name):\n            self._build()\n\n        # Build sequential layer model\n        self.activations.append(self.inputs)\n        for layer in self.layers:\n            hidden = layer(self.activations[-1])\n            self.activations.append(hidden)\n        self.outputs = self.activations[-1]\n\n        # Store model variables for easy access\n        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)\n        self.vars = {var.name: var for var in variables}\n\n        # Build metrics\n        self._loss()\n        self._accuracy()\n\n        self.opt_op = self.optimizer.minimize(self.loss)\n\n    def predict(self):\n        pass\n\n    def _loss(self):\n        raise NotImplementedError\n\n    def _accuracy(self):\n        raise NotImplementedError\n\n    def save(self, sess=None):\n        if not sess:\n            raise AttributeError(\"TensorFlow session not provided.\")\n        saver = tf.train.Saver(self.vars)\n        save_path = saver.save(sess, \"tmp/%s.ckpt\" % self.name)\n        print(\"Model saved in file: %s\" % save_path)\n\n    def load(self, sess=None):\n        if not sess:\n            raise AttributeError(\"TensorFlow session not provided.\")\n        saver = tf.train.Saver(self.vars)\n        save_path = \"tmp/%s.ckpt\" % self.name\n        saver.restore(sess, save_path)\n        print(\"Model restored from file: %s\" % save_path)\n\n\nclass MLP(Model):\n    def __init__(self, placeholders, input_dim, **kwargs):\n        super(MLP, self).__init__(**kwargs)\n\n        self.inputs = placeholders['features']\n        self.input_dim = input_dim\n        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions\n        self.output_dim = placeholders['labels'].get_shape().as_list()[1]\n        self.placeholders = placeholders\n\n        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)\n\n        self.build()\n\n    def _loss(self):\n        # Weight decay loss\n        for var in self.layers[0].vars.values():\n            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)\n\n        # Cross entropy error\n        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],\n                                                  self.placeholders['labels_mask'])\n\n    def _accuracy(self):\n        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],\n                                        self.placeholders['labels_mask'])\n\n    def _build(self):\n        self.layers.append(Dense(input_dim=self.input_dim,\n                                 output_dim=FLAGS.hidden1,\n                                 placeholders=self.placeholders,\n                                 act=tf.nn.relu,\n                                 dropout=True,\n                                 sparse_inputs=True,\n                                 logging=self.logging))\n\n        self.layers.append(Dense(input_dim=FLAGS.hidden1,\n                                 output_dim=self.output_dim,\n                                 placeholders=self.placeholders,\n                                 act=lambda x: x,\n                                 dropout=True,\n                                 logging=self.logging))\n\n    def predict(self):\n        return tf.nn.softmax(self.outputs)\n\n\nclass GCN(Model):\n    def __init__(self, placeholders, input_dim, **kwargs):\n        super(GCN, self).__init__(**kwargs)\n\n        self.inputs = placeholders['features']\n        self.input_dim = input_dim\n        # self.input_dim = self.inputs.get_shape().as_list()[1]  # To be supported in future Tensorflow versions\n        self.output_dim = placeholders['labels'].get_shape().as_list()[1]\n        self.placeholders = placeholders\n\n        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)\n\n        self.build()\n\n    def _loss(self):\n        # Weight decay loss\n        for var in self.layers[0].vars.values():\n            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)\n\n        # Cross entropy error\n        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],\n                                                  self.placeholders['labels_mask'])\n\n    def _accuracy(self):\n        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],\n                                        self.placeholders['labels_mask'])\n\n    def _build(self):\n\n        self.layers.append(GraphConvolution(input_dim=self.input_dim,\n                                            output_dim=FLAGS.hidden1,\n                                            placeholders=self.placeholders,\n                                            act=tf.nn.relu,\n                                            dropout=True,\n                                            sparse_inputs=True,\n                                            logging=self.logging))\n\n        self.layers.append(GraphConvolution(input_dim=FLAGS.hidden1,\n                                            output_dim=self.output_dim,\n                                            placeholders=self.pla\n\n=== repo:gcn/train.py@39a4089 ===\nfrom __future__ import division\nfrom __future__ import print_function\n\nimport time\nimport tensorflow as tf\n\nfrom gcn.utils import *\nfrom gcn.models import GCN, MLP\n\n# Set random seed\nseed = 123\nnp.random.seed(seed)\ntf.set_random_seed(seed)\n\n# Settings\nflags = tf.app.flags\nFLAGS = flags.FLAGS\nflags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'\nflags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'\nflags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')\nflags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')\nflags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')\nflags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')\nflags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')\nflags.DEFINE_integer('early_stopping', 10, 'Tolerance for early stopping (# of epochs).')\nflags.DEFINE_integer('max_degree', 3, 'Maximum Chebyshev polynomial degree.')\n\n# Load data\nadj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = load_data(FLAGS.dataset)\n\n# Some preprocessing\nfeatures = preprocess_features(features)\nif FLAGS.model == 'gcn':\n    support = [preprocess_adj(adj)]\n    num_supports = 1\n    model_func = GCN\nelif FLAGS.model == 'gcn_cheby':\n    support = chebyshev_polynomials(adj, FLAGS.max_degree)\n    num_supports = 1 + FLAGS.max_degree\n    model_func = GCN\nelif FLAGS.model == 'dense':\n    support = [preprocess_adj(adj)]  # Not used\n    num_supports = 1\n    model_func = MLP\nelse:\n    raise ValueError('Invalid argument for model: ' + str(FLAGS.model))\n\n# Define placeholders\nplaceholders = {\n    'support': [tf.sparse_placeholder(tf.float32) for _ in range(num_supports)],\n    'features': tf.sparse_placeholder(tf.float32, shape=tf.constant(features[2], dtype=tf.int64)),\n    'labels': tf.placeholder(tf.float32, shape=(None, y_train.shape[1])),\n    'labels_mask': tf.placeholder(tf.int32),\n    'dropout': tf.placeholder_with_default(0., shape=()),\n    'num_features_nonzero': tf.placeholder(tf.int32)  # helper variable for sparse dropout\n}\n\n# Create model\nmodel = model_func(placeholders, input_dim=features[2][1], logging=True)\n\n# Initialize session\nsess = tf.Session()\n\n\n# Define model evaluation function\ndef evaluate(features, support, labels, mask, placeholders):\n    t_test = time.time()\n    feed_dict_val = construct_feed_dict(features, support, labels, mask, placeholders)\n    outs_val = sess.run([model.loss, model.accuracy], feed_dict=feed_dict_val)\n    return outs_val[0], outs_val[1], (time.time() - t_test)\n\n\n# Init variables\nsess.run(tf.global_variables_initializer())\n\ncost_val = []\n\n# Train model\nfor epoch in range(FLAGS.epochs):\n\n    t = time.time()\n    # Construct feed dictionary\n    feed_dict = construct_feed_dict(features, support, y_train, train_mask, placeholders)\n    feed_dict.update({placeholders['dropout']: FLAGS.dropout})\n\n    # Training step\n    outs = sess.run([model.opt_op, model.loss, model.accuracy], feed_dict=feed_dict)\n\n    # Validation\n    cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)\n    cost_val.append(cost)\n\n    # Print results\n    print(\"Epoch:\", '%04d' % (epoch + 1), \"train_loss=\", \"{:.5f}\".format(outs[1]),\n          \"train_acc=\", \"{:.5f}\".format(outs[2]), \"val_loss=\", \"{:.5f}\".format(cost),\n          \"val_acc=\", \"{:.5f}\".format(acc), \"time=\", \"{:.5f}\".format(time.time() - t))\n\n    if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):\n        print(\"Early stopping...\")\n        break\n\nprint(\"Optimization Finished!\")\n\n# Testing\ntest_cost, test_acc, test_duration = evaluate(features, support, y_test, test_mask, placeholders)\nprint(\"Test set results:\", \"cost=\", \"{:.5f}\".format(test_cost),\n      \"accuracy=\", \"{:.5f}\".format(test_acc), \"time=\", \"{:.5f}\".format(test_duration))\n\n\n=== repo:gcn/utils.py@39a4089 (function body) ===\ndef load_data(dataset_str):\n    \"\"\"\n    Loads input data from gcn/data directory\n\n    ind.dataset_str.x => the feature vectors of the training instances as scipy.sparse.csr.csr_matrix object;\n    ind.dataset_str.tx => the feature vectors of the test instances as scipy.sparse.csr.csr_matrix object;\n    ind.dataset_str.allx => the feature vectors of both labeled and unlabeled training instances\n        (a superset of ind.dataset_str.x) as scipy.sparse.csr.csr_matrix object;\n    ind.dataset_str.y => the one-hot labels of the labeled training instances as numpy.ndarray object;\n    ind.dataset_str.ty => the one-hot labels of the test instances as numpy.ndarray object;\n    ind.dataset_str.ally => the labels for instances in ind.dataset_str.allx as numpy.ndarray object;\n    ind.dataset_str.graph => a dict in the format {index: [index_of_neighbor_nodes]} as collections.defaultdict\n        object;\n    ind.dataset_str.test.index => the indices of test instances in graph, for the inductive setting as list object.\n\n    All objects above must be saved using python pickle module.\n\n    :param dataset_str: Dataset name\n    :return: All data input files loaded (as well the training/test data).\n    \"\"\"\n    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']\n    objects = []\n    for i in range(len(names)):\n        with open(\"data/ind.{}.{}\".format(dataset_str, names[i]), 'rb') as f:\n            if sys.version_info > (3, 0):\n                objects.append(pkl.load(f, encoding='latin1'))\n            else:\n                objects.append(pkl.load(f))\n\n    x, y, tx, ty, allx, ally, graph = tuple(objects)\n    test_idx_reorder = parse_index_file(\"data/ind.{}.test.index\".format(dataset_str))\n    test_idx_range = np.sort(test_idx_reorder)\n\n    if dataset_str == 'citeseer':\n        # Fix citeseer dataset (there are some isolated nodes in the graph)\n        # Find isolated nodes, add them as zero-vecs into the right position\n        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)\n        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))\n        tx_extended[test_idx_range-min(test_idx_range), :] = tx\n        tx = tx_extended\n        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))\n        ty_extended[test_idx_range-min(test_idx_range), :] = ty\n        ty = ty_extended\n\n    features = sp.vstack((allx, tx)).tolil()\n    features[test_idx_reorder, :] = features[test_idx_range, :]\n    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))\n\n    labels = np.vstack((ally, ty))\n    labels[test_idx_reorder, :] = labels[test_idx_range, :]\n\n    idx_test = test_idx_range.tolist()\n    idx_train = range(len(y))\n    idx_val = range(len(y), len(y)+500)\n\n    train_mask = sample_mask(idx_train, labels.shape[0])\n    val_mask = sample_mask(idx_val, labels.shape[0])\n    test_mask = sample_mask(idx_test, labels.shape[0])\n\n    y_train = np.zeros(labels.shape)\n    y_val = np.zeros(labels.shape)\n    y_test = np.zeros(labels.shape)\n    y_t\n\n=== repo:gcn/utils.py@39a4089 (function body) ===\ndef preprocess_features(features):\n    \"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"\n    rowsum = np.array(features.sum(1))\n    r_inv = np.power(rowsum, -1).flatten()\n    r_inv[np.isinf(r_inv)] = 0.\n    r_mat_inv = sp.diags(r_inv)\n    features = r_mat_inv.dot(features)\n    return sparse_to_tuple(features)\n\n\n\n=== repo:gcn/utils.py@39a4089 (function body) ===\ndef preprocess_adj(adj):\n    \"\"\"Preprocessing of adjacency matrix for simple GCN model and conversion to tuple representation.\"\"\"\n    adj_normalized = normalize_adj(adj + sp.eye(adj.shape[0]))\n    return sparse_to_tuple(adj_normalized)\n\n\n\n=== repo:gcn/layers.py@39a4089 ===\nfrom gcn.inits import *\nimport tensorflow as tf\n\nflags = tf.app.flags\nFLAGS = flags.FLAGS\n\n# global unique layer ID dictionary for layer name assignment\n_LAYER_UIDS = {}\n\n\ndef get_layer_uid(layer_name=''):\n    \"\"\"Helper function, assigns unique layer IDs.\"\"\"\n    if layer_name not in _LAYER_UIDS:\n        _LAYER_UIDS[layer_name] = 1\n        return 1\n    else:\n        _LAYER_UIDS[layer_name] += 1\n        return _LAYER_UIDS[layer_name]\n\n\ndef sparse_dropout(x, keep_prob, noise_shape):\n    \"\"\"Dropout for sparse tensors.\"\"\"\n    random_tensor = keep_prob\n    random_tensor += tf.random_uniform(noise_shape)\n    dropout_mask = tf.cast(tf.floor(random_tensor), dtype=tf.bool)\n    pre_out = tf.sparse_retain(x, dropout_mask)\n    return pre_out * (1./keep_prob)\n\n\ndef dot(x, y, sparse=False):\n    \"\"\"Wrapper for tf.matmul (sparse vs dense).\"\"\"\n    if sparse:\n        res = tf.sparse_tensor_dense_matmul(x, y)\n    else:\n        res = tf.matmul(x, y)\n    return res\n\n\nclass Layer(object):\n    \"\"\"Base layer class. Defines basic API for all layer objects.\n    Implementation inspired by keras (http://keras.io).\n\n    # Properties\n        name: String, defines the variable scope of the layer.\n        logging: Boolean, switches Tensorflow histogram logging on/off\n\n    # Methods\n        _call(inputs): Defines computation graph of layer\n            (i.e. takes input, returns output)\n        __call__(inputs): Wrapper for _call()\n        _log_vars(): Log all variables\n    \"\"\"\n\n    def __init__(self, **kwargs):\n        allowed_kwargs = {'name', 'l",
+ "dropped_defaults": []
+}

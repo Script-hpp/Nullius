@@ -1,0 +1,26 @@
+{
+ "formatted": "Reproduction spec for NLinear, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than NLinear, ignore that selection.\n- lr = 0.005   [start script: \"--learning_rate 0.005\"]\n- batch_size = 32   [start script: \"--batch_size 32\"]\n- patience = 7   [code: \"def __init__(self, patience=7, verbose=False, delta=0):\"]\n- seq_len = 336   [start script: \"seq_len=336\"]\n- optimizer = Adam   [start script: \"model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)\"]\n- model_core = Subtract the last value, apply a linear transformation, then add the last value back.   [code: \"def forward(self, x): # x: [Batch, Input length, Channel] seq_last = x[:,-1:,:].detach() x = x - seq_last if self.individual: output = torch.zeros([x.size(0)...\"]\n- input_norm = subtract last value   [paper: \"Simply normalization via the last value from the lookback window can greatly relieve the distribution shift problem.\"]\nNot stated in any source (choose a standard value and say so in a comment): weight_decay, epochs, dropout, hidden, layers, lr_schedule, early_stopping, activation, init, channel_mode.",
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 1,
+    "quote": "self.Linear = nn.Linear(self.seq_len, self.pred_len)",
+    "source": "repo:models/NLinear.py@0c11366"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "missing": [
+  "weight_decay",
+  "epochs",
+  "dropout",
+  "hidden",
+  "layers",
+  "lr_schedule",
+  "early_stopping",
+  "activation",
+  "init",
+  "channel_mode"
+ ]
+}

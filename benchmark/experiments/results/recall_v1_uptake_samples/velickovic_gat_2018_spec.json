@@ -1,0 +1,37 @@
+{
+ "formatted": "Reproduction spec for GAT, checked against the paper and the authors' code. Conflicts between sources are already resolved (start script > config > paper > code > README > argparse default). Follow every entry exactly; if a script or default selects a model other than GAT, ignore that selection.\n- lr = 0.005   [paper: \"...with an initial learning rate of 0.01 for Pubmed, and 0.005 for all other datasets.\"]\n- weight_decay = 0.0005   [paper: \"During training, we apply L2 regulariza-tion with \u03bb = 0 .0005 .\"]\n- epochs = 100000   [start script: \"nb_epochs = 100000\"]\n- batch_size = 1   [start script: \"batch_size = 1\"]\n- dropout = 0.6   [paper: \"with p = 0 .6 is applied to both layers\u2019 inputs, as well as to the normalized attention coefficients\"]\n- hidden = The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features)   [paper: \"The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features)\"]\n- patience = 100   [start script: \"patience = 100\"]\n- heads = 8   [paper: \"The first layer consists of K = 8 attention heads\"]\n- optimizer = Adam   [paper: \"using the Adam SGD optimizer (Kingma & Ba, 2014)\"]\n- activation = followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity.   [paper: \"followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity.\"]\n- init = Both models are initialized using Glorot initialization (Glorot & Bengio, 2010)   [paper: \"Both models are initialized using Glorot initialization (Glorot & Bengio, 2010)\"]\n- model_core = The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features), followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity. The second layer is used for classification: a single attention head that computes C features (where C is the number of classes), followed by a softmax activation.   [paper: \"The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features), followed by an exponential linear unit (ELU) ...\"]\n- feature_norm = \"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"   [code: \"\"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"\"]\n- adj_norm = adj = adj + sp.eye(num_nodes)  # self-loop   [code: \"adj = adj + sp.eye(num_nodes) # self-loop\"]\n- self_loops = adj = adj + sp.eye(num_nodes)  # self-loop   [code: \"adj = adj + sp.eye(num_nodes) # self-loop\"]\nNot stated in any source (choose a standard value and say so in a comment): layers, lr_schedule, early_stopping.",
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 2,
+    "quote": "For the transductive learning tasks, we apply a two-layer GAT model.",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  },
+  {
+   "item": {
+    "key": "early_stopping",
+    "value": "Stop when neither validation accuracy improves nor validation loss improves for `patience` consecutive validation steps.",
+    "quote": "Stop when neither validation accuracy improves nor validation loss improves for `patience` consecutive validation steps.",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "early_stopping",
+    "value": "After training, restore the saved checkpoint for testing.",
+    "quote": "After training, restore the saved checkpoint for testing.",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  }
+ ],
+ "missing": [
+  "layers",
+  "lr_schedule",
+  "early_stopping"
+ ]
+}

@@ -1,0 +1,92 @@
+{
+ "model": "SGC",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.2",
+   "quote": "On the citation net-works, we train SGC for 100 epochs using Adam (Kingma & Ba, 2015) with learning rate 0.2.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 0.2,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "weight_decay",
+   "value": "5e-06",
+   "quote": "--weight_decay', type=float, default=5e-6, help='Weight decay (L2 loss on parameters).'",
+   "source": "repo:args.py@2c7a272",
+   "rank": "argparse default",
+   "number": 5e-06,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "epochs",
+   "value": "100",
+   "quote": "On the citation net-works, we train SGC for 100 epochs using Adam (Kingma & Ba, 2015) with learning rate 0.2.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 100,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0",
+   "quote": "--dropout', type=float, default=0, help='Dropout rate (1 - keep probability).'",
+   "source": "repo:args.py@2c7a272",
+   "rank": "argparse default",
+   "number": 0,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "hidden",
+   "value": "0",
+   "quote": "--hidden', type=int, default=0, help='Number of hidden units.'",
+   "source": "repo:args.py@2c7a272",
+   "rank": "argparse default",
+   "number": 0,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 1,
+    "quote": "self.W = nn.Linear(nfeat, nclass)",
+    "source": "repo:models.py@2c7a272"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models.py@2c7a272",
+  "repo:utils.py@2c7a272 (function body)",
+  "repo:utils.py@2c7a272 (function body)",
+  "repo:args.py@2c7a272 (function body)",
+  "repo:utils.py@2c7a272 (function body)",
+  "repo:models.py@2c7a272 (function body)",
+  "repo:utils.py@2c7a272 (function body)",
+  "repo:metrics.py@2c7a272 (function body)",
+  "repo:citation.py@2c7a272 (function body)",
+  "repo:citation.py@2c7a272 (function body)"
+ ],
+ "missing": [
+  "batch_size",
+  "layers",
+  "patience",
+  "heads"
+ ],
+ "excerpt": "=== repo:models.py@2c7a272 ===\nimport torch\nimport torch.nn as nn\nfrom torch.nn import Module\nimport torch.nn.functional as F\nimport math\n\nclass SGC(nn.Module):\n    \"\"\"\n    A Simple PyTorch Implementation of Logistic Regression.\n    Assuming the features have been preprocessed with k-step graph propagation.\n    \"\"\"\n    def __init__(self, nfeat, nclass):\n        super(SGC, self).__init__()\n\n        self.W = nn.Linear(nfeat, nclass)\n\n    def forward(self, x):\n        return self.W(x)\n\nclass GraphConvolution(Module):\n    \"\"\"\n    A Graph Convolution Layer (GCN)\n    \"\"\"\n\n    def __init__(self, in_features, out_features, bias=True):\n        super(GraphConvolution, self).__init__()\n        self.in_features = in_features\n        self.out_features = out_features\n        self.W = nn.Linear(in_features, out_features, bias=bias)\n        self.init()\n\n    def init(self):\n        stdv = 1. / math.sqrt(self.W.weight.size(1))\n        self.W.weight.data.uniform_(-stdv, stdv)\n\n    def forward(self, input, adj):\n        support = self.W(input)\n        output = torch.spmm(adj, support)\n\nclass GCN(nn.Module):\n    \"\"\"\n    A Two-layer GCN.\n    \"\"\"\n    def __init__(self, nfeat, nhid, nclass, dropout):\n        super(GCN, self).__init__()\n\n        self.gc1 = GraphConvolution(nfeat, nhid)\n        self.gc2 = GraphConvolution(nhid, nclass)\n        self.dropout = dropout\n\n    def forward(self, x, adj, use_relu=True):\n        x = self.gc1(x, adj)\n        if use_relu:\n            x = F.relu(x)\n        x = F.dropout(x, self.dropout, training=self.training)\n        x = self.gc2(x, adj)\n        return x\n\ndef get_model(model_opt, nfeat, nclass, nhid=0, dropout=0, cuda=True):\n    if model_opt == \"GCN\":\n        model = GCN(nfeat=nfeat,\n                    nhid=nhid,\n                    nclass=nclass,\n                    dropout=dropout)\n    elif model_opt == \"SGC\":\n        model = SGC(nfeat=nfeat,\n                    nclass=nclass)\n    else:\n        raise NotImplementedError('model:{} is not implemented!'.format(model_opt))\n\n    if cuda: model.cuda()\n    return model\n\n\n=== repo:utils.py@2c7a272 (function body) ===\ndef load_citation(dataset_str=\"cora\", normalization=\"AugNormAdj\", cuda=True):\n    \"\"\"\n    Load Citation Networks Datasets.\n    \"\"\"\n    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']\n    objects = []\n    for i in range(len(names)):\n        with open(\"data/ind.{}.{}\".format(dataset_str.lower(), names[i]), 'rb') as f:\n            if sys.version_info > (3, 0):\n                objects.append(pkl.load(f, encoding='latin1'))\n            else:\n                objects.append(pkl.load(f))\n\n    x, y, tx, ty, allx, ally, graph = tuple(objects)\n    test_idx_reorder = parse_index_file(\"data/ind.{}.test.index\".format(dataset_str))\n    test_idx_range = np.sort(test_idx_reorder)\n\n    if dataset_str == 'citeseer':\n        # Fix citeseer dataset (there are some isolated nodes in the graph)\n        # Find isolated nodes, add them as zero-vecs into the right position\n        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)\n        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))\n        tx_extended[test_idx_range-min(test_idx_range), :] = tx\n        tx = tx_extended\n        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))\n        ty_extended[test_idx_range-min(test_idx_range), :] = ty\n        ty = ty_extended\n\n    features = sp.vstack((allx, tx)).tolil()\n    features[test_idx_reorder, :] = features[test_idx_range, :]\n    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))\n    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)\n    labels = np.vstack((ally, ty))\n    labels[test_idx_reorder, :] = labels[test_idx_range, :]\n\n    idx_test = test_idx_range.tolist()\n    idx_train = range(len(y))\n    idx_val = range(len(y), len(y)+500)\n\n    adj, features = preprocess_citation(adj, features, normalization)\n\n    # porting to pytorch\n    features = torch.FloatTensor(np.array(features.todense())).float()\n    labels = torch.LongTensor(labels)\n    labels = torch.max(labels, dim=1)[1]\n    adj = sparse_mx_to_torch_sparse_tensor(adj).float()\n    idx_train = torch.LongTensor(idx_train)\n    idx_val = torch.LongTensor(idx_val)\n    idx_test = torch.LongTensor(idx_test)\n\n    if cuda:\n        features = features.cuda()\n        adj = adj.cuda()\n        labels = labels.cuda()\n        idx_train = idx_train.cuda()\n        idx_val = idx_val.cuda()\n        idx_test = idx_test.cuda()\n\n    return adj, features, labels, idx_train, idx_val, idx_test\n\n\n=== repo:utils.py@2c7a272 (function body) ===\ndef preprocess_citation(adj, features, normalization=\"FirstOrderGCN\"):\n    adj_normalizer = fetch_normalization(normalization)\n    adj = adj_normalizer(adj)\n    features = row_normalize(features)\n    return adj, features\n\n\n=== repo:args.py@2c7a272 (function body) ===\ndef get_citation_args():\n    parser = argparse.ArgumentParser()\n    parser.add_argument('--no-cuda', action='store_true', default=False,\n                        help='Disables CUDA training.')\n    parser.add_argument('--seed', type=int, default=42, help='Random seed.')\n    parser.add_argument('--epochs', type=int, default=100,\n                        help='Number of epochs to train.')\n    parser.add_argument('--lr', type=float, default=0.2,\n                        help='Initial learning rate.')\n    parser.add_argument('--weight_decay', type=float, default=5e-6,\n                        help='Weight decay (L2 loss on parameters).')\n    parser.add_argument('--hidden', type=int, default=0,\n                        help='Number of hidden units.')\n    parser.add_argument('--dropout', type=float, default=0,\n                        help='Dropout rate (1 - keep probability).')\n    parser.add_argument('--dataset', type=str, default=\"cora\",\n                        help='Dataset to use.')\n    parser.add_argument('--model', type=str, default=\"SGC\",\n                        choices=[\"SGC\", \"GCN\"],\n                        help='model to use.')\n    parser.add_argument('--feature', type=str, default=\"mul\",\n                        choices=['mul', 'cat', 'adj'],\n                        help='feature-type')\n    parser.add_argument('--normalization', type=str, default='AugNormAdj',\n                       choices=['AugNormAdj'],\n                       help='Normalization method for the adjacency matrix.')\n    parser.add_argument('--degree', type=int, default=2,\n                        help='degree of the approximation.')\n    parser.add_argument('--per', type=int, default=-1,\n                        help='Number of each nodes so as to balance.')\n    parser.add_argument('--experiment', type=str, default=\"base-experiment\",\n                        help='feature-type')\n    parser.add_argument('--tuned', action='store_true', help='use tuned hyperparams')\n\n    args, _ = parser.parse_known_args()\n    args.cuda = not args.no_cuda and torch.cuda.is_available()\n    return args\n\n\n=== repo:utils.py@2c7a272 (function body) ===\ndef set_seed(seed, cuda):\n    np.random.seed(seed)\n    torch.manual_seed(seed)\n    if cuda: torch.cuda.manual_seed(seed)\n\n\n=== repo:models.py@2c7a272 (function body) ===\ndef get_model(model_opt, nfeat, nclass, nhid=0, dropout=0, cuda=True):\n    if model_opt == \"GCN\":\n        model = GCN(nfeat=nfeat,\n                    nhid=nhid,\n                    nclass=nclass,\n                    dropout=dropout)\n    elif model_opt == \"SGC\":\n        model = SGC(nfeat=nfeat,\n                    nclass=nclass)\n    else:\n        raise NotImplementedError('model:{} is not implemented!'.format(model_opt))\n\n    if cuda: model.cuda()\n    return model\n\n\n=== repo:utils.py@2c7a272 (function body) ===\ndef sgc_precompute(features, adj, degree):\n    t = perf_counter()\n    for i in range(degree):\n        features = torch.spmm(adj, features)\n    precompute_time = perf_counter()-t\n    return features, precompute_time\n\n\n=== repo:metrics.py@2c7a272 (function body) ===\ndef accuracy(output, labels):\n    preds = output.max(1)[1].type_as(labels)\n    correct = preds.eq(labels).double()\n    correct = correct.sum()\n    return correct / len(labels)\n\n\n=== repo:citation.py@2c7a272 (function body) ===\ndef test_regression(model, test_features, test_labels):\n    model.eval()\n    return accuracy(model(test_features), test_labels)\n\n\n=== repo:citation.py@2c7a272 (function body) ===\ndef train_regression(model,\n                     train_features, train_labels,\n                     val_features, val_labels,\n                     epochs=args.epochs, weight_decay=args.weight_decay,\n                     lr=args.lr, dropout=args.dropout):\n\n    optimizer = optim.Adam(model.parameters(), lr=lr,\n                           weight_decay=weight_decay)\n    t = perf_counter()\n    for epoch in range(epochs):\n        model.train()\n        optimizer.zero_grad()\n        output = model(train_features)\n        loss_train = F.cross_entropy(output, train_labels)\n        loss_train.backward()\n        optimizer.step()\n    train_time = perf_counter()-t\n\n    with torch.no_grad():\n        model.eval()\n        output = model(val_features)\n        acc_val = accuracy(output, val_labels)\n\n    return model, acc_val, train_time\n",
+ "dropped_defaults": []
+}

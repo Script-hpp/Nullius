@@ -1,0 +1,1 @@
+{"unit": "shchur_pitfalls_2018", "arm": "cg", "temp": 0.2, "urteil": "reproduziert", "mean": 0.811943793911007, "std": 0.014468365539508608, "n_ok": 30, "n_seeds": 30, "code_missing": false, "attempts_seed0": 2, "target_reached": true, "seconds": 4963.9, "note": "", "facts": {}}

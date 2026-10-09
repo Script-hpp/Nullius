@@ -1,0 +1,1 @@
+{"unit": "zeng_dlinear_2023", "arm": "heute", "temp": 0.5, "urteil": "Agenten-Fehler vermutet", "mean": 1.1598854138963297, "std": 0.04174293419078486, "n_ok": 5, "n_seeds": 5, "code_missing": false, "attempts_seed0": 1, "target_reached": false, "seconds": 764.7, "note": "", "facts": {"seq336": true, "lr0.005": false, "halve_each_epoch": false}}

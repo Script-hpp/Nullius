@@ -56,6 +56,9 @@ class LocalSandbox:
                 timed_out=False,
             )
         except subprocess.TimeoutExpired as exc:
+            # `docker exec` beenden toetet nur den Client, nicht den Prozess im Container: ohne dies rechnet ein Timeout-Lauf weiter
+            # und stiehlt den naechsten Laeufen die Kerne. `kill -9 -1` beendet alle Prozesse ausser PID 1 (`sleep infinity`).
+            subprocess.run(["docker", "exec", branch, "sh", "-c", "kill -9 -1"], capture_output=True)
             return RunResult(
                 exit_code=-1,
                 stdout=exc.stdout or "",

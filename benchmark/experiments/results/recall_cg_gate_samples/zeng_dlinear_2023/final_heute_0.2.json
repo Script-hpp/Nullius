@@ -1,0 +1,1 @@
+{"unit": "zeng_dlinear_2023", "arm": "heute", "temp": 0.2, "urteil": "reproduziert", "mean": 0.38361676123013444, "std": 0.002420632770934013, "n_ok": 5, "n_seeds": 5, "code_missing": false, "attempts_seed0": 2, "target_reached": true, "seconds": 2432.2, "note": "", "facts": {"seq336": true, "lr0.005": false, "halve_each_epoch": false}}

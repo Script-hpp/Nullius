@@ -1,0 +1,1 @@
+{"unit": "wu_sgc_2019", "arm": "heute", "temp": 0.8, "urteil": "Agenten-Fehler vermutet", "mean": 0.477, "std": 0.0, "n_ok": 10, "n_seeds": 10, "note": "", "facts": {"feat_row_l1": false, "no_col_standardize": true}, "repaired": false, "overrides": 0}

@@ -6,6 +6,9 @@ Der Orchestrator kennt keine Datensaetze, nur `Task`. Neue Papers = neuer Eintra
 from __future__ import annotations
 
 import base64
+import dataclasses
+import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,6 +55,11 @@ class Task:
     # Protokoll-Neubewertungen (protocol_change): Namen der Re-Evaluationen, die der Harness aus denselben Vorhersagen rechnet
     # (kein neuer Lauf). "drop_last" = Metrik ueber die Testfenster, die ein Loader mit drop_last=True liefert (harness/droplast.py).
     protocols: tuple[str, ...] = ()
+    # Ausgabe-Helfer (harness/nullius_io.py, Flag `io_helper` des Orchestrators): Konstanten als JSON, Text des Ausgabeabschnitts
+    io_config: str = ""             # JSON fuer CONFIG des Helfers; "" = Task ohne Helfer
+    io_output: str = ""             # ersetzt den Abschnitt "Output: ..." der Datenbeschreibung
+    io_smoke: str = ""              # ersetzt die Smoke-Anweisung in code_notes
+    io_val_notes: str = ""          # ersetzt val_notes
 
     def env_for(self, seed: int) -> str:
         if self.seeds_per_split:
@@ -60,6 +68,26 @@ class Task:
 
     def split_for(self, seed: int) -> int:
         return seed // self.seeds_per_split if self.seeds_per_split else 0
+
+    def io_helper_source(self) -> str:
+        """Quelltext des Ausgabe-Helfers fuer diesen Task (nullius_io.py mit eingesetzten Konstanten)."""
+        src = (HARNESS_DIR / "nullius_io.py").read_text()
+        line = "CONFIG: dict = {}  # __CONFIG__"
+        assert line in src and self.io_config
+        cfg = dict(json.loads(self.io_config), val=bool(self.val_eval_cmd))
+        return src.replace(line, f"CONFIG = {cfg!r}", 1)
+
+    def with_io_helper(self) -> "Task":
+        """Dieselbe Aufgabe mit dem Ausgabevertrag ueber den Helfer: Output-Abschnitt, Smoke-Anweisung und Val-Hinweis ersetzt.
+        Gilt fuer beide Arme gleich; Inhalt der Aufgabe (Daten, Metrik, Toleranz) bleibt unveraendert."""
+        if not self.io_config:
+            return self
+        desc, n = re.subn(r"Output:.*?\nEnvironment:", lambda _: f"Output: {self.io_output}\nEnvironment:", self.data_description, count=1, flags=re.S)
+        assert n == 1, "Output-Abschnitt der Datenbeschreibung nicht gefunden"
+        notes = self.code_notes
+        smoke_start = notes.index("Smoke mode:")
+        notes = notes[:smoke_start] + self.io_smoke
+        return dataclasses.replace(self, data_description=desc, code_notes=notes, val_notes=self.io_val_notes if self.val_notes else "")
 
 
 def _file_cmd(path: Path, dest: str) -> str:
@@ -140,6 +168,25 @@ ETTH1_TUNABLE = (
 )
 
 
+IO_NODES_HELP = (
+    "use the helper module nullius_io (the file nullius_io.py lies next to train.py): `import nullius_io as nio`; `d = nio.load()` returns "
+    "the arrays of the data file (same keys as numpy.load); at the end call `nio.write_predictions(pred)` with the predicted class of EVERY "
+    "node of the graph (integer array of shape [{n}] indexable by node id, or logits of shape [{n}, {c}]; numpy array or torch tensor). "
+    "The helper writes /output/predictions.csv (header `id,prediction`, one row per test node, id = node index from test_idx) and "
+    "/output/val_predictions.csv itself. Do not write these files yourself. Nothing else is scored."
+)
+IO_NODES_SMOKE = (
+    "Smoke mode: nio.SMOKE is True when env var SMOKE=1. Then train exactly 1 epoch; it must finish in under 60 seconds. "
+    "nio.write_predictions applies the smoke subset of nodes itself: call it exactly as in the full run, with predictions for all nodes. "
+    "The pipeline runs this first to check the output form. If SMOKE is unset (or not 1) the script must do the normal full run: full "
+    "training. Never treat an unset SMOKE as smoke mode."
+)
+IO_NODES_VAL = (
+    "The same call writes /output/val_predictions.csv from the same predictions (same trained model, same run): pass the predictions for "
+    "all nodes and the helper selects val_idx. Selection among candidate scripts uses only this file; it is never scored as the result."
+)
+
+
 def planetoid_task(name: str) -> Task:
     _, n_nodes, n_features, n_classes, _, _, _ = PLANETOID[name]
     path = f"/data/{name}_public.npz"
@@ -185,6 +232,10 @@ def planetoid_task(name: str) -> Task:
             f"python -c \"import numpy as np; d = np.load('{path}'); "
             f"print(*sorted(int(i) for i in d['val_idx'])[:{CORA_SMOKE_N}])\""
         ),
+        io_config=json.dumps({"kind": "nodes", "data": path, "smoke_n": CORA_SMOKE_N}),
+        io_output=IO_NODES_HELP.format(n=n_nodes, c=n_classes),
+        io_smoke=IO_NODES_SMOKE,
+        io_val_notes=IO_NODES_VAL,
     )
 
 
@@ -266,6 +317,39 @@ def ett_smoke(name: str) -> str:
 ETTH1_SMOKE = ett_smoke("etth1")
 
 
+def ett_io_output(name: str) -> str:
+    n_win, n_val_win = ETT[name][5], ETT[name][6]
+    return (
+        "use the helper module nullius_io (the file nullius_io.py lies next to train.py): `import nullius_io as nio`; `d = nio.load()` "
+        "returns the arrays of the data file (same keys as numpy.load); at the end call `nio.write_predictions(test_pred, val_pred)` with "
+        f"test_pred = standardised forecasts of ALL {n_win} test windows, shape [{n_win}, 96, 7], and val_pred = forecasts of the "
+        f"{n_val_win} validation windows, shape [{n_val_win}, 96, 7] (numpy arrays or torch tensors). The helper writes "
+        "/output/predictions.csv (header `id,prediction`, id = \"{window}_{step}_{channel}\") and /output/val_predictions.csv itself. "
+        "Do not write these files yourself. Nothing else is scored (MSE and MAE over all values)."
+    )
+
+
+def ett_io_smoke(name: str) -> str:
+    n_win = ETT[name][5]
+    return (
+        "Smoke mode: nio.SMOKE is True when env var SMOKE=1. Then use at most 1 training batch of 32 samples for 1 epoch and pass "
+        f"forecasts for at least the first {ETTH1_SMOKE_WINDOWS} test windows and the first {ETTH1_SMOKE_WINDOWS} validation windows to "
+        f"nio.write_predictions (passing all windows also works, the helper takes the first {ETTH1_SMOKE_WINDOWS}); it must finish in "
+        "under 60 seconds. The pipeline runs this first to check the output form. If SMOKE is unset (or not 1) the script must do the "
+        f"normal full run: all {n_win} windows, full training. Never treat an unset SMOKE as smoke mode."
+    )
+
+
+def ett_io_val_notes(name: str) -> str:
+    _, _, unit, n_train, _, _, n_val_win, stride = ETT[name]
+    return (
+        f"Validation windows for val_pred: window w (0..{n_val_win - 1}) forecasts the 96 {unit} starting at row {n_train} + {stride}*w of "
+        f"the series train followed by val (i.e. val rows {stride}*w .. {stride}*w+95). Its input is only the history before that start, "
+        "taken from train followed by val (never later rows). Selection among candidate scripts uses only val_pred; it is never scored as "
+        "the result."
+    )
+
+
 def ett_task(name: str) -> Task:
     path = f"/data/{name}_public.npz"
     prep = [
@@ -298,6 +382,11 @@ def ett_task(name: str) -> Task:
         val_eval_cmd=f"python {{harness_dir}}/{name}_val_eval.py",
         val_smoke_ids=smoke_ids,
         val_smoke_dims=(ETTH1_SMOKE_WINDOWS, 96, 7),
+        io_config=json.dumps({"kind": "windows", "data": path, "steps": 96, "channels": 7, "test_windows": ETT[name][5],
+                              "val_windows": ETT[name][6], "smoke_windows": ETTH1_SMOKE_WINDOWS}),
+        io_output=ett_io_output(name),
+        io_smoke=ett_io_smoke(name),
+        io_val_notes=ett_io_val_notes(name),
     )
 
 
@@ -355,6 +444,10 @@ def cora_lcc_task() -> Task:
         prepare_files=("planetoid_data.py", "cora_data.py", "cora_lcc_data.py"),
         prepare_cmd="mkdir -p /data && python {dir}/cora_lcc_data.py public {split} /data/cora_lcc_public.npz",
         seeds_per_split=CORA_LCC_SEEDS_PER_SPLIT,
+        io_config=json.dumps({"kind": "nodes", "data": "/data/cora_lcc_public.npz", "smoke_n": CORA_SMOKE_N}),
+        io_output=IO_NODES_HELP.format(n=2485, c=7),
+        io_smoke=IO_NODES_SMOKE,
+        io_val_notes=IO_NODES_VAL,
     )
 
 

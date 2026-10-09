@@ -1,0 +1,16 @@
+- Set seeds: `numpy.random.seed(int(os.getenv('SEED'))); torch.manual_seed(int(os.getenv('SEED')))`  
+- Load `/data/cora_public.npz`; obtain `features`, `edges`, `labels`, `train_idx`, `val_idx`, `test_idx`.  
+- **Model**: 2‑layer GAT.  
+  - Layer 1: `num_heads = 8 (uncertain)`, `out_features_per_head = 8 → hidden_dim = 64`.  
+  - Activation: `ELU`.  
+  - Dropout on features and attention coefficients: `p = 0.6 (uncertain)`.  
+  - Layer 2: `num_heads = 1 (uncertain)`, `out_features_per_head = num_classes = 7`.  
+- **Loss**: `CrossEntropyLoss` (applied only on training nodes).  
+- **Optimizer**: `Adam` with `lr = 0.005 (uncertain)`, `weight_decay = 5e-4 (uncertain)`.  
+- **Training**:  
+  - Max epochs = 10000 (uncertain).  
+  - Early stopping on validation loss with patience = 100 epochs (uncertain).  
+  - After each epoch, compute validation accuracy; keep model with best validation loss.  
+- **Inference**: Load best model, run forward on all nodes, take `argmax` for nodes in `test_idx`.  
+- Write `/output/predictions.csv` with header `id,prediction`; each row: `node_index,predicted_class`.  
+- Ensure total runtime < 5 min on CPU.

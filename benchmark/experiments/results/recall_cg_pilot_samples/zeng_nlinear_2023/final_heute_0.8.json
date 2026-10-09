@@ -1,0 +1,1 @@
+{"unit": "zeng_nlinear_2023", "arm": "heute", "temp": 0.8, "urteil": "teilweise", "mean": 0.38810992547073264, "std": 0.0018424416388971728, "n_ok": 5, "n_seeds": 5, "note": "", "facts": {"seq336": true, "lr0.005": false, "halve_each_epoch": false, "subtract_last": false, "no_decomposition": true}, "repaired": false, "overrides": 0}

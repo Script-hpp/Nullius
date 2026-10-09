@@ -1,0 +1,1 @@
+{"unit": "velickovic_gat_2018", "arm": "heute", "temp": 0.2, "urteil": "nicht reproduziert", "mean": 0.7892, "std": 0.005452828012447613, "n_ok": 10, "n_seeds": 10, "code_missing": false, "attempts_seed0": 2, "target_reached": false, "seconds": 9962.8, "note": "", "facts": {"feat_row_l1": false}}

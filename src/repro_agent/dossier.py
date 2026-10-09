@@ -111,12 +111,12 @@ class Dossier:
     edge_direction: dict = field(default_factory=dict)   # claim_id -> Liste B2-Proben (Kantenrichtung, synthetischer Graph)
     repo_diff: dict = field(default_factory=dict)   # claim_id -> Abgleich mit Repo-Dateien (A2): Abweichungen, Kuerzung, Ergebnis
     warnings: list[str] = field(default_factory=list)   # Einschraenkungen der Belegbarkeit (Katalog: Protokoll, Spalte, Rolle 2)
-    # Modus Nachlauf (nachlauf.py): claim_id -> {repo, commit, command, command_source, command_documented, command_diff, env_diff, seed_method,
     # own_metric (je Seed), self_check (P3), independence (P2), test_loader}. Leer im Nachbau.
     nachlauf: dict = field(default_factory=dict)
     # Einwand-Experimente (objection_experiments.py): belegte Funde der Community-Suche, eingeordnet und, wo messbar, im eigenen Branch
     # geprueft. Nur Bericht, nie Teil des Urteils; Versuche stehen hier, nicht in `attempts`.
     objection_checks: list = field(default_factory=list)
+    spec: dict | None = None
 
     def save(self, timestamp: str) -> Path:
         run_dir = REPO_ROOT / "runs" / self.paper_id / timestamp
@@ -153,6 +153,7 @@ class Dossier:
             explanations=data.get("explanations", {}),
             summary=data.get("summary"),
             nachlauf=data.get("nachlauf", {}),
+            spec=data.get("spec"),
         )
 
     def condensed_for_reasoning(self) -> str:
