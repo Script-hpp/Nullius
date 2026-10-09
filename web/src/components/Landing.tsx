@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ChevronDown, Play } from 'lucide-react'
 import { ThemeToggle } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
@@ -8,7 +8,7 @@ import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, Lesson, Tavil
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 
-// Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke, then one sentence, one button and one quiet link.
+// Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke (under a second), above one sentence, one button and one quiet link.
 // Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
 
 function TopBar() {
@@ -28,35 +28,26 @@ function TopBar() {
 }
 
 function Hero() {
-  const [shown, setShown] = useState(prefersReducedMotion())   // false until the lettering is written
-  const fade = (delay = 0) => ({
-    style: { opacity: shown ? 1 : 0, transform: shown ? 'none' : 'translateY(10px)', transition: `opacity 900ms ease ${delay}ms, transform 900ms ease ${delay}ms` },
-    'data-hero-fade': true,
-  })
+  // Text and buttons are on screen from the first paint; only the lettering above them is animated.
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-16 pt-24 text-center">
-      <WrittenText onDone={() => setShown(true)} className="w-[min(880px,88vw)] text-fg" />
-      {/* collapsed while the lettering is written (it sits in the middle of the screen), then opens and moves it up */}
-      <div className="grid w-full" data-hero-fade style={{ gridTemplateRows: shown ? '1fr' : '0fr', transition: 'grid-template-rows 1000ms ease' }}>
-        <div className="min-h-0 overflow-hidden">
-          <div className="mx-auto mt-12 max-w-4xl sm:mt-16" {...fade()}>
-            <h1 className="font-grotesk m-0 text-[2.2rem] font-semibold leading-[0.98] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
-              <span className="block text-muted">papers make claims.</span>
-              <span className="block text-fg">we measure them.</span>
-            </h1>
-            <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
-              Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. When it says a target was reached, it was.
-            </p>
-          </div>
-          <div className="mt-10 flex flex-col items-center gap-3" {...fade(150)}>
-            <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-              <Play className="h-4 w-4" aria-hidden />See it in action
-            </a>
-            <a href="#catalog" className="text-sm text-fg-4 no-underline transition-colors hover:text-fg">Try it live</a>
-          </div>
-        </div>
+      <WrittenText className="w-[min(880px,88vw)] text-fg" />
+      <div className="mx-auto mt-12 max-w-4xl sm:mt-16">
+        <h1 className="font-grotesk m-0 text-[2.2rem] font-semibold leading-[0.98] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
+          <span className="block text-muted">papers make claims.</span>
+          <span className="block text-fg">we measure them.</span>
+        </h1>
+        <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
+          Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. When it says a target was reached, it was.
+        </p>
       </div>
-      <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14" {...fade(400)}>
+      <div className="mt-10 flex flex-col items-center gap-3">
+        <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
+          <Play className="h-4 w-4" aria-hidden />See it in action
+        </a>
+        <a href="#catalog" className="text-sm text-fg-4 no-underline transition-colors hover:text-fg">Try it live</a>
+      </div>
+      <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14">
         <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
           aria-label="Scroll down" className="cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3">
           <ChevronDown className="h-5 w-5" />

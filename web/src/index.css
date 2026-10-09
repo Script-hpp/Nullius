@@ -210,9 +210,6 @@ a, button, .panel { transition: all 0.2s ease-out; }
 
 /* Handwritten lettering on the landing page (components/hero/WrittenText.tsx) */
 @keyframes nullius-write { to { stroke-dashoffset: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  [data-hero-fade] { transition: none !important; }
-}
 
 /* One palette for the whole app (the landing page look): warm cream in light mode, near black in dark mode. Status colors stay emerald/amber/rose.
    Fonts: Inter Tight (headlines, wordmark) and Instrument Serif Italic (wordmark accent), both SIL OFL via @fontsource. */
