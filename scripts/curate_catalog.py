@@ -22,7 +22,7 @@ from repro_agent.dossier import REPO_ROOT
 
 def select(entries: list[dict], only: str | None) -> list[dict]:
     """--only: genau dieser Kandidat (jeder Status, Wiederholung moeglich). Sonst alle ungepruften, nach E5 sortiert."""
-    chosen = [e for e in entries if (e["arxiv_id"] == only if only else e["status"] == cat.UNCHECKED)]
+    chosen = [e for e in entries if (only in (e["arxiv_id"], e["id"]) if only else e["status"] == cat.UNCHECKED)]
     return sorted(chosen, key=cat.order_key)
 
 
@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--list", action="store_true", help="nur Uebersicht aus catalog.yaml (Status, Urteil, Jury-Eignung), keine Aufrufe")
     ap.add_argument("--dry-run", action="store_true", help="nur Adapter-Ausgabe, schreibt nichts, null Aufrufe")
-    ap.add_argument("--only", metavar="ARXIV_ID", help="nur dieser Kandidat (jeder Status)")
+    ap.add_argument("--only", metavar="ARXIV_ID|ENTRY_ID", help="nur dieser Kandidat (arXiv-ID oder Eintrags-ID, jeder Status)")
     ap.add_argument("--seeds", type=int, help="Seeds pro Kandidat (Standard: Wert des Katalogeintrags oder des Tasks)")
     ap.add_argument("--max-usd", type=float, default=1.0, help="harte Grenze brutto je Skriptlauf, Abbruch vor dem naechsten Kandidaten")
     ap.add_argument("--import-events", type=Path, help="Discovery-Aufnahme (jsonl, Ereignisse type=candidate) zusaetzlich importieren")

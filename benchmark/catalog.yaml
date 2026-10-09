@@ -46,6 +46,47 @@ candidates:
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_1609_02907_citeseer
+  arxiv_id: '1609.02907'
+  title: Semi-Supervised Classification with Graph Convolutional Networks
+  origin: reference
+  status: geprueft
+  seeds: 10
+  imported_from: manual (Kipf Table 2, Citeseer column; same paper as disc_1609_02907)
+  candidate:
+    dataset: CiteSeer
+    claim:
+      method: GCN (this paper)
+      quote: GCN (this paper) 70 .3 (7s) 81 .5 (4s) 79 .0 (38s) 66 .0 (48s)
+      metric: accuracy
+      target: 0.703
+      protocol: passt
+      protocol_quote: We choose the same dataset splits as in Yang et al. (2016) with an additional validation set of 500
+        labeled examples for hyperparameter optimization
+      column_check: ok
+      protocol_evidence: 'Protokoll: Zitat im Text belegt (Fixture 1609.02907.json)'
+    github_url: https://github.com/tkipf/gcn
+    source_url: https://arxiv.org/pdf/1609.02907
+    protocol: passt
+    found_by: benchmark
+    reason: Referenz-Paper (Kipf, Planetoid-Split), CiteSeer-Spalte aus Tabelle 2
+    community: []
+  checked_at: '2026-10-08T09:56:21Z'
+  cost_gross_usd: 0.1073
+  verdict:
+    urteil: teilweise
+    measured_mean: 0.714
+    measured_std: 0.008794
+    seeds: 10
+    target: 0.703
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_1609_02907_citeseer/20261008-114435
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
 - id: disc_1811_05868
   arxiv_id: '1811.05868'
   title: Pitfalls of Graph Neural Network Evaluation
