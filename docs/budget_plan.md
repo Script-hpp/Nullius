@@ -62,7 +62,7 @@ Die Demo muss erreichbar und kostenlos testbar bleiben. Juroren müssen nicht se
 | `BUDGET_SINCE` | Zeitpunkt des Deployments (UTC) | Server zählt nur eigene Läufe ab dann |
 | `MAX_DAILY_REPRO_JOBS` | 1 (ab 2026-12-01: 3) | Stand 2026-10-07: zwei Stufen und Rechnung in `docs/deploy.md`, „Limits bis 15.12.“ (gemessen 15,30 $ von 17,00 $ verfügbar); die Untergrenze `LIVE_MIN_BUDGET_USD=3` ist die harte Obergrenze |
 | `MAX_DAILY_JOBS` (Discovery) | 1 | Discovery braucht vor allem Tavily-Credits (ca. 16 je Lauf) |
-| `MAX_COST_PER_RUN_USD` | 0.50 | unverändert, bis die Messung unten vorliegt |
+| `MAX_COST_PER_RUN_USD` | 0.75 | seit 2026-10-09 Standardmodus „Nachbau aus Paper und Autorencode“ (recall cg v1: Mittel 0,25 $, Maximum 0,46 $ brutto je Lauf); Planungswert 0,30 $ je Lauf, Folgen für die Tageslimits in `docs/deploy.md`, „Limits bis 15.12.“. Kontostand laut Log nach recall cg v1: 17,39 $ (Konsole nicht verifiziert) – der Server-Anteil von 20,00 $ ist damit nicht mehr gedeckt |
 
 Erwartung statt schlimmstem Fall: Eine Schnellprüfung kostete vor `setup_v2` 0,03 bis 0,10 $ (`docs/deploy.md`). Mit `setup_v2` ist sie teurer; der Probelauf kam auf rund 0,39 $ je Benchmark-Lauf mit **zwei** Claims und vollen Seeds, das ist keine Messung einer Schnellprüfung. **Offen:** Kosten einer Schnellprüfung mit dem aktuellen Code messen (fällt beim Vorzeige-Lauf fürs Video ohnehin an) und hier eintragen. Liegt sie unter 0,25 $, kann `MAX_COST_PER_RUN_USD` auf 0.30 sinken.
 

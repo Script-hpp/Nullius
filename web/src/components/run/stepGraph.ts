@@ -1,6 +1,7 @@
 import type { Event } from '../../data'
 import type { Tone } from '../../labels'
 import { VERDICT_SENTENCE, translateClaim } from '../../labels'
+import { runMode } from '../../mode'
 import { fmtSeconds, fmtValue, type Expand, type RunModel } from './phases'
 
 // Turns the event list of a run into a flow graph: nodes (steps) and edges (data flow, repair loops).
@@ -40,6 +41,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
   const has = (t: string) => events.some((e) => e.type === t)
   const metric = model.metric
   const runStart = events.find((e) => e.type === 'run_start')
+  const rebuildMode = runMode(null, events)
   const verdictEv = model.verdict
   const verdictSeen = !!verdictEv
   const active = (phase: string) => model.phases.find((p) => p.id === phase)?.state === 'active'
@@ -211,7 +213,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     one({
       id: 'paper', kind: 'paper', title: model.title ?? 'Paper', sub: runStart?.paper_id ? String(runStart.paper_id) : null, state: has('run_start') ? 'done' : 'pending', tone: 'gray',
       what: 'The paper whose claim is checked.', why: 'Nullius takes nobody’s word for it: it rebuilds the experiment instead of trusting the reported number.',
-      facts: [...(runStart?.title ? [{ label: 'Title', value: String(runStart.title) }] : []), { label: 'Mode', value: 'Rebuild: the agent writes its own code' }], row: 0,
+      facts: [...(runStart?.title ? [{ label: 'Title', value: String(runStart.title) }] : []), { label: 'Mode', value: rebuildMode ? `${rebuildMode.label}${rebuildMode.planned ? ' (planned)' : ''}` : 'Rebuild: the agent writes its own code' }], row: 0,
     }),
     ...sources,
     one({

@@ -149,11 +149,12 @@ class ReproJob:
 repro_jobs: Dict[str, ReproJob] = {}
 
 
-def make_orchestrator(quick: bool):
-    """Orchestrator fuer einen Live-Lauf. Tests ersetzen diese Funktion."""
-    from .loop import Orchestrator
+def make_orchestrator(quick: bool, author_code: bool = True):
+    """Orchestrator fuer einen Live-Lauf. Tests ersetzen diese Funktion. Standard: Nachbau aus Paper und Autorencode
+    (`loop.product_kwargs`); `author_code=False` schaltet auf den reinen Paper-Nachbau."""
+    from .loop import Orchestrator, product_kwargs
 
-    return Orchestrator(graph_repair=True, setup_v2=True, seeds=QUICK_SEEDS if quick else None, llm_cache=False,
+    return Orchestrator(**product_kwargs(author_code), seeds=QUICK_SEEDS if quick else None, llm_cache=False,
                         objection_experiments=True, objection_quick=quick)   # Live: kein Cache, das Modell laeuft wirklich; Einwand-Experimente (Schnellmodus begrenzt)
 
 
@@ -242,6 +243,7 @@ async def live_status(request: Request):
 class ReproduceRequest(BaseModel):
     catalog_id: str
     quick: bool = True
+    author_code: bool = True   # False: reiner Paper-Nachbau (Schalter, kein Standard)
 
 
 def _prune_jobs() -> None:
@@ -271,7 +273,8 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     _prune_jobs()
     job = ReproJob(id=str(uuid.uuid4()), catalog_id=entry["id"], quick=req.quick)
     repro_jobs[job.id] = job
-    job.add({"ts": time.time(), "type": "queued", "catalog_id": entry["id"], "quick": req.quick})
+    job.add({"ts": time.time(), "type": "queued", "catalog_id": entry["id"], "quick": req.quick,
+                 "mode_requested": "nachbau_autorencode" if req.author_code else "nachbau"})
     loop = asyncio.get_running_loop()
     await job_semaphore.acquire()
     current_job.update({"kind": "reproduction", "job_id": job.id, "catalog_id": entry["id"], "started_at": time.time()})
@@ -279,7 +282,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     def worker():
         try:
             job.add({"ts": time.time(), "type": "started", "catalog_id": entry["id"]})
-            orch = make_orchestrator(req.quick)
+            orch = make_orchestrator(req.quick, req.author_code)
             orch.on_event = lambda evt: job.add(sanitize(evt))
             outcome = cat.run_candidate(orch, entry)
             if outcome.status == cat.CHECKED and outcome.dossier is not None and outcome.dossier.verdicts:

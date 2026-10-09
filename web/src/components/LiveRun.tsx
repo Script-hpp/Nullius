@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ArrowRight, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import { RunTimeline } from './run/RunTimeline'
 import { NextStep, PageIntro } from './page'
+import { ModeNote } from './ModeNote'
 import { StepStrip, buildSteps, type StepId } from './run/StepStrip'
 import { StepGraph } from './run/StepGraph'
 import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
@@ -74,6 +75,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
           </span>
           {claimText ? <span>Claim: {claimText}</span> : null}
         </p>
+        <ModeNote events={events} className="mt-4" />
       </PageIntro>
 
       {!ended && (eta || fallback) && (

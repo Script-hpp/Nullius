@@ -144,7 +144,8 @@ def export_run(run: Path, out: Path, titles: dict[str, str]) -> dict:
     code = next(iter(run.glob(f"*_{att[-1]['code_hash']}.py")), None) if att else None
     if code:
         shutil.copy(code, dest / "code.py")
-    return {"id": f"{paper_id}--{ts}", "paper_id": paper_id, "title": titles.get(paper_id, paper_id), "timestamp": ts}
+    return {"id": f"{paper_id}--{ts}", "paper_id": paper_id, "title": titles.get(paper_id, paper_id), "timestamp": ts,
+            "mode": dossier.get("mode") or "nachbau"}   # Modus des Laufs (Dossier ist die Quelle); alte Laeufe ohne Feld = reiner Paper-Nachbau
 
 
 def read_index(out: Path) -> list[dict]:

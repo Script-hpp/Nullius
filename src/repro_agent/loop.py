@@ -280,6 +280,25 @@ def load_claims(paper_id: str) -> tuple[dict, list[Claim]]:
     return paper, claims
 
 
+MODE_PAPER = "nachbau"                    # Nachbau aus Paper: der Agent kennt nur belegte Angaben aus Paper, README und Repo-Zitaten
+MODE_AUTHOR_CODE = "nachbau_autorencode"  # Nachbau aus Paper und Autorencode: roher Repo-Ausschnitt im Prompt, nie ausgefuehrt
+
+
+AUTHOR_CODE_KWARGS = dict(code_grounded=True, io_helper=True)   # inkl. Fixes F1 bis F4 und F8 (recall cg v1)
+
+
+def product_kwargs(author_code: bool = True) -> dict:
+    """Konfiguration des Produktpfads (API, Katalog-Reproduktion). Standard seit 2026-10-09: Nachbau aus Paper und Autorencode
+    (code_grounded + io_helper, Entscheidung der Nutzerin/des Nutzers auf Grundlage von recall cg v1). `author_code=False` ist der
+    Schalter zurueck auf den reinen Paper-Nachbau (die Produktkonfiguration von v4).
+    Gewollt KEIN Default des Orchestrators: Benchmark- und Experiment-Skripte legen ihre Konfiguration vorab fest und bauen
+    `Orchestrator(...)` ohne diese Funktion, damit ihre Laeufe reproduzierbar bleiben."""
+    kw: dict = dict(graph_repair=True, setup_v2=True)
+    if author_code:
+        kw.update(AUTHOR_CODE_KWARGS)
+    return kw
+
+
 class Orchestrator:
     def __init__(
         self, use_tavily: bool = True, fresh: bool = False, setup_details: bool = True,
@@ -303,6 +322,7 @@ class Orchestrator:
         # code_grounded (docs/recall_analysis_3.md Hebel 3): der Repo-Ausschnitt (S4) geht ROH in Plan-, Code- und Reparatur-Prompt,
         # Zahlen erzwingt S2 (nur Zahlenschluessel). Modus: Nachbau aus Paper UND Autorencode, unabhaengig gemessen. Default aus.
         self.code_grounded = code_grounded
+        self._base_modes = {"code_grounded": code_grounded, "io_helper": io_helper, "spec_mode": spec_mode}   # wie angefordert; ein Lauf kann zurueckfallen
         # io_helper (docs/recall_analysis_3.md Hebel 4): unser Ausgabevertrag laeuft ueber harness/nullius_io.py. Der Agent liefert Arrays,
         # der Helfer schreibt predictions.csv/val_predictions.csv und die SMOKE-Teilmengen. Nur Code-/Reparatur-Prompt (nicht der Plan). Default aus.
         self.io_helper = io_helper
@@ -310,6 +330,7 @@ class Orchestrator:
         self.spec_mode = spec_mode or code_grounded
         self.spec: Spec | None = None
         self.setup_v2 = setup_v2 or self.spec_mode
+        self.mode = MODE_AUTHOR_CODE if code_grounded else MODE_PAPER   # angeforderter Modus; im Lauf nach dem Repo-Zugriff festgestellt (_resolve_mode)
         self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
         # "live" (Standard): Paper-Text und README werden bei jedem Lauf per Tavily geholt. "fixture": gespeicherte Fassungen
         # (Tests, vorab festgelegte Experimente: alle Generierungen sehen denselben Text). Env TAVILY_MODE oder --offline.
@@ -353,6 +374,34 @@ class Orchestrator:
         dossier.save(ts)
         (run_dir / "zeugnis.md").write_text(render_markdown(dossier))
         self._emit("run_end", cost_net_usd=round(self.spent_usd, 4), cost_gross_usd=round(self.spent_gross_usd, 4), error="sandbox_setup")
+
+    def _set_author_code(self, active: bool) -> None:
+        """Schaltet Autorencode-Modus (code_grounded + io_helper) fuer diesen Lauf an oder auf den angeforderten Stand zurueck.
+        Aus = exakt die Prompts des reinen Paper-Nachbaus (Steckbrief nur, wenn spec_mode angefordert war)."""
+        base = getattr(self, "_base_modes", None)
+        if base is None:
+            return
+        self.code_grounded = base["code_grounded"] and active
+        self.io_helper = base["io_helper"] and active
+        self.spec_mode = base["spec_mode"] or self.code_grounded
+
+    def _resolve_mode(self, repo_info: dict | None) -> tuple[str, str]:
+        """Modus dieses Laufs: "nachbau_autorencode" nur, wenn ein Repo-Ausschnitt wirklich im Steckbrief steht; sonst Rueckfall auf
+        "nachbau" (nie falsch etikettiert). Rueckgabe (Modus, Grund des Rueckfalls oder "")."""
+        if not (getattr(self, "_base_modes", None) or {}).get("code_grounded"):
+            return MODE_PAPER, ""
+        spec = getattr(self, "spec", None)
+        if not (getattr(self, "use_setup_details", False) and self.paper_text is not None):
+            reason = "setup details switched off or paper text not read"
+        elif repo_info is None:
+            reason = "no repository found or clone failed"
+        elif spec is None or not spec.excerpt:
+            reason = "no model code found in the repository"
+        else:
+            return MODE_AUTHOR_CODE, ""
+        self._set_author_code(False)
+        self.spec = None
+        return MODE_PAPER, reason
 
     def _warn(self, text: str) -> None:
         if not hasattr(self, "_warnings"):
@@ -1584,7 +1633,10 @@ class Orchestrator:
         self._repo_files = {}
         self._setup_missing: list[str] = []
         self.events = EventLog(run_dir / "events.jsonl")
-        self._emit("run_start", paper_id=paper_id, title=paper["title"], mode="nachbau", use_tavily=self.use_tavily,
+        self._set_author_code(True)   # jeder Lauf startet im angeforderten Modus, ein Rueckfall des vorigen Laufs gilt nicht weiter
+        self.spec = None
+        requested = MODE_AUTHOR_CODE if getattr(self, "code_grounded", False) else MODE_PAPER
+        self._emit("run_start", paper_id=paper_id, title=paper["title"], mode_requested=requested, use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
                    models={"fast": self.settings.llm.model_fast, "code": self.settings.llm.model_code,
                            "reasoning": self.settings.llm.model_reasoning},
@@ -1623,7 +1675,8 @@ class Orchestrator:
                            targeted_docs=v2_info["targeted_docs"], added=v2_info["added"],
                            bodies=v2_info["bodies"], literals=v2_info["literals"],
                            excluded=[{"topic": d.topic, "value": d.value, "reason": d.excluded} for d in excluded])
-            if getattr(self, "spec_mode", False):
+            # Autorencode angefordert, aber kein Repo gelesen: kein Steckbrief-Aufruf ohne Ausschnitt, der Rueckfall (_resolve_mode) folgt
+            if getattr(self, "spec_mode", False) and not (getattr(self, "code_grounded", False) and repo_info is None):
                 self.spec = build_spec(
                     lambda system, user: self._ask("extract", system, user, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
                     self.details, docs, claims[0].text, paper["dataset"], numeric_only=getattr(self, "code_grounded", False)
@@ -1633,8 +1686,15 @@ class Orchestrator:
 
         elif extra_details:
             self.details = extra_details
+        mode, fallback_reason = self._resolve_mode(repo_info)
+        if fallback_reason:
+            self._warn(f"Autorencode nicht verfügbar ({fallback_reason}): Lauf als reiner Nachbau aus dem Paper.")
+        self.mode = mode
+        self._emit("mode", mode=mode, requested=requested, fallback_reason=fallback_reason or None,
+                   repo=(repo_info or {}).get("url"), commit=(repo_info or {}).get("commit"),
+                   excerpt_docs=(self.spec.excerpt_docs if mode == MODE_AUTHOR_CODE else []))
         dossier = Dossier(
-            paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources),
+            paper_id=paper_id, claims=claims, isolation=list(ISOLATION), repo=repo_info, sources=list(self._sources), mode=mode,
             setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings), summary=paper_head,
             setup_missing=list(self._setup_missing) if getattr(self, "setup_v2", False) else [],
             spec=spec_as_dict(getattr(self, "spec", None)) if getattr(self, "spec", None) is not None else None,
@@ -1670,6 +1730,9 @@ def main() -> None:
     paper_id = args[0] if args else "kipf_gcn_2017"
     from .llm import BillingBlocked
 
+    # Standard: Produktpfad mit Nachbau aus Paper und Autorencode. `--no-author-code` = die bisherige schlichte CLI-Konfiguration
+    # (reiner Paper-Nachbau, ohne Produktschalter); `--paper-only`/`--no-tavily` lesen kein Repo, der Lauf faellt dann selbst zurueck.
+    kw = {} if "--no-author-code" in sys.argv else product_kwargs(True)
     try:
         Orchestrator(
             use_tavily="--no-tavily" not in sys.argv,
@@ -1677,6 +1740,7 @@ def main() -> None:
             setup_details="--no-setup-details" not in sys.argv,
             paper_only="--paper-only" in sys.argv,
             tavily_mode="fixture" if "--offline" in sys.argv else None,
+            **kw,
         ).run(paper_id, source="catalog" if "--catalog" in sys.argv else "benchmark")
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")

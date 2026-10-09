@@ -187,7 +187,8 @@ def test_api_live_runs_switch_the_cache_off(monkeypatch):
     got = {}
     monkeypatch.setattr(loop_mod, "Orchestrator", lambda **kw: got.update(kw) or SimpleNamespace())
     api.make_orchestrator(True)
-    assert got == {"graph_repair": True, "setup_v2": True, "seeds": 3, "llm_cache": False, "objection_experiments": True, "objection_quick": True}
+    assert got == {"graph_repair": True, "setup_v2": True, "code_grounded": True, "io_helper": True, "seeds": 3, "llm_cache": False,
+                   "objection_experiments": True, "objection_quick": True}   # Standard seit 2026-10-09: Nachbau aus Paper und Autorencode
     got.clear()
     api.make_orchestrator(False)
     assert got["llm_cache"] is False and got["seeds"] is None

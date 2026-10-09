@@ -24,7 +24,8 @@ class FakeOrch:
     mode = "ok"
     gate: threading.Event | None = None
 
-    def __init__(self, quick):
+    def __init__(self, quick, author_code=True):
+        self.author_code = author_code
         self.seeds = 3 if quick else 10
         self.on_event = None
         self.last_run_dir = None
@@ -80,8 +81,8 @@ def env(tmp_path, monkeypatch):
     api.current_job.clear()
     FakeOrch.instances, FakeOrch.mode, FakeOrch.gate = [], "ok", None
 
-    def make(quick):
-        o = FakeOrch(quick)
+    def make(quick, author_code=True):
+        o = FakeOrch(quick, author_code)
         o.root = tmp_path
         return o
     monkeypatch.setattr(api, "make_orchestrator", make)
@@ -102,6 +103,15 @@ def read_stream(env, job_id, **params):
             if line.startswith("data: "):
                 events.append(json.loads(line[6:]))
     return events
+
+
+def test_author_code_is_the_default_and_the_switch_reaches_the_orchestrator(env):
+    job = start(env).json()["job_id"]
+    evts = read_stream(env, job)
+    assert FakeOrch.instances[0].author_code is True and evts[0]["mode_requested"] == "nachbau_autorencode"
+    job = start(env, author_code=False).json()["job_id"]
+    evts = read_stream(env, job)
+    assert FakeOrch.instances[1].author_code is False and evts[0]["mode_requested"] == "nachbau"
 
 
 def test_no_access_code_needed_and_unknown_id(env):

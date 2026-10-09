@@ -255,6 +255,7 @@ def verdict_dict(entry: dict, dossier, run_dir: Path | None = None) -> dict:
         "urteil": v.urteil, "measured_mean": num(v.measured_mean), "measured_std": num(v.measured_std),
         "seeds": len({a.seed for a in dossier.attempts if a.claim_id == claim.id and a.measured is not None}),
         "target": claim.target, "tolerance": claim.tolerance, "gesamtaussage": gesamt,
+        "mode": getattr(dossier, "mode", "nachbau"),
         "graph_repairs": dossier.graph_repairs.get(claim.id, 0),
         "fault_repairs": dossier.fault_repairs.get(claim.id, 0),
         "run_dir": str(run_dir.relative_to(REPO_ROOT)) if run_dir and run_dir.is_relative_to(REPO_ROOT) else str(run_dir),

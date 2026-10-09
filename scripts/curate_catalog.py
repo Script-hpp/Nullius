@@ -55,13 +55,14 @@ def overview(entries: list[dict]) -> str:
 
 
 def curate(entries: list[dict], chosen: list[dict], path: Path, max_usd: float, seeds: int | None, offline: bool,
-           orchestrator_factory=None) -> int:
+           orchestrator_factory=None, author_code: bool = True) -> int:
     """Laeuft die Kandidaten nacheinander. Rueckgabe: Exit-Code (0 ok, 2 Abrechnung/Budget/Kostengrenze)."""
     if orchestrator_factory is None:
-        from repro_agent.loop import Orchestrator
+        from repro_agent.loop import AUTHOR_CODE_KWARGS, Orchestrator
 
-        def orchestrator_factory():
-            return Orchestrator(seeds=seeds, tavily_mode="fixture" if offline else None, graph_repair=True)
+        def orchestrator_factory():   # Standard: Nachbau aus Paper und Autorencode; --no-author-code = reiner Paper-Nachbau
+            return Orchestrator(seeds=seeds, tavily_mode="fixture" if offline else None, graph_repair=True,
+                                **(AUTHOR_CODE_KWARGS if author_code else {}))
     orch = orchestrator_factory()
     spent = 0.0
     for entry in chosen:
@@ -100,6 +101,7 @@ def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     ap.add_argument("--cache", type=Path, default=cat.DISCOVERY_CACHE, help="Discovery-Cache (Standard logs/discovery_cache.json)")
     ap.add_argument("--catalog", type=Path, default=cat.CATALOG_YAML)
     ap.add_argument("--offline", action="store_true", help="Tavily-Fixtures statt Live-Aufrufe (nur Tests)")
+    ap.add_argument("--no-author-code", action="store_true", help="reiner Paper-Nachbau statt Nachbau aus Paper und Autorencode (Standard)")
     args = ap.parse_args(argv)
 
     if args.list:

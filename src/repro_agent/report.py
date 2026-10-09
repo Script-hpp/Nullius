@@ -29,6 +29,17 @@ def describe_check(o: dict) -> str:
     return f"{t}: {o.get('note') or 'no valid measurement'}"
 
 
+MODE_TEXT = {
+    "nachbau": "Modus: nachbau. Rebuild from paper: the agent writes its own code and uses only details quoted from the paper and the repository.",
+    "nachbau_autorencode": ("Modus: nachbau_autorencode. Rebuild from paper and authors' code: the agent reads the authors' code as text and writes "
+                            "its own code. The authors' code is never executed; the number is measured by our harness."),
+}
+
+
+def mode_line(mode: str) -> str:
+    return MODE_TEXT.get(mode, f"Modus: {mode}")
+
+
 def render_markdown(dossier: Dossier) -> str:
     lines = [f"# Reproduktions-Zeugnis: {dossier.paper_id}", ""]
     if dossier.warnings:
@@ -98,7 +109,7 @@ def render_markdown(dossier: Dossier) -> str:
         lines.append(f"## Possible explanations für {cid} (Tavily Rolle 6, ungeprüfte Hypothesen, nicht Teil des Urteils)")
         lines.extend(f"- {i['explanation']} — \"{i['quote']}\" ({i['url']})" for i in ex["items"]) if ex["items"] else lines.append("None found.")
         lines.append("")
-    lines.append(f"Modus: {dossier.mode} (Agent schreibt eigenen Code, nur belegte Angaben aus Paper/Repo)")
+    lines.append(mode_line(dossier.mode))
     if dossier.repo:
         lines.append(f"Repo gelesen: {dossier.repo['url']} @ {dossier.repo['commit'][:10]}")
     lines.append("")

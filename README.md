@@ -112,6 +112,7 @@ flowchart LR
 
 Nemotron is the brain, the sandbox is the lab, Tavily is the researcher, the orchestrator is the lab head. **The model never executes code; the sandbox never thinks.** Per claim: Tavily reads the target value and setup details, Nemotron plans and writes the code, the sandbox runs seed 0 in a branch, the harness scores it, checks run, the code is repaired if needed, then the remaining seeds run in parallel branches with exactly that code. The verdict rests on the **mean over all seeds** against a tolerance fixed before the run.
 
+- **Two rebuild modes.** The default is **"Rebuild from paper and authors' code"** (`nachbau_autorencode`): the agent reads a verbatim excerpt of the authors' public repository (model file, preprocessing, run scripts, configs) and writes its **own** single script from it. The authors' code is read as text and **never executed**; the number is always measured by our harness. If no repository is found, the clone fails or it holds no code for the model, the run falls back to **"Rebuild from paper"** (`nachbau`: only details quoted from the paper and the README) and the certificate says so. Every certificate names its mode; the switch `author_code=false` (API), `--no-author-code` (CLI, `scripts/curate_catalog.py`) selects the paper-only mode. The benchmark numbers below were measured in the paper-only mode (v4); the authors' code mode is evaluated separately.
 - **Independent harness.** The agent writes `/output/predictions.csv` (`id,prediction`) and nothing else counts. The harness is copied in fresh, loads the test labels itself from the original dataset, checks plausibility and computes the metric with fixed, tested code.
 - **Leak protection** (recorded in the dossier under `isolation`): no network in training (`unshare -n`), a static code check rejects network access, downloads, process spawning and dynamic code, test labels never enter the agent's dataset.
 - **Two axes.** Axis 1 is the result (reproduced / partially / not reproduced / agent fault suspected / not reproducible with our setup). Axis 2 is method fidelity (yes / partially / no / not checked) and is **"not checked"** in the benchmark (see Limits).
@@ -188,7 +189,7 @@ Configuration lives in `.env` (`LLM_PROVIDER`, `SANDBOX_BACKEND`, budgets, VAT r
 ## Limitations and roadmap
 
 - CPU only, claims under ten minutes; no LLM papers, no PDF image analysis. Each new dataset needs a task and a harness once.
-- Mode "rebuild" only: the agent writes its own code and takes only cited details from paper and repository. Running the authors' code ("re-run") tests something different and is not built.
+- Two rebuild modes (see "How it works"): in both the agent writes its own code. Reading the authors' code is the default; running it ("re-run") tests something different and is not part of the product.
 - The graph ablation covers graph models only; DLinear and NLinear would need a decomposition or normalisation ablation.
 - **Roadmap:** a method-fidelity checker that passes calibration; more tasks and datasets; findings from the community check turned into their own experiments; a real negative case; notifying paper authors with the certificate ([`docs/idea_author_notification.md`](docs/idea_author_notification.md)).
 

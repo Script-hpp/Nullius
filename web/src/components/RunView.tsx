@@ -16,6 +16,7 @@ import { DropLast } from './DropLast'
 import { ReadmeBadge } from './ReadmeBadge'
 import { CommunityCard } from './CommunityCard'
 import { Trust } from './Trust'
+import { ModeNote } from './ModeNote'
 import { WhatIf } from './WhatIf'
 import { toPercent } from './ui'
 import { useHead } from '../useHead'
@@ -105,6 +106,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           what="This is the certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it."
           look="Read the verdict sentence first, then compare claimed and measured. The nine steps below show how we got there, and why the number can be trusted." />
         <p className="m-0 max-w-3xl text-lg leading-relaxed text-fg-4">Claim: {translateClaim(claim.text)}</p>
+        <ModeNote dossier={d} events={run.events} className="mt-4" />
         {paperUrl && (
           <a className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-tone-blue no-underline transition-colors hover:text-tone-blue-hover" href={paperUrl} target="_blank" rel="noreferrer">
             <BookOpen className="h-4 w-4" />View the source paper

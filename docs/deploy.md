@@ -114,6 +114,7 @@ Empfohlene Werte für `deploy/.env` bzw. Coolify, zwei Stufen (der Nutzer setzt 
 | Variable | bis 2026-11-30 | ab 2026-12-01 | Grund |
 |---|---|---|---|
 | `MAX_DAILY_REPRO_JOBS` | 1 | 3 | Bis Ende November testet kaum jemand; ab 1.12. beginnt die Bewertung (01.–15.12.), dann sollen mehrere Juroren am selben Tag live prüfen können |
+| `MAX_COST_PER_RUN_USD` | 0.75 | 0.75 | Standardmodus mit Autorencode (siehe unten); die Untergrenze `LIVE_MIN_BUDGET_USD=3` bleibt ein Vielfaches davon |
 | `MAX_DAILY_JOBS` (Discovery) | 1 | 1 | Discovery ist billig in Token (ca. 0,02 $), kostet aber ca. 16 Tavily-Credits je Lauf (`docs/next_step_catalog_pipeline.md`, Zeile 83) |
 | `MAX_DAILY_REPRO_PER_IP` / `MAX_DAILY_DISCOVER_PER_IP` | 1 / 1 | 1 / 1 | Ein Besucher kann nicht das ganze Tageslimit verbrauchen |
 | `LIVE_MIN_BUDGET_USD` | 3 | 3 | Reserve, damit das Konto durch Live-Läufe nie ins Minus läuft (Karte würde belastet); ein Lauf kostet höchstens 0,50 $ |
@@ -121,12 +122,17 @@ Empfohlene Werte für `deploy/.env` bzw. Coolify, zwei Stufen (der Nutzer setzt 
 | `BUDGET_TOTAL_USD` | 20.00 | 20.00 | Server-Anteil, `docs/budget_plan.md` („Zwei Logs, ein Konto") |
 | `TRUST_PROXY` | 1 | 1 | hinter Coolify/Caddy, sonst zählt jeder Besucher als dieselbe Proxy-IP |
 
+**Standardmodus seit 2026-10-09 („Nachbau aus Paper und Autorencode“, `loop.product_kwargs`):** die Prompts enthalten den rohen Repo-Ausschnitt, ein Lauf ist teurer als die gemessenen 0,139 $ des Paper-Modus. Gemessen (recall cg v1, `benchmark/experiments/results/recall_cg_v1.md`, 22 Läufe, Tavily aus Fixtures, kein Community-Check): Mittel 0,25 $ brutto, Maximum 0,46 $ brutto je Lauf (Generation 0 mit zwei Claims). Für die Planung gelten 0,30 $ brutto je Live-Lauf (Spanne 0,20 bis 0,35; die Schnellprüfung im Produkt ist **noch nicht gemessen**, das geschieht beim ersten echten Live-Lauf mit OK des Nutzers). Daher `MAX_COST_PER_RUN_USD=0.75` auf dem Server (wie in recall cg v1; Code-Standard 0.50 gilt weiter für Benchmarks). Fällt das Autoren-Repo weg, läuft der Lauf als Paper-Nachbau (günstiger, 0,14 $) weiter.
+
 **Schlimmster Fall von heute (2026-10-07) bis 2026-12-15:** 70 Tage (7.10. bis 15.12. einschließlich) = 55 Tage Stufe 1 (25 im Oktober, 30 im November) plus 15 Tage Stufe 2. Verfügbar: 20,00 $ Server-Anteil minus 3,00 $ Untergrenze = **17,00 $**.
 
 | Szenario | Reproduktion | Discovery | Summe | gegen 17,00 $ |
 |---|---|---|---|---|
 | Gemessen: 0,139 $ je Lauf (Kipf, `web/public/data/kipf_gcn_2017/20261002-110746`, `docs/devpost_submission.md`) | (55 × 1 + 15 × 3) = 100 Läufe × 0,139 = 13,90 $ | 70 × 0,02 = 1,40 $ | **15,30 $** | reicht, 1,70 $ Luft |
-| Theoretisch: Obergrenze 0,50 $ je Lauf | 100 × 0,50 = 50,00 $ | 1,40 $ | 51,40 $ | übersteigt 17,00 $ |
+| **Standardmodus Autorencode, Planungswert 0,30 $ je Lauf** (Maximum gemessen 0,46 $) | 100 Läufe × 0,30 = 30,00 $ | 1,40 $ | **31,40 $** | **übersteigt 17,00 $** (siehe unten) |
+| Theoretisch: Obergrenze 0,50 $ je Lauf (Paper-Modus; mit Autorencode 0,75 $ = 75,00 $) | 100 × 0,50 = 50,00 $ | 1,40 $ | 51,40 $ | übersteigt 17,00 $ |
+
+**Folge für die Limits (Annahme gebrochen, Entscheidung beim Nutzer):** Mit 0,30 $ je Lauf trägt der Server-Anteil von 17,00 $ nutzbar (20,00 $ minus Untergrenze 3,00 $) nach Abzug von 1,40 $ Discovery rund 52 Läufe, nicht 100. Dazu kommt, dass der Konsolen-Kontostand nach recall cg v1 laut Log nur noch **17,39 $** beträgt (Stand 2026-10-09, Konsole nicht verifiziert), der geplante Server-Anteil von 20,00 $ also gar nicht mehr gedeckt ist. Vorschlag, solange kein Guthaben nachkommt: Stufe 1 (bis 2026-11-30) `MAX_DAILY_REPRO_JOBS=1` lassen, Stufe 2 (Bewertung 01.–15.12.) auf 2 statt 3 setzen; die Rechnung 55 × 1 + 15 × 2 = 85 Läufe × 0,30 = 25,50 $ bleibt auch dann über dem Anteil, die Untergrenze `LIVE_MIN_BUDGET_USD` pausiert Live-Läufe also vor dem 15.12. und die Wiedergabe übernimmt. Um das Bewertungsfenster zu schützen, den Server-Anteil nach Messung des echten Live-Laufs neu festlegen (Anteil = Läufe der Stufe 2 × Messwert + 3 $ Untergrenze) und `LIVE_MIN_BUDGET_USD` in Stufe 1 entsprechend höher setzen (Reserve für Stufe 2), statt `MAX_DAILY_REPRO_JOBS` allein zu verlassen.
 
 Der theoretische Fall tritt nur ein, wenn jeder Lauf die Kostenbremse ausreizt. Dann **ist die Untergrenze die harte Obergrenze**, nicht das Tageslimit: Live-Läufe pausieren (HTTP 503, `GET /api/status` meldet `live: false`, das Frontend zeigt die Wiedergabe), sobald das Rest-Budget unter 3,00 $ fällt. Weil nur ein Lauf gleichzeitig läuft und die Prüfung vor dem Start geschieht, kann das Budget die Untergrenze um höchstens einen Lauf (0,50 $) unterschreiten. Das Konto bleibt also bei etwa 2,50 $ Rest des Server-Anteils; die Summe der Anteile von Server und lokalem Rechner darf nie über dem Konsolen-Kontostand liegen (`docs/budget_plan.md`).
 
