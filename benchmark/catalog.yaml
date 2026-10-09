@@ -434,7 +434,7 @@ candidates:
 - id: disc_2303_06053
   arxiv_id: '2303.06053'
   title: 'TSMixer: An All-MLP Architecture for Time Series Forecasting'
-  status: ungeprueft
+  status: geprueft
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: ETTh1
@@ -494,3 +494,20 @@ candidates:
       snippet: "For this setup I got an final MSE of 0.2863. The paper states a MSE of 0.061.  \n For all the setups the MSE\
         \ values I got never came close to the ones stated in the paper.\n\nWas someone able to reproduce the results and\
         \ can share the configuration to the setup?\n\nBest Regards\n\nReactions are currently u"
+  checked_at: '2026-10-09T18:57:48Z'
+  cost_gross_usd: 0.2354
+  verdict:
+    urteil: reproduziert
+    measured_mean: 0.362416
+    measured_std: 0.000331
+    seeds: 3
+    target: 0.361
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2303_06053/20261009-201230
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'

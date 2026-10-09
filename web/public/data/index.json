@@ -131,5 +131,14 @@
   "mode": "nachbau_autorencode",
   "catalog_id": "disc_2601_18837",
   "gesamtaussage": "nicht reproduzierbar (Setup)"
+ },
+ {
+  "id": "disc_2303_06053--20261009-201230",
+  "paper_id": "disc_2303_06053",
+  "title": "TSMixer: An All-MLP Architecture for Time Series Forecasting",
+  "timestamp": "20261009-201230",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2303_06053",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

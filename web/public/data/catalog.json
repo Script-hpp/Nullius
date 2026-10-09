@@ -373,12 +373,27 @@
   "source_url": "https://arxiv.org/pdf/2303.06053",
   "origin": "discovery",
   "benchmark": null,
-  "status": "ungeprueft",
+  "status": "geprueft",
   "reason": null,
-  "checked_at": null,
-  "cost_gross_usd": null,
-  "verdict": null,
-  "run_id": null,
-  "jury": null
+  "checked_at": "2026-10-09T18:57:48Z",
+  "cost_gross_usd": 0.2354,
+  "verdict": {
+   "urteil": "reproduziert",
+   "measured_mean": 0.362416,
+   "measured_std": 0.000331,
+   "seeds": 3,
+   "target": 0.361,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "mode": "nachbau_autorencode",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_2303_06053/20261009-201230"
+  },
+  "run_id": "disc_2303_06053--20261009-201230",
+  "jury": {
+   "ready": true,
+   "reason": "Gesamtaussage: vorlaeufig"
+  }
  }
 ]
