@@ -1023,7 +1023,7 @@ class DiscoveryAgent:
 
 if __name__ == "__main__":
     agent = DiscoveryAgent()
-    print("Starting discovery for Cora, ETTh1...")
-    results = agent.discover(["Cora", "ETTh1"])
+    print("Starting discovery for Cora, CiteSeer, ETTh1...")
+    results = agent.discover(["Cora", "CiteSeer", "ETTh1"])
     for r in results:
         print(json.dumps(r.to_dict(), indent=2))
