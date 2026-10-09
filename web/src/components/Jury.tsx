@@ -32,13 +32,13 @@ export function Jury() {
       <ol className="m-0 grid list-none gap-4 p-0">
         {STEPS.map((s, i) => (
           <li key={s.title}>
-            <a href={s.href} className="group flex items-start gap-5 rounded-xl border border-line bg-surface p-5 no-underline transition-colors hover:border-line-strong sm:p-6">
-              <span className="font-mono text-3xl font-light leading-none text-fg-4">{String(i + 1).padStart(2, '0')}</span>
+            <a href={s.href} className="group flex items-start gap-3 rounded-xl border border-line bg-surface p-4 no-underline transition-colors hover:border-line-strong sm:gap-5 sm:p-6">
+              <span className="font-mono text-2xl font-light leading-none text-fg-4 sm:text-3xl">{String(i + 1).padStart(2, '0')}</span>
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2"><s.icon className="h-4 w-4 shrink-0 text-fg-4" aria-hidden /><span className="font-grotesk text-lg font-semibold tracking-[-0.02em] text-fg">{s.title}</span></span>
+                <span className="flex items-start gap-2"><s.icon className="mt-1.5 h-4 w-4 shrink-0 text-fg-4" aria-hidden /><span className="font-grotesk text-lg font-semibold tracking-[-0.02em] text-fg">{s.title}</span></span>
                 <span className="mt-2 block text-[14px] leading-relaxed text-fg-4">{s.text}</span>
               </span>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-fg-4 transition-transform group-hover:translate-x-0.5 group-hover:text-fg" aria-hidden />
+              <ArrowRight className="mt-1 hidden h-4 sm:block w-4 shrink-0 text-fg-4 transition-transform group-hover:translate-x-0.5 group-hover:text-fg" aria-hidden />
             </a>
           </li>
         ))}

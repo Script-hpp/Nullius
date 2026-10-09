@@ -5,8 +5,8 @@ const link = (path: string) => `${REPO_BLOB}/${path}`
 
 function Mark({ ok, label }: { ok: boolean; label: string }) {
   return ok
-    ? <span role="img" aria-label={label} className="inline-flex h-6 w-6 items-center sm:h-7 sm:w-7 justify-center rounded-full bg-tone-green-solid text-white"><Check className="h-4 w-4" strokeWidth={3} aria-hidden /></span>
-    : <span role="img" aria-label={label} className="inline-flex h-6 w-6 items-center sm:h-7 sm:w-7 justify-center rounded-full border border-line-stronger text-subtle"><Minus className="h-4 w-4" aria-hidden /></span>
+    ? <span role="img" aria-label={label} className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-tone-green-solid text-white sm:h-7 sm:w-7"><Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={3} aria-hidden /></span>
+    : <span role="img" aria-label={label} className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-line-stronger text-subtle sm:h-7 sm:w-7"><Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden /></span>
 }
 
 // Two separate measurements. The headline numbers sit side by side and are never added up.
@@ -56,36 +56,36 @@ export function Precision() {
 export function Matrix() {
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full min-w-[320px] border-collapse text-left" aria-label="Same eight units in two modes">
+      <table className="w-full min-w-[300px] border-collapse text-left" aria-label="Same eight units in two modes">
         <caption className="sr-only">Matches with the reference verdict per unit, paper only versus paper and authors&rsquo; code</caption>
         <thead>
           <tr className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
             <th scope="col" className="px-3 py-3 font-semibold sm:px-5">Unit</th>
-            <th scope="col" className="px-1 py-3 text-center text-[10px] font-semibold sm:px-3 sm:text-[11px]">Paper only</th>
-            <th scope="col" className="px-1 py-3 text-center text-[10px] font-semibold sm:px-3 sm:text-[11px]">Paper + code</th>
+            <th scope="col" className="w-[4.5rem] px-1 py-3 text-center text-[10px] font-semibold leading-tight sm:w-auto sm:px-3 sm:text-[11px]">Paper only</th>
+            <th scope="col" className="w-[4.5rem] px-1 py-3 text-center text-[10px] font-semibold leading-tight sm:w-auto sm:px-3 sm:text-[11px]">Paper + code</th>
           </tr>
         </thead>
         <tbody>
           {UNITS.map((u) => (
             <tr key={u.id} className="border-t border-line">
-              <th scope="row" className="px-3 py-3 text-[14px] font-medium text-fg sm:px-5">{u.author} <span className="font-normal text-fg-4">{u.model}</span></th>
-              <td className="px-3 py-3 text-center"><Mark ok={u.paperOnly} label={`${u.author} ${u.model}, paper only: ${u.paperOnly ? 'matched' : 'missed'}`} /></td>
-              <td className="px-3 py-3 text-center"><Mark ok={u.withCode} label={`${u.author} ${u.model}, paper and authors' code: ${u.withCode ? 'matched' : 'missed'}`} /></td>
+              <th scope="row" className="px-3 py-2.5 text-[14px] font-medium text-fg sm:px-5 sm:py-3">{u.author} <span className="block font-normal text-fg-4 sm:inline">{u.model}</span></th>
+              <td className="px-1 py-2.5 text-center sm:px-3 sm:py-3"><Mark ok={u.paperOnly} label={`${u.author} ${u.model}, paper only: ${u.paperOnly ? 'matched' : 'missed'}`} /></td>
+              <td className="px-1 py-2.5 text-center sm:px-3 sm:py-3"><Mark ok={u.withCode} label={`${u.author} ${u.model}, paper and authors' code: ${u.withCode ? 'matched' : 'missed'}`} /></td>
             </tr>
           ))}
           <tr className="border-t border-line-strong bg-surface-2">
-            <th scope="row" className="px-5 py-3 text-[14px] font-semibold text-fg">Development units</th>
-            <td className="px-3 py-3 text-center font-mono text-lg whitespace-nowrap text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</td>
-            <td className="px-3 py-3 text-center font-mono text-lg whitespace-nowrap text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</td>
+            <th scope="row" className="px-3 py-3 text-[14px] font-semibold text-fg sm:px-5">Development units</th>
+            <td className="px-1 py-3 text-center font-mono text-base whitespace-nowrap text-fg sm:px-3 sm:text-lg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</td>
+            <td className="px-1 py-3 text-center font-mono text-base whitespace-nowrap text-fg sm:px-3 sm:text-lg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</td>
           </tr>
           <tr className="border-t border-line">
-            <th scope="row" className="px-5 py-3 text-[14px] font-medium text-fg">{HELD_OUT.author} <span className="font-normal text-fg-4">{HELD_OUT.model}</span> <span className="ml-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-tone-amber-fg">held-out</span></th>
-            <td className="px-3 py-3 text-center text-[12px] text-muted">not in v4</td>
-            <td className="px-3 py-3 text-center"><span className="inline-flex items-center gap-2 whitespace-nowrap"><Mark ok={false} label={`${HELD_OUT.model} held-out: missed`} /><span className="font-mono text-[13px] text-fg-3">{HELD_OUT.matched} of {HELD_OUT.of}</span></span></td>
+            <th scope="row" className="px-3 py-2.5 text-[14px] font-medium text-fg sm:px-5 sm:py-3">{HELD_OUT.author} <span className="block font-normal text-fg-4 sm:inline">{HELD_OUT.model}</span> <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-tone-amber-fg sm:ml-1 sm:inline">held-out</span></th>
+            <td className="px-1 py-2.5 text-center text-[12px] text-muted sm:px-3">not in v4</td>
+            <td className="px-1 py-2.5 text-center sm:px-3"><span className="inline-flex flex-col items-center gap-1 whitespace-nowrap sm:flex-row sm:gap-2"><Mark ok={false} label={`${HELD_OUT.model} held-out: missed`} /><span className="font-mono text-[13px] text-fg-3">{HELD_OUT.matched} of {HELD_OUT.of}</span></span></td>
           </tr>
         </tbody>
       </table>
-      <p className="m-0 border-t border-line px-5 py-3 text-[12px] leading-relaxed text-fg-4">
+      <p className="m-0 border-t border-line px-3 py-3 text-[12px] sm:px-5 leading-relaxed text-fg-4">
         Check mark: the majority verdict over the generations equals the reference verdict. Held-out measured {HELD_OUT.measured[0]} and {HELD_OUT.measured[1]} against a target of {HELD_OUT.target}. Different modes and models; the two columns are never added up.
       </p>
     </div>
