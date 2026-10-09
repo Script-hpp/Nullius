@@ -17,8 +17,9 @@ export function referenceSentence(b: ReferenceBenchmark | null | undefined): str
     + `Across all ${b.units} paper-claim ${plural(b.units, 'unit', 'units')}, ${b.units_matched} matched the reference verdict.`
 }
 
-// The same facts in one short line for the catalog card.
+// The same facts in one short line for the catalog card. The benchmark ran in the paper-only mode; the card's own result
+// (shown above or below it) comes from a newer run in the product mode, so the line names the benchmark mode.
 export function referenceShort(b: ReferenceBenchmark | null | undefined): string {
   if (!b || !(b.runs > 0) || !(b.units > 0)) return 'Reference paper.'
-  return `Benchmark ${b.version}: ${b.reached} of ${b.runs} runs reached the target; ${b.units_matched} of ${b.units} units matched.`
+  return `Benchmark ${b.version}, rebuild from paper only (${b.arm}): ${b.reached} of ${b.runs} runs reached the target; ${b.units_matched} of ${b.units} units matched the reference verdict.`
 }

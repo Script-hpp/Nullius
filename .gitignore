@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 .venv/
 .ruff_cache/
+
+# Autorenliste enthaelt personenbezogene Daten (Kontaktadressen), nie committen
+docs/outreach/authors.md

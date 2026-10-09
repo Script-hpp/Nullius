@@ -115,12 +115,15 @@ def test_input_length_passed_as_detail_with_discovery_quote():
 
 def test_order_e5():
     a = entry(cand("2001.00001"))                                                     # passt + ok + Code
-    b = entry(cand("2001.00002", github_url=None))                                    # passt, kein Code
+    b = entry(cand("2001.00002", github_url=None, feasibility="no_repo"))             # passt, kein Code -> ans Ende
     c = entry(cand("2001.00003", claim={**cand()["claim"], "column_check": "unchecked"}))   # Spalte ungeprueft
     d = entry(etth1())                                                                # unklar
-    assert [cat.order_key(e)[0] for e in (a, b, c, d)] == [1, 2, 3, 3]
-    chosen = curate_mod.select([d, c, b, a], None)
-    assert [e["arxiv_id"] for e in chosen] == ["2001.00001", "2001.00002", "2001.00003", "2601.21866"]
+    assert [cat.order_key(e)[0] for e in (a, b, c, d)] == [1, 4, 3, 3]
+    chosen = curate_mod.select([d, c, b, a], None)   # ohne Code standardmaessig uebersprungen
+    assert [e["arxiv_id"] for e in chosen] == ["2001.00001", "2001.00003", "2601.21866"]
+    chosen = curate_mod.select([d, c, b, a], None, include_no_repo=True)
+    assert [e["arxiv_id"] for e in chosen] == ["2001.00001", "2001.00003", "2601.21866", "2001.00002"]
+    assert [e["arxiv_id"] for e in curate_mod.select([b], b["arxiv_id"])] == ["2001.00002"]   # --only ignoriert die Markierung
 
 
 def test_select_only_matches_arxiv_id_and_entry_id():

@@ -122,5 +122,14 @@
   "mode": "nachbau_autorencode",
   "catalog_id": "disc_2511_08094",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2601_18837--20261009-173311",
+  "paper_id": "disc_2601_18837",
+  "title": "Time series forecasting with Hahn Kolmogorov-Arnold networks",
+  "timestamp": "20261009-173311",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2601_18837",
+  "gesamtaussage": "nicht reproduzierbar (Setup)"
  }
 ]

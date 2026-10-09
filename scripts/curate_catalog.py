@@ -20,9 +20,11 @@ from repro_agent import catalog as cat
 from repro_agent.dossier import REPO_ROOT
 
 
-def select(entries: list[dict], only: str | None) -> list[dict]:
-    """--only: genau dieser Kandidat (jeder Status, Wiederholung moeglich). Sonst alle ungepruften, nach E5 sortiert."""
-    chosen = [e for e in entries if (only in (e["arxiv_id"], e["id"]) if only else e["status"] == cat.UNCHECKED)]
+def select(entries: list[dict], only: str | None, include_no_repo: bool = False) -> list[dict]:
+    """--only: genau dieser Kandidat (jeder Status, Wiederholung moeglich). Sonst alle ungepruften, nach E5 sortiert;
+    Kandidaten ohne oeffentlichen Code (feasibility no_repo) nur mit include_no_repo, dann am Ende."""
+    chosen = [e for e in entries if (only in (e["arxiv_id"], e["id"]) if only
+                                     else e["status"] == cat.UNCHECKED and (include_no_repo or not cat.no_repo(e)))]
     return sorted(chosen, key=cat.order_key)
 
 
@@ -101,6 +103,7 @@ def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     ap.add_argument("--cache", type=Path, default=cat.DISCOVERY_CACHE, help="Discovery-Cache (Standard logs/discovery_cache.json)")
     ap.add_argument("--catalog", type=Path, default=cat.CATALOG_YAML)
     ap.add_argument("--offline", action="store_true", help="Tavily-Fixtures statt Live-Aufrufe (nur Tests)")
+    ap.add_argument("--include-no-repo", action="store_true", help="auch Kandidaten ohne oeffentlichen Code laufen lassen (Paper-Nachbau, am Ende der Reihenfolge)")
     ap.add_argument("--no-author-code", action="store_true", help="reiner Paper-Nachbau statt Nachbau aus Paper und Autorencode (Standard)")
     args = ap.parse_args(argv)
 
@@ -116,7 +119,7 @@ def main(argv: list[str] | None = None, orchestrator_factory=None) -> int:
     if not args.dry_run and added:
         cat.save_catalog(entries, args.catalog)
 
-    chosen = select(entries, args.only)
+    chosen = select(entries, args.only, args.include_no_repo)
     if args.only and not chosen:
         print(f"{args.only} nicht im Katalog (Cache/Import enthaelt ihn nicht)")
         return 1
