@@ -157,7 +157,7 @@ def log_attempt(path: Path, lock: threading.Lock, code: str, seed: int, wall_s: 
     if res is not None:
         row.update({"status": res.get("status"), "exit_code": res.get("exit_code"), "train_s": None if res.get("train_seconds") is None else round(res["train_seconds"], 1),
                     "detail": str(res.get("detail", ""))[-ATTEMPT_LOG_CHARS:], "soft_timeout": res.get("soft_timeout"),
-                    "stack": (res.get("stack") or "")[-ATTEMPT_LOG_CHARS:] or None, "stdout_tail": (res.get("stdout_tail") or "")[-400:] or None,
+                    "stack": (res.get("stack") or "")[:ATTEMPT_LOG_CHARS] or None, "stdout_tail": (res.get("stdout_tail") or "")[-400:] or None,
                     "measured": res.get("measured")})
     if exc is not None:
         row.update({"status": "exception", "detail": f"{type(exc).__name__}: {str(exc)[-ATTEMPT_LOG_CHARS:]}"})
