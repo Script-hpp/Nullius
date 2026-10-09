@@ -15,7 +15,7 @@ export function ReadmeBadge({ ref_, urteil }: { ref_: RunRef; urteil?: string })
     try { await navigator.clipboard.writeText(md); setCopied(true); window.setTimeout(() => setCopied(false), 1800) } catch { /* clipboard blocked: the text stays selectable */ }
   }
   return (
-    <section id="sec-badge" className="scroll-mt-4 min-w-0 rounded-xl border border-line bg-surface p-6 md:p-8" aria-label="Add this badge to your README">
+    <section id="sec-badge" className="scroll-mt-16 min-w-0 border-t border-line pt-8" aria-label="Add this badge to your README">
       <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Add this badge to your README</div>
       <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">
         {note.text} A click on the badge leads to this certificate.

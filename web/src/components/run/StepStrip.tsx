@@ -72,9 +72,9 @@ export function buildSteps(events: Event[], dossier: Json | null, o: { running: 
     return { ...s, n: i + 1, status, data: data[s.id] }
   })
 }
-const STATUS_TEXT: Record<StepStatus, string> = { done: 'Done', running: 'Running', waiting: 'Waiting', skipped: 'Not part of this run' }
+export const STATUS_TEXT: Record<StepStatus, string> = { done: 'Done', running: 'Running', waiting: 'Waiting', skipped: 'Not part of this run' }
 
-function StatusMark({ s }: { s: StepStatus }) {
+export function StatusMark({ s }: { s: StepStatus }) {
   const cls = 'h-4 w-4 shrink-0'
   if (s === 'done') return <CheckCircle2 className={`${cls} text-tone-green`} />
   if (s === 'running') return <Loader2 className={`${cls} animate-spin text-fg-2`} />

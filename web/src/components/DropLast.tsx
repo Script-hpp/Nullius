@@ -9,7 +9,7 @@ export function DropLast({ dossier, claimId }: { dossier: Json; claimId: string 
   if (!note) return null
   const [lead, rest] = droplastParagraphs(note)
   return (
-    <section id="sec-droplast" className="scroll-mt-4 min-w-0 rounded-xl border border-line bg-surface p-6 md:p-8" aria-label="A known evaluation setting">
+    <section id="sec-droplast" className="scroll-mt-16 min-w-0 border-t border-line pt-8" aria-label="A known evaluation setting">
       <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted"><Info className="h-3.5 w-3.5" />A known evaluation setting</div>
       <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">{lead}</p>
       <p className="mb-0 mt-3 max-w-3xl text-[15px] leading-relaxed text-fg-4">{rest}</p>

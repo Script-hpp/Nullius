@@ -59,8 +59,8 @@ export function EvidenceLink({ entry, tab, children }: { entry: CatalogEntry; ta
   )
 }
 
-// Callout above the verdict of a catalog run: what limits the statement.
-export function CatalogCallout({ run, claimId, gesamt }: { run: RunData; claimId: string; gesamt?: string }) {
+// What the code or the run needs flagged: ablation result, graph repairs, run warnings. Plain strings, so the verdict card can count them.
+export function catalogNotes(run: RunData, claimId: string): { items: string[]; warnings: string[] } {
   const d = run.dossier
   const warnings: string[] = (d.warnings ?? []).map(translateWarning)
   const ab: Json = d.ablations?.[claimId]
@@ -78,33 +78,28 @@ export function CatalogCallout({ run, claimId, gesamt }: { run: RunData; claimId
   } else if (d.graph_repairs?.[claimId]) {
     items.push(`Graph repairs: ${d.graph_repairs[claimId]}.`)
   }
+  return { items, warnings }
+}
+
+// Notes about one run for the Limits tab: overall statement, then each flag on its own line. Flat, no frame.
+export function CatalogCallout({ run, claimId, gesamt }: { run: RunData; claimId: string; gesamt?: string }) {
+  const { items, warnings } = catalogNotes(run, claimId)
   return (
-    <div className="rounded-xl border border-line bg-panel/50 p-5">
-      <div className="flex items-start gap-3">
-        <Info className="mt-0.5 w-4 h-4 shrink-0 text-fg-4" />
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium text-fg-2">
-            {isPreliminary(gesamt) ? `${PRELIMINARY}.` : gesamt === NOT_ASSESSABLE ? 'Not assessable: the method was not implemented by the code.' : gesamt ? `${OVERALL[gesamt] ?? gesamt}.` : 'Discovery candidate run once through the loop.'}
-          </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-muted">
-            This is a measurement with our setup, not a finding about the paper. We do not claim the paper is wrong.
-          </p>
-          {(items.length > 0 || warnings.length > 0) && (
-            <ul className="mt-3 space-y-1.5">
-              {items.map((t, i) => (
-                <li key={`i${i}`} className="flex items-start gap-2 text-[12px] leading-relaxed text-fg-4">
-                  <AlertCircle className="mt-0.5 w-3.5 h-3.5 shrink-0 text-muted" />{t}
-                </li>
-              ))}
-              {warnings.map((t, i) => (
-                <li key={`w${i}`} className="flex items-start gap-2 text-[12px] leading-relaxed text-fg-4">
-                  <Info className="mt-0.5 w-3.5 h-3.5 shrink-0 text-muted" />{t}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+    <div>
+      <p className="m-0 text-[14px] font-medium leading-relaxed text-fg-2">
+        {isPreliminary(gesamt) ? `${PRELIMINARY}.` : gesamt === NOT_ASSESSABLE ? 'Not assessable: the method was not implemented by the code.' : gesamt ? `${OVERALL[gesamt] ?? gesamt}.` : 'Discovery candidate run once through the loop.'}
+      </p>
+      <p className="mb-0 mt-1 text-[13px] leading-relaxed text-muted">This is a measurement with our setup, not a finding about the paper. We do not claim the paper is wrong.</p>
+      {(items.length > 0 || warnings.length > 0) && (
+        <ul className="m-0 mt-4 list-none space-y-2 p-0">
+          {items.map((t, i) => (
+            <li key={`i${i}`} className="flex items-start gap-2 text-[13px] leading-relaxed text-fg-4"><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />{t}</li>
+          ))}
+          {warnings.map((t, i) => (
+            <li key={`w${i}`} className="flex items-start gap-2 text-[13px] leading-relaxed text-fg-4"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />{t}</li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

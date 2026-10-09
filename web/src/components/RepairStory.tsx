@@ -89,13 +89,14 @@ function CardView({ c, codeLoader }: { c: Card; codeLoader: Loader }) {
   )
 }
 
+export const repairCount = (events: Event[], claimId: string) => buildStory(events, claimId).length
+
 export function RepairStory({ events, claimId, codeLoader }: { events: Event[]; claimId: string; codeLoader: Loader }) {
   const cards = useMemo(() => buildStory(events, claimId), [events, claimId])
   if (!cards.length) return null
   return (
-    <section id="sec-repairs" className="scroll-mt-4 min-w-0" aria-label="How the agent fixed its own code">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Watch the agent fix its own code</div>
-      <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">Our agent is allowed to fail. Here is how it found and fixed its own mistakes in this run.</p>
+    <section id="sec-repairs" className="min-w-0" aria-label="How the agent fixed its own code">
+      <p className="mb-0 mt-0 max-w-3xl text-[14px] leading-relaxed text-fg-4">Our agent is allowed to fail. Here is how it found and fixed its own mistakes in this run.</p>
       <ol className="m-0 mt-8 list-none p-0">
         {cards.map((c, i) => <CardView key={i} c={c} codeLoader={codeLoader} />)}
       </ol>

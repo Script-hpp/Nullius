@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { ChevronDown, RotateCcw } from 'lucide-react'
 import { ResultBand } from './ResultChart'
 import { Badge } from './ui'
 import { RESULT, TONE_VAR, de2en, resultHint } from '../labels'
@@ -33,14 +33,19 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
   const verdictWord: Record<string, string> = { reproduziert: 'reproduced', teilweise: 'partially reproduced', 'nicht reproduziert': 'not reproduced' }
 
   return (
-    <section id="sec-whatif" className="scroll-mt-4 min-w-0 rounded-xl border border-line bg-surface p-6 md:p-8" aria-label="Try to fool Nullius">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Try to fool Nullius</div>
-      <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">
-        Drag the claimed value. Our measurements stay where they are; only the verdict changes. This is how placebo claims are rejected.
+    <details id="sec-whatif" className="group scroll-mt-16 min-w-0 border-y border-line" aria-label="Try to fool Nullius">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="text-[15px] font-medium text-fg-2">Try to fool Nullius</span>
+          <span className="ml-3 text-[12px] text-muted">Drag the claimed value and watch the verdict change</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <p className="mb-0 mt-1 max-w-3xl text-[14px] leading-relaxed text-fg-4">
+        Our measurements stay where they are; only the verdict changes. This is how placebo claims are rejected. What-if view: same measurements, different claim. This does not run a new check.
       </p>
-      <p className="mb-0 mt-2 max-w-3xl text-[13px] leading-relaxed text-muted">What-if view: same measurements, different claim. This does not run a new check.</p>
 
-      <div className="mt-8 grid items-start gap-10 lg:grid-cols-3">
+      <div className="mt-6 grid items-start gap-10 pb-8 lg:grid-cols-3">
         <div className="min-w-0">
           <label htmlFor={id} className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">What if the paper had claimed …?</label>
           <div className="font-grotesk mt-3 text-4xl font-semibold tracking-[-0.04em] text-fg"><span className="font-mono text-3xl font-light">{fmt(claimed)}</span></div>
@@ -65,6 +70,6 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
           </div>
         </div>
       </div>
-    </section>
+    </details>
   )
 }

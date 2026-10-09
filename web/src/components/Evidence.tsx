@@ -12,75 +12,66 @@ export function targetPosition(quote: string, target: number, metric: string): n
   return i < 0 ? null : i
 }
 
-export function EvidenceSplit({ claimId, dossier,  selected }: { claimId: string; dossier: Json; events: any[]; selected: Json | null }) {
-  const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
+const H3 = 'm-0 mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted'
+
+// The sentence of the paper that holds the target number, quoted from the page Tavily read.
+export function TargetEvidence({ claim }: { claim: Json }) {
   const ev = claim?.target_evidence
+  if (!ev) return <p className="m-0 text-sm italic text-muted">No verified target evidence found.</p>
+  const i = targetPosition(String(ev.quote ?? ''), claim.target, claim.metric)
+  return (
+    <div className="min-w-0">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Target value</span>
+        <span className="font-mono text-lg font-semibold text-fg">{toPercent(claim.target)}</span>
+      </div>
+      <blockquote className="m-0 rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] italic leading-relaxed text-tone-amber-fg/90">“{ev.quote}”</blockquote>
+      <p className="mb-0 mt-3 text-[12px] leading-relaxed text-fg-4">
+        Row from {ev.table || 'a table'} of the paper; {i == null ? 'our target is one of its numbers' : i < ORDINAL.length ? `the ${ORDINAL[i]} number is our target` : `our target is number ${i + 1}`}.
+        {' '}<a className="text-tone-blue transition-colors hover:text-tone-blue-hover" href={ev.url} target="_blank" rel="noreferrer">Source page</a>
+      </p>
+    </div>
+  )
+}
+
+// One line per seed run: which seed, whether it gave a valid result, what it measured. The selected branch of the tree is highlighted.
+export function SeedMeasurements({ claimId, dossier, selected }: { claimId: string; dossier: Json; selected: Json | null }) {
   const attempts: Json[] = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId).sort((a: Json, b: Json) => a.seed - b.seed)
   const ok = attempts.filter((a) => a.measured != null)
-
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-5">
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3 border-b border-line/50 pb-2">Target Evidence (Claimed)</h3>
-        {ev ? (
-          <div className="bg-surface border border-line/50 rounded-xl p-5">
-            <div className="mb-3 flex flex-wrap items-center justify-between text-sm">
-              <span className="text-fg-4 text-xs font-semibold uppercase tracking-wider">Target Value</span>
-              <span className="font-mono text-fg text-lg font-semibold">{toPercent(claim.target)}</span>
-            </div>
-            <blockquote className="font-mono rounded-lg border-l-2 px-4 py-3 text-[12px] leading-relaxed border-tone-amber-solid/50 bg-tone-amber-solid/5 text-tone-amber-fg/90 italic">
-              "{ev.quote}"
-            </blockquote>
-            <p className="mb-0 mt-3 text-[12px] leading-relaxed text-fg-4">
-              Row from {ev.table || 'a table'} of the paper; {(() => { const i = targetPosition(String(ev.quote ?? ''), claim.target, claim.metric); return i == null ? 'our target is one of its numbers' : i < ORDINAL.length ? `the ${ORDINAL[i]} number is our target` : `our target is number ${i + 1}` })()}.
-            </p>
-            <p className="mt-3 text-[11px] text-muted flex items-center gap-2">
-              <span>{ev.table}</span>
-              <span>•</span>
-              <a className="text-tone-blue hover:text-tone-blue-hover transition-colors truncate max-w-[200px]" href={ev.url} target="_blank" rel="noreferrer">Source URL</a>
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-muted italic">No verified target evidence found.</p>
-        )}
+    <div className="min-w-0">
+      <p className="m-0 mb-3 text-[12px] leading-relaxed text-muted">
+        {ok.length} of {attempts.length} runs gave a valid result, one seed per sandbox branch. The verdict uses the mean of all seeds; single seeds may fall outside the band.
+      </p>
+      <div className="max-h-[300px] overflow-auto border-y border-line">
+        <table className="w-full text-left text-[12px]">
+          <thead className="sticky top-0 bg-bg">
+            <tr className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              <th className="px-3 py-2.5 font-semibold">Seed</th>
+              <th className="px-3 py-2.5 font-semibold">Result</th>
+              <th className="px-3 py-2.5 text-right font-semibold">Measured</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {attempts.map((a, i) => (
+              <tr key={i} className={selected?.branch_id === a.branch_id ? 'bg-tone-blue-solid/10' : ''}>
+                <td className="px-3 py-2 font-mono text-fg-4">{a.seed}</td>
+                <td className="px-3 py-2 text-fg-4">{a.measured != null ? 'Valid' : 'No valid result'}</td>
+                <td className="px-3 py-2 text-right font-mono font-medium text-fg-2">{toPercent(a.measured)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+    </div>
+  )
+}
 
-      <div className="space-y-5">
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3 border-b border-line/50 pb-2">Sandbox Measurements</h3>
-        <div className="bg-surface border border-line/50 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-line/50 bg-panel/50">
-            <div className="font-medium text-sm text-fg-2">Execution Results</div>
-            <p className="text-[11px] text-muted mt-1">
-              {ok.length} of {attempts.length} runs gave a valid result. Each run is one seed in its own sandbox branch.
-            </p>
-            <p className="text-[11px] leading-relaxed text-muted mt-2">The verdict uses the mean of all seeds; single seeds may fall outside the band.</p>
-          </div>
-          <div className="max-h-[300px] overflow-auto">
-            <table className="w-full text-[12px] text-left">
-              <thead className="bg-panel/30 sticky top-0 backdrop-blur-sm">
-                <tr>
-                  <th className="py-3 px-4 border-b border-line/50 text-muted font-semibold uppercase tracking-wider text-[10px]">Seed</th>
-                  <th className="py-3 px-4 border-b border-line/50 text-muted font-semibold uppercase tracking-wider text-[10px]">Result</th>
-                  <th className="py-3 px-4 border-b border-line/50 text-muted font-semibold uppercase tracking-wider text-[10px] text-right">Measured</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/50">
-                {attempts.map((a, i) => (
-                  <tr key={i} className={`hover:bg-raised/50 transition-colors ${selected?.branch_id === a.branch_id ? 'bg-tone-blue-solid/10' : ''}`}>
-                    <td className="py-3 px-4 font-mono text-sm text-fg-4">{a.seed}</td>
-                    <td className="py-3 px-4 text-[12px] text-fg-4">{a.measured != null ? 'Valid' : 'No valid result'}</td>
-                    <td className="py-3 px-4 font-mono text-sm text-right font-medium text-fg-2">{toPercent(a.measured)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div className="lg:col-span-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-3 border-b border-line/50 pb-2">Each seed against the claim</h3>
-        <div className="bg-surface border border-line/50 rounded-xl p-5"><AttemptChart dossier={dossier} claimId={claimId} /></div>
-      </div>
+export function SeedChart({ claimId, dossier }: { claimId: string; dossier: Json }) {
+  return (
+    <div className="min-w-0">
+      <h3 className={H3}>Each seed against the claim</h3>
+      <AttemptChart dossier={dossier} claimId={claimId} />
     </div>
   )
 }
