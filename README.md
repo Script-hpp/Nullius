@@ -207,8 +207,8 @@ A normal run calls Tavily **live** at run time (`TAVILY_MODE=live`, the default)
 
 | Where | Endpoint | Purpose |
 |---|---|---|
-| **Discovery (live catalog)** | Search (github.com, arxiv.org, openreview.net), Extract | finds new papers on supported benchmarks, reads protocol and results sections, proposes claims with a verbatim quote |
-| Read claims (role 2) | Extract on the arXiv text | tables with target values, checked by quote and by table column |
+| **Discovery (live catalog)** | Search (github.com, arxiv.org, openreview.net) | finds new papers on supported benchmarks, reads protocol and results sections |
+| Read claims (role 2) | arXiv API (Tavily as fallback) | LaTeX source is downloaded directly via arXiv API to extract tables with target values. Checked by quote and table column. |
 | Material and setup details (roles 1, 4) | Search for the repository, Extract on the README, sandbox clone of chosen files | hyperparameters and data splits, each with a quote from paper, README or repository |
 | Error search (role 5) | Search with the failing line | solution hint for the code repair |
 | Community check (roles 3, 6) | Search, limited Crawl of repository issues | after the verdict: "What others found" and "Possible explanations", each with a quote. Verified findings that can be repeated become sandbox experiments (below). **Never changes the verdict** (`src/repro_agent/community.py`, `objection_experiments.py`) |

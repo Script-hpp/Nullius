@@ -76,15 +76,19 @@ def reference_benchmark(entry: dict, benchmark: dict | None) -> dict | None:
 
 def catalog_json(entries: list[dict], benchmark: dict | None = None) -> list[dict]:
     """Nur Felder, die die UI braucht."""
+    from .claims_source import clean_latex_quote
     out = []
     for e in entries:
         cand = e.get("candidate") or {}
         claim = cand.get("claim") or {}
         verdict = e.get("verdict")
+        clean_claim = {k: claim.get(k) for k in ("method", "metric", "target", "horizon", "quote", "input_length")}
+        if clean_claim.get("quote"):
+            clean_claim["quote"] = clean_latex_quote(clean_claim["quote"])
         out.append({
             "id": e["id"], "arxiv_id": e["arxiv_id"], "title": e["title"],
             "dataset": cand.get("dataset"), "task": claim.get("matched_task") or cand.get("dataset"),
-            "claim": {k: claim.get(k) for k in ("method", "metric", "target", "horizon", "quote", "input_length")},
+            "claim": clean_claim,
             "protocol": cand.get("protocol"), "column_check": claim.get("column_check"),
             "github_url": cand.get("github_url"), "source_url": cand.get("source_url"),
             "origin": e.get("origin") or "discovery", "benchmark": reference_benchmark(e, benchmark),

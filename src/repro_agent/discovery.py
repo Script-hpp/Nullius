@@ -418,6 +418,7 @@ class DiscoveryAgent:
             "The claim must be the ABSOLUTE test metric of the method PROPOSED in the paper, "
             "never a baseline and never a relative improvement (no 'reduction percent'). "
             "Choose the best or the highlighted result of the main configuration of the proposed method; "
+            "prioritize the main results table. Do NOT extract claims from ablation studies, hyperparameter tuning tables, or heatmaps, "
             "never an ablation and never a restricted variant (for example 'frozen', 'w/o ...', 'without ...', 'linear probe'). "
             "FEASIBILITY RULE: We only test methods that can be trained from scratch on CPU in <10 minutes. "
             "If the method uses pretraining, is a Foundation Model, or requires external data/weights, you MUST reply with "

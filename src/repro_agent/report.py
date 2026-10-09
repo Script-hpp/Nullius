@@ -71,8 +71,10 @@ def render_markdown(dossier: Dossier) -> str:
         claim = next((c for c in dossier.claims if c.id == verdict.claim_id), None)
         ev = claim.target_evidence if claim else None
         if ev:
+            from .claims_source import clean_latex_quote
+            clean_quote = clean_latex_quote(ev['quote'])
             lines.append(
-                f"Zielwert {claim.target} belegt: \"{ev['quote']}\" ({ev['table']}, "
+                f"Zielwert {claim.target} belegt: \"{clean_quote}\" ({ev['table']}, "
                 f"{ev['url']}, Version {ev['arxiv_version']}, abgerufen {ev['retrieved_at']}, "
                 f"SHA-256 {ev['sha256'][:12]})"
             )

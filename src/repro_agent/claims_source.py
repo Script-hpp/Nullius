@@ -101,6 +101,23 @@ def fetch_paper_text(
     tavily = get_tavily()
 
     version = latest_arxiv_version(arxiv_id)
+    
+    # Neu: Zuerst versuchen wir, den echten LaTeX-Quellcode von arXiv zu holen.
+    from .discovery import _fetch_arxiv_source
+    latex_text = _fetch_arxiv_source(arxiv_id)
+    if latex_text and len(latex_text) > 2000:
+        paper = PaperText(
+            arxiv_id=arxiv_id, url=f"https://export.arxiv.org/e-print/{arxiv_id}", source_kind="latex",
+            retrieved_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            sha256=hashlib.sha256(latex_text.encode()).hexdigest(),
+            arxiv_version=version, text=latex_text,
+        )
+        if mode != "live":
+            fixture_dir.mkdir(parents=True, exist_ok=True)
+            fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
+        return paper
+
+    # Fallback: Tavily (liest oft unsauber, mischt Tabellenspalten)
     for kind, url in _source_urls(arxiv_id, version):
         result = tavily.read_claims(url)
         for item in result.get("results", []):
@@ -124,6 +141,19 @@ def _norm_v1(s: str) -> str:
     s = re.sub(r"\s+", " ", s.replace(chr(0xA0), " ")).strip().lower()
     s = re.sub(r"(\d) \.(\d)", r"\1.\2", s)
     return re.sub(r"(?<=[a-z])-\s?(?=[a-z])", "", s)
+
+
+def clean_latex_quote(text: str) -> str:
+    """Entfernt grundlegende LaTeX-Befehle fuer die saubere Anzeige in Katalog und Zeugnis."""
+    if not text: return ""
+    text = re.sub(r'\\(?:cellcolor|color|textcolor|rowcolor)(?:\[.*?\])?(?:\{.*?\})?', '', text)
+    while re.search(r'\\(?:textbf|textit|underline|mathit)\{([^{}]*)\}', text):
+        text = re.sub(r'\\(?:textbf|textit|underline|mathit)\{([^{}]*)\}', r'\1', text)
+    text = re.sub(r'\\pm\b', '±', text)
+    text = re.sub(r'\\[a-zA-Z]+(?:\[.*?\])?', '', text)
+    text = re.sub(r'\$|&|\\\\', ' ', text)
+    text = re.sub(r'\{|\}', '', text)
+    return re.sub(r'\s+', ' ', text).strip()
 
 
 _TYPO = str.maketrans({

@@ -161,7 +161,7 @@ export function Lesson() {
 
 const TAVILY_ROLES = [
   { icon: Search, title: 'Find papers', text: 'on supported benchmarks' },
-  { icon: Quote, title: 'Read the claim', text: 'only with a verbatim quote' },
+  { icon: Quote, title: 'Read the claim', text: 'LaTeX source (Tavily fallback)' },
   { icon: FileText, title: 'Setup details', text: 'each with a quote' },
   { icon: Bug, title: 'Error search', text: 'hints for the repair' },
   { icon: Users, title: 'Community check', text: 'after the verdict' },

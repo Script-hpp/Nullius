@@ -120,7 +120,7 @@ function QuoteView({ quote, target }: { quote?: string; target?: number }) {
 // One plain sentence per funnel stage, shown under the number (visible, not a tooltip).
 const FUNNEL_TEXT = [
   'Papers Tavily returned for the benchmark search.',
-  'Papers whose protocol and results Tavily read in full. A run reads at most three per benchmark.',
+  'Papers whose protocol and results were read from the arXiv LaTeX source (Tavily as fallback). A run reads at most three per benchmark.',
   'A result we can quote word for word from the results table.',
   'The paper splits the data the way our task does, so the numbers are comparable.',
   'A claim we can re-run. The catalog lists the ones that have been run.',
@@ -399,7 +399,7 @@ export function Discovery() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Discover" title="Find papers worth checking"
-        what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. It reads only the protocol and results, and keeps claims it can quote word for word."
+        what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. The text is read directly from the arXiv LaTeX source, keeping claims it can quote word for word."
         look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
 
       <div className="mb-6 rounded-xl border border-line bg-surface p-6">
