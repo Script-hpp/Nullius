@@ -5,7 +5,7 @@ Diese Datei ersetzt den Verlauf der vorherigen Reviewer-Session. Danach `CLAUDE.
 ## Rollen und Terminals (Orca)
 
 - **Reviewer** (Opus): vergibt Aufträge, prüft Code/Suite/Screenshots, pusht, macht alle echten Läufe (Token Factory, Tavily, Nebius-Sandbox). Worker schreiben an das Reviewer-Terminal; nach einem Neustart hat der Reviewer eine **neue Terminal-ID** (`echo $ORCA_TERMINAL_HANDLE`). Dem Worker die neue ID mitteilen und `docs/worker_handover.md` anpassen (dort steht die alte `term_83e002c7-…`).
-- **worker-2 (sonnet)**: Terminal `term_1f71e793-9652-4019-b162-945f40c1af17`, Checkout `/home/onuralp/Desktop/hackathon/research`. Implementiert nur mit Fakes, committet, pusht nie.
+- **worker-2 (sonnet)**: Terminal `term_1f71e793-9652-4019-b162-945f40c1af17`, Checkout `<main checkout>`. Implementiert nur mit Fakes, committet, pusht nie.
 - Alter Worker `term_7431f070-…` ist abgemeldet, kann geschlossen werden.
 - Nachrichten: `orca terminal send --terminal <id> --enter --wait-submit 30 --text '<einzeilig>'`. Die Warnung "no turn start was observed" kommt oft, obwohl die Nachricht ankam: mit `orca terminal read --terminal <id> | grep -c '<Stichwort>'` prüfen, sonst mit `--retry-request <id>` erneut.
 - Aufträge an Worker als Datei (Scratchpad oder `docs/`), im Terminal nur Verweis.

@@ -36,7 +36,7 @@ LOGDIR = ROOT / "runs" / "recall_cg_v1_logs"
 INCIDENTS = ROOT / "runs" / "recall_cg_v1_incidents.jsonl"
 STOPFILE = ROOT / "runs" / "recall_cg_v1.STOP"
 GATEFILE = ROOT / "runs" / "recall_cg_v1_gate.json"
-RLINEAR_PAPER = Path("/home/onuralp/Desktop/hackathon/research/runs/rlinear_2023/20261002-105416/paper_text.json")   # gespeicherter Lauf vom 2026-10-02
+RLINEAR_PAPER = ROOT / "runs" / "rlinear_2023" / "20261002-105416" / "paper_text.json"   # gespeicherter Lauf vom 2026-10-02
 MAX_INFRA_RETRIES = 3
 
 

@@ -15,7 +15,7 @@ Diese Datei ersetzt den Verlauf der vorherigen Worker-Session. Lies sie ganz, da
 - Erst Plan und Fragen, dann Code. Unklares fragen statt raten. Jede "erledigt"-Meldung mit Datei:Zeile und Testendzeile belegen.
 - Benchmark-Pfade (`benchmark/papers.yaml`, Läufe ohne Flag `graph_repair`) bleiben unverändert (Experiment-Disziplin: vorab festlegen, `src/` während eines Experiments einfrieren).
 - UI-Texte englisch, Design nach CLAUDE.md "Design Philosophy", Dark und Light.
-- Screenshots mit Playwright: `playwright-core` im eigenen Scratchpad, `executablePath: /home/onuralp/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome`, gegen eigene Fake-API + eigenen Vite (z. B. :8010/:5190), Dateien außerhalb des Repos.
+- Screenshots mit Playwright: `playwright-core` im eigenen Scratchpad, `executablePath: ~/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome`, gegen eigene Fake-API + eigenen Vite (z. B. :8010/:5190), Dateien außerhalb des Repos.
 - Laufende Prozesse des Reviewers nicht beenden: Vite `:5174`, API `:8000`, Hintergrund-Läufe von `scripts/curate_catalog.py`.
 
 ## Rückmeldung an den Reviewer (Orca)

@@ -3,7 +3,7 @@ Aufruf: PYTHONPATH=src .venv/bin/python gp.py <variante> [n_seeds]"""
 import os, statistics, subprocess, sys, tempfile, time
 from pathlib import Path
 import numpy as np
-ROOT = Path("/home/onuralp/Desktop/hackathon/research")
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src" / "repro_agent" / "harness")); sys.path.insert(0, str(ROOT / "src"))
 import cora_data, cora_lcc_data, etth1_data, metrics
 CACHE = Path(__file__).parent / "cache"   # needs raw/ind.cora.* (Planetoid); set before running

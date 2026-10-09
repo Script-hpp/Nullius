@@ -2,7 +2,7 @@
 # Zeile fuer Horizont 96 aus LTSF-Linear scripts/EXP-LongForecasting/Linear/etth1.sh (seq_len=336, DLinear) mit Seed-Kopie von run_longExp.py.
 # Aufruf: run_ltsf_seed.sh <seed>   (Umgebung: venv aktiv). Klon bleibt unveraendert.
 set -euo pipefail
-W=/home/onuralp/Desktop/hackathon/prestudy_work
+W="${W:-$HOME/Desktop/hackathon/prestudy_work}"
 S=$(cd "$(dirname "$0")" && pwd)
 seed=$1
 cd $W/ltsf

@@ -2,7 +2,7 @@
 
 Stand 2026-10-08, ca. 23:55. Branch `Script-hpp/gat-analysis` (Basis `7224df3`). **Nur Analyse und Vorschlag.** Kein Modell-, Tavily- oder Token-Factory-Aufruf, kein Agenten-Code ausgeführt (nur gelesen; ein `ast`-Parser-Lauf über den Quelltext der Proben, siehe Abschnitt 6), keine Änderung an `src/`. Kein Push, kein Merge.
 
-Rohdaten (nur gelesen, untracked im Worktree `cto`, dort läuft der G0-Worker weiter): `/home/onuralp/orca/workspaces/research/cto/benchmark/experiments/results/recall_cg_gate_samples/`. Pfade unten sind relativ dazu. Vorab-Festlegung: `benchmark/experiments/recall_cg_gate.md` (Code `fa40b25`, Nachtrag `7224df3`).
+Rohdaten (nur gelesen, untracked im Worktree `cto`, dort läuft der G0-Worker weiter): `<worktree cto>/benchmark/experiments/results/recall_cg_gate_samples/`. Pfade unten sind relativ dazu. Vorab-Festlegung: `benchmark/experiments/recall_cg_gate.md` (Code `fa40b25`, Nachtrag `7224df3`).
 
 ## 0. Kurzfassung
 

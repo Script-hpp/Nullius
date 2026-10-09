@@ -2,7 +2,7 @@
 
 Rolle: Analyst. Du liest Daten und Code und schreibst einen Bericht. Du änderst nichts unter `src/`, `scripts/`, `web/`, `benchmark/papers.yaml`, und du committest und pushst nicht. Der Reviewer committet.
 
-Arbeitsverzeichnis: `/home/onuralp/Desktop/hackathon/research` (Hauptcheckout, Branch `main`). Kein `git checkout`, kein `git stash`, kein Branchwechsel: dort laufen gerade Demo-Läufe des Reviewers.
+Arbeitsverzeichnis: `<main checkout>` (Hauptcheckout, Branch `main`). Kein `git checkout`, kein `git stash`, kein Branchwechsel: dort laufen gerade Demo-Läufe des Reviewers.
 
 Erlaubt: Dateien lesen, Python lokal zum Auswerten (`.venv/bin/python`), lokale CPU-Läufe der menschlichen Referenzlösungen (`tests/reference/*.py`, `scripts/run_reference_local.py`) mit geänderten Hyperparametern. **Nicht erlaubt:** LLM-Aufrufe (Token Factory, OpenRouter), Tavily-Aufrufe, Nebius-Sandbox. Keine Teststatistik in irgendeinen Prompt (es gibt keine Prompts in diesem Auftrag).
 

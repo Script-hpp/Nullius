@@ -2,7 +2,7 @@
 import os, statistics, subprocess, sys, tempfile, time, json
 from pathlib import Path
 import numpy as np
-ROOT = Path("/home/onuralp/Desktop/hackathon/research")
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src" / "repro_agent" / "harness"))
 import cora_data, cora_lcc_data
 CACHE = Path(__file__).parent / "cache"

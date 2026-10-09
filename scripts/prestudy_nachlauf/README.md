@@ -3,7 +3,7 @@
 Original-Code der Autoren (RTSF/RLinear, LTSF-Linear/DLinear) lokal auf CPU, Vorhersagen ueber einen Adapter, Auswertung mit dem unveraenderten Harness.
 Vorab-Festlegung: `docs/prestudy_nachlauf.md`. Ergebnis: `benchmark/experiments/results/nachlauf_prestudy.md`. Kein LLM, kein Tavily, keine Sandbox, kein `src/`-Eingriff.
 
-Arbeitsverzeichnis ausserhalb des Repos: `W=/home/onuralp/Desktop/hackathon/prestudy_work` (Klone `rtsf/`, `ltsf/`, `data/ETTh1.csv`, `venv/`, `ckpt/`, `out/`).
+Arbeitsverzeichnis ausserhalb des Repos: `W=~/Desktop/hackathon/prestudy_work` (Klone `rtsf/`, `ltsf/`, `data/ETTh1.csv`, `venv/`, `ckpt/`, `out/`).
 
 ## Aufbau
 1. Umgebung: `uv venv --python 3.11 $W/venv; uv pip install numpy pandas scikit-learn matplotlib torch --extra-index-url https://download.pytorch.org/whl/cpu; uv pip install "numpy<2"` (numpy 2 scheitert, siehe Ergebnis).

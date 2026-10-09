@@ -74,5 +74,17 @@
   "timestamp": "20261004-212533",
   "catalog_id": "disc_1811_05868",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_1609_02907--20261009-115012",
+  "paper_id": "disc_1609_02907",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20261009-115012",
+  "mode": "nachbau_autorencode",
+  "note": "live quick check, 3 seeds",
+  "live": true,
+  "seeds": 3,
+  "catalog_id": "disc_1609_02907",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

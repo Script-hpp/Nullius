@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 400" width="980" height="400" role="img" aria-labelledby="t d" font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+<title id="t">Eight paper-claim units: matches with the reference verdict, paper only versus paper and authors' code</title>
+<desc id="d">Paper-only rebuild (benchmark v4, with Tavily): 2 of 8 units match the reference verdict. Paper and authors' code (recall cg v1): 7 of 8 development units match; the held-out paper RLinear misses (0 of 1). In-sample result, different mode and models, never added to the v4 count.</desc>
+<style>
+:root{--fg:#1c1a17;--mut:#6b655c;--line:#d9d3c7;--bg:#f7f3ea;--ok:#0f7a5c;--miss:#9a9388;--warn:#b4570f}
+@media (prefers-color-scheme:dark){:root{--fg:#ece8df;--mut:#a39d91;--line:#3a3731;--bg:#141311;--ok:#34c79b;--miss:#7b756a;--warn:#e0913f}}
+.bg{fill:var(--bg)} text{fill:var(--fg)} .m{fill:var(--mut)} .w{fill:var(--warn)} .ln{stroke:var(--line);stroke-width:1}
+.ok{fill:var(--ok)} .tick{fill:none;stroke:var(--bg);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.miss{fill:none;stroke:var(--miss);stroke-width:1.6} .dash{stroke:var(--miss);stroke-width:1.6;stroke-linecap:round}
+.h{font-size:12.5px;text-anchor:middle} .rl{font-size:14px;font-weight:600} .rs{font-size:12px} .big{font-size:24px;font-weight:700} .fn{font-size:12px}
+</style>
+<rect class="bg" width="980" height="400" rx="10"/>
+<text x="28" y="36" font-size="15" font-weight="700">Same eight units, two modes: matches with the reference verdict</text>
+<text class="h m" x="268" y="72">Kipf</text>
+<text class="h m" x="268" y="88">GCN</text>
+<text class="h m" x="342" y="72">Wu</text>
+<text class="h m" x="342" y="88">SGC</text>
+<text class="h m" x="416" y="72">Zeng</text>
+<text class="h m" x="416" y="88">DLinear</text>
+<text class="h m" x="490" y="72">Zeng</text>
+<text class="h m" x="490" y="88">NLinear</text>
+<text class="h m" x="564" y="72">Shchur</text>
+<text class="h m" x="564" y="88">GCN</text>
+<text class="h m" x="638" y="72">Shchur</text>
+<text class="h m" x="638" y="88">GAT</text>
+<text class="h m" x="712" y="72">Veličković</text>
+<text class="h m" x="712" y="88">GAT</text>
+<text class="h m" x="786" y="72">DGI</text>
+<line class="ln" x1="28" x2="952" y1="100" y2="100"/>
+<text class="rl" x="28" y="128">Paper only</text><text class="rs m" x="28" y="144">benchmark v4, with Tavily (stored)</text><text class="rs m" x="28" y="160">majority of 3 generations</text>
+<g role="img" aria-label="Paper only, Kipf GCN: matched"><circle class="ok" cx="268" cy="138" r="15"/><path class="tick" d="M262 138 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper only, Wu SGC: missed"><circle class="miss" cx="342" cy="138" r="15"/><path class="dash" d="M337 138 h10"/></g>
+<g role="img" aria-label="Paper only, Zeng DLinear: missed"><circle class="miss" cx="416" cy="138" r="15"/><path class="dash" d="M411 138 h10"/></g>
+<g role="img" aria-label="Paper only, Zeng NLinear: missed"><circle class="miss" cx="490" cy="138" r="15"/><path class="dash" d="M485 138 h10"/></g>
+<g role="img" aria-label="Paper only, Shchur GCN: matched"><circle class="ok" cx="564" cy="138" r="15"/><path class="tick" d="M558 138 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper only, Shchur GAT: missed"><circle class="miss" cx="638" cy="138" r="15"/><path class="dash" d="M633 138 h10"/></g>
+<g role="img" aria-label="Paper only, Veličković GAT: missed"><circle class="miss" cx="712" cy="138" r="15"/><path class="dash" d="M707 138 h10"/></g>
+<g role="img" aria-label="Paper only, DGI: missed"><circle class="miss" cx="786" cy="138" r="15"/><path class="dash" d="M781 138 h10"/></g>
+<text class="big" x="884" y="146" text-anchor="middle">2 of 8</text>
+<text class="rl" x="28" y="204">Paper and authors' code</text><text class="rs m" x="28" y="220">recall cg v1, Super in all roles</text><text class="rs m" x="28" y="236">majority of 2 to 3 generations</text>
+<g role="img" aria-label="Paper and authors' code, Kipf GCN: matched"><circle class="ok" cx="268" cy="214" r="15"/><path class="tick" d="M262 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, Wu SGC: matched"><circle class="ok" cx="342" cy="214" r="15"/><path class="tick" d="M336 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, Zeng DLinear: matched"><circle class="ok" cx="416" cy="214" r="15"/><path class="tick" d="M410 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, Zeng NLinear: missed"><circle class="miss" cx="490" cy="214" r="15"/><path class="dash" d="M485 214 h10"/></g>
+<g role="img" aria-label="Paper and authors' code, Shchur GCN: matched"><circle class="ok" cx="564" cy="214" r="15"/><path class="tick" d="M558 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, Shchur GAT: matched"><circle class="ok" cx="638" cy="214" r="15"/><path class="tick" d="M632 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, Veličković GAT: matched"><circle class="ok" cx="712" cy="214" r="15"/><path class="tick" d="M706 214 l4.5 5 l8 -10"/></g>
+<g role="img" aria-label="Paper and authors' code, DGI: matched"><circle class="ok" cx="786" cy="214" r="15"/><path class="tick" d="M780 214 l4.5 5 l8 -10"/></g>
+<text class="big" x="884" y="222" text-anchor="middle">7 of 8</text>
+<line class="ln" x1="28" x2="952" y1="258" y2="258"/>
+<text class="rl" x="28" y="292">Held-out and controls</text><text class="rs m" x="28" y="310">RLinear was not used</text><text class="rs m" x="28" y="326">to design the fixes</text>
+<g role="img" aria-label="Held-out RLinear, paper and authors' code: missed"><circle class="miss" cx="268" cy="294" r="15"/><path class="dash" d="M263 294 h10"/></g>
+<text class="rs" x="296" y="299">RLinear 0 of 1 (0.487 and 0.432 against a target of 0.366)</text>
+<text class="rs" x="296" y="324">Placebo claims confirmed as reproduced: 0 of 9 (v4: 0 of 48)</text>
+<text class="fn w" x="28" y="364">Read with care: in-sample (fixes were designed after seeing these units), different mode and models, never added to the v4 count.</text>
+<text class="fn m" x="28" y="382">Method fidelity not checked. Three units were decided only by a third generation; one (NLinear) flipped to a miss.</text>
+</svg>

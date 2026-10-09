@@ -2,7 +2,7 @@
 # Startbefehl aus RTSF script.md:3 (ETTh1, 96) mit Seed-Kopie von run.py; nur `--model RLinear` statt `Linear` (siehe README), sonst identisch.
 # Aufruf: run_rtsf_seed.sh <seed>   (Umgebung: venv aktiv). Klon bleibt unveraendert (Kopie liegt ausserhalb, PYTHONPATH auf den Klon).
 set -euo pipefail
-W=/home/onuralp/Desktop/hackathon/prestudy_work
+W="${W:-$HOME/Desktop/hackathon/prestudy_work}"
 S=$(cd "$(dirname "$0")" && pwd)
 seed=$1
 cd $W/rtsf

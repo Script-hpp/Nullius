@@ -10,7 +10,7 @@ Basis-Snapshot bauen (rlinear-2023-20261009-024550) ...
 [rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (20s)
 [rlinear_etth1_96_mse] seed=0 versuch=1 abweichung measured=1.2943705955099625 (19s)
 [rlinear_etth1_96_mse] seed=1 versuch=1 abweichung measured=1.2943705955099625 (11s)
-Fertig. Bericht: /home/onuralp/orca/workspaces/research/tavily-ui/runs/rlinear_2023/20261009-024550/zeugnis.md | Kosten: 0.0000 $
+Fertig. Bericht: <worktree tavily-ui>/runs/rlinear_2023/20261009-024550/zeugnis.md | Kosten: 0.0000 $
 {
  "verdict": "Agenten-Fehler vermutet",
  "mean": 1.2943705955099625,
