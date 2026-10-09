@@ -172,6 +172,7 @@ class CandidatePaper:
     source_url: str | None = None           # Tavily-Treffer, ueber den das Paper gefunden wurde
     community: list[dict] = __import__('dataclasses').field(default_factory=list)   # Tavily-Hinweise, kein Urteil
     protocol: str = "unklar"                # "passt" (Zitat belegt) | "unklar" (Protokoll nicht belegt)
+    feasibility: str = "ok"                 # "ok" | "no_repo" (kein oeffentlicher Code: nur Paper-Nachbau)
 
     def to_dict(self):
         return {
@@ -187,6 +188,7 @@ class CandidatePaper:
             "source_url": self.source_url,
             "community": self.community or [],
             "protocol": self.protocol,
+            "feasibility": self.feasibility,
         }
 
 
@@ -195,15 +197,23 @@ DISCOVERY_QUERIES = {
     "Cora": [
         "node classification Cora Planetoid public split 140 training nodes test accuracy results table",
         "node classification Cora random splits Shchur largest connected component test accuracy results table",
+        "simple lightweight graph neural network Cora CiteSeer Planetoid semi-supervised node classification official code github",
     ],
     "ETTh1": [
         "long-term time series forecasting ETTh1 prediction length 96 192 336 720 12/4/4 months split MSE MAE results table",
+        "linear MLP lightweight forecaster ETTh1 look-back window 336 horizon 96 MSE MAE official code github",
     ],
     "CiteSeer": [
         "node classification CiteSeer Planetoid public split 120 training nodes test accuracy results table",
+        "simple graph neural network CiteSeer Cora Planetoid semi-supervised node classification official code github",
     ],
 }
-MAX_SEARCHES_PER_DATASET = 2
+MAX_SEARCHES_PER_DATASET = 3
+SEARCH_START_DATE = "2023-01-01"   # Jahre 2023-2026 (tavily_tools.curate_papers)
+MAX_EXTRACTS_PER_DATASET = 3
+MAX_CANDIDATES_PER_DATASET = 2
+CODE_HINT_RE = __import__("re").compile(r"github\.com|code (?:is |are )?(?:publicly )?available|open[- ]source|our code|official (?:code|implementation)", __import__("re").I)
+INFEASIBLE_REASON = "not CPU-feasible: pretraining/foundation model/external data"
 # Tavily-Extract-Frage: nur Abschnitte zu Protokoll und Ergebnis zurueckgeben.
 EXTRACT_QUERIES = {
     "Cora": "Cora node classification: data split (Planetoid public split 140 training nodes, or random splits / largest connected component), evaluation protocol, test accuracy",
@@ -319,6 +329,11 @@ class DiscoveryAgent:
             p.update(found.get(p["arxiv_id"], {}), found_by="tavily")
         return papers
 
+    @staticmethod
+    def _prefer_code(papers: list[dict]) -> list[dict]:
+        """Papers, deren Abstract oder Tavily-Ausschnitt oeffentlichen Code nennt, zuerst (stabil, ohne Aufruf)."""
+        return sorted(papers, key=lambda p: not CODE_HINT_RE.search((p.get("abstract") or "") + " " + (p.get("snippet") or "")))
+
     def _search_arxiv(self, dataset: str, max_results: int = 10) -> list[dict]:
         """Ersatzweg ohne Tavily-Treffer: neueste arXiv-Papers, die den Datensatz nennen."""
         query = f'all:"{dataset}" AND (all:"node classification" OR all:"graph neural network" OR all:"time series" OR all:"forecasting" OR all:"recommendation")'
@@ -347,6 +362,9 @@ class DiscoveryAgent:
             "never a baseline and never a relative improvement (no 'reduction percent'). "
             "Choose the best or the highlighted result of the main configuration of the proposed method; "
             "never an ablation and never a restricted variant (for example 'frozen', 'w/o ...', 'without ...', 'linear probe'). "
+            "FEASIBILITY RULE: We only test methods that can be trained from scratch on CPU in <10 minutes. "
+            "If the method uses pretraining, is a Foundation Model, or requires external data/weights, you MUST reply with "
+            "exactly {\"infeasible\": \"<short reason>\"} and nothing else. "
             "Reply with keys: "
             "'method' (name of the proposed method exactly as written in the quote), "
             "'quote' (a VERBATIM excerpt copied from the text that names the method and gives the number), "
@@ -436,7 +454,8 @@ class DiscoveryAgent:
         return {"type": "candidate", "arxiv_id": paper.arxiv_id, "cached": cached, "title": paper.title,
                 "dataset": paper.dataset, "claim": paper.claim, "reason": paper.reason, "found_by": paper.found_by,
                 "community_hits": len(paper.community), "protocol": paper.protocol,
-                "github_url": paper.github_url, "source_url": paper.source_url}
+                "github_url": paper.github_url, "source_url": paper.source_url,
+                "feasibility": "ok" if paper.github_url else "no_repo"}
 
     def _fetch_readme(self, repo_url: str) -> str:
         """Fetch README from github repo."""
@@ -586,7 +605,8 @@ class DiscoveryAgent:
                 with open(cache_file, "r") as f:
                     loaded = json.load(f)
                 cache = {k: v for k, v in loaded.items()
-                         if isinstance(v, dict) and v.get("cache_version") == CACHE_VERSION}
+                         if isinstance(v, dict) and v.get("cache_version") == CACHE_VERSION
+                         and not (v.get("status") == "rejected" and v.get("reason") == NO_REPO_REASON)}   # frueher hart abgelehnt, jetzt markiert
             except Exception:
                 pass
                 
@@ -633,10 +653,11 @@ class DiscoveryAgent:
                 emit({"type": "reject", "dataset": ds, "reason": "No results found on arXiv", "stage": "prefilter"})
                 continue
                 
+            papers = self._prefer_code(papers)
             dataset_candidates = 0
             extracts_count = 0
             for p in papers:
-                if dataset_candidates >= 2:
+                if dataset_candidates >= MAX_CANDIDATES_PER_DATASET:
                     break
                 cache_key = p["arxiv_id"]
                 if cache_key in cache:
@@ -662,8 +683,8 @@ class DiscoveryAgent:
                     
                 html_url = f"https://arxiv.org/html/{cache_key}"
                 
-                if extracts_count >= 3:
-                    emit({"type": "warning", "dataset": ds, "message": "Max 3 Tavily extracts reached."})
+                if extracts_count >= MAX_EXTRACTS_PER_DATASET:
+                    emit({"type": "warning", "dataset": ds, "message": f"Max {MAX_EXTRACTS_PER_DATASET} Tavily extracts reached."})
                     break
                     
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
@@ -701,6 +722,12 @@ class DiscoveryAgent:
                     continue
                 if claim_data.get("llm_unreadable"):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "LLM-Antwort nicht lesbar", "stage": "extract"})
+                    continue
+
+                if claim_data.get("infeasible"):
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": INFEASIBLE_REASON, "stage": "feasibility",
+                          "detail": str(claim_data["infeasible"])[:200]})
+                    _update_cache(cache_key, {"status": "rejected", "reason": INFEASIBLE_REASON})
                     continue
 
                 if not claim_data:
@@ -839,6 +866,7 @@ class DiscoveryAgent:
                     source_url=p.get("source_url"),
                     community=community,
                     protocol=protocol,
+                    feasibility="ok" if github_url else "no_repo",
                 )
                 emit(self._candidate_event(paper, cached=False))
                 candidates.append(paper)

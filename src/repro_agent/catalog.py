@@ -98,7 +98,7 @@ def read_event_candidates(path: Path) -> list[tuple[dict, str]]:
 
 
 def entry_from_candidate(c: dict, source: str) -> dict:
-    keep = ("dataset", "claim", "github_url", "source_url", "protocol", "found_by", "reason", "community")
+    keep = ("dataset", "claim", "github_url", "feasibility", "source_url", "protocol", "found_by", "reason", "community")
     return {
         "id": catalog_id(c["arxiv_id"]), "arxiv_id": c["arxiv_id"], "title": c["title"],
         "status": UNCHECKED, "imported_from": source,
@@ -214,10 +214,17 @@ def discovery_details(paper: dict):
 
 
 # ---- Reihenfolge (E5) und Status -----------------------------------------------
+def no_repo(entry: dict) -> bool:
+    """Kandidat ohne oeffentlichen Code (Discovery-Markierung feasibility=no_repo; aeltere Eintraege ohne Markierung zaehlen nicht)."""
+    return entry["candidate"].get("feasibility") == "no_repo"
+
+
 def order_key(entry: dict) -> tuple[int, str]:
     """1: Protokoll belegt + Spalte geprueft + Code, 2: Protokoll belegt ohne Code, 3: Rest."""
     cand = entry["candidate"]
     strong = cand.get("protocol") == "passt"
+    if no_repo(entry):
+        return 4, entry["arxiv_id"]   # ohne oeffentlichen Code ans Ende
     if strong and (cand.get("claim") or {}).get("column_check") == "ok":
         tier = 1 if cand.get("github_url") else 2
     else:

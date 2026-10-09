@@ -756,6 +756,7 @@ def test_repo_score_zero_gives_no_repo(monkeypatch, arxiv_xml, tmp_path):
     result = agent.discover(["Cora"], on_event=events.append)
     assert len(result) == 1
     assert result[0].github_url is None and result[0].reason == "kein passendes Repo gefunden"
+    assert result[0].feasibility == "no_repo"
     assert not any(e.get("stage") == "repo" for e in events)
 
 
@@ -763,6 +764,8 @@ def test_no_repo_at_all_is_candidate(monkeypatch, arxiv_xml, tmp_path):
     result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
     assert len(result) == 1 and result[0].github_url is None
     assert result[0].reason == "kein passendes Repo gefunden"
+    assert result[0].feasibility == "no_repo"
+    assert result[0].to_dict()["feasibility"] == "no_repo"
 
 
 def test_queries_contain_protocol_terms():
@@ -775,7 +778,7 @@ def test_queries_contain_protocol_terms():
     assert "planetoid" in EXTRACT_QUERIES["Cora"].lower() and "12/4/4" in EXTRACT_QUERIES["ETTh1"]
 
 
-def test_max_two_searches_and_dedup(monkeypatch, tmp_path):
+def test_max_searches_and_dedup(monkeypatch, tmp_path):
     class TwoQ(FakeTavily):
         def __init__(self, repos=None):
             super().__init__(repos)
@@ -794,10 +797,11 @@ def test_max_two_searches_and_dedup(monkeypatch, tmp_path):
     tavily = TwoQ(repos=["https://github.com/foo/bar"])
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=tavily, cache_path=str(tmp_path / "c.json"))
     agent.discover(["Cora"])
-    assert len(tavily.paper_queries) == 2
-    assert tavily.paper_queries[0] != tavily.paper_queries[1]
+    from repro_agent.discovery import MAX_SEARCHES_PER_DATASET
+    assert len(tavily.paper_queries) == MAX_SEARCHES_PER_DATASET == 3
+    assert len(set(tavily.paper_queries)) == 3
     ids = urls[0]["id_list"].split(",")
-    assert ids.count("2101.12345") == 1 and len(ids) == 3
+    assert ids.count("2101.12345") == 1 and len(ids) == 4
 
 
 def test_prompt_contains_protocol_hints(monkeypatch, arxiv_xml, tmp_path):
@@ -1167,7 +1171,7 @@ def test_fresh_candidate_event_carries_card_fields(monkeypatch, tmp_path):
 def test_candidate_event_without_repo_has_null_github_url(monkeypatch, arxiv_xml, tmp_path):
     result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
     cand = [e for e in events if e.get("type") == "candidate"][0]
-    assert cand["github_url"] is None
+    assert cand["github_url"] is None and cand["feasibility"] == "no_repo"
 
 
 # ---- Y1 zeilenweise Zitate, Y2 Spaltenpruefung, Y3 zweiter LLM-Versuch ----
@@ -1324,3 +1328,54 @@ def test_prompt_passt_nicht_only_if_no_supported_protocol_matches():
     DiscoveryAgent(llm=Rec(), tavily=FakeTavily())._extract_claim("t", "Cora")
     assert "matches NONE of the supported protocols" in Rec.prompts[0]
     assert "answer \"passt\" with that task" in Rec.prompts[0]
+
+
+# ---- Machbarkeit (CPU) und Repo-Markierung ----
+
+def _run_with_llm(monkeypatch, arxiv_xml, tmp_path, llm):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(arxiv_xml))
+    cache_file = str(tmp_path / "c.json")
+    agent = DiscoveryAgent(llm=llm, tavily=FakeTavily(repos=["https://github.com/foo/bar"]), cache_path=cache_file)
+    events = []
+    return agent.discover(["Cora"], on_event=events.append), events, cache_file
+
+
+def test_infeasible_answer_is_clean_reject_and_cached(monkeypatch, arxiv_xml, tmp_path):
+    from repro_agent.discovery import INFEASIBLE_REASON
+    llm = FakeLLM(claim_content='{"infeasible": "pretrained foundation model"}')
+    result, events, cache_file = _run_with_llm(monkeypatch, arxiv_xml, tmp_path, llm)
+    assert result == []
+    rej = [e for e in events if e.get("type") == "reject"]
+    assert any(e["reason"] == INFEASIBLE_REASON and e["stage"] == "feasibility" for e in rej)
+    assert not any(e["reason"] in ("LLM-Antwort nicht lesbar", "No numerical claim found") for e in rej)
+    cached = _read_cache(cache_file)
+    assert cached["2101.12345"]["status"] == "rejected" and cached["2101.12345"]["reason"] == INFEASIBLE_REASON
+
+
+def test_prompt_has_feasibility_rule(monkeypatch, arxiv_xml, tmp_path):
+    class Spy(FakeLLM):
+        def complete(self, role, messages, **kw):
+            Spy.prompt = messages[0]["content"]
+            return super().complete(role, messages, **kw)
+    _run_with_llm(monkeypatch, arxiv_xml, tmp_path, Spy())
+    assert "FEASIBILITY RULE" in Spy.prompt and "infeasible" in Spy.prompt
+
+
+def test_old_hard_no_repo_reject_is_rechecked(monkeypatch, arxiv_xml, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"2101.12345": {"status": "rejected", "reason": "kein passendes Repo gefunden", "cache_version": 3}}))
+    result, events, _ = _run(monkeypatch, arxiv_xml, tmp_path, FakeLLM().claim_content, repos=())
+    assert len(result) == 1 and result[0].feasibility == "no_repo"
+
+
+def test_papers_mentioning_code_come_first():
+    papers = [{"abstract": "x", "snippet": ""}, {"abstract": "Code is available at https://github.com/a/b", "snippet": ""}]
+    assert DiscoveryAgent._prefer_code(papers)[0] is papers[1]
+
+
+def test_search_covers_all_datasets_and_stays_bounded():
+    from repro_agent.discovery import DISCOVERY_QUERIES, MAX_SEARCHES_PER_DATASET
+    assert set(DISCOVERY_QUERIES) == {"Cora", "CiteSeer", "ETTh1"}
+    assert all(1 <= len(q) <= MAX_SEARCHES_PER_DATASET <= 3 for q in DISCOVERY_QUERIES.values())
+    assert any("github" in q for q in DISCOVERY_QUERIES["Cora"])
+    assert any("linear" in q.lower() for q in DISCOVERY_QUERIES["ETTh1"])

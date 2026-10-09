@@ -176,7 +176,7 @@ class TavilyTools:
         return self._note(8, "search", query, self._client.search(
             query=query,
             include_domains=["arxiv.org", "openreview.net"],
-            time_range="year",
+            start_date="2023-01-01",   # 2023-2026
             search_depth="advanced",
             max_results=max_results,
         ))

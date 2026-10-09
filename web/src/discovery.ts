@@ -91,6 +91,7 @@ export function humanReject(stage: string | undefined, reason: string | undefine
     [/target value not found/i, 'The number is not contained in the quote.'],
     [/metrik nicht messbar/i, 'The metric cannot be measured by our tasks (for example a relative improvement).'],
     [/another column/i, 'The number sits in another column of the results table, not in the proposed method column.'],
+    [/not cpu-feasible/i, 'Needs pretraining, a foundation model or external data; we only re-run methods that train from scratch on CPU.'],
     [/horizont nicht/i, 'The number is not for prediction horizon 96, which is the one we can re-run.'],
   ]
   for (const [re, text] of table) if (re.test(r)) return text
@@ -104,6 +105,7 @@ export const STAGE_LABEL: Record<string, string> = {
   protocol: 'Protocol check',
   quote: 'Quote check',
   number: 'Number check',
+  feasibility: 'Feasibility check',
 }
 
 export function deriveView(events: DEvent[]): DiscoveryView {
@@ -120,7 +122,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
   let cachedLlmCalls = 0
   let costUsd = 0
   let tavilyCalls = 0
-  const rejects: Record<string, number> = { prefilter: 0, extract: 0, protocol: 0, quote: 0, number: 0 }
+  const rejects: Record<string, number> = { prefilter: 0, extract: 0, protocol: 0, quote: 0, number: 0, feasibility: 0 }
   let extractingCount = 0
   let candidates = 0
   let activeId: string | null = null

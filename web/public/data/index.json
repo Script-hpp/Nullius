@@ -86,5 +86,50 @@
   "seeds": 3,
   "catalog_id": "disc_1609_02907",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_1609_02907--20261009-160716",
+  "paper_id": "disc_1609_02907",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20261009-160716",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_1609_02907",
+  "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_1609_02907_citeseer--20261009-162142",
+  "paper_id": "disc_1609_02907_citeseer",
+  "title": "Semi-Supervised Classification with Graph Convolutional Networks",
+  "timestamp": "20261009-162142",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_1609_02907_citeseer",
+  "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_1811_05868--20261009-163701",
+  "paper_id": "disc_1811_05868",
+  "title": "Pitfalls of Graph Neural Network Evaluation",
+  "timestamp": "20261009-163701",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_1811_05868",
+  "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2511_08094--20261009-165248",
+  "paper_id": "disc_2511_08094",
+  "title": "Stuart-Landau Oscillatory Graph Neural Network",
+  "timestamp": "20261009-165248",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2511_08094",
+  "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2601_18837--20261009-173311",
+  "paper_id": "disc_2601_18837",
+  "title": "Time series forecasting with Hahn Kolmogorov-Arnold networks",
+  "timestamp": "20261009-173311",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2601_18837",
+  "gesamtaussage": "nicht reproduzierbar (Setup)"
  }
 ]

@@ -136,7 +136,7 @@ candidates:
 - id: disc_2601_18837
   arxiv_id: '2601.18837'
   title: Time series forecasting with Hahn Kolmogorov-Arnold networks
-  status: ungeprueft
+  status: geprueft
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: ETTh1
@@ -190,6 +190,23 @@ candidates:
 
         back arrowGo to **ICLR 2026 Conference** homepage. ## AdaKAN: Kolmogorov-Arnold Networks with Adaptive Spectral Decomposition
         for Time Series Forecasting. ### Yuhan Wu, Xiyu Meng, '
+  checked_at: '2026-10-09T15:51:19Z'
+  cost_gross_usd: 0.4113
+  verdict:
+    urteil: nicht reproduzierbar (Setup)
+    measured_mean: null
+    measured_std: null
+    seeds: 0
+    target: 0.369
+    tolerance: 0.01
+    gesamtaussage: nicht reproduzierbar (Setup)
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2601_18837/20261009-173311
+  jury:
+    ready: false
+    reason: 'Gesamtaussage: nicht reproduzierbar (Setup)'
 - id: disc_2601_21866
   arxiv_id: '2601.21866'
   title: 'MoHETS: Long-term Time Series Forecasting with Mixture-of-Heterogeneous-Experts'

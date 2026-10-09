@@ -261,7 +261,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
               <a href={p.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
                 <Code className="w-3.5 h-3.5" />Code
               </a>
-            ) : <span className="text-subtle">No code found</span>}
+            ) : <span className="text-subtle" title="The paper is rebuilt from its text alone">No public code – paper-only rebuild</span>}
             <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
               <BookOpen className="w-3.5 h-3.5" />arXiv
             </a>
