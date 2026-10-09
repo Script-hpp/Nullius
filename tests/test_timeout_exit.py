@@ -162,3 +162,19 @@ def test_attempt_log_records_exception(tmp_path):
     cg_gate.log_attempt(log, threading.Lock(), "code", 0, 1.23, None, RuntimeError("sandbox down"))
     row = json.loads(log.read_text())
     assert row["status"] == "exception" and "RuntimeError: sandbox down" in row["detail"]
+
+
+def test_long_stack_keeps_the_innermost_frames_and_drops_coverage_frames():
+    """Nachtrag nach G1: das Kuerzen vom Ende verlor die innersten Frames (faulthandler nennt sie zuerst)."""
+    from repro_agent.loop import STACK_CHARS, trim_stack
+    inner = ('Fatal Python error: Aborted\n\nCurrent thread 0x1 (most recent call first):\n'
+             '  File "/work/train.py", line 5 in attention\n  File "/usr/local/lib/python3.11/site-packages/torch/nn/module.py", line 1 in _call_impl\n')
+    noise = "".join(f'  File "/usr/local/lib/python3.11/site-packages/torch/x{i}.py", line {i} in f{i}\n' for i in range(80))
+    wrapper = ('  File "/usr/local/lib/python3.11/site-packages/coverage/execfile.py", line 222 in run\n  File "<frozen runpy>", line 88 in _run_code\n')
+    dump = inner + noise + wrapper
+    assert len(dump) > STACK_CHARS
+    out = trim_stack(dump)
+    assert len(out) <= STACK_CHARS and 'File "/work/train.py", line 5 in attention' in out
+    assert "coverage" not in out and "frozen runpy" not in out
+    text = timeout_report({"stack": out}, LOOP_CODE, 600)
+    assert "in `attention` at train.py line 5: `for i in range(len(x)):`" in text

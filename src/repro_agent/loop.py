@@ -233,6 +233,14 @@ STAY_FAST_NOTE = (
 )
 STACK_CHARS = 1200
 STDOUT_CHARS = 400
+
+
+def trim_stack(dump: str) -> str:
+    """faulthandler listet die innersten Frames ZUERST: vom Anfang kuerzen (nie vom Ende), Frames der Abdeckungsmessung und des Modul-Starters weglassen."""
+    lines = [ln for ln in dump.splitlines() if "/site-packages/coverage/" not in ln and "<frozen runpy>" not in ln]
+    return "\n".join(lines)[:STACK_CHARS]
+
+
 _FRAME_RE = re.compile(r'File "([^"]+)", line (\d+) in (\S+)')
 
 
@@ -246,7 +254,7 @@ def timeout_report(res: dict, code: str, limit: int) -> str:
         inner = next(((int(n), fn) for f, n, fn in _FRAME_RE.findall(stack) if f.endswith("train.py")), None)
         if inner and 1 <= inner[0] <= len(lines):
             parts.append(f"When the limit hit, the script was in `{inner[1]}` at train.py line {inner[0]}: `{lines[inner[0] - 1].strip()[:160]}`.")
-        parts.append("Python stack at the time limit (most recent call first):\n" + stack[-STACK_CHARS:])
+        parts.append("Python stack at the time limit (most recent call first):\n" + stack[:STACK_CHARS])
     tail = (res.get("stdout_tail") or "").strip()
     parts.append(("Last output of the script before the limit:\n" + tail[-STDOUT_CHARS:]) if tail
                  else "The script printed nothing before the limit (print progress per epoch to see the speed).")
@@ -741,7 +749,7 @@ class Orchestrator:
             if not r.timed_out:
                 err = r.stderr or ""
                 i = err.find("Fatal Python error")
-                out["stack"] = (err[i:] if i >= 0 else err)[-STACK_CHARS:]
+                out["stack"] = trim_stack(err[i:] if i >= 0 else err)
                 out["stdout_tail"] = (r.stdout or "")[-STDOUT_CHARS:]
             return out
         if r.exit_code != 0:
