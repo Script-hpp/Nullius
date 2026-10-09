@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SCRIPT_TEXTS } from './scriptData'
-import { HERO_TEXT, WRITE_MS, ease, prefersReducedMotion } from './config'
+import { HERO_TEXT, WRITE_MS, ease, prefersReducedMotion, heroSeen, markHeroSeen } from './config'
 
 // Handwritten lettering that is drawn stroke by stroke (stroke-dashoffset), in writing order, at constant pen speed
-// with an eased start and end. Reduced motion: the finished lettering at once.
+// with an eased start and end. Reduced motion and repeat visits in one session: the finished lettering at once.
 export function WrittenText({ variant = HERO_TEXT, onDone, className = '' }: { variant?: keyof typeof SCRIPT_TEXTS; onDone?: () => void; className?: string }) {
   const t = SCRIPT_TEXTS[variant]
-  const reduce = useMemo(() => prefersReducedMotion(), [])
+  const reduce = useMemo(() => prefersReducedMotion() || heroSeen(), [])
   const ref = useRef<SVGSVGElement>(null)
   const [width, setWidth] = useState(0)
   const [settled, setSettled] = useState(reduce)
@@ -38,7 +38,8 @@ export function WrittenText({ variant = HERO_TEXT, onDone, className = '' }: { v
 
   useEffect(() => {
     if (reduce) { doneRef.current?.(); return }
-    const a = window.setTimeout(() => { setSettled(true); doneRef.current?.() }, WRITE_MS + 150)
+    markHeroSeen()
+    const a = window.setTimeout(() => { setSettled(true); doneRef.current?.() }, WRITE_MS + 100)
     return () => window.clearTimeout(a)
   }, [reduce])
 
