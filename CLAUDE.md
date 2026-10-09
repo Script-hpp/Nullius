@@ -15,7 +15,7 @@ Einreichung muss auf Nebius Token Factory laufen und mindestens ein NVIDIA-Model
 | LLM-Anbieter | OpenRouter, kostenlose NVIDIA-Endpunkte | Nebius Token Factory |
 | Basis-URL | `https://openrouter.ai/api/v1` | `https://api.tokenfactory.nebius.com/v1/` |
 | Kosten | 0 $ | aus 25 $ Guthaben |
-| Ultra verfügbar | Nein, Rolle `reasoning` nutzt Super | Ja |
+| Ultra verfügbar | Nein, Rolle `reasoning` nutzt Super | Nein, seit 2026-10-09 von Token Factory entfernt (404); `reasoning` nutzt Super |
 | Zuverlässigkeit | niedrig (ca. 91 % Uptime, ~36 Token/s, Rate Limits) | hoch |
 | Sandbox | `nebius` (Beta genehmigt, kostenlos) | `nebius` (Pflicht) |
 | Tavily | vorhandener API-Key | vorhandener API-Key |
@@ -45,7 +45,7 @@ NEBIUS_API_KEY=
 NEBIUS_PROJECT_ID=
 TF_MODEL_FAST=nvidia/Nemotron-3_5-Lightning        # geprueft via GET /v1/models, 2026-09-28
 TF_MODEL_CODE=nvidia/nemotron-3-super-120b-a12b
-TF_MODEL_REASONING=nvidia/Nemotron-3-Ultra-550b-a55b
+TF_MODEL_REASONING=nvidia/nemotron-3-super-120b-a12b   # Ultra bis 2026-10-09, dann von Token Factory entfernt (404)
 
 # ---- Tavily ----
 TAVILY_API_KEY=
@@ -107,7 +107,7 @@ Grundprinzip: Nemotron ist Gehirn, Sandbox ist Labor, Tavily ist Rechercheur, Or
 |---|---|---|---|
 | `fast` | Log-Parsing, Triage, Ergebnis auswerten | Lightning (free) | Nano oder Lightning |
 | `code` | Experiment-Code schreiben und reparieren | Super (free) | Super |
-| `reasoning` | Forschungsplan, Hypothesen, Endurteil | Super (free) | Ultra, nur mit verdichteter Forschungsakte |
+| `reasoning` | Forschungsplan, Hypothesen, Endurteil | Super (free) | Super, nur mit verdichteter Forschungsakte (Ultra bis 2026-10-09; Benchmark v2–v4 liefen mit Ultra für `reasoning`, recall cg v1 und G0/G1 mit Super überall) |
 
 ### Sandbox-Adapter
 
@@ -184,7 +184,7 @@ Kernidee für Tavily-Preis (ursprünglich): Tavily-Funde werden zu Experimenten.
 
 **Modus „Nachbau“** (einziger gebauter Modus): Der Agent schreibt eigenen Code und übernimmt nur belegte Angaben aus Paper und Repo. Das Original-Repo liegt nie in einem Agenten-Branch, es wird nur in einem eigenen Lese-Snapshot des Orchestrators geklont (Commit im Dossier). „Nachlauf“ (Original-Code ausführen) prüft etwas anderes; er ist als Experiment gebaut (`nachlauf*.py`, `scripts/run_nachlauf.py`), trägt aber nur an den zwei Entwicklungs-Einheiten (RLinear, DLinear) und scheiterte an vier neuen Einheiten zweimal mit 0 von 4 (`results/nachlauf_v1.md`). Nicht im Produkt, nicht in der API, nicht bewerben; kein dritter Versuch. Modus steht im Dossier und im Zeugnis.
 
-**Rolle 4 (Setup-Details):** Quellen sind Paper-Text, README (Tavily Extract) und vom LLM gewählte Repo-Dateien (Sandbox-`git clone`). Extraktion abschnittsweise mit Rolle `extract` (= Modell von `code`, Super; Ultra nur für Plan und Endurteil). Jede Angabe braucht ein wörtliches Zitat, das im jeweiligen Dokument vorkommt, sonst wird sie verworfen. Jede Angabe trägt ihre Quelle.
+**Rolle 4 (Setup-Details):** Quellen sind Paper-Text, README (Tavily Extract) und vom LLM gewählte Repo-Dateien (Sandbox-`git clone`). Extraktion abschnittsweise mit Rolle `extract` (= Modell von `code`, Super; Plan und Endurteil bis 2026-10-09 Ultra, seitdem ebenfalls Super). Jede Angabe braucht ein wörtliches Zitat, das im jeweiligen Dokument vorkommt, sonst wird sie verworfen. Jede Angabe trägt ihre Quelle.
 
 **Rolle 2 Grenze:** Der Check belegt, dass Zitat und Zahl im Text stehen, nicht die Spalten-/Zeilenzuordnung. Fehlt der Methodenname im Zitat, steht im Zeugnis eine Warnung.
 
@@ -284,7 +284,7 @@ Verfügbar: Token Factory laut Konsole 30,74 $ (Stand 2026-10-02, Builders-Gutha
 - Log-Felder pro Aufruf: `provider`, `base_url`, `model`, `prompt_tokens`, `completion_tokens` (aus `usage` der API, nie geschätzt; Reasoning-Tokens sind enthalten, zusätzlich `reasoning_tokens`), `cache_hit`, `finish_reason`, `status` (`ok`/`bad_response`/`cached`), `cost_usd` netto. Leere, aber bezahlte Antworten werden mitgeloggt.
 - Versuchs-Limit: `MAX_ATTEMPTS_PER_CLAIM=4`
 - Kosten-Log: jeder Aufruf mit Modell, Tokens, geschätzten Kosten in `logs/costs.jsonl`
-- Ultra nur für Plan und Endurteil
+- Plan und Endurteil: bis 2026-10-09 Ultra, seit der Entfernung durch Token Factory Super (kein Code setzt Ultra voraus)
 - Tavily Crawl immer mit `limit`, Research max 1× pro Paper
 - Tavily-Key ist scharf (echtes Kontingent) — auch beim Entwickeln/Testen sparsam einsetzen, nicht in Schleifen oder Smoke-Tests verballern
 - Usage-Seite in TF-Konsole wöchentlich prüfen
