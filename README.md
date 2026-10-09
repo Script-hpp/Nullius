@@ -125,7 +125,7 @@ Each page below is a screenshot of the current web app (`web/`, light and dark t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/benchmark-dark.jpg">
-  <img src="docs/img/benchmark.jpg" alt="Benchmark page: 0 of 48 wrong claims certified, 7 of 7 reproduced verdicts agree with the reference, 2 of 8 papers rebuilt">
+  <img src="docs/img/benchmark.jpg" alt="Benchmark page: precision first (0 of 48 and 0 of 9 wrong claims certified), then two separate modes: 2 of 8 from the paper only, 7 of 8 in-sample with the authors code">
 </picture>
 
 ## How it works

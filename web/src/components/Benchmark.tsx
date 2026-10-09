@@ -1,6 +1,7 @@
 import { CheckCircle2, MinusCircle, ShieldCheck, BadgeCheck, Target } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
+import { TwoModes } from './TwoModes'
 import { NextStep, PageIntro } from './page'
 import { useBenchmark, type BenchArm, type BenchUnit, type BenchVersion } from '../benchmark'
 import { RESULT, de2en } from '../labels'
@@ -172,13 +173,14 @@ export function Benchmark() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
-        what="We ran the whole procedure on papers whose results are known and counted how often Nullius agrees with the known result, with and without Tavily."
-        look={latest ? 'Read the three numbers first. The table per paper and claim sits below them; a check mark there means that arm matched the reference verdict.' : 'Results are published here once the evaluation has run. Until then, read how the benchmark works.'} />
+        what="We ran the whole procedure on papers whose results are known and counted how often Nullius agrees with the known result, in two modes: reading the paper only, and reading the paper and the authors' code."
+        look={latest ? 'Start with precision: no wrong claim was ever certified. The two mode columns follow; the pre-registered paper-only evaluation sits below.' : 'Results are published here once the evaluation has run. Until then, read how the benchmark works.'} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>
         : latest ? (
           <>
+            <TwoModes />
             <section aria-label={`Benchmark ${latest.id}`}>
-              <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Latest evaluation · {latest.id}</div>
+              <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
               <Tiles v={latest} older={older} />
               <details className="group mt-12 border-t border-line pt-6">
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Table per paper and claim</summary>

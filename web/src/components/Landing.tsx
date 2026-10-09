@@ -3,6 +3,7 @@ import { ArrowRight, ChevronDown, Play } from 'lucide-react'
 import { ThemeSwitch } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
 import { useBenchmark } from '../benchmark'
+import { FIGURES, HELD_OUT } from '../data/benchmark'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 import { FEATURED_RUN_ID } from '../featured'
@@ -174,13 +175,13 @@ function Footer() {
           <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Does it work?</h2>
           <p className="mb-0 mt-5 text-lg leading-relaxed text-fg-3">
             {sum?.placebo_total !== undefined && sum.placebo_reproduced !== undefined ? (
-              <>We tested it on papers with known results. It never certified a wrong number: <span className="font-mono text-fg">{sum.placebo_reproduced} of {sum.placebo_total}</span> deliberately wrong claims passed. Rebuilding a paper from its text alone is harder: <span className="font-mono text-fg">{sum.agree_B} of {sum.n_units}</span> with Tavily, <span className="font-mono text-fg">{sum.agree_A} of {sum.n_units}</span> without.</>
+              <>We tested it on papers with known results. It never certified a wrong number: <span className="font-mono text-fg">{sum.placebo_reproduced} of {sum.placebo_total}</span> deliberately wrong claims passed (and {FIGURES.placebo.cg[0]} of {FIGURES.placebo.cg[1]} in the authors&rsquo;-code run). How often it reaches the target depends on what it may read: <span className="font-mono text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</span> units from the paper alone, <span className="font-mono text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</span> with the authors&rsquo; code (in-sample; held-out {HELD_OUT.matched} of {HELD_OUT.of}). Two measurements, never added up.</>
             ) : (
-              <>We tested it on papers with known results: <span className="font-mono text-fg">{sum ? `${sum.agree_B} of ${sum.n_units}` : 'TBD'}</span> claims matched the reference verdict with Tavily, <span className="font-mono text-fg">{sum ? `${sum.agree_A} of ${sum.n_units}` : 'TBD'}</span> without it.</>
+              <>We tested it on papers with known results: <span className="font-mono text-fg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</span> units matched from the paper alone, <span className="font-mono text-fg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</span> with the authors&rsquo; code (in-sample).</>
             )}
           </p>
           <p className="mb-0 mt-4 max-w-md text-[13px] leading-relaxed text-muted">
-            A match means the target value was reached. Whether the method matches the paper is not checked yet. <a href="#benchmark" className="text-fg-3 underline underline-offset-4 hover:text-fg">How the benchmark works</a>
+            A match means the target value was reached; method fidelity is not checked. <a href="#benchmark" className="text-fg-3 underline underline-offset-4 hover:text-fg">How the benchmark works</a>
           </p>
         </div>
         <div className="md:border-l md:border-line md:pl-14">
