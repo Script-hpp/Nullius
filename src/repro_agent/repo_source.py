@@ -163,23 +163,92 @@ def _last_string_list(content: str) -> list[str]:
     return []
 
 
+def _resolve_paths(raw: list[str], listing: list[str]) -> list[str]:
+    """Antwort-Pfade auf exakte Pfade der Dateiliste abbilden: Anfuehrungszeichen/Backticks, `./`, `/repo/` und Gross-/Kleinschreibung
+    toleriert. Unbekannte Pfade fallen weg, Reihenfolge und Eindeutigkeit bleiben."""
+    valid, lower, out = set(listing), {p.lower(): p for p in listing}, []
+    for r in raw:
+        cand = r.strip().strip("`'\"").removeprefix("/repo/").removeprefix("./").lstrip("/")
+        hit = cand if cand in valid else lower.get(cand.lower())
+        if hit and hit not in out:
+            out.append(hit)
+    return out
+
+
+def _mentioned_paths(content: str, listing: list[str]) -> list[str]:
+    """Letzter Ausweg bei Antworten ohne JSON-Liste: Pfade der Dateiliste, die im Text vorkommen (Reihenfolge des ersten Auftretens)."""
+    found = sorted((content.find(p), p) for p in listing if len(p) > 3 and p in content)
+    return [p for _, p in found]
+
+
 def select_files(llm: LLMClient, listing: list[str], claim_text: str, dataset: str, focus_model: bool = False) -> list[str]:
-    resp = llm.complete("extract", [
-        {"role": "system", "content": "You pick files from a code repository. Keep reasoning brief."},
-        {"role": "user", "content": (
-            f"A reproducer wants to re-implement this result: {claim_text} (dataset: {dataset}).\n"
-            f"From the file list below, pick up to {MAX_FILES} files that most likely state how the "
-            "experiment is set up: run scripts/configs for this dataset, argument definitions with "
-            "defaults, the training loop, the data loader/splits, learning-rate or scheduler "
-            "utilities, README. "
-            + ("Name the model of the goal in your choice: prefer files of that model and skip files that only concern other models "
-               "of the repository. " if focus_model else "")
-            + "Answer with a JSON list of exact paths from the list and end with it.\n\n"
-            + "\n".join(listing[:MAX_LISTING])
-        )},
-    ], temperature=0.0, max_tokens=6000, timeout_s=400)
-    valid = set(listing)
-    return [p for p in _last_string_list(resp.content) if p in valid][:MAX_FILES]
+    def ask(focus: bool, max_tokens: int) -> list[str]:
+        resp = llm.complete("extract", [
+            {"role": "system", "content": "You pick files from a code repository. Keep reasoning brief."},
+            {"role": "user", "content": (
+                f"A reproducer wants to re-implement this result: {claim_text} (dataset: {dataset}).\n"
+                f"From the file list below, pick up to {MAX_FILES} files that most likely state how the "
+                "experiment is set up: run scripts/configs for this dataset, argument definitions with "
+                "defaults, the training loop, the data loader/splits, learning-rate or scheduler "
+                "utilities, README. "
+                + ("Name the model of the goal in your choice: prefer files of that model and skip files that only concern other models "
+                   "of the repository. " if focus else "")
+                + "Answer with a JSON list of exact paths from the list and end with it.\n\n"
+                + "\n".join(listing[:MAX_LISTING])
+            )},
+        ], temperature=0.0, max_tokens=max_tokens, timeout_s=400)
+        return (_resolve_paths(_last_string_list(resp.content), listing) or _resolve_paths(_mentioned_paths(resp.content, listing), listing))[:MAX_FILES]
+
+    chosen = ask(focus_model, 6000)
+    # Live-Fund 2026-10-09 (Kipf GCN): eine Antwort ohne einen gueltigen Pfad ergab einen leeren Ausschnitt und den stillen Rueckfall auf
+    # "Nachbau aus Paper". Daher einmal neu fragen (schlichter Auftrag, mehr Platz), erst danach gibt read_repo eine Namensheuristik vor.
+    return chosen or ask(False, 9000)
+
+
+_SETUP_STEMS = {"train": 7, "main": 7, "run": 7, "trainer": 7, "experiment": 6, "exp": 6,
+                "layer": 4, "layers": 4, "utils": 4, "config": 4, "configs": 4, "args": 4, "options": 4, "metrics": 4, "inits": 4,
+                "data": 3, "dataset": 3, "datasets": 3, "loader": 3, "dataloader": 3, "preprocess": 3}
+_MODEL_STEMS = ("model", "models", "net", "nets", "network", "networks")
+
+
+def heuristic_model_files(listing: list[str], model: str) -> list[str]:
+    """Python-Dateien, die nach dem Modell oder nach Modellen heissen (gcn/models.py, models/NLinear.py), kuerzester Pfad zuerst."""
+    from .spec import DATA_DIR
+
+    m = model.lower()
+    hits = []
+    for p in listing:
+        stem = p.rsplit("/", 1)[-1][:-3].lower() if p.endswith(".py") else None
+        if stem is None or DATA_DIR.search(p) or re.search(r"(^|/)(tests?|examples?|docs?)/", p, re.I):
+            continue
+        if stem in _MODEL_STEMS or stem.endswith(("model", "models")) or (m and (stem == m or m in stem)):   # slmodel.py, base_model.py
+            hits.append(p)
+    return sorted(hits, key=lambda p: (p.rsplit("/", 1)[-1][:-3].lower() != m, len(p)))
+
+
+def heuristic_files(listing: list[str], model: str, dataset: str) -> list[str]:
+    """Namensheuristik ohne LLM, wenn die Dateiwahl keinen gueltigen Pfad liefert: README, Modelldatei, Trainingsskript, Schichten,
+    Hilfsmodule, Konfigurationen des Modells. Nie leer, solange das Repo Python-Dateien oder ein README hat."""
+    from .spec import BINARY_EXT, DATA_DIR
+
+    ds, m = dataset.lower(), model.lower()
+    score: dict[str, int] = {p: 8 for p in heuristic_model_files(listing, model)}
+    for p in listing:
+        if BINARY_EXT.search(p) or DATA_DIR.search(p) or re.search(r"(^|/)(tests?|examples?|docs?)/", p, re.I):
+            continue
+        name = p.rsplit("/", 1)[-1]
+        stem = name.rsplit(".", 1)[0].lower()
+        if "/" not in p and name.lower().startswith("readme"):
+            score[p] = max(score.get(p, 0), 9)
+        elif name.lower() == "requirements.txt":
+            score[p] = max(score.get(p, 0), 2)
+        elif p.endswith(".py"):
+            s_ = _SETUP_STEMS.get(stem, 0) + (3 if ds and ds in stem else 0)
+            if s_:
+                score[p] = max(score.get(p, 0), s_)
+        elif re.search(r"\.(ya?ml|json|conf|cfg|ini|toml)$", p, re.I) and ((m and m in name.lower()) or (ds and ds in name.lower())):
+            score[p] = max(score.get(p, 0), 3)
+    return sorted(score, key=lambda p: (-score[p], len(p)))[:MAX_FILES]
 
 
 IMPORT_CHAR_BUDGET = 120_000   # Steckbrief-Modus: importierte Dateien bis zu diesem Gesamtumfang statt fester Anzahl
@@ -192,7 +261,7 @@ def unit_fixture_name(url: str, unit_key: str) -> str:
 def read_repo(
     sandbox: Sandbox, llm: LLMClient, url: str, claim_text: str, dataset: str,
     fixture_dir: Path | None = None, focus_model: bool = False, unit_key: str | None = None, model: str | None = None,
-    mode: str = "fixture",
+    mode: str = "fixture", on_note=None,
 ) -> RepoDump:
     """Fixture zuerst; sonst klonen (Sandbox), Dateien waehlen (LLM), lesen, speichern (nicht bei mode="live").
 
@@ -222,6 +291,10 @@ def read_repo(
     commit = sandbox.get_file(branch, "/repo/.head_commit").decode().strip()
     listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
     chosen = select_files(llm, listing, claim_text, dataset, focus_model)
+    if not chosen:   # beide Antworten ohne gueltigen Pfad: Namensheuristik statt leerem Ausschnitt, sichtbar gemacht
+        chosen = heuristic_files(listing, model or "", dataset)
+        if on_note is not None:
+            on_note(f"Dateiwahl des Modells lieferte keinen gueltigen Pfad ({len(listing)} Dateien im Repo); Rueckfall auf Namensheuristik: {', '.join(chosen) or 'keine Datei'}")
     files = {}
 
     def read(paths):
@@ -240,6 +313,12 @@ def read_repo(
                 chosen = [mf] + chosen
             chosen = chosen + [c for c in model_config_in_listing(listing, model) if c not in chosen]
         read(chosen)
+        if model:   # Modellklasse fehlt in der Auswahl (z. B. nur train.py gewaehlt): Dateien namens models.py/<Modell>.py nachladen
+            from .setup_details import Doc
+            from .spec import model_files
+
+            if not model_files([Doc(f"repo:{p}", t) for p, t in files.items()], model):
+                read([p for p in heuristic_model_files(listing, model) if p not in files][:2])
         for _ in range(2):   # zwei Ebenen
             budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
             nxt = []

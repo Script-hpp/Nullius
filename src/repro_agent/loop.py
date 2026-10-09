@@ -1022,7 +1022,7 @@ class Orchestrator:
         try:
             unit = getattr(self, "_paper_id", None) if getattr(self, "spec_mode", False) else None   # S4: Fixture je Einheit
             dump = read_repo(self.sandbox, self.llm, url, claim_text, dataset, focus_model=getattr(self, "setup_v2", False),
-                             unit_key=unit, model=model_name_of(claim_text) if unit else None, mode=self.tavily_mode)
+                             unit_key=unit, model=model_name_of(claim_text) if unit else None, mode=self.tavily_mode, on_note=self._warn)
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None

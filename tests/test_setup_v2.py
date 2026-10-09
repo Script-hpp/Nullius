@@ -217,7 +217,8 @@ def test_select_files_focus_model_only_in_v2():
     from repro_agent.repo_source import select_files
     select_files(Cap(), ["a.py"], "GAT claim", "Cora")
     select_files(Cap(), ["a.py"], "GAT claim", "Cora", focus_model=True)
-    assert "skip files that only concern other models" not in seen[0] and "skip files that only concern other models" in seen[1]
+    # je Aufruf zwei Anfragen (leere Antwort => einmal neu, schlicht); die erste Anfrage traegt den Fokus
+    assert "skip files that only concern other models" not in seen[0] and "skip files that only concern other models" in seen[2]
 
 
 def test_dossier_and_report_show_exclusions_and_missing():

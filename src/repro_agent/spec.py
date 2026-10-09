@@ -77,8 +77,9 @@ def keys_for(family: str, numeric_only: bool = False) -> tuple[list[tuple[str, s
 
 
 def model_name_of(claim_text: str) -> str:
-    """Modellname des Claims: Text vor ' erreicht ' (papers.yaml), ohne Variante nach '/' (PatchTST/42 -> PatchTST)."""
+    """Modellname des Claims: Text vor ' erreicht ' (papers.yaml), ohne Variante nach '/' (PatchTST/42 -> PatchTST) und ohne Klammerzusatz (GCN (this paper) -> GCN)."""
     head = claim_text.split(" erreicht ")[0].strip() if " erreicht " in claim_text else claim_text.split()[0]
+    head = re.sub(r"\s*\([^)]*\)\s*$", "", head)   # Katalog-Methode aus der Tabelle: "GCN (this paper)" -> GCN
     return head.split("/")[0].strip()
 
 
