@@ -1,0 +1,150 @@
+{
+ "snapshot_seconds": 0.5,
+ "resources": {
+  "exit": 0,
+  "stdout": "4\nPython 3.11.15\nrootfs           47T  144G   47T   1% /\n",
+  "stderr": "/bin/sh: 1: free: not found\n"
+ },
+ "abrt": {
+  "seconds": 9.3,
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "start\nexit=124\n",
+  "stderr": "Fatal Python error: Aborted\n\nCurrent thread 0x00007ffff7fba340 (most recent call first):\n  File \"/tmp/loop.py\", line 5 in work\n  File \"/tmp/loop.py\", line 6 in <module>\n"
+ },
+ "hard_timeout": {
+  "seconds": 12.6,
+  "exit": -1,
+  "timed_out": true,
+  "stdout": "",
+  "stderr": "",
+  "file_after": "FEHLER ContreeImageStateError: Image state \"9082f6dd-d418-40f7-a9b5-b50b9549fe02\" cannot have state FAILED",
+  "branch_after": "FEHLER ContreeImageStateError: Image state \"9082f6dd-d418-40f7-a9b5-b50b9549fe02\" cannot have state FAILED"
+ },
+ "mem": {
+  "4": {
+   "exit": 0,
+   "stdout": "exit=1",
+   "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nMemoryError"
+  }
+ },
+ "parallel": {
+  "n": 16,
+  "wall_s": 19.7,
+  "errors": 0,
+  "rows": [
+   {
+    "i": 0,
+    "branch_s": 0.0,
+    "total_s": 18.3,
+    "exit": 0,
+    "out": "4 572730201645000"
+   },
+   {
+    "i": 1,
+    "branch_s": 0.0,
+    "total_s": 17.9,
+    "exit": 0,
+    "out": "4 573963942466000"
+   },
+   {
+    "i": 2,
+    "branch_s": 0.0,
+    "total_s": 17.2,
+    "exit": 0,
+    "out": "4 573638853092000"
+   },
+   {
+    "i": 3,
+    "branch_s": 0.0,
+    "total_s": 19.3,
+    "exit": 0,
+    "out": "4 571821550198000"
+   },
+   {
+    "i": 4,
+    "branch_s": 0.0,
+    "total_s": 17.0,
+    "exit": 0,
+    "out": "4 574707384559000"
+   },
+   {
+    "i": 5,
+    "branch_s": 0.0,
+    "total_s": 17.1,
+    "exit": 0,
+    "out": "4 575589389336000"
+   },
+   {
+    "i": 6,
+    "branch_s": 0.0,
+    "total_s": 18.2,
+    "exit": 0,
+    "out": "4 572498375616000"
+   },
+   {
+    "i": 7,
+    "branch_s": 0.0,
+    "total_s": 17.8,
+    "exit": 0,
+    "out": "4 576207592080000"
+   },
+   {
+    "i": 8,
+    "branch_s": 0.0,
+    "total_s": 17.8,
+    "exit": 0,
+    "out": "4 573353733723000"
+   },
+   {
+    "i": 9,
+    "branch_s": 0.0,
+    "total_s": 17.2,
+    "exit": 0,
+    "out": "4 563204017120000"
+   },
+   {
+    "i": 10,
+    "branch_s": 0.0,
+    "total_s": 18.2,
+    "exit": 0,
+    "out": "4 573995918470000"
+   },
+   {
+    "i": 11,
+    "branch_s": 0.0,
+    "total_s": 17.8,
+    "exit": 0,
+    "out": "4 571403197479000"
+   },
+   {
+    "i": 12,
+    "branch_s": 0.0,
+    "total_s": 18.7,
+    "exit": 0,
+    "out": "4 574070529146000"
+   },
+   {
+    "i": 13,
+    "branch_s": 0.0,
+    "total_s": 17.1,
+    "exit": 0,
+    "out": "4 574861935245000"
+   },
+   {
+    "i": 14,
+    "branch_s": 0.0,
+    "total_s": 19.7,
+    "exit": 0,
+    "out": "4 572711548976000"
+   },
+   {
+    "i": 15,
+    "branch_s": 0.0,
+    "total_s": 17.5,
+    "exit": 0,
+    "out": "4 566484222197000"
+   }
+  ]
+ }
+}

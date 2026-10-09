@@ -1,0 +1,149 @@
+{
+ "model": "GAT",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.005",
+   "quote": "lr = 0.005  # learning rate",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 0.005,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.0005",
+   "quote": "l2_coef = 0.0005  # weight decay",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 0.0005,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "nb_epochs = 100000",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "batch_size",
+   "value": "1",
+   "quote": "batch_size = 1",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 1,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "2",
+     "source": "paper",
+     "rank": "paper",
+     "quote": "We utilize a batch size of 2 graphs during training."
+    }
+   ],
+   "note": "",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "dropout",
+   "value": "0.6",
+   "quote": "dropout (Srivastava et al., 2014) with p = 0 .6 is applied to both layers\u2019 inputs, as well as to the normalized attention coefficients",
+   "source": "paper",
+   "rank": "paper",
+   "number": 0.6,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "hidden",
+   "value": "K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features)",
+   "quote": "The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features), followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity.",
+   "source": "paper",
+   "rank": "paper",
+   "number": null,
+   "enforce": false,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "patience",
+   "value": "100",
+   "quote": "patience = 100",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 100,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "heads",
+   "value": "8",
+   "quote": "The first layer consists of K = 8 attention heads",
+   "source": "paper",
+   "rank": "paper",
+   "number": 8,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": "2",
+    "quote": "we apply a two-layer GAT model",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/gat.py@5af87e7",
+  "repo:execute_cora.py@5af87e7",
+  "repo:execute_cora_sparse.py@5af87e7",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/layers.py@5af87e7"
+ ],
+ "missing": [
+  "layers"
+ ],
+ "excerpt_chars": 15327
+}

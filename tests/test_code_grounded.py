@@ -129,8 +129,9 @@ def test_build_spec_numeric_only_prompt_has_no_text_keys_and_keeps_raw_excerpt()
     assert "- model_core:" not in seen["user"] and "- lr:" in seen["user"]
     assert spec.excerpt and "seq_last = x[:,-1:,:].detach()" in spec.excerpt
     assert "default=96" not in spec.excerpt and "seq_len" in spec.dropped_defaults
-    assert [i.key for i in spec.items] == ["lr"] and any(d["reason"] == "unbekannter Schluessel" for d in spec.dropped)
-    assert spec.items[0].enforce
+    # F1/F4: Startskript-Flags (--batch_size 32, --seq_len 336) werden zusaetzlich deterministisch gelesen
+    assert [i.key for i in spec.items] == ["lr", "batch_size", "seq_len"] and any(d["reason"] == "unbekannter Schluessel" for d in spec.dropped)
+    assert all(i.enforce for i in spec.items) and [i.origin for i in spec.items] == ["model", "raw", "raw"]
     flag_off = build_spec(ask, [], docs, "NLinear erreicht MSE 0,374 auf ETTh1", "ETTh1")
     assert flag_off.excerpt == "" and "model_core" in {i.key for i in flag_off.items}
 

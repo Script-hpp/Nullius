@@ -146,3 +146,77 @@ class GateSandbox:
             self.branches.clear()   # dieselbe Liste wie in den Ansichten (for_unit)
         for name in names:
             subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+
+
+# ---- Nebius-Messweg (G1) -----------------------------------------------------------------------------------------------------
+NEBIUS_MAX_PARALLEL_RUNS = 16   # gleichzeitige Kommandos (Sondierung 2026-10-09: 16 Branches ohne Fehler, gleicher Durchsatz je Branch)
+
+
+class NebiusGateSandbox:
+    """Duenne Huelle um `NebiusSandbox` mit der Schnittstelle von `GateSandbox` (`for_unit`, `begin_attempt`, `release_attempt`, `times`, `cleanup`).
+
+    Unterschiede zum lokalen Weg: Netzsperre wie im Produkt (`unshare -n` im Kommando bleibt stehen), keine Kerngruppen und kein Speicher-Semaphor
+    (jeder Branch hat eigene 4 vCPU und ca. 4 GB RAM, Sondierung), Wanduhr-Zeit um `run` fuer die Trainingszeit. Der Basis-Snapshot wird ueber
+    sein Tag wiederverwendet, falls er schon existiert. Branches haben keine Freigabe-API: die Sitzung wird nur clientseitig vergessen.
+    """
+
+    def __init__(self, max_parallel: int = NEBIUS_MAX_PARALLEL_RUNS):
+        from repro_agent.sandbox.nebius import NebiusSandbox
+        self.inner, self._lock = NebiusSandbox(), threading.Lock()
+        self.created = threading.local()
+        self.times: dict[str, float] = {}
+        self.slots = threading.BoundedSemaphore(max_parallel)
+        self.tags: dict[str, str] = {}
+
+    def for_unit(self, unit: str | None) -> "NebiusGateSandbox":
+        return self
+
+    def base_snapshot(self, image, setup_cmds, label=None):
+        from repro_agent.sandbox.nebius import SNAPSHOT_PREFIX
+        tag = f"{SNAPSHOT_PREFIX}{label}" if label else None
+        if tag:
+            try:   # `images.use` ist lazy: erst ein Branch mit einem Kommando zeigt, ob das Tag existiert
+                probe = self.inner.branch(tag)
+                if self.inner.run(probe, "true", 60).exit_code == 0:
+                    self.inner._sessions.pop(probe, None)
+                    return tag   # Wiederverwendung desselben Basis-Snapshots (Daten + Pakete) zwischen Prozessen
+            except Exception:   # noqa: BLE001 - nicht vorhanden oder nicht lesbar: neu bauen
+                pass
+        return self.inner.base_snapshot(image, setup_cmds, label=label)
+
+    def branch(self, snapshot):
+        name = self.inner.branch(snapshot)
+        getattr(self.created, "names", []).append(name)
+        return name
+
+    def run(self, branch, cmd, timeout_s):
+        with self.slots:
+            t0 = time.time()
+            try:
+                return self.inner.run(branch, cmd, timeout_s)
+            finally:
+                if "train.py" in cmd and "SMOKE=1" not in cmd:
+                    self.times[branch] = time.time() - t0
+
+    def put_file(self, branch, path, content):
+        self.inner.put_file(branch, path, content)
+
+    def put_files(self, branch, files):
+        self.inner.put_files(branch, files)
+
+    def get_file(self, branch, path):
+        return self.inner.get_file(branch, path)
+
+    def begin_attempt(self) -> None:
+        self.created.names = []
+
+    def release_attempt(self) -> None:
+        for name in getattr(self.created, "names", []):
+            self.release(name)
+        self.created.names = []
+
+    def release(self, branch):
+        self.inner._sessions.pop(branch, None)
+
+    def cleanup(self):
+        self.inner._sessions.clear()

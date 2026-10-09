@@ -1,0 +1,365 @@
+{
+ "zeng_nlinear_2023": {
+  "items_changed": {},
+  "missing": {
+   "g0": [
+    "weight_decay",
+    "epochs",
+    "dropout",
+    "hidden",
+    "layers",
+    "patience"
+   ],
+   "g1": [
+    "weight_decay",
+    "epochs",
+    "dropout",
+    "hidden",
+    "layers",
+    "patience"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 9304
+ },
+ "wu_sgc_2019": {
+  "items_changed": {},
+  "missing": {
+   "g0": [
+    "batch_size",
+    "layers",
+    "patience",
+    "heads"
+   ],
+   "g1": [
+    "batch_size",
+    "layers",
+    "patience",
+    "heads"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 10920
+ },
+ "zeng_dlinear_2023": {
+  "items_changed": {},
+  "missing": {
+   "g0": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "g1": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 15712
+ },
+ "velickovic_gat_2018": {
+  "items_changed": {
+   "batch_size": {
+    "g0": [
+     "2",
+     true,
+     "paper",
+     "paper"
+    ],
+    "g1": [
+     "1",
+     true,
+     "start script",
+     "repo:execute_cora.py"
+    ]
+   },
+   "lr": {
+    "g0": [
+     "0.005",
+     true,
+     "paper",
+     "paper"
+    ],
+    "g1": [
+     "0.005",
+     true,
+     "start script",
+     "repo:execute_cora.py"
+    ]
+   },
+   "weight_decay": {
+    "g0": [
+     "0.0005",
+     true,
+     "paper",
+     "paper"
+    ],
+    "g1": [
+     "0.0005",
+     true,
+     "start script",
+     "repo:execute_cora.py"
+    ]
+   }
+  },
+  "missing": {
+   "g0": [
+    "layers"
+   ],
+   "g1": [
+    "layers"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 17265
+ },
+ "velickovic_dgi_2019": {
+  "items_changed": {},
+  "missing": {
+   "g0": [
+    "layers",
+    "heads"
+   ],
+   "g1": [
+    "layers",
+    "heads"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 10595
+ },
+ "shchur_gat_2018": {
+  "items_changed": {
+   "epochs": {
+    "g0": [
+     "100000",
+     true,
+     "paper",
+     "paper"
+    ],
+    "g1": [
+     "100000",
+     true,
+     "config",
+     "repo:config/train.conf.yaml"
+    ]
+   },
+   "hidden": {
+    "g0": null,
+    "g1": [
+     "8",
+     true,
+     "config",
+     "repo:config/reference/gat.conf.yaml"
+    ]
+   },
+   "layers": {
+    "g0": null,
+    "g1": [
+     "2",
+     true,
+     "config",
+     "repo:config/optimized/gat.conf.yaml"
+    ]
+   },
+   "lr": {
+    "g0": null,
+    "g1": [
+     "0.01",
+     true,
+     "config",
+     "repo:config/reference/gat.conf.yaml"
+    ]
+   },
+   "weight_decay": {
+    "g0": null,
+    "g1": [
+     "0.01",
+     true,
+     "config",
+     "repo:config/optimized/gat.conf.yaml"
+    ]
+   }
+  },
+  "missing": {
+   "g0": [
+    "lr",
+    "weight_decay",
+    "batch_size",
+    "dropout",
+    "hidden",
+    "layers"
+   ],
+   "g1": [
+    "batch_size",
+    "dropout"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 16825
+ },
+ "kipf_gcn_2017": {
+  "items_changed": {},
+  "missing": {
+   "g0": [
+    "batch_size",
+    "layers",
+    "heads"
+   ],
+   "g1": [
+    "batch_size",
+    "layers",
+    "heads"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 17124
+ },
+ "shchur_pitfalls_2018": {
+  "items_changed": {
+   "dropout": {
+    "g0": [
+     "0.8",
+     false,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ],
+    "g1": [
+     "0.8",
+     true,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ]
+   },
+   "hidden": {
+    "g0": [
+     "64",
+     false,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ],
+    "g1": [
+     "64",
+     true,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ]
+   },
+   "weight_decay": {
+    "g0": [
+     "0.001",
+     false,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ],
+    "g1": [
+     "0.001",
+     true,
+     "config",
+     "repo:config/optimized/gcn.conf.yaml"
+    ]
+   }
+  },
+  "missing": {
+   "g0": [
+    "batch_size",
+    "heads"
+   ],
+   "g1": [
+    "batch_size",
+    "heads"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 16907
+ },
+ "rlinear_2023": {
+  "items_changed": {
+   "batch_size": {
+    "g0": null,
+    "g1": [
+     "16",
+     true,
+     "argparse default",
+     "repo:run.py"
+    ]
+   },
+   "dropout": {
+    "g0": null,
+    "g1": [
+     "0.1",
+     true,
+     "argparse default",
+     "repo:run.py"
+    ]
+   },
+   "epochs": {
+    "g0": null,
+    "g1": [
+     "15",
+     true,
+     "argparse default",
+     "repo:run.py"
+    ]
+   },
+   "lr": {
+    "g0": null,
+    "g1": [
+     "0.001",
+     true,
+     "argparse default",
+     "repo:run.py"
+    ]
+   },
+   "patience": {
+    "g0": null,
+    "g1": [
+     "10",
+     true,
+     "argparse default",
+     "repo:run.py"
+    ]
+   }
+  },
+  "missing": {
+   "g0": [
+    "lr",
+    "weight_decay",
+    "epochs",
+    "batch_size",
+    "dropout",
+    "hidden",
+    "layers",
+    "patience",
+    "seq_len"
+   ],
+   "g1": [
+    "weight_decay",
+    "hidden",
+    "layers",
+    "seq_len"
+   ]
+  },
+  "missing_text_changed": true,
+  "ties": [],
+  "touched": true,
+  "prompt_chars": 17352
+ }
+}

@@ -97,6 +97,8 @@ PRODUCT_LIB_NOTE = (
     "write every layer in plain PyTorch (dense or torch.sparse operations)."
 )
 TRAIN_TIMEOUT_S = 600
+ABRT_GRACE_S = 15       # F2: `timeout -s ABRT` greift diese Sekunden vor dem harten Sandbox-Timeout (der Branch und seine Dateien sind danach weg)
+SOFT_TIMEOUT_EXIT = 124   # Exit-Code von `timeout`
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
 INFRA_RETRIES = 3       # Wiederholungen eines Versuchs bei Sandbox-Infrastrukturfehler (neuer Branch je Versuch)
@@ -194,15 +196,28 @@ OOM_HINT = (
 )
 
 
+EXIT_CODE_RE = re.compile(r"\(exit code (-?\d+)\)\s*$")
+OOM_EXIT_CODES = {137, -9}
+
+
+def describe_exit(exit_code: int, text: str) -> str:
+    """F3: Fehlertext eines Laufs mit Exit-Code am ENDE (das Ende bleibt im Triage-Fenster); leerer Text nie als leeres Problem."""
+    body = (text or "").rstrip()
+    if not body.strip():
+        body = "The script printed nothing to stderr or stdout before it ended."
+    return f"{body}\n(exit code {exit_code})"
+
+
 def repair_hint(summary: str | None) -> str:
     """Feste Zusatzhinweise (nur Produktpfad) fuer Fehler, an denen die Reparatur in Benchmark v2 viermal scheiterte."""
     from .harness.repair_hints import CHECKLIST_CLASSIFICATION
     text = summary or ""
+    m = EXIT_CODE_RE.search(text.strip())
     if "Dataset-Bibliothek" in text:
         return STATIC_LIB_HINT
     if "einzige Vorhersage-Klasse" in text:
         return ONE_CLASS_HINT + CHECKLIST_CLASSIFICATION
-    if ("Traceback" not in text and "Killed" in text) or "can't allocate memory" in text or "out of memory" in text.lower():
+    if (m and int(m.group(1)) in OOM_EXIT_CODES) or ("Traceback" not in text and "Killed" in text) or "can't allocate memory" in text or "out of memory" in text.lower():
         return OOM_HINT
     return ""
 
@@ -212,6 +227,38 @@ TIMEOUT_REPAIR_MESSAGE = (
     "hyperparameters, but make it faster: vectorize, no Python loops over nodes, edges or samples, "
     "use sparse or batched tensor operations."
 )
+STAY_FAST_NOTE = (
+    "\n\nAn earlier version of this script already exceeded the training time limit. The corrected script must stay fast: no Python loops "
+    "over nodes, edges or samples, vectorised/sparse/batched tensor operations only, in every part of the model."
+)
+STACK_CHARS = 1200
+STDOUT_CHARS = 400
+
+
+def trim_stack(dump: str) -> str:
+    """faulthandler listet die innersten Frames ZUERST: vom Anfang kuerzen (nie vom Ende), Frames der Abdeckungsmessung und des Modul-Starters weglassen."""
+    lines = [ln for ln in dump.splitlines() if "/site-packages/coverage/" not in ln and "<frozen runpy>" not in ln]
+    return "\n".join(lines)[:STACK_CHARS]
+
+
+_FRAME_RE = re.compile(r'File "([^"]+)", line (\d+) in (\S+)')
+
+
+def timeout_report(res: dict, code: str, limit: int) -> str:
+    """F2: Repariertext nach einem Timeout mit Messung: wo das Skript beim Zeitlimit stand (faulthandler-Stack des Haupt-Threads, dazu die
+    Quellzeile aus dem Agenten-Code) und die letzten Ausgaben des Skripts. Kein LLM."""
+    parts = [TIMEOUT_REPAIR_MESSAGE.format(limit=limit)]
+    stack = (res.get("stack") or "").strip()
+    if stack:
+        lines = code.splitlines()
+        inner = next(((int(n), fn) for f, n, fn in _FRAME_RE.findall(stack) if f.endswith("train.py")), None)
+        if inner and 1 <= inner[0] <= len(lines):
+            parts.append(f"When the limit hit, the script was in `{inner[1]}` at train.py line {inner[0]}: `{lines[inner[0] - 1].strip()[:160]}`.")
+        parts.append("Python stack at the time limit (most recent call first):\n" + stack[:STACK_CHARS])
+    tail = (res.get("stdout_tail") or "").strip()
+    parts.append(("Last output of the script before the limit:\n" + tail[-STDOUT_CHARS:]) if tail
+                 else "The script printed nothing before the limit (print progress per epoch to see the speed).")
+    return "\n\n".join(parts)
 
 
 def claim_specs(paper: dict) -> dict[str, dict]:
@@ -559,7 +606,7 @@ class Orchestrator:
             return (f"Smoke run (SMOKE=1) exceeded {SMOKE_TIMEOUT_S}s: the script ignores SMOKE=1. "
                     "With SMOKE=1 use the tiny subset and 1 epoch as described.")
         if r.exit_code != 0:
-            return "Smoke run (SMOKE=1) crashed:\n" + (r.stderr or r.stdout).strip()[-TRIAGE_CHARS:]
+            return "Smoke run (SMOKE=1) crashed:\n" + describe_exit(r.exit_code, (r.stderr or r.stdout).strip()[-TRIAGE_CHARS:])
         try:
             out = sb.get_file(branch, "/output/predictions.csv")
         except Exception as exc:   # Sandbox-Adapter melden fehlende Datei unterschiedlich
@@ -693,15 +740,26 @@ class Orchestrator:
         # Abdeckung nur im ersten vollstaendigen Seed-Lauf (Smoke-Lauf ist zu kurz: Epochen-/Early-Stopping-Zweige)
         with_cov = measure_coverage and sb.run(branch, "python -c 'import coverage'", 30).exit_code == 0
         runner = "python -m coverage run --data-file=/tmp/.cov train.py" if with_cov else "python train.py"
+        # F2: `timeout -s ABRT` beendet das Skript kurz VOR dem harten Sandbox-Timeout; `faulthandler` schreibt dabei alle Python-Stacks nach stderr
+        # (Stelle des Zeitlimits), stdout (unbuffered) bleibt lesbar. Der harte Timeout toetet auf Nebius den ganzen Branch (Dateien danach weg).
+        limit = self._train_timeout()
+        soft = max(1, limit - ABRT_GRACE_S)
         r = sb.run(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n {runner}",
-            self._train_timeout(),
+            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} PYTHONFAULTHANDLER=1 PYTHONUNBUFFERED=1 "
+            f"unshare -n timeout -s ABRT {soft} {runner}",
+            limit,
         )
-        if r.timed_out:
-            return {"status": "timeout", "detail": f"Training > {self._train_timeout()}s"}
+        if r.timed_out or r.exit_code == SOFT_TIMEOUT_EXIT:
+            out = {"status": "timeout", "detail": f"Training > {limit}s", "exit_code": r.exit_code, "soft_timeout": not r.timed_out}
+            if not r.timed_out:
+                err = r.stderr or ""
+                i = err.find("Fatal Python error")
+                out["stack"] = trim_stack(err[i:] if i >= 0 else err)
+                out["stdout_tail"] = (r.stdout or "")[-STDOUT_CHARS:]
+            return out
         if r.exit_code != 0:
-            return {"status": "fehler", "detail": (r.stderr or r.stdout)}
+            return {"status": "fehler", "detail": describe_exit(r.exit_code, r.stderr or r.stdout), "exit_code": r.exit_code}
         coverage = self._measure_coverage(branch) if with_cov else None
 
         # Harness frisch aus unserem Repo kopieren, in ein Verzeichnis mit Zufallsnamen: der
@@ -1403,6 +1461,7 @@ class Orchestrator:
     ) -> tuple[float | None, str | None, str]:
         """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis, letzter Code)."""
         summary = None
+        timed_out_before = False   # F2 (c): nach einem Timeout haengt jede weitere Reparatur dieses Seeds den Hinweis "schnell bleiben" an
         for n in range(1, self.settings.max_attempts_per_claim + 1):
             code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
@@ -1445,12 +1504,13 @@ class Orchestrator:
             if status == "timeout":
                 if not product:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
-                summary = TIMEOUT_REPAIR_MESSAGE.format(limit=self._train_timeout())   # Produktpfad: schneller machen
+                summary = timeout_report(res, code, self._train_timeout())   # Produktpfad: schneller machen (F2: mit Stack und Ausgabe)
+                timed_out_before = True
             if n < self.settings.max_attempts_per_claim:
                 hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:
                     self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
-                    extra = repair_hint(summary) if product else ""
+                    extra = (repair_hint(summary) + (STAY_FAST_NOTE if timed_out_before and status != "timeout" else "")) if product else ""
                     code = self.repair_code(plan, task, code, (summary or "") + extra + hints)
                     self._emit("repair_result", claim_id=claim.id, seed=seed, from_hash=code_hash, to_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code

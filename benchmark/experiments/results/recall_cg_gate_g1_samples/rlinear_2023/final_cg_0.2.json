@@ -1,0 +1,1 @@
+{"unit": "rlinear_2023", "arm": "cg", "temp": 0.2, "urteil": "reproduziert", "mean": 0.3706606042693759, "std": 9.709825880084764e-05, "n_ok": 5, "n_seeds": 5, "code_missing": false, "attempts_seed0": 1, "target_reached": true, "seconds": 253.0, "note": "", "facts": {}}

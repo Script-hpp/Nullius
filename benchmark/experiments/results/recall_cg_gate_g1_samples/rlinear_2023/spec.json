@@ -1,0 +1,106 @@
+{
+ "model": "RLinear",
+ "family": "forecast",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.001",
+   "quote": "parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')",
+   "source": "repo:run.py@0fec001",
+   "rank": "argparse default",
+   "number": 0.001,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "epochs",
+   "value": "15",
+   "quote": "parser.add_argument('--train_epochs', type=int, default=15, help='train epochs')",
+   "source": "repo:run.py@0fec001",
+   "rank": "argparse default",
+   "number": 15,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "batch_size",
+   "value": "16",
+   "quote": "parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')",
+   "source": "repo:run.py@0fec001",
+   "rank": "argparse default",
+   "number": 16,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "dropout",
+   "value": "0.1",
+   "quote": "parser.add_argument('--drop', type=float, default=0.1, help='dropout ratio')",
+   "source": "repo:run.py@0fec001",
+   "rank": "argparse default",
+   "number": 0.1,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "patience",
+   "value": "10",
+   "quote": "parser.add_argument('--patience', type=int, default=10, help='early stopping patience')",
+   "source": "repo:run.py@0fec001",
+   "rank": "argparse default",
+   "number": 10,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 1,
+    "quote": "self.Linear = nn.ModuleList([ nn.Linear(configs.seq_len, configs.pred_len) for _ in range(configs.channel) ]) if configs.individual else nn.Linear(configs.seq_len, configs.pred_len)",
+    "source": "RLinear.py"
+   },
+   "reason": "Quelle unbekannt"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/RLinear.py@0fec001",
+  "repo:exp/exp_main.py@0fec001",
+  "repo:run.py@0fec001",
+  "repo:utils/tools.py@0fec001 (function body)",
+  "repo:utils/tools.py@0fec001 (function body)",
+  "repo:data_provider/data_loader.py@0fec001 (function body)",
+  "repo:layers/Invertible.py@0fec001",
+  "repo:data_provider/data_factory.py@0fec001 (function body)",
+  "repo:data_provider/data_loader.py@0fec001 (function body)",
+  "repo:data_provider/data_loader.py@0fec001 (function body)"
+ ],
+ "missing": [
+  "weight_decay",
+  "hidden",
+  "layers",
+  "seq_len"
+ ],
+ "excerpt_chars": 15533
+}

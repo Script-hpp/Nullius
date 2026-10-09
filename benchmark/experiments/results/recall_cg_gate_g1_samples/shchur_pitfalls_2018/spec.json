@@ -1,0 +1,183 @@
+{
+ "model": "GCN",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.01",
+   "quote": "learning_rate: 0.01",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.01,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.001",
+   "quote": "weight_decay: 0.001",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.001,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "0.0005",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "weight_decay: !!float 5e-4"
+    },
+    {
+     "value": "5e-4",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "weight_decay: !!float 5e-4"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "num_epochs: 100000",
+   "source": "repo:config/train.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "200",
+     "source": "paper",
+     "rank": "paper",
+     "quote": "Maximum number of epochs: 200."
+    }
+   ],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "dropout",
+   "value": "0.8",
+   "quote": "dropout_prob: 0.8",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.8,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "0.5",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "dropout_prob: 0.5"
+    },
+    {
+     "value": "0.5",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "dropout_prob: 0.5"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "hidden",
+   "value": "64",
+   "quote": "hidden_size: 64",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 64,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "16",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "hidden_size: 16"
+    },
+    {
+     "value": "16",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "hidden_size: 16"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "layers",
+   "value": "2",
+   "quote": "num_layers: 2",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 2,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "patience",
+   "value": "50",
+   "quote": "early_stopping_tolerance: 50",
+   "source": "repo:config/train.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 50,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "10",
+     "source": "paper",
+     "rank": "paper",
+     "quote": "Early stopping: stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs."
+    }
+   ],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "epochs",
+    "value": 100000,
+    "quote": "We train for a maximum of 100 k epochs.",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:gnnbench/models/gcn.py@1e72912",
+  "repo:gnnbench/train.py@1e72912",
+  "repo:config/optimized/gcn.conf.yaml@1e72912",
+  "repo:config/reference/gcn.conf.yaml@1e72912",
+  "repo:config/train.conf.yaml@1e72912",
+  "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+  "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+  "repo:gnnbench/models/base_model.py@1e72912"
+ ],
+ "missing": [
+  "batch_size",
+  "heads"
+ ],
+ "excerpt_chars": 15416
+}

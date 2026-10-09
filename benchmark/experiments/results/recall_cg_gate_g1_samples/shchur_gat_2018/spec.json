@@ -1,0 +1,161 @@
+{
+ "model": "GAT",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.01",
+   "quote": "learning_rate: 0.01",
+   "source": "repo:config/reference/gat.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.01,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.01",
+   "quote": "weight_decay: 0.01",
+   "source": "repo:config/optimized/gat.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.01,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "5e-4",
+     "source": "repo:config/reference/gat.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "weight_decay: !!float 5e-4"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich; entschieden durch die Zahl im Paper-Zitat",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "num_epochs: 100000",
+   "source": "repo:config/train.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": false,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "hidden",
+   "value": "8",
+   "quote": "hidden_size: 8",
+   "source": "repo:config/reference/gat.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 8,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "raw",
+   "tie": []
+  },
+  {
+   "key": "layers",
+   "value": "2",
+   "quote": "num_layers: 2",
+   "source": "repo:config/optimized/gat.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 2,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "patience",
+   "value": "100",
+   "quote": "stop optimization if neither the validation loss nor the validation accuracy improve for 100 epochs.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 100,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  },
+  {
+   "key": "heads",
+   "value": "8",
+   "quote": "GAT uses a multi-head architecture with 8 heads",
+   "source": "paper",
+   "rank": "paper",
+   "number": 8,
+   "enforce": true,
+   "alternatives": [],
+   "note": "",
+   "specific": true,
+   "origin": "model",
+   "tie": []
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "lr",
+    "value": 0.01,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "weight_decay",
+    "value": 0.01,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "dropout",
+    "value": "0.6/0.3",
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "hidden",
+    "value": 64,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:gnnbench/models/gat.py@1e72912",
+  "repo:gnnbench/train.py@1e72912",
+  "repo:config/reference/gat.conf.yaml@1e72912",
+  "repo:config/optimized/gat.conf.yaml@1e72912",
+  "repo:config/train.conf.yaml@1e72912"
+ ],
+ "missing": [
+  "batch_size",
+  "dropout"
+ ],
+ "excerpt_chars": 15239
+}
