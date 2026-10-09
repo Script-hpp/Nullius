@@ -290,6 +290,8 @@ def run_all() -> int:
 def prep() -> int:
     from repro_agent.loop import Orchestrator, load_claims, model_name_of
     from repro_agent.repo_source import _repo_key, find_repo_url, read_repo
+    since = start_time()   # Beginn der Kostenzaehlung: Schritt 0 zaehlt in den Deckel
+    os.environ.update(R.worker_env(since))
     build_overlay()
     patch_fixture_dirs()
     before = {p.relative_to(ROOT / "benchmark" / "fixtures") for p in (ROOT / "benchmark" / "fixtures").rglob("*") if p.is_file()}

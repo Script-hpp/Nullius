@@ -1,0 +1,13 @@
+{
+ "value": 0.366,
+ "quote": "ETTh1  96 0.366 0.391 0.390 0.410 0.381 0.405 0.398 0.418 0.375 0.399",
+ "table": "Table 2",
+ "url": "https://arxiv.org/pdf/2305.10721v2",
+ "source_kind": "pdf",
+ "retrieved_at": "2026-10-02T08:54:22+00:00",
+ "sha256": "b4ce09d1c9bf98950852b6fb9c72f0e0ecfad627ae5a1d44849aba351a9105b8",
+ "arxiv_version": "v2",
+ "caveat": "Methodenname 'RLinear' steht nicht im Zitat: Der Check belegt nur, dass die Zahl im Text steht, nicht dass sie zur richtigen Spalte/Zeile gehoert (Zuordnung nicht automatisch geprueft, Kopfzeile ggf. von Hand gegenlesen).",
+ "column_check": "nicht pruefbar",
+ "from_store": false
+}
