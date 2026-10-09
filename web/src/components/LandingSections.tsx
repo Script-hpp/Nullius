@@ -11,7 +11,7 @@ import { Matrix } from './TwoModes'
 import { Badge } from './ui'
 
 // The sections of the start page after the hero. They read as one story while scrolling: problem, how it works,
-// one real certificate, proof and lesson, Tavily, limits, try it. One thought per section, at most one link.
+// one real certificate, Tavily, proof and lesson, limits, try it. One thought per section, at most one link.
 // Every benchmark number is read from data/benchmark.ts; the certificate numbers come from the exported run.
 
 export const EXAMPLE_RUN = `#/run/${FEATURED_RUN_ID}`
@@ -63,7 +63,7 @@ export function Problem({ run }: { run: RunData | null }) {
 }
 
 const STEPS = [
-  { title: 'Read', text: 'Tavily reads the paper. We keep only numbers that appear word for word in the text.' },
+  { title: 'Read', text: 'Tavily finds the paper, the target value with a quote and the setup details, live. We keep only numbers that appear word for word in the text.' },
   { title: 'Rebuild', text: 'An agent reads the paper and the authors’ code as text, never run, writes its own version and runs it in isolated Nebius Sandboxes, one run per random seed.' },
   { title: 'Measure', text: 'An independent harness the agent cannot change loads the true labels itself, scores the predictions and compares them with the claim.' },
 ]

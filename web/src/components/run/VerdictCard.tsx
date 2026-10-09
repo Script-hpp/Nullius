@@ -1,7 +1,8 @@
-import { AlertCircle, BookOpen, ShieldCheck } from 'lucide-react'
+import { AlertCircle, BookOpen, Search, ShieldCheck } from 'lucide-react'
 import { Hint } from '../Hint'
 import { ModeNote } from '../ModeNote'
 import { toPercent } from '../ui'
+import { tavilyChip } from '../../tavilysummary'
 import { colorForTone, getDelta } from '../../format'
 import { OVERALL, TONE_VAR, isPreliminary, resultHint, type Tone } from '../../labels'
 import type { Event, Json } from '../../data'
@@ -10,14 +11,15 @@ const FIDELITY_HINT = 'The number was measured by an independent program. Whethe
 
 // The one card at the top of a run: verdict, claim in one sentence, claimed against measured, the way it was rebuilt and why the number can be trusted.
 // Everything longer lives in the tabs below.
-export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fmt, fmtSpread, paperUrl, fidelityUnchecked, gesamt, isCatalog, notes, claimText, onLimits }: {
+export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fmt, fmtSpread, paperUrl, fidelityUnchecked, gesamt, isCatalog, notes, claimText, onLimits, onTavily }: {
   dossier: Json; events: Event[]; claim: Json; verdict: Json | undefined; res: { label: string; tone: Tone }; sentence: string
   fmt: (x: number) => string; fmtSpread: (x: number) => string; paperUrl?: string; fidelityUnchecked: boolean
-  gesamt?: string; isCatalog: boolean; notes: number; claimText: string; onLimits: (tab: 'limits') => void
+  gesamt?: string; isCatalog: boolean; notes: number; claimText: string; onLimits: (tab: 'limits') => void; onTavily: () => void
 }) {
   const delta = verdict ? getDelta(verdict.measured_mean, claim.target, claim.metric) : null
   const tol = claim.metric === 'accuracy' ? toPercent(claim.tolerance) : Number(claim.tolerance).toFixed(3)
   const color = colorForTone(res.tone)
+  const chip = tavilyChip(events, dossier?.sources)
   const overall = isCatalog && gesamt && !isPreliminary(gesamt) ? OVERALL[gesamt] ?? null : null
   return (
     <section aria-label="The verdict" className="border-t-2 pb-8 pt-6 sm:pb-10 sm:pt-8" style={{ borderTopColor: TONE_VAR[res.tone] }}>
@@ -49,6 +51,11 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
           <li className="inline-flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-muted" aria-hidden />Method fidelity not checked<Hint text={FIDELITY_HINT} /></li>
         )}
         {overall && <li>{overall}</li>}
+        {chip && (
+          <li><button type="button" onClick={onTavily} data-testid="tavily-chip" title="Open Sources & Tavily"
+            className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-[12.5px] text-fg-3 underline decoration-line-strong underline-offset-4 hover:text-fg">
+            <Search className="h-3.5 w-3.5 text-muted" aria-hidden />{chip}</button></li>
+        )}
         {notes > 0 && (
           <li><button type="button" onClick={() => onLimits('limits')} className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-[12.5px] text-fg-3 underline decoration-line-strong underline-offset-4 hover:text-fg">
             {notes} {notes === 1 ? 'note' : 'notes'} about this run</button></li>

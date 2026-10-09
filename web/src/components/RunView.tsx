@@ -54,11 +54,17 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const stored = useHead(ref_.paper_id)
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // ?play=1: bring the whole player into view once it is on the page
+  // The scroll container is <main id="app-scroll"> (Layout), not the window; scrollIntoView finds it from the element.
+  const [playAsk, setPlayAsk] = useState(0)   // counts ?play=1 links followed while this run is already open
   const playing = timelapse && !!run && run.events.length > 0
-  useEffect(() => { if (playing) filmRef.current?.scrollIntoView({ block: 'start' }) }, [playing])
+  useEffect(() => { if (playing) filmRef.current?.scrollIntoView({ block: 'start' }) }, [playing, playAsk])
   // a link to the same run with another ?tab= (the hash changes, the page stays) switches the tab
   useEffect(() => {
-    const f = () => { const q = location.hash.split('?')[1]; const n = parseTab(new URLSearchParams(q ?? '').get('tab')); setTab(n.tab); setHow(n.how) }
+    const f = () => {
+      const q = new URLSearchParams(location.hash.split('?')[1] ?? '')
+      const n = parseTab(q.get('tab')); setTab(n.tab); setHow(n.how)
+      if (q.get('play') === '1') { setTimelapse(true); setPlayAsk((x) => x + 1) }   // "See it in action" while this run is open
+    }
     addEventListener('hashchange', f)
     return () => removeEventListener('hashchange', f)
   }, [])
@@ -120,7 +126,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 md:px-8">
       {timelapse && run.events.length > 0 && (
-        <div ref={filmRef} className="scroll-mt-4"><Film events={run.events} dossier={d} claim={claim} title={run.ref.title} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked}
+        <div ref={filmRef} className="scroll-mt-4" data-testid="film"><Film events={run.events} dossier={d} claim={claim} title={run.ref.title} tone={res.tone} resultLabel={res.label} sentence={sentence} fidelityUnchecked={fidelityUnchecked}
           overall={OVERALL[ref_.gesamtaussage ?? ''] ?? null} fmt={fmt} fmtSpread={fmtSpread}
           plan={run.plan} finalCode={run.code} codeLoader={codeLoader} autoplay /></div>
       )}
@@ -143,7 +149,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           <PaperByline head={head} />
         </header>
         <VerdictCard dossier={d} events={run.events} claim={claim} verdict={v} res={res} sentence={sentence} fmt={fmt} fmtSpread={fmtSpread} paperUrl={paperUrl}
-          fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} />
+          fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} onTavily={() => goTab('sources')} />
       </div>
 
       <RunTabs tab={tab} onTab={(t) => goTab(t)} icons={ICONS} barRef={barRef} />
