@@ -1,0 +1,42 @@
+{
+ "velickovic_gat_2018/plan_heute.md": {
+  "g0": "ac16486c61dd7ea647310595b0cfa28306abcb5edda9fc01c1e3b537de472bac",
+  "g1": "ac16486c61dd7ea647310595b0cfa28306abcb5edda9fc01c1e3b537de472bac",
+  "identical": true
+ },
+ "velickovic_gat_2018/code_heute_0.2.py": {
+  "g0": "d0c96331570579eb9d84b89fcb0a585c2b157c605f33ff2da30c71b903806ef8",
+  "g1": "d0c96331570579eb9d84b89fcb0a585c2b157c605f33ff2da30c71b903806ef8",
+  "identical": true
+ },
+ "velickovic_gat_2018/code_heute_0.5.py": {
+  "g0": "8edd47b6c8020cee795ad155c4eda0b25fe07e03ea73ab8b84924d55bc789be0",
+  "g1": "8edd47b6c8020cee795ad155c4eda0b25fe07e03ea73ab8b84924d55bc789be0",
+  "identical": true
+ },
+ "velickovic_gat_2018/code_heute_0.8.py": {
+  "g0": "d48d5c21c0d973df5b0d30932d7638e9b88fad64ed28f0115b9a82fb17f999ed",
+  "g1": "d48d5c21c0d973df5b0d30932d7638e9b88fad64ed28f0115b9a82fb17f999ed",
+  "identical": true
+ },
+ "shchur_gat_2018/plan_heute.md": {
+  "g0": "62fd74158e856608700ad8272e64fc6509e606a4ab1bfa5d77b8f2cca80e4435",
+  "g1": "62fd74158e856608700ad8272e64fc6509e606a4ab1bfa5d77b8f2cca80e4435",
+  "identical": true
+ },
+ "shchur_gat_2018/code_heute_0.2.py": {
+  "g0": "e4787ddf8d078d3024c15f80fe3a6fb3888671735276949646c5febfdb95e1f8",
+  "g1": "e4787ddf8d078d3024c15f80fe3a6fb3888671735276949646c5febfdb95e1f8",
+  "identical": true
+ },
+ "shchur_gat_2018/code_heute_0.5.py": {
+  "g0": "2a90081d0f5834f9c933182fd7b538da4b74330e9c7ece4ae5cbc227bb04aea5",
+  "g1": "2a90081d0f5834f9c933182fd7b538da4b74330e9c7ece4ae5cbc227bb04aea5",
+  "identical": true
+ },
+ "shchur_gat_2018/code_heute_0.8.py": {
+  "g0": "452c38e20b340289983fb54ff67c02c1917c2db79d374fd4e81c542627d1ae59",
+  "g1": "452c38e20b340289983fb54ff67c02c1917c2db79d374fd4e81c542627d1ae59",
+  "identical": true
+ }
+}

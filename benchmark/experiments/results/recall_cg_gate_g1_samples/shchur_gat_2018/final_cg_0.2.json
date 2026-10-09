@@ -1,0 +1,1 @@
+{"unit": "shchur_gat_2018", "arm": "cg", "temp": 0.2, "urteil": "reproduziert", "mean": 0.8166432474629196, "std": 0.014994211326133154, "n_ok": 30, "n_seeds": 30, "code_missing": false, "attempts_seed0": 1, "target_reached": true, "seconds": 1445.7, "note": "", "facts": {}}
