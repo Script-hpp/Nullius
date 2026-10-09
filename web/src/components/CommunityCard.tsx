@@ -1,7 +1,8 @@
-import { ExternalLink, Lightbulb, MessagesSquare } from 'lucide-react'
+import { ExternalLink, FlaskConical, GitBranch, Lightbulb, MessagesSquare } from 'lucide-react'
 import { Badge, Section } from './ui'
 import type { Json } from '../data'
 import type { Tone } from '../labels'
+import { TYPE_LABEL, STATUS, branchCount, checksFor, measuredLine, whyNot } from '../objections'
 
 const KIND: Record<string, { label: string; tone: Tone }> = {
   'protocol note': { label: 'Protocol note', tone: 'amber' },
@@ -17,7 +18,8 @@ const when = (iso: string | undefined) => { const d = iso ? new Date(iso) : null
 export function CommunityCard({ dossier, claimId }: { dossier: Json; claimId: string }) {
   const c = dossier.community as Json | null | undefined
   const ex = (dossier.explanations ?? {})[claimId] as Json | undefined
-  if (!c && !ex) return null   // runs without a community check (older runs, benchmark): no card
+  const checks = checksFor(dossier, claimId)
+  if (!c && !ex && !checks.length) return null   // runs without a community check (older runs, benchmark): no card
   const findings: Json[] = c?.findings ?? []
   const items: Json[] = ex?.items ?? []
   return (
@@ -53,6 +55,41 @@ export function CommunityCard({ dossier, claimId }: { dossier: Json; claimId: st
               `${(c.pages ?? []).length} page${(c.pages ?? []).length === 1 ? '' : 's'} read`,
               c.dropped ? `${c.dropped} statement${c.dropped === 1 ? '' : 's'} dropped because the quote is not in the page` : null].filter(Boolean).join(' · ')}
           </p>
+        </Section>
+      )}
+      {checks.length > 0 && (
+        <Section title="Objections checked" hint="Tested by us · not part of the verdict" className="min-w-0">
+          <div className="mb-5 flex items-start gap-3 text-[12px] leading-relaxed text-fg-4">
+            <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+            <p>Where an objection names something we can change or repeat, it ran in its own sandbox branch and our harness measured it. Confirmed or refuted follows a rule fixed before the run, for this task only; the author of the objection may have used another setup.</p>
+          </div>
+          <ul className="space-y-4" data-testid="objection-checks">
+            {checks.map((o) => {
+              const st = STATUS[o.status] ?? STATUS.offen
+              const why = whyNot(o)
+              return (
+                <li key={o.id} className="rounded-lg border border-line/50 bg-surface p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <Badge tone="violet">{TYPE_LABEL[o.type] ?? o.type}</Badge>
+                    <Badge tone={st.tone}>{st.label}</Badge>
+                  </div>
+                  <blockquote className="rounded-md border-l-2 border-line-strong/60 bg-panel/40 px-3 py-2 font-mono text-[12px] italic leading-relaxed text-fg-4">“{o.quote}”</blockquote>
+                  <a className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-tone-blue transition-colors hover:text-tone-blue-hover" href={o.url} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-3 w-3" />
+                    <span className="max-w-[320px] truncate">{host(o.url)}</span>
+                  </a>
+                  {o.type !== 'not_measurable' && <p className="mt-3 text-[13px] font-medium leading-relaxed text-fg-2">{measuredLine(o)}</p>}
+                  {why && <p className="mt-2 text-[12px] leading-relaxed text-muted">{why}</p>}
+                  {branchCount(o) > 0 && (
+                    <p className="mt-2 flex items-center gap-1.5 font-mono text-[11px] text-subtle">
+                      <GitBranch className="h-3 w-3" />
+                      {(o.attempts as Json[]).map((a) => `${a.branch_id} (seed ${a.seed}${a.measured == null ? ', no result' : ''})`).join(' · ')}
+                    </p>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
         </Section>
       )}
       {ex && (

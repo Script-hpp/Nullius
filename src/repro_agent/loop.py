@@ -27,7 +27,7 @@ from pathlib import Path
 import yaml
 
 from .catalog import discovery_details, load_catalog_claims
-from . import community
+from . import community, objection_experiments
 from .claims_source import ExtractionInvalid, PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .costs import BudgetExceeded
@@ -227,10 +227,16 @@ class Orchestrator:
         seeds: int | None = None, claim_ids: list[str] | None = None, paper_only: bool = False,
         tavily_mode: str | None = None, graph_repair: bool = False, llm_cache: bool | None = None,
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
+        objection_experiments: bool = False, objection_quick: bool = False,
     ) -> None:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
+        # Einwand-Experimente (objection_experiments.py): Funde der Community-Suche werden eingeordnet und, wo messbar, im eigenen
+        # Branch geprueft. Nur Bericht. Default aus, damit Benchmark und vorab festgelegte Experimente unveraendert bleiben (API: an).
+        self.objection_experiments = objection_experiments
+        self.objection_quick = objection_quick   # Schnellmodus: weniger Experimente und Seeds (Live-Demo bleibt kurz)
+        self._claim_ctx: dict[str, dict] = {}
         # v5 Schritt A: Pflichtliste, Quellenrang und Geltungsbereich in Rolle 4 (setup_details.py); Default aus, damit v2 bis v4 reproduzierbar bleiben
         self.setup_v2 = setup_v2
         self.n_candidates = n_candidates if n_candidates is not None else CANDIDATES   # wirkt nur mit graph_repair (A1)
@@ -812,7 +818,8 @@ class Orchestrator:
             dossier.sources.append(rec)
             self._emit("source", **rec)
         self._emit("community", mode=mode, n_findings=len(found["findings"]), dropped=found["dropped"], queries=found["queries"],
-                   reused_discovery=found["reused_discovery"], findings=found["findings"])
+                   reused_discovery=found["reused_discovery"], findings=found["findings"],
+                   hits=found.get("hits", []), not_read=found.get("not_read", []), not_extracted=found.get("not_extracted", []), dropped_items=found.get("dropped_items", []), candidates=found.get("candidates", []))
         if deviating and entry.get("explanations"):
             expl = entry["explanations"]
             for cid in deviating:
@@ -867,6 +874,20 @@ class Orchestrator:
         return get
 
     # ---- Loop pro Claim -----------------------------------------------------
+    def _objection_round(self, paper: dict, dossier: Dossier) -> None:
+        """Einwand-Experimente (Rolle 3, Stufe 2): nur Produktpfad mit Tavily live und eingeschaltetem Schalter, nach Urteilen und
+        Community-Check. Liest Funde, schreibt nur dossier.objection_checks und Ereignisse. Fehler werden zur Warnung."""
+        if not (getattr(self, "objection_experiments", False) and getattr(self, "graph_repair", False) and getattr(self, "use_tavily", False)
+                and getattr(self, "tavily_mode", None) == "live"):
+            return
+        from .llm import BillingBlocked
+        try:
+            objection_experiments.run_round(self, dossier, paper, quick=getattr(self, "objection_quick", False))
+        except BillingBlocked:
+            raise
+        except Exception as exc:   # Beigabe: ein Fehler beruehrt Lauf und Urteil nie
+            self._warn(f"Einwand-Experimente fehlgeschlagen: {type(exc).__name__}: {exc}")
+
     def run_claim(
         self, paper: dict, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path
     ) -> None:
@@ -968,6 +989,7 @@ class Orchestrator:
             for a in dossier.attempts:
                 if a.claim_id == claim.id and a.candidate is not None:
                     a.chosen = a.candidate == cand and a.code_hash not in discarded
+        self.__dict__.setdefault("_claim_ctx", {})[claim.id] = {"code": code, "plan": plan, "task": task, "snapshot": snapshot, "n_seeds": len(seeds)}   # fuer Einwand-Experimente
         dossier.verdicts.append(verdict)
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
@@ -1387,6 +1409,7 @@ class Orchestrator:
         self.paper_text = None    # pro Lauf neu holen (live) statt den Text des vorigen Laufs weiterzuverwenden
         self._sources = []
         self._code_sent = set()
+        self._claim_ctx = {}
         self._repo_files = {}
         self._setup_missing: list[str] = []
         self.events = EventLog(run_dir / "events.jsonl")
@@ -1451,6 +1474,7 @@ class Orchestrator:
             for claim in claims:
                 self.run_claim(paper, claim, task, snapshot, dossier, run_dir)
             self._community_round(paper, dossier)   # erst nach allen Urteilen; nur Bericht
+            self._objection_round(paper, dossier)   # nach dem Community-Check; nur Bericht
         finally:
             dossier.save(ts)
             (run_dir / "zeugnis.md").write_text(render_markdown(dossier))

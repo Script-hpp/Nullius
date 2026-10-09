@@ -70,6 +70,16 @@ def used_credits(since: str = "") -> int:
     return total
 
 
+CALL_ATTEMPTS = 3
+BACKOFF_S = 2.0
+_sleep = time.sleep   # Tests biegen um
+
+
+def _is_transient(exc: Exception) -> bool:
+    import requests
+    return isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ChunkedEncodingError))
+
+
 class CountedClient:
     """Umhuellt TavilyClient: jeder search/extract/crawl-Aufruf schreibt genau einen Log-Eintrag."""
 
@@ -77,13 +87,19 @@ class CountedClient:
         self._client = client
 
     def _call(self, endpoint: str, *args, **kwargs):
-        try:
-            result = getattr(self._client, endpoint)(*args, **kwargs)
-        except Exception as exc:
-            log_call(endpoint, kwargs, error=f"{type(exc).__name__}: {exc}")
-            raise
-        log_call(endpoint, kwargs)
-        return result
+        # Verbindungsabbrueche (RemoteDisconnected, Timeout) werden bis zu CALL_ATTEMPTS Mal mit Backoff wiederholt; jeder Versuch zaehlt
+        # als Aufruf (konservativ). Alle anderen Fehler (Key, Limit, 4xx) sofort weiter.
+        for attempt in range(1, CALL_ATTEMPTS + 1):
+            try:
+                result = getattr(self._client, endpoint)(*args, **kwargs)
+            except Exception as exc:
+                log_call(endpoint, kwargs, error=f"{type(exc).__name__}: {exc}")
+                if attempt == CALL_ATTEMPTS or not _is_transient(exc):
+                    raise
+                _sleep(BACKOFF_S * 2 ** (attempt - 1))
+                continue
+            log_call(endpoint, kwargs)
+            return result
 
     def search(self, *args, **kwargs):
         return self._call("search", *args, **kwargs)

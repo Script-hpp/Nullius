@@ -26,11 +26,13 @@ ERRATUM = "Erratum: Table 2 of GraphNet: Better Node Classification was recomput
 
 
 class FakeTools:
-    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None, method_pages=None):
+    def __init__(self, search_pages=None, crawl_pages=None, read_pages=None, explain_pages=None, repo_pages=None, method_pages=None, critique_pages=None):
         self.calls = []
         self.search_pages = search_pages if search_pages is not None else [("https://github.com/a/b/issues/1", PAGE_ISSUE), ("https://example.org/r", PAGE_REPORT)]
         self.crawl_pages, self.read, self.explain_pages, self.repo_pages = crawl_pages or [], read_pages or [], explain_pages or [], repo_pages or []
         self.method_pages = method_pages or []
+        self.critique_pages = critique_pages or []
+        self.critique_limit = None
 
     @staticmethod
     def _res(pages):
@@ -43,6 +45,11 @@ class FakeTools:
     def search_method_critique(self, method, dataset, limit=5):
         self.calls.append(("method_search", method, dataset))
         return self._res(self.method_pages)
+
+    def search_critique(self, method, dataset, limit=5):
+        self.calls.append(("critique", method, dataset))
+        self.critique_limit = limit
+        return {**self._res(self.critique_pages), "queries": ["q1", "q2", "q3", "q4"]}
 
     def search_repo_issues(self, slug, limit=5):
         self.calls.append(("repo_search", slug))
@@ -141,7 +148,7 @@ def test_repo_issues_by_search_crawl_only_as_fallback():
     tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)], repo_pages=[("https://github.com/a/b/issues/7", "Issue about reproduce accuracy " + ISSUE)])
     d = dossier(repo=repo)
     orch(tools, FakeLLM([REPORT, ISSUE]))._community_round(paper(), d)
-    assert [c[0] for c in tools.calls] == ["search", "repo_search"] and tools.calls[1][1] == "a/b"
+    assert [c[0] for c in tools.calls] == ["search", "repo_search", "extract"] and tools.calls[1][1] == "a/b"   # extract: Issue-Text nachladen
     assert "https://github.com/a/b/issues/7" in [p["url"] for p in d.community["pages"]]            # Repo-Seite braucht den Titel nicht
     # auch die Repo-Suche leer: Crawl als Rueckfall, limit 3
     community.CACHE_PATH.unlink(missing_ok=True)
@@ -152,7 +159,7 @@ def test_repo_issues_by_search_crawl_only_as_fallback():
     community.CACHE_PATH.unlink(missing_ok=True)
     tools3 = FakeTools()
     orch(tools3, FakeLLM([ISSUE]))._community_round(paper(), dossier(repo=repo))
-    assert [c[0] for c in tools3.calls] == ["search"]
+    assert [c[0] for c in tools3.calls] == ["search", "extract"]   # Issue-Text nachladen, sonst nichts
     # kein Repo: nie Repo-Suche oder Crawl
     community.CACHE_PATH.unlink(missing_ok=True)
     tools4 = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)])
@@ -368,6 +375,11 @@ def kipf_paper(with_method=True):
     return {"title": KIPF, "dataset": "Cora", "arxiv_url": "https://arxiv.org/abs/1609.02907", "claims": claims, "community": []}
 
 
+def kipf_paper_of(method):
+    return {"title": "Some Unrelated Title", "dataset": "Cora", "arxiv_url": "https://arxiv.org/abs/2501.00009",
+            "claims": [{"id": "c", "extract": {"method": method, "dataset": "Cora"}}], "community": []}
+
+
 def test_finding_must_name_method_or_title_but_repo_pages_are_exempt():
     page = f"Review of {KIPF}. Some say: {TOO_GOOD}. Another review: GCN accuracy on Cora is lower with random splits."
     issue = "Issue in the repo: the numbers differ on my machine, please explain the preprocessing step."
@@ -391,7 +403,7 @@ def test_method_query_reads_critique_papers_without_the_title():
     assert [f["url"] for f in d.community["findings"]] == ["https://arxiv.org/abs/1811.05868"]      # Kritik-Paper, nicht die eigene Seite
     f = d.community["findings"][0]
     assert f["kind"] == "other" and f["label"] == "Note"                                                  # Label-Feld nie leer
-    assert {q["kind"] for q in d.community["queries"]} == {"search", "method_search"}
+    assert {q["kind"] for q in d.community["queries"]} == {"search", "method_search", "critique_search"}
 
 
 def test_method_query_needs_method_and_dataset_in_the_page():
@@ -439,3 +451,216 @@ def test_same_page_with_query_string_or_fragment_is_read_once():
              {"url": "https://github.com/tkipf/gcn/issues/15", "raw_content": "other issue"}]
     docs = community.select_docs(items, KIPF, "1609.02907", ("https://github.com/tkipf/gcn/",))
     assert [d.name for d in docs] == [base, "https://github.com/tkipf/gcn/issues/15"] and docs[0].text == "issue text A"
+
+
+def test_hits_and_drop_reasons_are_logged():
+    page = f"Review of {KIPF}. Some say: {TOO_GOOD}. Another review: GCN accuracy on Cora is lower with random splits."
+    tools = FakeTools(search_pages=[("https://openreview.net/forum?id=1", page)])
+    llm = QuoteLLM([("Results look too good.", TOO_GOOD), ("GCN is worse with random splits.", "GCN accuracy on Cora is lower with random splits")])
+    d = dossier()
+    o = orch(tools, llm)
+    o._community_round(kipf_paper(), d)
+    c = d.community
+    assert [h["url"] for h in c["hits"]] == ["https://openreview.net/forum?id=1"] and c["not_read"] == []
+    assert [x["reason"] for x in c["dropped_items"]] == ["names_neither_method_title_nor_arxiv_id"]
+    assert c["dropped_items"][0]["quote"] == TOO_GOOD[:300] and len(c["dropped_items"]) == c["dropped"]
+    ev = types(o, "community")[0]
+    assert ev["hits"] == c["hits"] and ev["dropped_items"] == c["dropped_items"]
+
+
+def test_quote_not_in_page_reason():
+    tools = FakeTools(search_pages=[("https://github.com/a/b/issues/1", PAGE_ISSUE)])
+    o, d = orch(tools, FakeLLM([ISSUE, REPORT])), dossier()
+    o._community_round(paper(), d)
+    assert {x["reason"] for x in d.community["dropped_items"]} <= {"quote_not_in_page", "names_neither_method_title_nor_arxiv_id"}
+    assert len(d.community["dropped_items"]) == d.community["dropped"]
+
+
+# ---- generische Kritik-Vorlagen, Foren, Issue-Texte (Pivot 2026-10-08) -----------------------------------------------------
+
+def test_critique_templates_are_generic_and_search_forums():
+    from repro_agent import tavily_tools as tt
+
+    seen = []
+    t = tt.TavilyTools.__new__(tt.TavilyTools)
+    t.on_call = None
+    t._client = SimpleNamespace(search=lambda **kw: seen.append(kw) or {"results": [{"url": "https://x/" + kw["query"].replace(" ", "_")}, {"url": "https://x/dup"}]})
+    res = t.search_critique("GCN", "Cora", 5)
+    assert [k["query"] for k in seen] == ["GCN Cora reproduce results differ", "GCN bug evaluation", "GCN baseline re-evaluation fixed",
+                                           "we re-run GCN on Cora and compare with the reported numbers"]
+    assert all(k["max_results"] == 5 and "arxiv.org" in k["include_domains"] and "openreview.net" in k["include_domains"]
+               and "github.com" in k["include_domains"] for k in seen)
+    assert [("discuss.dgl.ai" in k["include_domains"]) for k in seen] == [True, True, True, False]
+    assert len(res["results"]) == 5 and res["queries"] == [k["query"] for k in seen]   # Duplikat-URL einmal
+    # keine Paper-Eigenheiten in den Vorlagen
+    assert not any(w in " ".join(q for q, _ in tt.CRITIQUE_TEMPLATES).lower() for w in ("drop_last", "dlinear", "etth1", "github.com/"))
+
+
+def test_critique_hits_are_read_with_method_and_dataset_but_paper_and_quote_checks_stay():
+    page = "We re-run MyNet on Cora and find the reported accuracy drops by two points. Details follow."
+    tools = FakeTools(search_pages=[("https://example.org/r", PAGE_REPORT)], critique_pages=[("https://arxiv.org/abs/2601.00002", page)])
+    quote = "We re-run MyNet on Cora and find the reported accuracy drops by two points."
+    d = dossier()
+    orch(tools, QuoteLLM([("Re-run drops accuracy.", quote), ("Made up.", "nowhere in the page")]))._community_round(kipf_paper_of("MyNet"), d)
+    assert ("critique", "MyNet", "Cora") in tools.calls
+    assert [f["url"] for f in d.community["findings"]] == ["https://arxiv.org/abs/2601.00002"]
+    assert d.community["calls"].count("search") == 1 + 1 + 4   # title, method, 4 critique templates
+    # Seite ohne Methode+Datensatz im Text wird auch als Treffer der Kritik-Vorlagen nicht gelesen
+    tools2 = FakeTools(search_pages=[], critique_pages=[("https://arxiv.org/abs/2601.00003", "Totally unrelated text about transformers.")])
+    d2 = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools2, QuoteLLM([]))._community_round(kipf_paper_of("MyNet"), d2)
+    assert d2.community["pages"] == []
+
+
+def test_short_issue_hits_get_their_body_by_extract_limited():
+    repo = {"url": "https://github.com/a/b"}
+    heads = [(f"https://github.com/a/b/issues/{i}", f"Issue {i} title") for i in range(1, 8)]
+    body = "Issue 2 title. Description: " + ISSUE
+    tools = FakeTools(search_pages=heads, read_pages=[("https://github.com/a/b/issues/2", body)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    ext = [c for c in tools.calls if c[0] == "extract"]
+    assert len(ext) == 1 and len(ext[0][1]) == community.MAX_BODIES == 4 and ext[0][1][0].endswith("/issues/1")
+    assert [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/2"]   # Zitat steht nur im Text
+    assert {"kind": "issue_bodies", "urls": list(ext[0][1])} in d.community["queries"]
+
+
+def test_issue_list_page_alone_triggers_the_crawl_for_bodies():
+    repo = {"url": "https://github.com/a/b"}
+    tools = FakeTools(search_pages=[("https://github.com/a/b/issues", "Issues\n#1 Something\n#2 Other")],
+                      crawl_pages=[("https://github.com/a/b/issues/9", "Issue nine " + ISSUE)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    assert ("crawl", "https://github.com/a/b", 3) in tools.calls
+    assert [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/9"]
+
+
+def test_extract_failure_keeps_the_paid_hits():
+    class Boom(FakeTools):
+        def read_pages(self, urls, limit=3):
+            raise RuntimeError("down")
+    repo = {"url": "https://github.com/a/b"}
+    tools = Boom(search_pages=[("https://github.com/a/b/issues/1", PAGE_ISSUE[:100] + ISSUE)])
+    d = dossier(repo=repo)
+    orch(tools, FakeLLM([ISSUE]))._community_round(paper(), d)
+    assert d.community is not None and [f["url"] for f in d.community["findings"]] == ["https://github.com/a/b/issues/1"]
+
+
+# ---- Addendum B: Seitenebene fuer Setup-Themen -----------------------------------------------------------------------------
+
+DL = "the test dataloader uses drop_last=True, which may exclude a significant portion of test data"
+
+
+def _page_rule(page_text, pairs):
+    tools = FakeTools(search_pages=[], critique_pages=[("https://example.org/fits", page_text)])   # Seite kommt als Kritik-Treffer
+    d = dossier()
+    o = orch(tools, QuoteLLM(pairs))
+    community.CACHE_PATH.unlink(missing_ok=True)
+    o._community_round(kipf_paper(), d)
+    return d.community
+
+
+def test_setup_finding_passes_when_page_names_method_but_statement_does_not():
+    c = _page_rule(f"README of another model. Compared with GCN on Cora. Note: {DL}.", [("Test loader drops data.", DL)])
+    assert [f["quote"] for f in c["findings"]] == [DL] and c["findings"][0]["pass_reason"] == "page_names_method"
+    assert [x["outcome"] for x in c["candidates"]] == ["kept_page_names_method"] and c["dropped_items"] == []
+
+
+def test_setup_finding_dropped_when_page_does_not_name_method(monkeypatch):
+    # select_docs laesst solche Seiten normalerweise nicht durch; hier erzwungen, damit die Regel allein geprueft wird
+    monkeypatch.setattr(community, "select_docs", lambda items, *a, **kw: [community.Doc(i["url"], i["raw_content"]) for i in items])
+    c = _page_rule(f"README of another model about Cora arXiv 2501.00001. Note: {DL}.", [("Test loader drops data.", DL)])
+    assert c["findings"] == [] and c["dropped_items"][0]["reason"] == "names_neither_method_title_nor_arxiv_id"
+    assert c["candidates"][0]["outcome"] == "dropped_names_neither_method_title_nor_arxiv_id"
+
+
+def test_non_setup_finding_keeps_statement_level_rule_even_if_page_names_method():
+    c = _page_rule(f"Mentions GCN on Cora once. {TOO_GOOD}.", [("Results look too good.", TOO_GOOD)])
+    assert c["findings"] == [] and c["candidates"][0]["outcome"] == "dropped_names_neither_method_title_nor_arxiv_id"
+
+
+def test_quote_check_stays_strict_and_candidates_store_raw_output():
+    c = _page_rule(f"Compared with GCN on Cora. {DL}.", [("Test loader drops data.", DL)])
+    assert c["findings"][0]["pass_reason"] == "page_names_method"
+
+    class Bad:
+        def complete(self, role, messages, **kw):
+            return SimpleNamespace(content=json.dumps([{"topic": "t", "statement": "drop_last used", "quote": "invented quote GCN"}]))
+    tools = FakeTools(search_pages=[], critique_pages=[("https://example.org/fits", "GCN on Cora. Nothing else here at all.")])
+    d = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools, Bad())._community_round(kipf_paper(), d)
+    assert d.community["findings"] == [] and d.community["candidates"][0]["outcome"] == "dropped_quote_not_in_page"
+    assert d.community["candidates"][0]["quote_in_page"] is False
+
+
+# Nachtrag C: Seitenreihenfolge vor dem Schnitt auf MAX_CHUNKS. Die FITS-Seite stand im Lauf von Nachtrag A an Stelle 12 von 22 gelesenen
+# (0-basiert) und fiel unbemerkt hinter docs[:12]. Text: woertlicher Auszug aus dem FITS-README (github.com/VEWOXIC/FITS, "Important Update:
+# 2023-12-25", frei abgerufen am 2026-10-08, nicht ueber Tavily); die Fuellseiten sind synthetisch.
+FITS_README = (
+    "## Important Update: 2023-12-25\n\nWe've identified a significant bug in our code, originally found in Informer. This issue has "
+    "implications for a broad spectrum of research on time series forecasting, including but not limited to:\n\n"
+    "- PatchTST (ICLR 2023)\n- DLinear (AAAI 2022 reported version)\n- FEDformer (ICML 2022)\n\n"
+    "### Description of the Bug:\n\nThe bug stems from an incorrect implementation in the data loader. Specifically, "
+    "the test dataloader uses `drop_last=True`, which may exclude a significant portion of test data, particularly with large batch sizes, "
+    "leading to unfair model comparisons.\n\nThe discovered bug predominantly impacts results on smaller datasets like ETTh1 and ETTh2.\n"
+)
+FITS_QUOTE = "the test dataloader uses `drop_last=True`, which may exclude a significant portion of test data"
+
+
+def dlinear_paper():
+    return {"title": "Are Transformers Effective for Time Series Forecasting?", "dataset": "ETTh1", "arxiv_url": "https://arxiv.org/abs/2205.13504",
+            "claims": [{"id": "c", "extract": {"method": "DLinear", "dataset": "ETTh1"}}], "community": []}
+
+
+def late_fits_scenario():
+    fillers = [(f"https://arxiv.org/html/2601.{i:05d}", f"We compare DLinear on ETTh1 with our model {i}. We tune the hyperparameter grid, "
+                f"report the test set MSE over 3 seeds and the validation set curve. " + "z" * 3000) for i in range(12)]
+    other = ("https://arxiv.org/html/2604.99999", "A KAN model on Weather and ETTm1. We use a unified protocol. Test set results over seeds. "
+             "Our dataloader sets drop_last=True for training only; leakage is avoided.")   # nennt weder DLinear noch ETTh1: wird nicht gelesen
+    return fillers + [other, ("https://github.com/VEWOXIC/FITS", FITS_README)]
+
+
+def test_rank_docs_puts_rare_protocol_keywords_first_and_keeps_ties_in_order():
+    common = "tune the hyperparameter on the validation set and report the test set accuracy"
+    docs = [community.Doc(f"u{i}", common + " " * i) for i in range(4)] + [community.Doc("rare", common + " drop_last leakage")]
+    assert [d.name for d in community.rank_docs(docs)] == ["rare", "u0", "u1", "u2", "u3"]
+    assert [d.name for d in community.rank_docs(docs[:1])] == ["u0"] and community.rank_docs([]) == []
+
+
+def test_late_page_with_rare_protocol_keyword_reaches_the_extractor_and_passes_page_rule(monkeypatch):
+    def run():
+        tools = FakeTools(search_pages=[], critique_pages=late_fits_scenario())
+        d = dossier()
+        community.CACHE_PATH.unlink(missing_ok=True)
+        orch(tools, QuoteLLM([("Test loader drops data.", FITS_QUOTE)]))._community_round(dlinear_paper(), d)
+        return tools, d.community
+    tools, c = run()
+    assert tools.critique_limit == community.CRITIQUE_RESULTS >= 8
+    assert [f["url"] for f in c["findings"]] == ["https://github.com/VEWOXIC/FITS"] and c["findings"][0]["pass_reason"] == "page_names_method"
+    assert c["findings"][0]["kind"] == community.KIND_PROTOCOL
+    assert "https://arxiv.org/html/2604.99999" not in {p["url"] for p in c["pages"]}      # Seite ohne Methode/Datensatz: nicht gelesen
+    assert len(c["pages"]) == 13 and c["not_extracted"] and "https://github.com/VEWOXIC/FITS" not in c["not_extracted"]
+    # alte Reihenfolge (Eingang der Suchergebnisse): die Seite faellt hinter den Schnitt, nichts wird extrahiert
+    monkeypatch.setattr(community, "rank_docs", lambda docs: docs)
+    _, old = run()
+    assert old["findings"] == [] and old["not_extracted"] == ["https://github.com/VEWOXIC/FITS"]
+
+
+def test_generic_pages_without_rare_keywords_do_not_make_findings():
+    fillers = [(u, t) for u, t in late_fits_scenario()[:12]]
+    tools = FakeTools(search_pages=[], critique_pages=fillers)
+    d = dossier()
+    community.CACHE_PATH.unlink(missing_ok=True)
+    orch(tools, QuoteLLM([("Test loader drops data.", FITS_QUOTE)]))._community_round(dlinear_paper(), d)
+    assert d.community["findings"] == [] and d.community["candidates"] == []
+
+
+def test_fits_style_finding_is_accepted_as_protocol_change_by_the_fixed_validation():
+    from repro_agent.objection_experiments import validate
+    finding = {"statement": "The test dataloader drops part of the test data.", "quote": FITS_QUOTE}
+    out = validate({"type": "protocol_change", "reason": "r"}, finding, "mse", {}, ("drop_last",))
+    assert out["type"] == "protocol_change" and out["param"] == "drop_last"
+    generic = {"statement": "Baselines are quoted from original publications.", "quote": "Nonlinear baselines are quoted from their original publications"}
+    assert validate({"type": "protocol_change"}, generic, "mse", {}, ("drop_last",))["type"] == "not_measurable"

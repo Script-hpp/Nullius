@@ -63,8 +63,11 @@ def _extract_chunk(llm: LLMClient, chunk: str, paper: str, dataset: str) -> list
 
 
 def extract_objections(
-    llm: LLMClient, docs: list[Doc], paper: str, dataset: str, repo_files: dict[str, str] | None = None
+    llm: LLMClient, docs: list[Doc], paper: str, dataset: str, repo_files: dict[str, str] | None = None,
+    drops: list[dict] | None = None, candidates: list[dict] | None = None,
 ) -> tuple[list[Objection], int]:
+    """`drops` (optional) sammelt je verworfenem Kandidaten {url, reason, topic, statement, quote}; `candidates` (optional) alle
+    rohen Extraktor-Kandidaten je Seite {url, topic, statement, quote, quote_in_page}, auch die behaltenen."""
     jobs = [(d, c) for d in docs for c in _chunks(d.text[:60000])]
     with ThreadPoolExecutor(max_workers=4) as pool:
         raw = list(pool.map(lambda j: _extract_chunk(llm, j[1], paper, dataset), jobs))
@@ -74,11 +77,19 @@ def extract_objections(
         for it in lst:
             if not isinstance(it, dict):
                 dropped += 1
+                if drops is not None:
+                    drops.append({"url": doc.name, "reason": "not_an_object", "topic": "", "statement": "", "quote": str(it)[:200]})
                 continue
             topic, stmt, quote = (str(it.get(k, "")).strip() for k in ("topic", "statement", "quote"))
             nq = _norm(quote)
+            if candidates is not None:
+                candidates.append({"url": doc.name, "topic": topic, "statement": stmt[:300], "quote": quote[:300],
+                                   "quote_in_page": bool(stmt and quote and nq in hay[doc.name])})
             if not (stmt and quote and nq in hay[doc.name]):
                 dropped += 1
+                if drops is not None:
+                    reason = "empty_statement_or_quote" if not (stmt and quote) else "quote_not_in_page"
+                    drops.append({"url": doc.name, "reason": reason, "topic": topic, "statement": stmt[:300], "quote": quote[:300]})
             elif (doc.name, nq) not in seen:
                 seen.add((doc.name, nq))
                 low = (stmt + " " + quote).lower()
