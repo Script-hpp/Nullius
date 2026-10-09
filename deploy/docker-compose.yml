@@ -12,6 +12,13 @@ services:
       - logs:/app/logs      # costs.jsonl: Budgetzaehler, darf beim Neustart nicht verloren gehen
       - runs:/app/runs
     expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 512
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
   caddy:
     image: caddy:2
     restart: unless-stopped

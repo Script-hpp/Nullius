@@ -24,5 +24,5 @@ USER app
 VOLUME ["/data", "/app/logs", "/app/runs"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/jobs/current', timeout=4).status == 200 else 1)"
-CMD ["uvicorn", "deploy.serve:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers"]
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status == 200 else 1)"
+CMD ["uvicorn", "deploy.serve:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--proxy-headers", "--no-server-header", "--limit-concurrency", "200", "--timeout-keep-alive", "15"]

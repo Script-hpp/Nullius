@@ -44,3 +44,11 @@ def _fixture_copy(tmp_path_factory, monkeypatch):
     shutil.copytree(REAL_FIXTURES, copy)
     monkeypatch.setattr("repro_agent.claims_source.FIXTURE_DIR", copy)
     monkeypatch.setattr("repro_agent.repo_source.FIXTURE_DIR", copy / "repos")
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    from repro_agent import web_guard
+
+    web_guard.HITS.clear()
+    yield

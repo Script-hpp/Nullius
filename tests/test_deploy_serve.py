@@ -55,3 +55,29 @@ def test_seed_copies_image_data_only_into_empty_volume(tmp_path):
     env = {"WEB_DIST": str(dist), "REPRO_EXPORT_DIR": str(tmp_path / "vol0"), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(ROOT / "src")}
     res = subprocess.run([sys.executable, "-c", src, str(dist / "data"), str(tmp_path / "vol")], capture_output=True, text=True, env=env, timeout=60)
     assert res.returncode == 0 and "ok" in res.stdout, res.stderr[-800:]
+
+
+def test_page_csp_hashes_inline_script_and_headers_reach_the_page(tmp_path):
+    src = textwrap.dedent("""
+        import sys, hashlib, base64
+        sys.path.insert(0, %r)
+        from fastapi.testclient import TestClient
+        import deploy.serve as s
+        body = "var x = 1"
+        want = "'sha256-" + base64.b64encode(hashlib.sha256(body.encode()).digest()).decode() + "'"
+        csp = s.page_csp()
+        assert want in csp and "'unsafe-inline'" not in csp.split("style-src")[0] and "frame-ancestors 'none'" in csp, csp
+        c = TestClient(s.app)
+        page = c.get("/")
+        assert page.headers["content-security-policy"] == csp and page.headers["x-content-type-options"] == "nosniff"
+        assert c.get("/data/index.json").headers["content-security-policy"].startswith("default-src 'none'")   # Nicht-HTML: strenge Policy
+        assert c.get("/docs").status_code == 404 and c.get("/api/health").json() == {"ok": True}
+        print("ok")
+    """ % str(ROOT))
+    dist = tmp_path / "dist"
+    (dist / "data").mkdir(parents=True)
+    (dist / "index.html").write_text('<html><head><script>var x = 1</script></head><body><script type="module" src="/a.js"></script></body></html>')
+    (dist / "data" / "index.json").write_text("[]")
+    env = {"WEB_DIST": str(dist), "REPRO_EXPORT_DIR": str(tmp_path / "vol"), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(ROOT / "src")}
+    res = subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, env=env, timeout=60)
+    assert res.returncode == 0 and "ok" in res.stdout, res.stderr[-800:]

@@ -1,7 +1,16 @@
 # IP-Variante ohne Domain: Selbstzertifikat (Browser warnt einmal). Nutzung: CADDYFILE=Caddyfile.selfsigned
 :443 {
 	tls internal
-	encode gzip
+	header {
+		-Server
+	}
+	request_body {
+		max_size 64KB
+	}
+	# SSE (/api/*) nie komprimieren; alles andere gzip
+	@static not path /api/*
+	encode @static gzip
+	# SSE (Live-Lauf): nicht puffern, langer Lese-Timeout (Laeufe bis ca. 20 Minuten)
 	reverse_proxy app:8000 {
 		flush_interval -1
 		transport http {

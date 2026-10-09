@@ -5,9 +5,9 @@ Official Rules: Demo muss bis 15.12.2026 erreichbar und kostenlos testbar sein (
 ## Was der Dienst braucht
 - **Ein Prozess, ein Job gleichzeitig:** Jobs, Warteschlange und Semaphor liegen im Speicher der API (`api.py`). Genau **ein** uvicorn-Worker, kein Autoscaling auf mehrere Instanzen.
 - **Lange Läufe:** Reproduktionsläufe bis etwa 20 Minuten, Schnellprüfung (3 Seeds) kürzer. Der Live-Stream (SSE, `/api/reproduce/{id}/stream`) bleibt so lange offen (Keepalive alle 15 s). Proxy ohne Pufferung und mit Lese-Timeout über 20 Minuten.
-- **Persistenz:** Exporte neuer Läufe (`REPRO_EXPORT_DIR`, im Container `/data`: `index.json`, `catalog.json`, Laufordner) und das Verzeichnis `logs/` mit `costs.jsonl` (Budgetzähler: `BUDGET_TOTAL_USD` zählt aus diesem Log) und `tavily_usage.jsonl` (Tavily-Credit-Zähler der Live-Sperre). Ein leeres `logs/` nach Neustart oder Redeploy ließe beide Untergrenzen auf „voll“ zurückspringen. `logs/` und `/data` als Volume (Coolify: `nullius-logs` → `/app/logs`, Compose: `logs:/app/logs`; das ganze Verzeichnis, nicht einzelne Dateien).
+- **Persistenz:** Exporte neuer Läufe (`REPRO_EXPORT_DIR`, im Container `/data`: `index.json`, `catalog.json`, Laufordner) und das Verzeichnis `logs/` mit `costs.jsonl` (Budgetzähler: `BUDGET_TOTAL_USD` zählt aus diesem Log) `tavily_usage.jsonl` (Tavily-Credit-Zähler der Live-Sperre) und `live_jobs.jsonl` (Start-Log der Live-Jobs mit IP-Hash: stellt Tageslimits und Limits je IP nach einem Neustart wieder her). Ein leeres `logs/` nach Neustart oder Redeploy ließe Untergrenzen und Tageslimits auf „voll“ zurückspringen. `logs/` und `/data` als Volume (Coolify: `nullius-logs` → `/app/logs`, Compose: `logs:/app/logs`; das ganze Verzeichnis, nicht einzelne Dateien).
 - **Ausgehend erreichbar:** Token Factory (`api.tokenfactory.nebius.com`), Tavily, Nebius Sandboxes (`contree-sdk`), arXiv/GitHub für Quellen. Keine eingehenden Verbindungen außer 80/443.
-- **Schlüssel nur als Umgebungsvariablen** (`deploy/.env`, nie im Image und nicht in Git). Die Demo ist offen (kein Zugangscode); Live-Läufe sperrt die API selbst, wenn Budget oder Tavily-Credits unter die Schwelle fallen (`LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`), dazu Tageslimits und ein Limit je IP. Replay und Evidence bleiben immer nutzbar.
+- **Schlüssel nur als Umgebungsvariablen** (`deploy/.env`, nie im Image und nicht in Git). Die Demo ist offen (kein Zugangscode); Live-Läufe sperrt die API selbst, wenn Budget oder Tavily-Credits unter die Schwelle fallen (`LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`), dazu Tageslimits, ein Tagesbudget in $ (`MAX_DAILY_COST_USD`) und ein Limit je IP. Ohne `BUDGET_TOTAL_USD` und `BUDGET_SINCE` bleibt Live bei `LLM_PROVIDER=tokenfactory` gesperrt (fail closed). Replay und Evidence bleiben immer nutzbar.
 - **Klein:** Die Berechnung läuft in der Nebius-Sandbox, nicht im Container. 2 vCPU und 4 bis 8 GB RAM genügen; Plattenbedarf gering (Image unter 1 GB, Exporte einige MB).
 
 ## Optionen im Vergleich
@@ -34,17 +34,17 @@ Voraussetzungen: Coolify-Instanz mit Zugriff auf das GitHub-Repo (GitHub-App ode
 1. **DNS:** A-Record `nullius.example.com` auf die öffentliche IP des Coolify-Servers (oder CNAME auf dessen Hostnamen). Liegt die Domain bei Cloudflare: Wolke **grau** (nur DNS), nicht proxied. Der Cloudflare-Proxy schneidet stille Verbindungen nach etwa 100 s ab und kann SSE puffern; mit Keepalive alle 15 s klappt es meist, ist aber ein unnötiges Risiko.
 2. **Ressource anlegen:** Project > Environment > **+ New Resource > Public/Private Repository (GitHub)** > Repo `Script-hpp/Nullius`, Branch `main`. **Build Pack: Dockerfile**, Base Directory `/`, Dockerfile Location `/Dockerfile`.
 3. **Ports und Domain:** *Ports Exposes* = `8000`. Unter *Domains* `https://nullius.example.com` eintragen. Coolify legt Traefik-Labels an und holt das Let's-Encrypt-Zertifikat, sobald DNS stimmt (Ports 80 und 443 des Servers offen).
-4. **Umgebungsvariablen** (Configuration > Environment Variables; Namen wie in `deploy/.env.example`, **Werte nur hier**): `LLM_PROVIDER=tokenfactory`, `SANDBOX_BACKEND=nebius`, `TAVILY_MODE=live`, `NEBIUS_API_KEY`, `NEBIUS_PROJECT_ID`, `TF_MODEL_FAST`, `TF_MODEL_CODE`, `TF_MODEL_REASONING`, `TAVILY_API_KEY`, `MAX_DAILY_JOBS`, `MAX_DAILY_REPRO_JOBS`, `MAX_DAILY_REPRO_PER_IP`, `MAX_DAILY_DISCOVER_PER_IP`, `LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`, `TAVILY_CREDITS_TOTAL`, `TAVILY_CREDITS_SINCE`, `TRUST_PROXY=1` (hinter Coolify/Caddy, sonst zählt jeder Besucher als dieselbe Proxy-IP), `MAX_COST_PER_RUN_USD`, `VAT_RATE`, `BUDGET_TOTAL_USD`, `BUDGET_SINCE`, `MAX_ATTEMPTS_PER_CLAIM`, `REPRO_EXPORT_DIR=/data` (steht schon im Image). **„Build Variable“ nicht ankreuzen**: Schlüssel dürfen nie in den Build. `SITE_ADDRESS` und `CADDYFILE` werden nicht gebraucht (nur für `docker-compose.yml` mit Caddy).
-5. **Persistente Speicher** (Configuration > Persistent Storage > Add, Typ *Volume*): `nullius-data` → `/data`, `nullius-logs` → `/app/logs`, `nullius-runs` → `/app/runs`. Benannte Volumes übernehmen beim ersten Start Inhalt und Besitzer aus dem Image (Nutzer `app`, UID 10001); bei Bind-Mounts auf dem Host müsste `chown 10001` gesetzt werden. `/app/logs` enthält `costs.jsonl` (Budgetzähler) und `tavily_usage.jsonl` (Tavily-Credit-Zähler): nie löschen, sonst springen `LIVE_MIN_BUDGET_USD` und `LIVE_MIN_TAVILY_CREDITS` auf „voll“ zurück. Vor dem ersten Redeploy prüfen: `docker exec <container> ls /app/logs` zeigt beide Dateien auch nach dem Neustart.
-6. **Healthcheck** (Configuration > Healthcheck, aktivieren): Methode GET, Schema http, Host `localhost`, Port `8000`, Pfad `/api/jobs/current`, Rückgabecode `200`, Intervall 30 s, Timeout 5 s, Retries 3, Start-Zeitraum 20 s. (Das Dockerfile hat einen eigenen `HEALTHCHECK` mit demselben Pfad; Coolify wertet seine Einstellung aus.) **Nur eine Instanz** betreiben (keine Replikate): Jobs und Semaphor liegen im Speicher der API.
+4. **Umgebungsvariablen** (Configuration > Environment Variables; Namen wie in `deploy/.env.example`, **Werte nur hier**): `LLM_PROVIDER=tokenfactory`, `SANDBOX_BACKEND=nebius`, `TAVILY_MODE=live`, `NEBIUS_API_KEY`, `NEBIUS_PROJECT_ID`, `TF_MODEL_FAST`, `TF_MODEL_CODE`, `TF_MODEL_REASONING`, `TAVILY_API_KEY`, `MAX_DAILY_JOBS`, `MAX_DAILY_REPRO_JOBS`, `MAX_DAILY_REPRO_PER_IP`, `MAX_DAILY_DISCOVER_PER_IP`, `MAX_DAILY_COST_USD`, `ALLOW_FULL_RUNS=0`, `LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS`, `TAVILY_CREDITS_TOTAL`, `TAVILY_CREDITS_SINCE`, `TRUST_PROXY=1` (hinter Coolify/Caddy, sonst zählt jeder Besucher als dieselbe Proxy-IP), `MAX_COST_PER_RUN_USD`, `VAT_RATE`, `BUDGET_TOTAL_USD`, `BUDGET_SINCE`, `MAX_ATTEMPTS_PER_CLAIM`, `REPRO_EXPORT_DIR=/data` (steht schon im Image). Optional (Defaults genügen): `RATE_LIMIT_PER_MIN`, `RATE_LIMIT_POST_PER_MIN`, `MAX_BODY_BYTES`, `MAX_SSE_STREAMS`, `MAX_SSE_PER_IP`. Die Werte für Stufe 1 und 2 stehen in `deploy/.env.example`. **Schlüssel (`NEBIUS_API_KEY`, `NEBIUS_PROJECT_ID`, `TAVILY_API_KEY`) nur hier eintragen, als „Secret“ markieren; „Build Variable“ nicht ankreuzen**: Schlüssel dürfen nie in den Build. `SITE_ADDRESS` und `CADDYFILE` werden nicht gebraucht (nur für `docker-compose.yml` mit Caddy).
+5. **Persistente Speicher** (Configuration > Persistent Storage > Add, Typ *Volume*): `nullius-data` → `/data`, `nullius-logs` → `/app/logs`, `nullius-runs` → `/app/runs`. Benannte Volumes übernehmen beim ersten Start Inhalt und Besitzer aus dem Image (Nutzer `app`, UID 10001); bei Bind-Mounts auf dem Host müsste `chown 10001` gesetzt werden. `/app/logs` enthält `costs.jsonl` (Budgetzähler und Tagesbudget), `tavily_usage.jsonl` (Tavily-Credit-Zähler), `live_jobs.jsonl` (Tageslimits) und `discovery_cache.json`: nie löschen, sonst springen `LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS` und die Tageslimits auf „voll“ zurück. Vor dem ersten Redeploy prüfen: `docker exec <container> ls /app/logs` zeigt die Dateien auch nach dem Neustart.
+6. **Healthcheck** (Configuration > Healthcheck, aktivieren): Methode GET, Schema http, Host `localhost`, Port `8000`, Pfad `/api/health`, Rückgabecode `200`, Intervall 30 s, Timeout 5 s, Retries 3, Start-Zeitraum 20 s. (Das Dockerfile hat einen eigenen `HEALTHCHECK` mit demselben Pfad; Coolify wertet seine Einstellung aus. `/api/health` liest nichts von der Platte und zeigt keinen Job-Zustand.) **Nur eine Instanz** betreiben (keine Replikate): Jobs und Semaphor liegen im Speicher der API.
 7. **Auto-Deploy ausschalten** (Configuration > Advanced: *Auto Deploy* aus, Webhooks nicht einrichten). Ein Redeploy beendet den laufenden Container und damit einen laufenden Live-Lauf; während der Bewertung (01.–15.12.) nur von Hand und nicht während eines Laufs deployen. Mit Coolify-Rolling-Update wartet der alte Container auf den Healthcheck des neuen, ein aktiver Job geht trotzdem verloren (Speicher).
 8. **Speicher begrenzen** (Advanced > Resource Limits): RAM 1 bis 2 GB, CPU 1 bis 2 (die Berechnung läuft in der Nebius-Sandbox, der Container ist leicht).
 9. **Deploy** starten und das Build-Log beobachten (Node-Stufe baut `web/`, Python-Stufe installiert mit `uv sync --frozen`). Danach ist der Status *Running (healthy)*.
-10. **Proxy: SSE ohne Puffer, lange Timeouts.** Traefik puffert Antworten nicht und gibt Streams unverändert weiter; Standardwerte von Coolifys Traefik passen meist: keine Lese-/Schreib-Timeouts auf dem HTTP-Entrypoint (`readTimeout`/`writeTimeout` 0), `idleTimeout` 180 s betrifft nur ruhende Verbindungen, der Stream schickt alle 15 s einen Keepalive **[zu prüfen an der echten Instanz]**. Zu beachten:
+10. **Proxy: SSE ohne Puffer, lange Timeouts.** Die App setzt `X-Accel-Buffering: no` und `Cache-Control: no-store` auf den Streams selbst. Traefik puffert Antworten nicht und gibt Streams unverändert weiter; Standardwerte von Coolifys Traefik passen meist: keine Lese-/Schreib-Timeouts auf dem HTTP-Entrypoint (`readTimeout`/`writeTimeout` 0), `idleTimeout` 180 s betrifft nur ruhende Verbindungen, der Stream schickt alle 15 s einen Keepalive **[zu prüfen an der echten Instanz]**. Zu beachten:
     - Keine Kompression oder Puffer-Middleware für `/api/*` hinzufügen (Coolify-Option „gzip/compress“ an der Ressource aus lassen, oder `text/event-stream` ausnehmen).
     - Steht ein weiterer Proxy davor (Cloudflare, Nginx): dort Pufferung aus (`proxy_buffering off`, `X-Accel-Buffering` kommt von der App nicht), Lese-Timeout mindestens 30 min.
     - Falls ein Timeout den Stream vor 20 Minuten trennt: Traefik-Entrypoint-Timeouts in den Coolify-Proxy-Einstellungen (Servers > Proxy > Konfiguration) anheben (`--entrypoints.https.transport.respondingTimeouts.idleTimeout=1800s`), danach Proxy neu starten.
-11. **Test von außen:** `curl -s https://nullius.example.com/api/jobs/current` liefert `{"busy":false}`. Seite im Browser öffnen (Overview, Catalog). Dann als **Schnellprüfung** einen Live-Lauf (ohne Code, ein Klick) starten und die Stream-Anzeige bis zum Ende beobachten (kostet wenige Cent). Probe für den Proxy, ohne Kosten: `curl -N -m 60 https://nullius.example.com/api/reproduce/<job>/stream` während eines Laufs zeigt die Ereignisse zeitnah, nicht erst am Ende.
+11. **Test von außen:** `curl -s https://nullius.example.com/api/jobs/current` liefert `{"busy":false}`; `curl -si https://nullius.example.com/api/health` zeigt `content-security-policy`, `x-content-type-options: nosniff`, `x-frame-options: DENY` und `cache-control: no-store`; `curl -so /dev/null -w '%{http_code}' https://nullius.example.com/docs` liefert 404. Seite im Browser öffnen (Overview, Catalog). Dann als **Schnellprüfung** einen Live-Lauf (ohne Code, ein Klick) starten und die Stream-Anzeige bis zum Ende beobachten (kostet wenige Cent). Probe für den Proxy, ohne Kosten: `curl -N -m 60 https://nullius.example.com/api/reproduce/<job>/stream` während eines Laufs zeigt die Ereignisse zeitnah, nicht erst am Ende.
 12. **Eintragen:** Demo-URL `https://nullius.example.com` und Spiegel-Link in Devpost-Testhinweise und README; die Testhinweise nennen keinen Code (die Demo ist offen). Spiegel aktivieren: GitHub > Settings > Pages > Source „GitHub Actions“, Workflow „Pages mirror“ einmal manuell starten (`https://script-hpp.github.io/Nullius/`).
 
 ## Alternative: Nebius-VM mit Docker und Caddy
@@ -109,38 +109,80 @@ Voraussetzungen: Nebius-Projekt mit Compute-Zugang, `nebius` CLI angemeldet (`ne
 
 ## Limits bis 15.12.
 
-Empfohlene Werte für `deploy/.env` bzw. Coolify, zwei Stufen (der Nutzer setzt die Variablen und deployt neu; nicht während eines laufenden Jobs):
+Stand 2026-10-09. Konsolen-Kontostand **17,02 $** (11:11 UTC); der Anteil des Servers ist **12,00 $ brutto**, rund 5 $ bleiben für den lokalen Rechner (Rest-Benchmarks, Video-Aufnahmen). Die Anteile von Server und Rechner dürfen zusammen nie über dem Konsolen-Kontostand liegen (`docs/budget_plan.md`, „Zwei Logs, ein Konto“); der lokale `BUDGET_TOTAL_USD` ist danach auf den Rechner-Anteil zu setzen. Werte in `deploy/.env.example`; der Nutzer setzt sie in Coolify und deployt neu (nicht während eines laufenden Jobs).
 
-| Variable | bis 2026-11-30 | ab 2026-12-01 | Grund |
+Mehrere Schichten, jede für sich schon eine harte Grenze:
+
+| Schicht | Wert | Wirkung |
+|---|---|---|
+| Kostenbremse je Lauf | `MAX_COST_PER_RUN_USD=0.50` | Abbruch im Orchestrator; gemessen: Schnellprüfung 0,14 $, Mittel 0,25 $, Maximum 0,46 $ (zwei Claims) |
+| Schnellprüfung erzwungen | `ALLOW_FULL_RUNS=0` | Ein Client kann keinen teuren Vollauf (10 Seeds) anfordern |
+| Tagesbudget | `MAX_DAILY_COST_USD` | Kein Start mehr, wenn die Bruttokosten des Tages (aus `costs.jsonl`, überlebt Neustarts) die Grenze erreicht haben; Grund `daily_limit` mit Reset |
+| Tageslimits | `MAX_DAILY_REPRO_JOBS`, `MAX_DAILY_JOBS`, je IP 1 | Aus `live_jobs.jsonl` nach Neustart wiederhergestellt |
+| Untergrenze Budget | `LIVE_MIN_BUDGET_USD` | Kein Start, wenn `BUDGET_TOTAL_USD` minus Kosten seit `BUDGET_SINCE` darunter liegt (harte Gesamtgrenze) |
+| Globale Bremse im LLM-Client | 95 % von `BUDGET_TOTAL_USD` | Kein Modellaufruf mehr, auch mitten im Lauf (`BudgetExceeded`) |
+| Ein Job gleichzeitig, Wanduhr | 45 min Reproduktion, 15 min Discovery | Hängt ein Lauf, meldet der Stream einen Fehler und die Sperre wird frei |
+
+Zwei Stufen:
+
+| Variable | Stufe 1: Deployment bis 2026-11-30 | Stufe 2: ab 2026-12-01 (Bewertung 01.–15.12.) | Grund |
 |---|---|---|---|
-| `MAX_DAILY_REPRO_JOBS` | 1 | 3 | Bis Ende November testet kaum jemand; ab 1.12. beginnt die Bewertung (01.–15.12.), dann sollen mehrere Juroren am selben Tag live prüfen können |
-| `MAX_COST_PER_RUN_USD` | 0.75 | 0.75 | Standardmodus mit Autorencode (siehe unten); die Untergrenze `LIVE_MIN_BUDGET_USD=3` bleibt ein Vielfaches davon |
-| `MAX_DAILY_JOBS` (Discovery) | 1 | 1 | Discovery ist billig in Token (ca. 0,02 $), kostet aber ca. 16 Tavily-Credits je Lauf (`docs/next_step_catalog_pipeline.md`, Zeile 83) |
+| `BUDGET_TOTAL_USD` | 12.00 | 12.00 (nicht ändern, `BUDGET_SINCE` auch nicht) | Server-Anteil |
+| `LIVE_MIN_BUDGET_USD` | **6.0** | **1.0** | Stufe 1 hält 6 $ als Reserve für das Bewertungsfenster zurück; Stufe 2 gibt sie frei und lässt eine Reserve von zwei Läufen (2 × 0,50 $) |
+| `MAX_DAILY_REPRO_JOBS` | 1 | 2 | Bis Ende November testet kaum jemand; in der Bewertung sollen mehrere Juroren am Tag live prüfen können |
+| `MAX_DAILY_COST_USD` | 0.75 | 1.25 | Mehr als ein Lauf plus Discovery pro Tag in Stufe 1 gibt es nie; Stufe 2 zwei Läufe (2 × 0,50 $) plus Discovery |
+| `MAX_DAILY_JOBS` (Discovery) | 1 | 1 | Token billig (ca. 0,02 $), aber ca. 16 Tavily-Credits je Lauf |
 | `MAX_DAILY_REPRO_PER_IP` / `MAX_DAILY_DISCOVER_PER_IP` | 1 / 1 | 1 / 1 | Ein Besucher kann nicht das ganze Tageslimit verbrauchen |
-| `LIVE_MIN_BUDGET_USD` | 3 | 3 | Reserve, damit das Konto durch Live-Läufe nie ins Minus läuft (Karte würde belastet); ein Lauf kostet höchstens 0,50 $ |
-| `LIVE_MIN_TAVILY_CREDITS` | 300 | 300 | Reserve für die Vorzeige-Läufe und Discovery bei der Abgabe |
-| `BUDGET_TOTAL_USD` | 20.00 | 20.00 | Server-Anteil, `docs/budget_plan.md` („Zwei Logs, ein Konto") |
-| `TRUST_PROXY` | 1 | 1 | hinter Coolify/Caddy, sonst zählt jeder Besucher als dieselbe Proxy-IP |
+| `MAX_COST_PER_RUN_USD` | 0.50 | 0.50 | Siehe Messwerte; ein Lauf mit zwei Claims und Autorencode kann an die Grenze kommen (Maximum gemessen 0,46 $) und endet dann mit Teilergebnis statt mit mehr Kosten |
+| `LIVE_MIN_TAVILY_CREDITS` | 300 | 300 | Reserve für Vorzeige-Läufe |
+| `TRUST_PROXY` | 1 | 1 | Hinter Coolify/Caddy, sonst zählt jeder Besucher als dieselbe Proxy-IP |
 
-**Standardmodus seit 2026-10-09 („Nachbau aus Paper und Autorencode“, `loop.product_kwargs`):** die Prompts enthalten den rohen Repo-Ausschnitt, ein Lauf ist teurer als die gemessenen 0,139 $ des Paper-Modus. Gemessen (recall cg v1, `benchmark/experiments/results/recall_cg_v1.md`, 22 Läufe, Tavily aus Fixtures, kein Community-Check): Mittel 0,25 $ brutto, Maximum 0,46 $ brutto je Lauf (Generation 0 mit zwei Claims). Für die Planung gelten 0,30 $ brutto je Live-Lauf (Spanne 0,20 bis 0,35; die Schnellprüfung im Produkt ist **noch nicht gemessen**, das geschieht beim ersten echten Live-Lauf mit OK des Nutzers). Daher `MAX_COST_PER_RUN_USD=0.75` auf dem Server (wie in recall cg v1; Code-Standard 0.50 gilt weiter für Benchmarks). Fällt das Autoren-Repo weg, läuft der Lauf als Paper-Nachbau (günstiger, 0,14 $) weiter.
+**Worst-Case-Kosten bis 2026-12-15 gegen 17,02 $** (alles brutto, Server-Anteil 12,00 $):
 
-**Schlimmster Fall von heute (2026-10-07) bis 2026-12-15:** 70 Tage (7.10. bis 15.12. einschließlich) = 55 Tage Stufe 1 (25 im Oktober, 30 im November) plus 15 Tage Stufe 2. Verfügbar: 20,00 $ Server-Anteil minus 3,00 $ Untergrenze = **17,00 $**.
+| Fall | Rechnung | Summe |
+|---|---|---|
+| Absolute Obergrenze des Servers | min(95 % × 12,00 $ = 11,40 $; 12,00 $ − 1,00 $ Untergrenze Stufe 2 + 0,50 $ letzter Lauf = 11,50 $) | **11,40 $**; Konto bleibt ≥ 0,60 $, wenn der Rechner seine 5 $ nicht überschreitet |
+| Stufe 1, jeder Tag ausgereizt | höchstens 1 Lauf × 0,50 $ + Discovery 0,02 $ = 0,52 $ je Tag; die Untergrenze 6,0 $ stoppt nach 12 − 6 + 0,5 = **6,50 $** (in etwa 12 Tagen), danach Wiedergabe bis 30.11. | 6,50 $ |
+| Stufe 2, jeder Tag ausgereizt | höchstens 2 × 0,50 $ + 0,02 $ = 1,02 $ je Tag × 15 Tage = 15,30 $ ohne Untergrenze; die Untergrenze 1,0 $ begrenzt auf den Rest der Stufe 1 minus 1,00 $ plus 0,50 $, also bei ausgeschöpfter Stufe 1 auf 5,00 $ | 5,00 $ (Stufe 1 + 2 zusammen ≤ 11,40 $) |
+| Erwartet (Jury) | 20 bis 30 Schnellprüfungen × 0,14 bis 0,25 $ + wenige Discovery-Läufe | 3 bis 7 $ |
+| Erwartet, Stufe 2 allein, 2 Läufe an allen 15 Tagen × 0,14 $ (gemessene Schnellprüfung) | 30 × 0,14 $ + 15 × 0,02 $ | 4,50 $, passt in die Reserve |
 
-| Szenario | Reproduktion | Discovery | Summe | gegen 17,00 $ |
-|---|---|---|---|---|
-| Gemessen: 0,139 $ je Lauf (Kipf, `web/public/data/kipf_gcn_2017/20261002-110746`, `docs/devpost_submission.md`) | (55 × 1 + 15 × 3) = 100 Läufe × 0,139 = 13,90 $ | 70 × 0,02 = 1,40 $ | **15,30 $** | reicht, 1,70 $ Luft |
-| **Standardmodus Autorencode, Planungswert 0,30 $ je Lauf** (Maximum gemessen 0,46 $) | 100 Läufe × 0,30 = 30,00 $ | 1,40 $ | **31,40 $** | **übersteigt 17,00 $** (siehe unten) |
-| Theoretisch: Obergrenze 0,50 $ je Lauf (Paper-Modus; mit Autorencode 0,75 $ = 75,00 $) | 100 × 0,50 = 50,00 $ | 1,40 $ | 51,40 $ | übersteigt 17,00 $ |
+Fazit: Selbst bei böswilliger Dauernutzung gibt der Server nie mehr als 11,40 $ aus; die Stufe-1-Reserve sichert, dass die Bewertung Live-Läufe sieht (4,50 $ Nutzbudget in Stufe 2 reichen für rund 9 Läufe an der Kostengrenze oder rund 30 Schnellprüfungen). Beim ersten echten Live-Lauf den Messwert gegen 0,14 $ prüfen und die Tabelle anpassen (Anteil = Läufe Stufe 2 × Messwert + Untergrenze).
 
-**Folge für die Limits (Annahme gebrochen, Entscheidung beim Nutzer):** Mit 0,30 $ je Lauf trägt der Server-Anteil von 17,00 $ nutzbar (20,00 $ minus Untergrenze 3,00 $) nach Abzug von 1,40 $ Discovery rund 52 Läufe, nicht 100. Dazu kommt, dass der Konsolen-Kontostand nach recall cg v1 laut Log nur noch **17,39 $** beträgt (Stand 2026-10-09, Konsole nicht verifiziert), der geplante Server-Anteil von 20,00 $ also gar nicht mehr gedeckt ist. Vorschlag, solange kein Guthaben nachkommt: Stufe 1 (bis 2026-11-30) `MAX_DAILY_REPRO_JOBS=1` lassen, Stufe 2 (Bewertung 01.–15.12.) auf 2 statt 3 setzen; die Rechnung 55 × 1 + 15 × 2 = 85 Läufe × 0,30 = 25,50 $ bleibt auch dann über dem Anteil, die Untergrenze `LIVE_MIN_BUDGET_USD` pausiert Live-Läufe also vor dem 15.12. und die Wiedergabe übernimmt. Um das Bewertungsfenster zu schützen, den Server-Anteil nach Messung des echten Live-Laufs neu festlegen (Anteil = Läufe der Stufe 2 × Messwert + 3 $ Untergrenze) und `LIVE_MIN_BUDGET_USD` in Stufe 1 entsprechend höher setzen (Reserve für Stufe 2), statt `MAX_DAILY_REPRO_JOBS` allein zu verlassen.
+**Restrisiko:** Wer jeden Tag kurz nach Mitternacht (Reset) startet, belegt das einzige Tageslimit der Stufe 1 und hält andere ab; die Wiedergabe bleibt nutzbar. In Stufe 2 braucht ein Angreifer zwei IPs. Ein Zugangscode nur für Live-Läufe wurde bewusst nicht gebaut (Entscheidung des Nutzers vom 2026-10-05: offene Demo).
 
-Der theoretische Fall tritt nur ein, wenn jeder Lauf die Kostenbremse ausreizt. Dann **ist die Untergrenze die harte Obergrenze**, nicht das Tageslimit: Live-Läufe pausieren (HTTP 503, `GET /api/status` meldet `live: false`, das Frontend zeigt die Wiedergabe), sobald das Rest-Budget unter 3,00 $ fällt. Weil nur ein Lauf gleichzeitig läuft und die Prüfung vor dem Start geschieht, kann das Budget die Untergrenze um höchstens einen Lauf (0,50 $) unterschreiten. Das Konto bleibt also bei etwa 2,50 $ Rest des Server-Anteils; die Summe der Anteile von Server und lokalem Rechner darf nie über dem Konsolen-Kontostand liegen (`docs/budget_plan.md`).
+Tavily: Discovery 1/Tag × 16 Credits bis 15.12. ≈ 1 100 Credits; Reproduktion nicht gemessen (`docs/budget_plan.md`); die Untergrenze `LIVE_MIN_TAVILY_CREDITS` schützt. Verfügbarkeit laut `docs/budget_plan.md`: rund 6 025 Credits bis 15.12.
 
-Tavily: Discovery 70 × 16 = 1 120 Credits (`docs/next_step_catalog_pipeline.md`, Zeile 83). Der Verbrauch einer Reproduktion ist **nicht gemessen** (`docs/budget_plan.md`, „Tavily"); die Untergrenze `LIVE_MIN_TAVILY_CREDITS` schützt, bis ein Wert vorliegt. Verfügbarkeit laut `docs/budget_plan.md`: rund 6 025 Credits bis 15.12. (900 laufender Monat, 2 × 1 000 Monatsplan, 3 125 Add-on; Verfall des Add-ons im Dashboard prüfen).
+**Verhalten bei Erreichen einer Grenze:** `GET /api/status` meldet `live: false` mit Grund (`budget_floor`, `tavily_floor`, `daily_limit`, `busy`) und `reset_at` bei Tageslimits; `POST /api/reproduce` und `/api/discover` antworten 503 oder 429 mit demselben Grund (nie mit Kontoständen). Das Frontend zeigt „Live checks are paused (…). Here is the recorded run of this check.“ und spielt den Vorab-Lauf ab (`web/src/livestatus.ts`). Fällt der Server aus, bleibt der Pages-Spiegel.
 
-**Bekannte Grenze:** Tageszähler (`MAX_DAILY_*`) und Limits je IP liegen im Speicher der API. Ein Neustart oder Redeploy setzt sie auf null zurück, der Tag kann dann mehr Läufe sehen als das Limit. Die Untergrenzen bleiben wirksam, weil sie aus `logs/costs.jsonl` und `logs/tavily_usage.jsonl` rechnen; das gilt nur, solange `logs/` ein persistentes Volume ist. Deshalb: Redeploys selten und von Hand (Schritt 7 oben), `logs/` nie leeren.
+**Termine:** am 2026-12-01 Stufe 2 setzen (`LIVE_MIN_BUDGET_USD=1.0`, `MAX_DAILY_REPRO_JOBS=2`, `MAX_DAILY_COST_USD=1.25`) und von Hand neu deployen; wöchentlich Konsole und Tavily-Dashboard prüfen (`docs/budget_plan.md`, „Regeln und Auslöser“).
 
-**Termine:** am 2026-12-01 `MAX_DAILY_REPRO_JOBS=3` setzen und neu deployen; wöchentlich Konsole und Tavily-Dashboard prüfen (`docs/budget_plan.md`, „Regeln und Auslöser").
+## Sicherheit des öffentlichen Pfads
+
+Angriffsfläche: nur diese Endpunkte, alle ohne Anmeldung. Keine Eingabe führt fremden Code aus; Experimente laufen in der Nebius-Sandbox (Netzsperre `unshare -n`, `harness/code_check.py`, Testlabels nie beim Agenten).
+
+| Endpunkt | Eingabe | Schutz |
+|---|---|---|
+| `POST /api/reproduce` | `catalog_id` (nur Einträge aus `benchmark/catalog.yaml`, sonst 404, max. 120 Zeichen), `quick`, `author_code` | Sperre vor jedem Start, `quick` serverseitig erzwungen, kein freier arXiv-Link, kein Paper-Text vom Besucher |
+| `POST /api/discover` | `datasets` (nur unterstützte Datensätze, höchstens 8, Duplikate entfernt) | Dieselbe Sperre; Suchergebnisse aus dem Netz sind nicht vertrauenswürdig: sie landen nur als Kandidaten im Stream, schreiben nie `catalog.yaml`, Code aus Autoren-Repos wird nie ausgeführt |
+| `GET …/stream` | Job-ID (UUID4) | höchstens 30 Streams insgesamt, 4 je IP, 60 min je Stream; Reconnect mit `from=` |
+| `GET /api/status`, `/api/jobs/current`, `/api/health` | keine | Rate-Limit 240/min je IP; keine Kontostände |
+
+Weitere Schichten: Rate-Limit je IP (240/min GET, 10/min POST), Body-Limit 16 KB (App) und 64 KB (Caddy), kein CORS (gleiche Herkunft), `/docs`, `/redoc`, `/openapi.json` aus, Security-Header (CSP ohne `unsafe-inline` für Skripte, `nosniff`, `frame-ancestors 'none'`, `no-referrer`), Container als Nutzer `app` (UID 10001) ohne Capabilities (Compose). Ereignisse, Fehlermeldungen und die exportierten Dateien eines Live-Laufs laufen durch `web_guard.redact_text` (Schlüssel aus der Umgebung, bekannte Schlüsselmuster, `/home/<x>`-Pfade). Keine Admin- oder Debug-Endpunkte. IP-Adressen stehen nur als Hash in `live_jobs.jsonl`.
+
+**Bekannte Grenzen:** Bei `TRUST_PROXY=1` muss der Port 8000 aus dem Internet unerreichbar sein (Coolify/Compose: nur der Proxy); sonst lässt sich die IP per `X-Forwarded-For` fälschen und das Limit je IP umgehen (die globalen Grenzen bleiben). Der Job-ID-Link zum laufenden Job steht in `/api/jobs/current` (Zuschauen ist gewollt, Steuern nicht möglich). Die CSP ist im Test (Header, Hash des Theme-Skripts) geprüft, aber nicht in einem echten Browser: nach dem ersten Deployment die Konsole auf „Refused to …“ prüfen.
+
+## Backup
+
+Wichtig sind `/app/logs` (Budget- und Limitzähler) und `/data` (Exporte der Live-Läufe); beides klein. Vor jedem Redeploy und wöchentlich:
+```bash
+# Volume-Namen mit "docker volume ls" nachsehen (Coolify stellt eine UUID voran)
+docker run --rm -v <logs-volume>:/src:ro -v "$PWD":/backup alpine tar czf /backup/nullius-logs-$(date +%F).tgz -C /src .
+docker run --rm -v <data-volume>:/src:ro -v "$PWD":/backup alpine tar czf /backup/nullius-data-$(date +%F).tgz -C /src .
+```
+Wiederherstellen: leeres Volume anlegen, `tar xzf` hineinentpacken, Container starten. Fehlt `costs.jsonl` nach einem Unfall, `BUDGET_TOTAL_USD` auf den aktuellen Konsolen-Stand setzen und `BUDGET_SINCE` auf jetzt (sonst zählt die Sperre zu großzügig). Coolify bietet dafür auch geplante Backups für Volumes. Die Läufe selbst liegen zusätzlich im Repo (`web/public/data`) und im Pages-Spiegel.
+
+**Pages-Spiegel als Absicherung:** `.github/workflows/pages.yml` veröffentlicht `web/dist` mit den Exporten unter `https://script-hpp.github.io/Nullius/` (nur Replay, keine Live-Steuerung). Den Workflow nach jeder Änderung der Exporte neu starten und den Link in den Devpost-Testhinweisen als Rückfall nennen.
 
 ## Betrieb bis 15.12.
 - **Neustart (Coolify):** Configuration > *Restart*; Logs im Reiter *Logs*, Shell im Reiter *Terminal*. **Neustart (VM mit Compose):** `docker compose -f deploy/docker-compose.yml --env-file deploy/.env restart app`. Laufende Jobs gehen verloren (im Speicher); das Frontend zeigt dann den Vorab-Lauf als Replay.
@@ -154,14 +196,14 @@ Tavily: Discovery 70 × 16 = 1 120 Credits (`docs/next_step_catalog_pipeline.md`
 ## Lokaler Test (ohne echte Schlüssel)
 ```bash
 docker build -t nullius-test .
-docker run -d --name nullius-t -p 8011:8000 -e NEBIUS_API_KEY=fake -e NEBIUS_PROJECT_ID=fake -e TAVILY_API_KEY=fake -v nullius-t-data:/data nullius-test
-curl -s localhost:8011/api/jobs/current        # {"busy":false}
+docker run -d --name nullius-t -p 8011:8000 -e LLM_PROVIDER=tokenfactory -e BUDGET_TOTAL_USD=12 -e BUDGET_SINCE=2026-10-09T11:11Z -e TRUST_PROXY=1 -e NEBIUS_API_KEY=fake -e NEBIUS_PROJECT_ID=fake -e TAVILY_API_KEY=fake -v nullius-t-data:/data nullius-test
+curl -s localhost:8011/api/health              # {"ok":true}
 ```
-Am 2026-10-01 geprüft: Build erfolgreich, Container `healthy`, `/api/jobs/current` antwortet, Seite und `/data/index.json` werden ausgeliefert, `/api/status` antwortet, Volume wird beim ersten Start befüllt. Kein Live-Lauf, keine echten Aufrufe. Der Spiegel wurde unter dem Unterpfad `/Nullius/` lokal geprüft (Assets und Daten laden, keine Live-Steuerung sichtbar; einziger 404 ist `events.jsonl` eines Altlaufs ohne Ereignisprotokoll, das Frontend spielt ihn aus dem Dossier ab).
+Am 2026-10-09 erneut geprüft (nach den Schutzmaßnahmen): Build erfolgreich, Container `healthy` (Healthcheck `/api/health`), läuft als UID 10001, im Image keine `.env`-Dateien, `/docs` und `/openapi.json` 404, Security-Header und CSP mit Hash des Theme-Skripts auf der Seite, 20-KB-Body wird mit 413 abgelehnt; Caddyfile und Caddyfile.selfsigned mit `caddy validate` gültig. Am 2026-10-01: `/api/jobs/current` antwortet, Seite und `/data/index.json` werden ausgeliefert, `/api/status` antwortet, Volume wird beim ersten Start befüllt. Kein Live-Lauf, keine echten Aufrufe. Der Spiegel wurde unter dem Unterpfad `/Nullius/` lokal geprüft (Assets und Daten laden, keine Live-Steuerung sichtbar; einziger 404 ist `events.jsonl` eines Altlaufs ohne Ereignisprotokoll, das Frontend spielt ihn aus dem Dossier ab).
 
 ## Offen
 - Coolify: Menünamen und Traefik-Standardwerte stammen aus dem Gedächtnis und sind an der echten Instanz zu prüfen (Domain-/Port-Feld, Healthcheck-Reiter, Timeouts, Kompression). Nicht getestet, da keine Coolify-Instanz verfügbar ist; der Container selbst ist lokal mit Docker getestet (siehe oben).
 - Plattform- und Preset-Namen der Nebius-CPU-VM, statische IP, Preis des kleinsten Presets: vor dem Anlegen prüfen.
 - Nebius Serverless nicht getestet.
 - Ob Builders-/Trial-Guthaben für Compute gilt: Reviewer mit dem Nutzer klären.
-- `api.py` bleibt unverändert; `src/` ist eingefroren. Nicht nötig, aber hilfreich für später: `/api/health` (heute dient `/api/jobs/current` als Healthcheck).
+- Browser-Test der CSP an der echten Instanz (siehe „Sicherheit des öffentlichen Pfads“).

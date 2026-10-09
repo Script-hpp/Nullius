@@ -37,3 +37,9 @@ test('status per kind and paused detection', () => {
   assert.equal(isPaused(statusFor({ live: false, reason: 'busy', reset_at: null }, 'discovery')), false)
   assert.equal(isPaused(statusFor(null, 'discovery')), false)
 })
+
+test('rate limited start is a calm notice, not a pause reason', () => {
+  const r = startErrorText(429, { reason: 'rate_limited' })
+  assert.equal(r.reason, null)
+  assert.match(r.text, /Too many requests/)
+})

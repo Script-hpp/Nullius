@@ -44,6 +44,7 @@ export class StartRefused extends Error {
 // Text for a failed start (HTTP status and the JSON body, if any). 503/429 with a known reason are calm notices, not errors.
 export function startErrorText(status: number, body: unknown, target: 'check' | 'search' = 'check'): { text: string; reason: PauseReason | null } {
   const b = (body && typeof body === 'object' ? body : {}) as { reason?: unknown; detail?: unknown }
+  if (b.reason === 'rate_limited') return { text: 'Too many requests from this connection. Try again in a minute.', reason: null }
   const reason = isReason(b.reason) ? b.reason : null
   if (reason) return { text: pausedText(reason, target), reason }
   if (status === 503 || status === 429) return { text: pausedText(status === 503 ? 'budget_floor' : 'daily_limit', target), reason: null }
