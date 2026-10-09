@@ -10,7 +10,7 @@ import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../cat
 import { translateJuryReason, translateReason } from '../labels'
 import { startReproduction, useJobInfo, useLiveStatus } from '../live'
 import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
-import { referenceSentence } from '../referenceBench'
+import { referenceShort } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
@@ -38,7 +38,7 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
         <div className="mt-3 space-y-1">
           <Badge tone="gray" icon={<Library className="w-4 h-4" />} title="A paper from our benchmark with a known reference result">Reference paper</Badge>
           <p className="m-0 text-[12px] leading-relaxed text-muted">
-            {referenceSentence(e.benchmark)} <a href="#benchmark" className="text-fg-3 hover:text-fg-max">Benchmark results</a>
+            {referenceShort(e.benchmark)} <a href="#benchmark" className="text-fg-3 hover:text-fg-max">Benchmark results</a>
           </p>
         </div>
       )}
@@ -120,30 +120,31 @@ export function Catalog() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
-        what="Papers that Tavily found and that were then run once through the full loop: the agent rebuilt the experiment and our harness measured it. Every entry shows the claimed number next to the measured one."
-        look="Open the evidence of an entry marked Jury ready. You can also start a short live check yourself." />
+        what="Papers run through the full loop: claimed number next to measured."
+        look="Open an entry marked Jury ready, or start a quick check." />
 
-      <section className="mb-12 grid gap-10 border-t border-line pt-10 md:grid-cols-2 md:gap-0" aria-label="How this catalog is made and which datasets it supports">
-        <div className="md:pr-12">
-          <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How this catalog is made</h2>
-          <ol className="m-0 mt-5 list-none space-y-4 p-0 text-[15px] leading-relaxed text-fg-4">
-            <li><span className="mr-3 font-mono text-fg-3">01</span><span className="font-medium text-fg">Collect.</span> The catalog holds reference papers from our benchmark and papers Tavily found on the web, which report a result on a benchmark we can rebuild; only claims that can be quoted are kept.</li>
-            <li><span className="mr-3 font-mono text-fg-3">02</span><span className="font-medium text-fg">One full run.</span> The agent rebuilds the experiment; the harness measures it over several seeds.</li>
-            <li><span className="mr-3 font-mono text-fg-3">03</span><span className="font-medium text-fg">Listed here.</span> An entry is Jury ready when its run finished cleanly and the method was implemented.</li>
-          </ol>
-          <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A live check can still differ from the stored result, because the agent writes new code each time. The precomputed full result stays next to it.</p>
+      <details className="group mb-10 border-t border-line pt-6">
+        <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How this catalog is made · supported datasets</summary>
+        <div className="mt-6 grid gap-10 md:grid-cols-2 md:gap-0">
+          <div className="md:pr-12">
+            <ol className="m-0 list-none space-y-3 p-0 text-[15px] leading-relaxed text-fg-4">
+              <li><span className="mr-3 font-mono text-fg-3">01</span><span className="font-medium text-fg">Collect.</span> Reference papers and Tavily finds with a quotable claim.</li>
+              <li><span className="mr-3 font-mono text-fg-3">02</span><span className="font-medium text-fg">One full run.</span> Rebuilt by the agent, measured by the harness.</li>
+              <li><span className="mr-3 font-mono text-fg-3">03</span><span className="font-medium text-fg">Listed.</span> Jury ready: the run finished cleanly and implemented the method.</li>
+            </ol>
+            <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A live check can differ from the stored result: the agent writes new code each time.</p>
+          </div>
+          <div className="border-line md:border-l md:pl-12">
+            <dl className="m-0 space-y-2 text-[15px] leading-relaxed text-fg-4">
+              <div><dt className="inline font-medium text-fg">Cora</dt><dd className="m-0 inline"> <Glossed text="Cited scientific articles, seven topics, accuracy." /></dd></div>
+              <div><dt className="inline font-medium text-fg">Cora-LCC</dt><dd className="m-0 inline"> Largest connected group, random 20/30/rest splits.</dd></div>
+              <div><dt className="inline font-medium text-fg">CiteSeer</dt><dd className="m-0 inline"> <Glossed text="Cited scientific articles, six topics, accuracy." /></dd></div>
+              <div><dt className="inline font-medium text-fg">ETTh1</dt><dd className="m-0 inline"> <Glossed text="Transformer temperature, 96-hour forecast, MSE." /></dd></div>
+            </dl>
+            <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">Another dataset needs a task and harness first.</p>
+          </div>
         </div>
-        <div className="border-line md:border-l md:pl-12">
-          <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Supported datasets</h2>
-          <dl className="m-0 mt-5 space-y-4 text-[15px] leading-relaxed text-fg-4">
-            <div><dt className="inline font-medium text-fg">Cora</dt><dd className="m-0 inline"> <Glossed text="Scientific articles that cite each other, sorted into seven topics. Scored by accuracy, fixed public split." /></dd></div>
-            <div><dt className="inline font-medium text-fg">Cora-LCC</dt><dd className="m-0 inline"> The same articles, restricted to the largest connected group, with random 20/30/rest splits as in the 2018 evaluation study.</dd></div>
-            <div><dt className="inline font-medium text-fg">CiteSeer</dt><dd className="m-0 inline"> <Glossed text="Scientific articles that cite each other, sorted into six topics. Scored by accuracy, fixed public split." /></dd></div>
-            <div><dt className="inline font-medium text-fg">ETTh1</dt><dd className="m-0 inline"> <Glossed text="Hourly temperature readings of an electricity transformer. We forecast the next 96 hours and score MSE." /></dd></div>
-          </dl>
-          <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A paper on another dataset needs a new task and harness first; papers on these datasets work out of the box.</p>
-        </div>
-      </section>
+      </details>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-3">
@@ -156,8 +157,7 @@ export function Catalog() {
         <span className={label}>{entries ? `${shown.length} of ${total} shown` : 'Loading'}</span>
       </div>
       <p className="mb-6 mt-0 max-w-3xl text-[13px] leading-relaxed text-muted">
-        Jury-ready only hides entries whose run crashed or whose code did not implement the method.
-        {available ? ' Live checks need no sign-in; the catalog and all evidence are open.' : ' Live checks are not available on this page; the finished runs and replays are.'}
+        {available ? 'Live checks need no sign-in.' : 'Live checks are off here; finished runs and replays are open.'}
       </p>
       {available && paused && (
         <p role="status" className="mb-6 mt-0 flex max-w-3xl items-start gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-[13px] leading-relaxed text-fg-3">
@@ -183,8 +183,8 @@ export function Catalog() {
       {(() => {
         const first = shown.map((e) => ({ e, href: evidenceHref(e) })).find((x) => x.href)
         return first
-          ? <NextStep title="Read the evidence" text={`Open the checked run of "${first.e.title}": the verdict in one sentence, the steps the agent took and why the number can be trusted.`} label="Open the evidence" href={first.href!} />
-          : <NextStep title="Find more papers" text="Nothing to open yet. Let Tavily look for papers that report a result on a supported benchmark." label="Discover papers" href="#discover" />
+          ? <NextStep title="Read the evidence" text={`Open the run of "${first.e.title}".`} label="Open the evidence" href={first.href!} />
+          : <NextStep title="Find more papers" text="Nothing to open yet." label="Discover papers" href="#discover" />
       })()}
     </main>
   )

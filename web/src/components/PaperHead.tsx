@@ -38,7 +38,7 @@ export function PaperByline({ head }: { head: Head | undefined }) {
   if (!text && !line) return null
   return (
     <div className="mt-4 max-w-3xl" aria-label="What this paper is about">
-      {text && <p className="m-0 text-[15px] leading-relaxed text-fg-3"><span className="text-muted">What this paper is about · </span><Glossed text={text} /></p>}
+      {text && <p className="m-0 text-[15px] leading-relaxed text-fg-3"><Glossed text={firstSentence(text).split(';')[0]} /></p>}
       {line && <p className="m-0 mt-1.5 font-mono text-[11.5px] text-muted">{line}</p>}
     </div>
   )
@@ -51,12 +51,12 @@ export function PaperHead({ head, compact = false }: { head: Head | undefined; c
   if (compact) {
     return (
       <div className="mt-3 flex min-w-0 flex-col gap-2.5" aria-label="About the paper">
-        {head.summary && <p className="m-0 text-[13px] leading-relaxed text-fg-4"><Glossed text={firstSentence(head.summary)} /></p>}
+        {head.summary && <p className="m-0 text-[13px] leading-relaxed text-fg-4"><Glossed text={firstSentence(head.summary).split(';')[0]} /></p>}
         <Authors head={head} small />
         {inst.length > 0 && (
           <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1.5 p-0">
-            {inst.slice(0, 3).map((i) => <Chip key={i.name} name={i.name} small />)}
-            {inst.length > 3 && <li className="self-center text-[11px] text-muted">+{inst.length - 3}</li>}
+            {inst.slice(0, 1).map((i) => <Chip key={i.name} name={i.name} small />)}
+            {inst.length > 1 && <li className="self-center text-[11px] text-muted">+{inst.length - 1}</li>}
           </ul>
         )}
       </div>

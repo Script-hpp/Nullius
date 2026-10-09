@@ -51,7 +51,7 @@ export function Problem({ run }: { run: RunData | null }) {
     <Block id="claim" label="The problem">
       <div className="grid items-end gap-10 md:grid-cols-5">
         <p className={`${lead} md:col-span-3`}>
-          A result in a paper is a claim in words. Checking it costs days of broken code and missing hyperparameters.
+          A paper claims a number. Checking it costs days.
         </p>
         <div className="md:col-span-2 md:pl-6">
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Kipf &amp; Welling report</div>
@@ -63,9 +63,9 @@ export function Problem({ run }: { run: RunData | null }) {
 }
 
 const STEPS = [
-  { title: 'Read', text: 'Tavily finds the paper, the target value with a quote and the setup details, live. We keep only numbers that appear word for word in the text.' },
-  { title: 'Rebuild', text: 'An agent reads the paper and the authors’ code as text, never run, writes its own version and runs it in isolated Nebius Sandboxes, one run per random seed.' },
-  { title: 'Measure', text: 'An independent harness the agent cannot change loads the true labels itself, scores the predictions and compares them with the claim.' },
+  { title: 'Read', text: 'Tavily finds the paper, the target and the setup, live. Every number comes with a quote.' },
+  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run) and runs it in Nebius Sandboxes.' },
+  { title: 'Measure', text: 'An independent harness loads the true labels itself and scores the predictions.' },
 ]
 
 export function Steps() {
@@ -94,11 +94,11 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
   const std = claim.metric === 'accuracy' ? `${(v.measured_std * 100).toFixed(1)}` : v.measured_std.toFixed(3)
   return (
     <Block id="certificate" label="A real certificate">
-      <h2 className={lead}>Every check ends in a certificate: claimed against measured.</h2>
+      <h2 className={lead}>Every check ends in a certificate.</h2>
       <a href={EXAMPLE_RUN} className="group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline transition-colors hover:border-line-strong sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge tone={res.tone} title={resultHint(v.urteil)}>{res.label}</Badge>
-          <span className="text-[12px] text-muted">Finished run, {run!.ref.title}</span>
+          <span className="text-[12px] text-muted">Example run</span>
         </div>
         <p className="font-grotesk mb-0 mt-5 max-w-xl text-lg font-semibold leading-snug tracking-[-0.02em] text-fg">{translateClaim(claim.text)}</p>
         <dl className="m-0 mt-8 grid grid-cols-2 gap-6">
@@ -113,8 +113,8 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
           </div>
         </dl>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[13px] text-fg-4">
-          <span>Target value reached with our setup; method fidelity not checked.</span>
-          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open the certificate <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
+          <span>Method fidelity not checked.</span>
+          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
         </div>
       </a>
     </Block>
@@ -122,28 +122,24 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
 }
 
 export function Proof() {
-  const { paperOnly, withCode, placebo, reproducedAgree } = FIGURES
+  const { placebo, reproducedAgree } = FIGURES
   const num = 'font-mono text-3xl font-light tracking-tight text-fg sm:text-4xl'
   return (
     <Block id="proof" label="Proof">
-      <h2 className={lead}>When Nullius says a target was reached, it was.</h2>
+      <h2 className={lead}>A reached target is a real one.</h2>
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         <div>
           <div className={num}>{placebo.v4[0]} of {placebo.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">deliberately wrong claims reported as reproduced (benchmark v4; also {placebo.v2[0]} of {placebo.v2[1]} in v2 and {placebo.v3[0]} of {placebo.v3[1]} in v3)</p>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">wrong claims reported as reproduced (v4; also {placebo.v2[0]} of {placebo.v2[1]} in v2 and v3)</p>
         </div>
         <div>
           <div className={num}>{reproducedAgree.v4[0]} of {reproducedAgree.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">&lsquo;reproduced&rsquo; verdicts in v4 agree with the reference (post hoc, small sample)</p>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">&lsquo;reproduced&rsquo; verdicts agree with the reference (post hoc)</p>
         </div>
       </div>
-      <p className={`${body} mt-10`}>
-        How often it reaches the target depends on what the agent may read: <span className="font-mono text-fg">{paperOnly.matched} of {paperOnly.of}</span> units
-        from the paper alone, <span className="font-mono text-fg">{withCode.matched} of {withCode.of}</span> with the authors&rsquo; code.
-      </p>
-      <div className="mt-8"><Matrix /></div>
+      <div className="mt-10"><Matrix short /></div>
       <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
-        A match means the target value was reached; method fidelity is not checked. <a href="#benchmark" className={link}>The full benchmark</a>
+        Method fidelity not checked. <a href="#benchmark" className={link}>Full benchmark</a>
       </p>
     </Block>
   )
@@ -152,53 +148,42 @@ export function Proof() {
 export function Lesson() {
   return (
     <Block id="lesson" label="Our own small bitter lesson">
-      <h2 className={lead}>Days of cleverness left the count at {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}. The authors&rsquo; code moved it.</h2>
-      <div className="mt-8 flex max-w-2xl flex-col gap-4 text-[16px] leading-relaxed text-fg-4">
-        <p className="m-0">
-          We made the agent cleverer for days: better code extraction, repair loops, a fidelity checker. Agreement with the reference stayed at {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}.
-          Then the code model read the authors&rsquo; public code, as text, never run: {FIGURES.withCode.matched} of {FIGURES.withCode.of}. The missing details sat in their repository, not in a cleverer prompt.
-        </p>
-        <p className="m-0">
-          Related to Rich Sutton&rsquo;s Bitter Lesson, not the same: we added information, not computation. In-sample, with one held-out miss ({HELD_OUT.matched} of {HELD_OUT.of}): an observation, not a proof.
-        </p>
-        <p className="m-0">
-          <a href={`${REPO_BLOB}/${SOURCES.readme}`} {...ext} className={link}>Read the full lesson <ExternalLink className="h-3 w-3" aria-hidden /></a>
-        </p>
-      </div>
+      <h2 className={lead}>Cleverness left {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}. The authors&rsquo; code moved it.</h2>
+      <p className={`${body} mt-6`}>
+        With the authors&rsquo; code, read as text and never run: {FIGURES.withCode.matched} of {FIGURES.withCode.of}. Held-out: {HELD_OUT.matched} of {HELD_OUT.of}. An observation, not a proof.
+      </p>
+      <p className="mb-0 mt-4 text-[14px]">
+        <a href={`${REPO_BLOB}/${SOURCES.readme}`} {...ext} className={link}>The full lesson <ExternalLink className="h-3 w-3" aria-hidden /></a>
+      </p>
     </Block>
   )
 }
 
 const TAVILY_ROLES = [
-  { icon: Search, title: 'Find papers', text: 'Discovery searches arXiv, GitHub and OpenReview for new papers on supported benchmarks.' },
-  { icon: Quote, title: 'Read the claim', text: 'Extract reads the paper text. A target value counts only with a quote that appears word for word.' },
-  { icon: FileText, title: 'Setup details', text: 'Hyperparameters and data splits from paper, README and chosen repository files, each with a quote.' },
-  { icon: Bug, title: 'Error search', text: 'When generated code fails, Tavily searches the failing line and passes a hint to the repair.' },
-  { icon: Users, title: 'Community check', text: 'After the verdict: issues and critiques. Findings that can be repeated run as sandbox experiments.' },
+  { icon: Search, title: 'Find papers', text: 'on supported benchmarks' },
+  { icon: Quote, title: 'Read the claim', text: 'only with a verbatim quote' },
+  { icon: FileText, title: 'Setup details', text: 'each with a quote' },
+  { icon: Bug, title: 'Error search', text: 'hints for the repair' },
+  { icon: Users, title: 'Community check', text: 'after the verdict' },
 ]
 
 export function TavilySection() {
   return (
     <Block id="tavily" label="Tavily">
       <h2 className={lead}>Tavily is the researcher.</h2>
-      <p className={`${body} mt-6`}>
-        It answers questions the agent could not answer alone, live at run time. Every source is stored with a timestamp and a hash and shown on the certificate.
-      </p>
-      <ol className="m-0 mt-10 grid list-none gap-5 p-0">
+      <p className={`${body} mt-6`}>Live, with sources stored and hashed.</p>
+      <ol className="m-0 mt-8 grid list-none gap-3 p-0">
         {TAVILY_ROLES.map((r) => (
           <li key={r.title} className="flex items-start gap-4">
             <r.icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-3" aria-hidden />
-            <p className="m-0 text-[15px] leading-relaxed text-fg-4"><span className="font-semibold text-fg">{r.title}.</span> {r.text}</p>
+            <p className="m-0 text-[15px] leading-relaxed text-fg-4"><span className="font-semibold text-fg">{r.title}</span> {r.text}</p>
           </li>
         ))}
       </ol>
-      <p className={`${body} mt-10`}>
-        A finding that names something we can repeat runs in its own sandbox branch. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.
-      </p>
-      <figure className="m-0 mt-6">
+      <figure className="m-0 mt-8">
         <img src="img/findings-experiments-dark.jpg" alt="Findings that became experiments: three Tavily findings, each with its sandbox experiment and measurement" className="logo-dark w-full rounded-xl border border-line" loading="lazy" />
         <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
-        <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Words on the left, experiment in the middle, measurement on the right. Live DLinear run, 8 Oct 2026, paper-only mode.</figcaption>
+        <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Finding, experiment, measurement. Live DLinear run.</figcaption>
       </figure>
       <details className="group mt-8 max-w-2xl">
         <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-[14px] text-fg-3 hover:text-fg">
@@ -207,7 +192,7 @@ export function TavilySection() {
         <ul className="m-0 mt-4 grid list-none gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
           <li>A normal run calls Tavily live. The benchmark uses stored copies of Tavily results, because the key is scarce.</li>
           <li>Tavily&rsquo;s effect on the benchmark is small (2 vs 1 of 8 units). Its role is discovery, traceable sources and findings that become measurements.</li>
-          <li>The community check never changes the verdict. Not every run finds something testable.</li>
+          <li>The community check never changes the verdict. Not every run finds something testable. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.</li>
           <li>The last-batch note for ETTh1 (<span className="font-mono">drop_last</span>) is not a Tavily find. It is a fixed list from our own research; the search did not return it.</li>
           <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
         </ul>
@@ -248,8 +233,7 @@ export function TryIt() {
   return (
     <Block id="try" label="Try it">
       <h2 className={lead}>Check a claim yourself.</h2>
-      <p className={`${body} mt-6`}>Pick a curated paper and start a quick check, or replay a finished one if the demo is busy.</p>
-      <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
         <a href="#catalog" className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
           Open the catalog <ArrowRight className="h-4 w-4" aria-hidden />
         </a>

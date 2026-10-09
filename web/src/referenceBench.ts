@@ -16,3 +16,9 @@ export function referenceSentence(b: ReferenceBenchmark | null | undefined): str
   return `In benchmark ${b.version} (${b.arm}), ${b.reached} of ${b.runs} fresh ${plural(b.runs, 'run', 'runs')} reached the target. `
     + `Across all ${b.units} paper-claim ${plural(b.units, 'unit', 'units')}, ${b.units_matched} matched the reference verdict.`
 }
+
+// The same facts in one short line for the catalog card.
+export function referenceShort(b: ReferenceBenchmark | null | undefined): string {
+  if (!b || !(b.runs > 0) || !(b.units > 0)) return 'Reference paper.'
+  return `Benchmark ${b.version}: ${b.reached} of ${b.runs} runs reached the target; ${b.units_matched} of ${b.units} units matched.`
+}

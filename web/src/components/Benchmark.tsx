@@ -1,4 +1,4 @@
-import { CheckCircle2, MinusCircle, ShieldCheck, BadgeCheck, Target } from 'lucide-react'
+import { CheckCircle2, MinusCircle, Target } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { TwoModes } from './TwoModes'
@@ -50,28 +50,19 @@ const num = (n: number | undefined) => (n === undefined ? '–' : String(n))
 const of = (n: number | undefined, total: number | undefined) => (n === undefined || total === undefined ? '–' : `${n} of ${total}`)
 
 // Three tiles, same size. Every number comes from benchmark.json; numbers that were not pre-registered say "post hoc".
-function Tiles({ v, older }: { v: BenchVersion; older: BenchVersion[] }) {
+function Tiles({ v }: { v: BenchVersion }) {
   const s = v.summary
-  const earlier = older.filter((o) => o.summary.reproduced_real !== undefined && o.summary.reproduced_real_agree !== undefined)
   const tiles = [
     {
-      Icon: ShieldCheck, value: of(s.placebo_reproduced, s.placebo_total), label: 'wrong claims certified', tag: 'Pre-registered negative control',
-      small: 'Every run also checks a deliberately wrong target value. None was ever reported as reproduced.',
-    },
-    {
-      Icon: BadgeCheck, value: of(s.reproduced_real_agree, s.reproduced_real), label: "'reproduced' verdicts agreed with the reference", tag: 'Post hoc, small sample',
-      small: `Whenever Nullius reported a real claim as reproduced, our reference solution agreed.${earlier.length ? ` Earlier evaluations: ${earlier.map((o) => `${o.id} ${o.summary.reproduced_real_agree} of ${o.summary.reproduced_real}`).join(', ')}.` : ''}`,
-    },
-    {
-      Icon: Target, value: of(s.agree_B, s.n_units), label: `papers rebuilt from the text alone (${num(s.agree_A)} of ${s.n_units} without Tavily)`, tag: 'Pre-registered primary metric',
-      small: 'Majority of three fresh generations per paper, compared with the reference verdict. Rebuilding a paper from its description is hard; each miss is traced to its cause.',
+      Icon: Target, value: of(s.agree_B, s.n_units), label: `units matched, paper only (${num(s.agree_A)} of ${s.n_units} without Tavily)`, tag: 'Primary metric',
+      small: 'Majority of three fresh generations per unit.',
       link: { href: `${REPO}/blob/main/benchmark/experiments/failure_analysis_v4.md`, text: 'Failure analysis' },
     },
   ]
   const d = (x: number | undefined) => (x === undefined ? '–' : x.toFixed(3))
   return (
     <div>
-      <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-3" aria-label="Benchmark in three numbers">
+      <ul className="m-0 grid list-none gap-4 p-0 md:max-w-md" aria-label="Primary metric">
         {tiles.map(({ Icon, value, label, tag, small, link }) => (
           <li key={tag} className="flex flex-col rounded-xl border border-line bg-surface p-6 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -85,17 +76,10 @@ function Tiles({ v, older }: { v: BenchVersion; older: BenchVersion[] }) {
           </li>
         ))}
       </ul>
-      <p className="mb-0 mt-8 max-w-3xl text-[16px] leading-relaxed text-fg-3">
-        With Tavily the median distance to the paper&rsquo;s value is {d(s.median_distance_B)} against {d(s.median_distance_A)} without (post hoc).
-        {' '}Method fidelity was not checked.
+      <p className="mb-0 mt-8 max-w-3xl text-[15px] leading-relaxed text-fg-3">
+        Median distance to the target: {d(s.median_distance_B)} with Tavily, {d(s.median_distance_A)} without (post hoc). Method fidelity not checked.
+        {' '}&ldquo;Not reproduced&rdquo; means &ldquo;not reached with our setup&rdquo;.
       </p>
-      <div className="mt-6 max-w-3xl border-l-2 border-line pl-5">
-        <h3 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">How to read this</h3>
-        <p className="mb-0 mt-2 text-[14px] leading-relaxed text-fg-4">
-          The errors are one-sided. Nullius often misses the rebuild, but it has not confirmed a wrong number. A &ldquo;not reproduced&rdquo; means
-          {' '}&ldquo;not reached with our setup&rdquo; and usually points at the agent, not at the paper.
-        </p>
-      </div>
     </div>
   )
 }
@@ -145,10 +129,10 @@ function VersionBlock({ v }: { v: BenchVersion }) {
 // Methodology in words, independent of any numbers.
 function Method() {
   const items = [
-    ['Papers with known results', 'We picked papers whose result has been checked by our own reference solution, written by hand and run in the same harness.'],
-    ['With and without Tavily', 'Every claim runs twice: once with Tavily reading the paper and its code page, once without. The comparison shows what Tavily adds.'],
-    ['Fresh starts, majority verdict', 'Every claim is generated several times from scratch. The verdict most generations agree on counts for the claim.'],
-    ['Placebo claims', 'Next to every real claim we run a placebo: the same experiment with a deliberately wrong target. A trustworthy checker must reject it.'],
+    ['Known results', 'Checked by our own reference solution.'],
+    ['With and without Tavily', 'Every claim runs twice.'],
+    ['Fresh starts', 'Three generations from scratch; the majority counts.'],
+    ['Placebo claims', 'A deliberately wrong target must be rejected.'],
   ]
   return (
     <section aria-label="How the benchmark works" className="border-t border-line pt-10">
@@ -162,7 +146,7 @@ function Method() {
           </li>
         ))}
       </ol>
-      <p className="mb-0 mt-6 max-w-3xl text-[13px] leading-relaxed text-muted">A match means the target value was reached according to our harness. Whether the code follows the paper&rsquo;s method is not checked. The reference verdicts come from our own reference solutions, not from an independent study.</p>
+      <p className="mb-0 mt-6 max-w-3xl text-[13px] leading-relaxed text-muted">A match means the harness reached the target. Method fidelity not checked. References are our own solutions.</p>
     </section>
   )
 }
@@ -173,15 +157,15 @@ export function Benchmark() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
-        what="We ran the whole procedure on papers whose results are known and counted how often Nullius agrees with the known result, in two modes: reading the paper only, and reading the paper and the authors' code."
-        look={latest ? 'Start with precision: no wrong claim was ever certified. The two mode columns follow; the pre-registered paper-only evaluation sits below.' : 'Results are published here once the evaluation has run. Until then, read how the benchmark works.'} />
+        what="Papers with known results: how often does Nullius agree?"
+        look={latest ? 'Precision first: no wrong claim was ever certified.' : 'Results appear once the evaluation has run.'} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>
         : latest ? (
           <>
             <TwoModes />
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
-              <Tiles v={latest} older={older} />
+              <Tiles v={latest} />
               <details className="group mt-12 border-t border-line pt-6">
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Table per paper and claim</summary>
                 <div className="mt-8"><VersionBlock v={latest} /></div>
@@ -211,7 +195,7 @@ export function Benchmark() {
           </section>
         )}
       <div className="mt-16"><Method /></div>
-      <NextStep title="Check a paper yourself" text="Discover finds papers that report a result on a benchmark we can rebuild; the catalog lists the ones that were already checked." label="Discover papers" href="#discover" />
+      <NextStep title="Check a paper yourself" text="Find new papers or open a checked one." label="Discover papers" href="#discover" />
     </main>
   )
 }

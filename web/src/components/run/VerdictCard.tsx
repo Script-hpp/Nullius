@@ -61,7 +61,7 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
             {notes} {notes === 1 ? 'note' : 'notes'} about this run</button></li>
         )}
         <li className="max-w-full">
-          <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" aria-hidden />Scored by an independent harness the agent cannot change.{' '}
+          <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" aria-hidden />Scored by an independent harness.{' '}
           <button type="button" onClick={() => onLimits('limits')} className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] text-fg-3 underline decoration-line-strong underline-offset-4 hover:text-fg">Why trust it</button>
         </li>
         {paperUrl && (
