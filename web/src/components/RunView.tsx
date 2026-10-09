@@ -12,7 +12,7 @@ import { StepList } from './run/StepList'
 import { Fold, TabIntro } from './run/Fold'
 import { RunTabs } from './run/RunTabs'
 import { VerdictCard } from './run/VerdictCard'
-import { PaperHead } from './PaperHead'
+import { PaperHead, PaperByline } from './PaperHead'
 import { Film } from './film/Film'
 import { DropLast } from './DropLast'
 import { ReadmeBadge } from './ReadmeBadge'
@@ -136,6 +136,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             {run.ref.paper_id} · {parseDate(run.ref.timestamp)}<Hint text={INFO} />
           </div>
           <h1 className="font-grotesk m-0 mt-3 max-w-4xl text-3xl font-semibold leading-[1.08] text-fg sm:text-4xl">{run.ref.title}</h1>
+          <PaperByline head={head} />
         </header>
         <VerdictCard dossier={d} events={run.events} claim={claim} verdict={v} res={res} sentence={sentence} fmt={fmt} fmtSpread={fmtSpread} paperUrl={paperUrl}
           fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} />

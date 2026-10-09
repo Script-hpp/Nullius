@@ -27,6 +27,23 @@ function Authors({ head, small = false }: { head: Head; small?: boolean }) {
   )
 }
 
+// Two lines for the verdict card: what the paper is about (at most two sentences) and "Wu et al., ICML 2019". Nothing is shown for a missing part.
+export function PaperByline({ head }: { head: Head | undefined }) {
+  if (!head) return null
+  const text = (head.summary ?? '').trim().split(/(?<=[.!?])\s+/).slice(0, 2).join(' ')   // decimals like 81.5 have no space after the dot
+  const sur = (a: string) => a.trim().split(/\s+/).pop()
+  const who = head.authors?.length ? (head.authors.length > 2 ? `${sur(head.authors[0])} et al.` : head.authors.map(sur).join(' & ')) : ''
+  const when = whenLine(head)
+  const line = [who, when].filter(Boolean).join(', ')
+  if (!text && !line) return null
+  return (
+    <div className="mt-4 max-w-3xl" aria-label="What this paper is about">
+      {text && <p className="m-0 text-[15px] leading-relaxed text-fg-3"><span className="text-muted">What this paper is about · </span><Glossed text={text} /></p>}
+      {line && <p className="m-0 mt-1.5 font-mono text-[11.5px] text-muted">{line}</p>}
+    </div>
+  )
+}
+
 // The head of a paper: what it is about in plain words, who wrote it, where they work. Compact: for catalog cards.
 export function PaperHead({ head, compact = false }: { head: Head | undefined; compact?: boolean }) {
   if (!head || (!head.summary && !head.authors?.length && !head.institutions?.length)) return null
