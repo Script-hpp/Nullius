@@ -37,7 +37,7 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="text-[15px] font-medium text-fg-2">Try to fool Nullius</span>
-          <span className="ml-3 text-[12px] text-muted">Drag the claimed value and watch the verdict change</span>
+          <span className="ml-3 text-[12px] text-muted">drag the claim, watch the verdict</span>
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
       </summary>

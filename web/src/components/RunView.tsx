@@ -31,7 +31,7 @@ import { tavilySummary } from '../tavilysummary'
 import { toPercent } from './ui'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-const INFO = 'This is the certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it. Read the verdict first, then compare claimed and measured. The other tabs hold the proof.'
+const INFO = 'The certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it.'
 const ICONS: Record<RunTab, React.ReactNode> = {
   overview: <LayoutDashboard className="h-4 w-4" />, how: <Route className="h-4 w-4" />, sources: <Search className="h-4 w-4" />, code: <GitBranch className="h-4 w-4" />, limits: <ShieldCheck className="h-4 w-4" />,
 }
@@ -160,12 +160,12 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             <section aria-label="Claimed against measured">
               <h3 className={h3}>Claimed against measured</h3>
               <ResultBand dossier={d} claimId={claim.id} tone={res.tone} fmt={fmt} fmtSpread={fmtSpread} showKey={false} />
-              <p className="mb-0 mt-3 text-[12px] leading-relaxed text-muted">Dots are single seeds. The band is the claim ± tolerance, the solid line our mean, the dashed line the claim.</p>
+              <p className="mb-0 mt-3 text-[12px] leading-relaxed text-muted">Dots: seeds. Band: claim ± tolerance.</p>
             </section>
             <section aria-label="The nine steps">
               <h3 className={h3}>The nine steps of a check</h3>
               <StepList steps={steps} onStep={onStep} />
-              <p className="mb-0 mt-3 text-[12px] text-muted">Click a step to see where it is shown. Steps marked “Not part of this run” were not recorded.</p>
+              <p className="mb-0 mt-3 text-[12px] text-muted">Click a step to open it.</p>
             </section>
             {nExp > 0 && (
               <section aria-label="Findings that became experiments">
@@ -176,14 +176,14 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={fmtSpread} />
             {head && <Fold title="About the paper" meta="summary, authors, affiliations" id="f-about" open={open.has('f-about')} onOpenChange={setFold('f-about')}><PaperHead head={head} /></Fold>}
             <a href="#benchmark" className="inline-flex items-center gap-2 text-[13px] font-medium text-fg-3 no-underline hover:text-fg">
-              One check is an example: see how often Nullius is right on papers with known results<ArrowRight className="h-4 w-4" />
+              Benchmark: how often Nullius is right<ArrowRight className="h-4 w-4" />
             </a>
           </div>
         )}
 
         {tab === 'how' && (
           <div>
-            <TabIntro title="How we got there" text="From paper to verdict: the steps the agent took, in order, and every time it had to fix its own code." />
+            <TabIntro title="How we got there" text="The agent’s steps, in order." />
             <div className="mb-6 flex gap-2">
               <button onClick={() => setHow('graph')} aria-pressed={how === 'graph'} className={toggle(how === 'graph')}>Step graph</button>
               <button onClick={() => setHow('log')} aria-pressed={how === 'log'} className={toggle(how === 'log')}>Execution log</button>
@@ -203,7 +203,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
         {tab === 'sources' && (
           <div>
-            <TabIntro title="Sources & Tavily" text="What Tavily found and read for this check, and what others say about the paper. They are reported next to the measurement and never change the verdict." />
+            <TabIntro title="Sources & Tavily" text="What Tavily found. It never changes the verdict." />
             {tav.total > 0 && (
               <p className="mb-8 mt-0 font-mono text-[12px] text-muted" data-testid="tavily-summary">{tav.total} Tavily {tav.total === 1 ? 'call' : 'calls'} in this run · {tav.parts.join(' · ')}</p>
             )}
@@ -230,7 +230,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
         {tab === 'code' && (
           <div>
-            <TabIntro title="Code & branches" text="Every seed ran in its own sandbox branch. Here are the branches, the measurements, and the exact plan and code the agent wrote." />
+            <TabIntro title="Code & branches" text="One sandbox branch per seed, plus plan and code." />
             <section id="sec-branches" className="scroll-mt-16" aria-label="Branch tree">
               <h3 className={h3}>Branch tree</h3>
               <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />
@@ -259,7 +259,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
         {tab === 'limits' && (
           <div className="space-y-12">
-            <TabIntro title="Limits" text="Why the number can be trusted, and what it does not say." />
+            <TabIntro title="Limits" text="Why trust the number, and what it does not say." />
             <section aria-label="What the verdict means">
               <h3 className={h3}>What the verdict means</h3>
               <p className="m-0 max-w-3xl text-[14px] leading-relaxed text-fg-3">

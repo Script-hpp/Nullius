@@ -38,14 +38,13 @@ function Hero() {
           <span className="block text-fg">we measure them.</span>
         </h1>
         <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
-          Nullius rebuilds a paper&rsquo;s experiment in a sandbox and lets an independent harness measure it. Tavily researches the paper live. When it says a target was reached, it was.
+          Nullius rebuilds a paper&rsquo;s experiment and measures it independently. Tavily researches live.
         </p>
       </div>
       <div className="mt-10 flex flex-col items-center gap-3">
         <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
           <Play className="h-4 w-4" aria-hidden />See it in action
         </a>
-        <a href="#catalog" className="text-sm text-fg-4 no-underline transition-colors hover:text-fg">Try it live</a>
       </div>
       <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14">
         <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}

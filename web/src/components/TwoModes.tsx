@@ -1,5 +1,5 @@
 import { Check, Minus, ShieldCheck, BookOpen, ChevronDown, ExternalLink } from 'lucide-react'
-import { UNITS, HELD_OUT, FIGURES, MODES, LIMITS, BITTER_LESSON, REPO_BLOB, SOURCES } from '../data/benchmark'
+import { UNITS, HELD_OUT, FIGURES, MODES, LIMITS, REPO_BLOB, SOURCES } from '../data/benchmark'
 
 const link = (path: string) => `${REPO_BLOB}/${path}`
 
@@ -12,8 +12,8 @@ function Mark({ ok, label }: { ok: boolean; label: string }) {
 // Two separate measurements. The headline numbers sit side by side and are never added up.
 export function Headline() {
   const cols = [
-    { m: MODES.paperOnly, big: `${FIGURES.paperOnly.matched} of ${FIGURES.paperOnly.of}`, note: `${FIGURES.paperOnly.runs} runs, pre-registered primary metric` },
-    { m: MODES.withCode, big: `${FIGURES.withCode.matched} of ${FIGURES.withCode.of}`, note: `development units, in-sample · held-out RLinear ${HELD_OUT.matched} of ${HELD_OUT.of}` },
+    { m: MODES.paperOnly, big: `${FIGURES.paperOnly.matched} of ${FIGURES.paperOnly.of}`, note: `${FIGURES.paperOnly.runs} runs, pre-registered` },
+    { m: MODES.withCode, big: `${FIGURES.withCode.matched} of ${FIGURES.withCode.of}`, note: `in-sample · held-out RLinear ${HELD_OUT.matched} of ${HELD_OUT.of}` },
   ]
   return (
     <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-2">
@@ -33,9 +33,9 @@ export function Headline() {
 export function Precision() {
   const p = FIGURES.placebo
   const rows = [
-    { v: `${p.v4[0]} of ${p.v4[1]}`, t: 'deliberately wrong claims reported as reproduced in v4', s: `also ${p.v2[0]} of ${p.v2[1]} in v2 and ${p.v3[0]} of ${p.v3[1]} in v3 · pre-registered negative control` },
-    { v: `${p.cg[0]} of ${p.cg[1]}`, t: "wrong claims confirmed in the authors'-code run", s: '8 rejected, 1 without a verdict (that generation failed in setup)' },
-    { v: `${FIGURES.reproducedAgree.v4[0]} of ${FIGURES.reproducedAgree.v4[1]}`, t: "'reproduced' verdicts in v4 agree with the reference", s: 'post hoc, small sample' },
+    { v: `${p.v4[0]} of ${p.v4[1]}`, t: 'wrong claims reported as reproduced (v4)', s: `also ${p.v2[0]} of ${p.v2[1]} in v2 and v3 · pre-registered` },
+    { v: `${p.cg[0]} of ${p.cg[1]}`, t: "wrong claims confirmed, authors'-code run", s: '8 rejected, 1 failed in setup' },
+    { v: `${FIGURES.reproducedAgree.v4[0]} of ${FIGURES.reproducedAgree.v4[1]}`, t: "'reproduced' verdicts agree with the reference", s: 'v4, post hoc, small sample' },
   ]
   return (
     <div>
@@ -53,7 +53,7 @@ export function Precision() {
   )
 }
 
-export function Matrix() {
+export function Matrix({ short = false }: { short?: boolean }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
       <table className="w-full min-w-[300px] border-collapse text-left" aria-label="Same eight units in two modes">
@@ -74,7 +74,7 @@ export function Matrix() {
             </tr>
           ))}
           <tr className="border-t border-line-strong bg-surface-2">
-            <th scope="row" className="px-3 py-3 text-[14px] font-semibold text-fg sm:px-5">Development units</th>
+            <th scope="row" className="px-3 py-3 text-[14px] font-semibold text-fg sm:px-5">Matches, in-sample</th>
             <td className="px-1 py-3 text-center font-mono text-base whitespace-nowrap text-fg sm:px-3 sm:text-lg">{FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}</td>
             <td className="px-1 py-3 text-center font-mono text-base whitespace-nowrap text-fg sm:px-3 sm:text-lg">{FIGURES.withCode.matched} of {FIGURES.withCode.of}</td>
           </tr>
@@ -86,7 +86,9 @@ export function Matrix() {
         </tbody>
       </table>
       <p className="m-0 border-t border-line px-3 py-3 text-[12px] sm:px-5 leading-relaxed text-fg-4">
-        Check mark: the majority verdict over the generations equals the reference verdict. Held-out measured {HELD_OUT.measured[0]} and {HELD_OUT.measured[1]} against a target of {HELD_OUT.target}. Different modes and models; the two columns are never added up.
+        {short
+          ? 'Check: majority verdict equals the reference. Columns are never added up.'
+          : `Check: the majority verdict equals the reference. Held-out measured ${HELD_OUT.measured[0]} and ${HELD_OUT.measured[1]} against ${HELD_OUT.target}. Columns are never added up.`}
       </p>
     </div>
   )
@@ -115,9 +117,9 @@ export function TwoModes() {
   return (
     <section aria-label="Two modes, two measurements" className="mb-16 space-y-8">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Two modes, two separate measurements</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Two modes, never added up</div>
         <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-          Nullius is a high-precision checker. How often it reaches the target depends on what the agent may read.
+          A precise checker. What it reaches depends on what it reads.
         </p>
       </div>
       <Precision />
@@ -126,7 +128,7 @@ export function TwoModes() {
       <Limits />
       <p className="m-0 flex max-w-3xl items-start gap-3 text-[14px] leading-relaxed text-fg-3">
         <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-fg-4" aria-hidden />
-        <span>{BITTER_LESSON} <a href={link(SOURCES.readme)} target="_blank" rel="noreferrer" className="whitespace-nowrap text-fg underline underline-offset-4">Our own small bitter lesson</a></span>
+        <span>Cleverness left {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}; the authors&rsquo; code moved it. <a href={link(SOURCES.readme)} target="_blank" rel="noreferrer" className="whitespace-nowrap text-fg underline underline-offset-4">The lesson</a></span>
       </p>
     </section>
   )
