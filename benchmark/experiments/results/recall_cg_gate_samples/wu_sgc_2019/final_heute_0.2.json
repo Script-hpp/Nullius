@@ -1,0 +1,1 @@
+{"unit": "wu_sgc_2019", "arm": "heute", "temp": 0.2, "urteil": "reproduziert", "mean": 0.8099000000000001, "std": 0.001370320319406299, "n_ok": 10, "n_seeds": 10, "code_missing": false, "attempts_seed0": 1, "target_reached": true, "seconds": 54.2, "note": "", "facts": {"feat_row_l1": true, "no_col_standardize": true}}

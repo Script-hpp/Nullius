@@ -1,0 +1,151 @@
+{
+ "model": "GCN",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.01",
+   "quote": "learning_rate: 0.01",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.01,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.001",
+   "quote": "weight_decay: 0.001",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.001,
+   "enforce": false,
+   "alternatives": [
+    {
+     "value": "0.0005",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "weight_decay: !!float 5e-4"
+    },
+    {
+     "value": "0.0005",
+     "source": "repo:config/train.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "weight_decay: !!float 5e-4"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich: 0.0005 (repo:config/reference/gcn.conf.yaml@1e72912); 0.0005 (repo:config/train.conf.yaml@1e72912)"
+  },
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "num_epochs: 100000",
+   "source": "repo:config/train.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "200",
+     "source": "paper",
+     "rank": "paper",
+     "quote": "Maximum number of epochs: 200."
+    }
+   ],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0.8",
+   "quote": "dropout_prob: 0.8",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 0.8,
+   "enforce": false,
+   "alternatives": [
+    {
+     "value": "0.5",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "dropout_prob: 0.5"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich: 0.5 (repo:config/reference/gcn.conf.yaml@1e72912)"
+  },
+  {
+   "key": "hidden",
+   "value": "64",
+   "quote": "hidden_size: 64",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 64,
+   "enforce": false,
+   "alternatives": [
+    {
+     "value": "16",
+     "source": "repo:config/reference/gcn.conf.yaml@1e72912",
+     "rank": "config",
+     "quote": "hidden_size: 16"
+    }
+   ],
+   "note": "gleichrangige Quellen widersprechen sich: 16 (repo:config/reference/gcn.conf.yaml@1e72912)"
+  },
+  {
+   "key": "layers",
+   "value": "2",
+   "quote": "num_layers: 2",
+   "source": "repo:config/optimized/gcn.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 2,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "50",
+   "quote": "early_stopping_tolerance: 50",
+   "source": "repo:config/train.conf.yaml@1e72912",
+   "rank": "config",
+   "number": 50,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "10",
+     "source": "paper",
+     "rank": "paper",
+     "quote": "Early stopping: stop optimization if the validation loss is larger than the mean of validation losses of the last 10 epochs."
+    }
+   ],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "epochs",
+    "value": 100000,
+    "quote": "We train for a maximum of 100 k epochs.",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:gnnbench/models/gcn.py@1e72912",
+  "repo:gnnbench/train.py@1e72912",
+  "repo:config/optimized/gcn.conf.yaml@1e72912",
+  "repo:config/reference/gcn.conf.yaml@1e72912",
+  "repo:config/train.conf.yaml@1e72912",
+  "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+  "repo:gnnbench/models/gcn.py@1e72912 (function body)",
+  "repo:gnnbench/models/base_model.py@1e72912"
+ ],
+ "missing": [
+  "batch_size",
+  "heads"
+ ],
+ "excerpt": "=== repo:gnnbench/models/gcn.py@1e72912 ===\nimport tensorflow as tf\nimport tensorflow.contrib.slim as slim\nfrom sacred import Ingredient\n\nfrom gnnbench.data.preprocess import row_normalize, renormalize_adj\nfrom gnnbench.models.base_model import GNNModel\nfrom gnnbench.util import dropout_supporting_sparse_tensors, to_sparse_tensor\n\n# implementation verified against Kipf data\n\n\ndef graph_convolution(inputs, sparse_renormalized_laplacian, weights, input_is_sparse=False):\n    \"\"\"Implements the graph convolution operation \u00c2 * inputs * weights, where\n    \u00c2 is the renormalized Laplacian \u00c2 = D~^-0.5 * A~ * D~^-0.5 with\n    A~ = A + I_N (adjacency matrix with added self-loops) and\n    D~ = diagonal matrix of node degrees deduced from A~.\n    \"\"\"\n    if input_is_sparse:\n        output = tf.sparse_tensor_dense_matmul(inputs, weights)\n    else:\n        output = tf.matmul(inputs, weights)\n    return tf.sparse_tensor_dense_matmul(sparse_renormalized_laplacian, output)\n\n\ndef graph_convolution_layer(output_dim,\n                            inputs, sparse_renormalized_laplacian,\n                            activation_fn,\n                            dropout_prob,\n                            weight_decay,\n                            name,\n                            input_is_sparse=False):\n    with tf.name_scope(name):\n        input_dim = int(inputs.get_shape()[1])\n        weights = tf.get_variable(\"%s-weights\" % name, [input_dim, output_dim], dtype=tf.float32,\n                                  initializer=tf.glorot_uniform_initializer(),\n                                  regularizer=slim.l2_regularizer(weight_decay))\n        bias = tf.get_variable(\"%s-bias\" % name, [output_dim], dtype=tf.float32,\n                               initializer=tf.zeros_initializer())\n\n        # Apply dropout to inputs if required\n        inputs = tf.cond(\n            tf.cast(dropout_prob, tf.bool),\n            true_fn=(lambda: dropout_supporting_sparse_tensors(inputs, 1 - dropout_prob)),\n            false_fn=(lambda: inputs),\n        )\n\n        convolved = graph_convolution(inputs, sparse_renormalized_laplacian, weights,\n                                      input_is_sparse)\n        output = convolved + bias\n        if activation_fn is not None:\n            output = activation_fn(output)\n        return output\n\n\nclass GCN(GNNModel):\n    def __init__(self, features, graph_adj, targets, nodes_to_consider,\n                 num_layers, hidden_size, dropout_prob, weight_decay, normalize_features):\n        self.normalize_features = normalize_features\n        with tf.name_scope('extract_relevant_nodes'):\n            targets = tf.gather(targets, nodes_to_consider)\n        super().__init__(features, graph_adj, targets)\n        self.nodes_to_consider = nodes_to_consider\n        self.num_layers = num_layers\n        self.hidden_size = hidden_size\n        self.dropout_prob = dropout_prob\n        self.weight_decay = weight_decay\n\n        self._build_model_graphs()\n\n    def _inference(self):\n        with tf.name_scope('inference'):\n            x = self.features\n            for i in range(0, self.num_layers - 1):\n                x = graph_convolution_layer(output_dim=self.hidden_size,\n                                            inputs=x,\n                                            sparse_renormalized_laplacian=self.graph_adj,\n                                            activation_fn=tf.nn.relu,\n                                            dropout_prob=self.dropout_prob,\n                                            # original implementation uses L2 regularization only on first layer\n                                            weight_decay=self.weight_decay if i == 0 else 0.0,\n                                            name=\"gc%d\" % i,\n                                            input_is_sparse=i == 0)\n            output = graph_convolution_layer(output_dim=self.targets.shape[1],\n                                             inputs=x,\n                                             sparse_renormalized_laplacian=self.graph_adj,\n                                             activation_fn=None,\n                                             dropout_prob=self.dropout_prob,\n                                             weight_decay=0.0,\n                                             name=\"gc%d\" % (self.num_layers - 1),\n                                             input_is_sparse=False)\n        with tf.name_scope('extract_relevant_nodes'):\n            return tf.gather(output, self.nodes_to_consider)\n\n    def _preprocess_features(self, features):\n        if self.normalize_features:\n            features = row_normalize(features)\n        return to_sparse_tensor(features)\n\n    def _preprocess_adj(self, graph_adj):\n        return to_sparse_tensor(renormalize_adj(graph_adj))\n\n\nMODEL_INGREDIENT = Ingredient('model')\n\n\n@MODEL_INGREDIENT.capture\ndef build_model(graph_adj, node_features, labels, dataset_indices_placeholder,\n                train_feed, trainval_feed, val_feed, test_feed,\n                weight_decay, normalize_features,\n                num_layers, hidden_size, dropout_prob):\n    dropout = tf.placeholder(dtype=tf.float32, shape=[])\n    train_feed[dropout] = dropout_prob\n    trainval_feed[dropout] = False\n    val_feed[dropout] = False\n    test_feed[dropout] = False\n\n    return GCN(node_features, graph_adj, labels, dataset_indices_placeholder,\n               num_layers=num_layers, hidden_size=hidden_size,\n               dropout_prob=dropout,\n               weight_decay=weight_decay,\n               normalize_features=normalize_features)\n\n\n=== repo:gnnbench/train.py@1e72912 ===\nimport numpy as np\nimport tensorflow as tf\n\nimport gnnbench.metrics\nfrom gnnbench.early_stopping import GCNCriterion, GATCriterion, KDDCriterion, NoStoppingCriterion, \\\n    GATCriterionWithTolerance\n\n\ndef build_train_ops(sess, model, early_stopping_tolerance, early_stopping_criterion, improvement_tolerance,\n                    _run, _log):\n    learning_rate_placeholder = tf.placeholder(dtype=tf.float32, shape=[])\n\n    global_step = tf.get_variable(\n        name=\"global_step\",\n        shape=[],\n        dtype=tf.int64,\n        initializer=tf.zeros_initializer(),\n        trainable=False,\n        collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.GLOBAL_STEP])\n\n    train_step = model.optimize(learning_rate_placeholder, global_step)\n\n    if early_stopping_criterion == 'gcn':\n        early_stopping = GCNCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == 'gat':\n        early_stopping = GATCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == 'gnnbench':\n        early_stopping = KDDCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == \"gat_tol\":\n        early_stopping = GATCriterionWithTolerance(early_stopping_tolerance, improvement_tolerance, sess, _log)\n    else:\n        _log.warn(\"Disabled early stopping.\")\n        early_stopping = NoStoppingCriterion(early_stopping_tolerance, sess, _log)\n\n    init_op = tf.global_variables_initializer()\n\n    return train_step, early_stopping, learning_rate_placeholder, global_step, init_op\n\n\ndef run_train_ops(sess, train_step, early_stopping, learning_rate_placeholder, global_step, init_op,\n                  train_feed, trainval_feed, val_feed, test_feed, metrics_to_use,\n                  model, learning_rate, num_epochs, early_stopping_criterion,\n                  alternating_optimization_interval, lr_decay_factor, lr_decay_steps,\n                  report_interval, _run, run_no, _log, traces):\n    # reset all training progress\n    sess.run(init_op)\n    early_stopping.reset()\n\n    start_iteration = sess.run(global_step)\n\n    _log.info(\"Started training for %s epochs.\" % num_epochs)\n\n    for epoch in range(start_iteration, num_epochs):\n\n        # add learning rate to feed dict\n        train_feed[learning_rate_placeholder] = learning_rate\n\n        if isinstance(train_step, list):\n            # triggers alternating optimization as needed for MoNet\n            loss_to_optimize = int(epoch / alternating_optimization_interval) % len(train_step)\n            _, train_loss = sess.run([train_step[loss_to_optimize], model.loss], feed_dict=train_feed)\n        else:\n            _, train_loss = sess.run([train_step, model.loss], feed_dict=train_feed)\n\n        # compute metrics needed for logging and early stopping\n        val_loss = sess.run(model.loss, feed_dict=val_feed)\n        val_metrics = compute_metrics(sess, model, val_feed, metrics_to_use)\n\n        # report some statistics to the logs\n        if (epoch + 1) % report_interval == 0:\n            train_metrics = compute_metrics(sess, model, trainval_feed, metrics_to_use)\n            metrics_string = build_metrics_string(train_loss, val_loss, train_metrics, val_metrics)\n            _log.debug(f\"After {sess.run(global_step)} epochs:\\n\" + metrics_string)\n\n            _run.log_scalar(f\"train.loss-{run_no}\", train_loss, epoch + 1)\n            _run.log_scalar(f\"val.loss-{run_no}\", val_loss, epoch + 1)\n            for name, value in train_metrics.items():\n                _run.log_scalar(f\"train.{name}-{run_no}\", value, epoch + 1)\n            for name, value in val_metrics.items():\n                _run.log_scalar(f\"val.{name}-{run_no}\", value, epoch + 1)\n\n        # test early stopping criterion\n        if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):\n            _log.debug(f\"Early stopping by {early_stopping_criterion} criterion\"\n                       f\" after {sess.run(global_step)} epochs.\")\n            break\n\n        # decay learning rate if enabled\n        if lr_decay_factor > 0.0 and lr_decay_steps:\n            if lr_decay_factor >= 1.0:\n                raise ValueError(f\"A learning rate decay factor of {lr_decay_factor} will not \"\n                                 f\"decay the learning rate.\")\n            if epoch + 1 in lr_decay_steps:\n                learning_rate *= lr_decay_factor\n                _log.debug(f\"Decaying learning rate to {learning_rate}.\")\n\n    # run after-stopping operations of early stopping criterion\n    e\n\n=== repo:config/optimized/gcn.conf.yaml@1e72912 ===\nmodel_name: \"GCN\"\nnum_layers: 2\nhidden_size: 64\ndropout_prob: 0.8\n\nlearning_rate: 0.01\nweight_decay: 0.001\n\n=== repo:config/reference/gcn.conf.yaml@1e72912 ===\nmodel_name: \"GCN\"\nnum_layers: 2\nhidden_size: 16\ndropout_prob: 0.5\n\nlearning_rate: 0.01\nweight_decay: !!float 5e-4\n\n=== repo:config/train.conf.yaml@1e72912 ===\n# This file provides the default values for all parameters of the training procedure.\n# You can OVERRIDE these defaults by specifying values in respective model config files (such as gcn.conf.yaml).\n\n# ---\n# Training procedure parameters.\n\n# Maximum number of epochs to train for. Should be large enough for early stopping to take effect.\nnum_epochs: 100000\n\n# The early stopping criterion to use. Must be one of\n#     - gcn        Early stopping criterion used in [1]. Early stopping if validation loss is larger than the mean of\n#                  the validation losses of the last <patience> epochs.\n#     - gat        Early stopping criterion used in [2]. Early stopping if neither validation loss nor validation\n#                  accuracy improve, reset of variables after stopping.\n#     - gnnbench   Early stopping criterion used in our paper. Early stopping only by improvement of validation loss,\n#                  reset of variables after stopping.\n# Set to null to disable early stopping.\n#\n# [1] Kipf & Welling (2016). Semi-supervised classification with graph convolutional networks.\n# [2] Velickovic et al. (2017). Graph attention networks.\nearly_stopping_criterion: \"gnnbench\"\n\n# The tolerance (or patience) of the early stopping criterion. To correspond to the criterion in [1] this must be set to\n# 10, to correspond to the criterion in [2] this must be set to 100.\nearly_stopping_tolerance: 50\n\n# Always set to 0.0. Only needed for LabelProp where it is updated in corresponding config files.\n# This \"dummy parameter\" is needed here in order for the parameter to be defined in Sacred before the model is\n# instantiated. Only needed for model-specific training parameters, not for model parameters.\nimprovement_tolerance: 0.0\n\n# Initial learning rate.\nlearning_rate: 0.01\n\n# Strength of the L2 regularization.\nweight_decay: !!float 5e-4\n\n# Only needed for MoNet. Number of consecutive steps to either optimize filter weights or kernel weights.\nalternating_optimization_interval: 12\n\n# Only needed for MoNet. Multiplicative factor to decay learning rate after each entry of lr_decay_steps. Set to 0.0 to\n# disable learning rate decay.\nlr_decay_factor: 0.0\n\n# Only needed for MoNet. List of steps after which to decay the learning rate. Set to empty list or null to disable\n# learning rate decay.\nlr_decay_steps: null\n\n\n# ---\n# Dataset parameters\n\n# Number of samples (i.e. nodes) in the train/val/test sets.\n# For each of the [train, val, test] sets use one of\n#     - <set_name>_examples_per_class    Randomly sample this many examples per class. Total number of <set_name> samples\n#                                        is then num_classes * <set_name>_examples_per_class.\n#     - <set_name>_size                  Randomly samples this many examples in total.\n# If test_size and test_examples_per_class are both null, the remainder of the samples is used as test set.\nsplit:\n    train_examples_per_class: 20\n    val_examples_per_class: 30\n    test_size: null\n# For example, in the Planetoid paper the following configuration is used.\n#split:\n#    train_examples_per_class: 20\n#    val_size: 500\n#    test_size: 1000\n\n# Should the input graph be standardized?\n# Standardizing includes:\n#  - Making the graph undirected\n#  - Making the graph unweighted\n#  - Selecting the largest connected component (LCC)\nstandardize_graph: true\n\n# Should the attribute matrix (X) be row-normalized s.t. each row has L2 norm equal to 1?\nnormalize_features: false\n\n\n# ---\n# Logging parameters\n# The number of epochs after which to print a log message.\nreport_interval: 10\n\n\n=== repo:gnnbench/models/gcn.py@1e72912 (function body) ===\n    def _preprocess_features(self, features):\n        if self.normalize_features:\n            features = row_normalize(features)\n        return to_sparse_tensor(features)\n\n\n=== repo:gnnbench/models/gcn.py@1e72912 (function body) ===\n    def _preprocess_adj(self, graph_adj):\n        return to_sparse_tensor(renormalize_adj(graph_adj))\n\n\n\n=== repo:gnnbench/models/base_model.py@1e72912 ===\nimport tensorflow as tf\n\n__all__ = [\n    'GNNModel',\n]\n\n\nclass GNNModel(object):\n    \"\"\"Base class for all Graph Neural Network (GNN) models.\"\"\"\n\n    def __init__(self, features, graph_adj, targets):\n        \"\"\"Create a model.\n\n        Parameters\n        ----------\n        graph_adj : sp.csr_matrix, shape [num_nodes, num_nodes]\n            Adjacency matrix in CSR format.\n        features : sp.csr_matrix or np.ndarray, shape [num_nodes, num_attr]\n            Attribute matrix in CSR or numpy format.\n        targets : np.ndarray, shape [num_nodes, num_classes]\n            One-hot matrix of node labels.\n        \"\"\"\n        self.targets = targets\n        self.graph_adj = self._preprocess_adj(graph_adj)\n        self.features = self._preprocess_features(features)\n\n    def _inference(self):\n        \"\"\"\n        Builds the inference graph of the model.\n\n        Returns\n        -------\n        logits : tf.",
+ "dropped_defaults": []
+}

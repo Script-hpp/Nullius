@@ -1,0 +1,109 @@
+{
+ "model": "DLinear",
+ "family": "forecast",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.005",
+   "quote": "--learning_rate 0.005",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 0.005,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "epochs",
+   "value": "10",
+   "quote": "parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')",
+   "source": "repo:run_longExp.py@0c11366",
+   "rank": "argparse default",
+   "number": 10,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "batch_size",
+   "value": "32",
+   "quote": "--batch_size 32",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 32,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0.05",
+   "quote": "parser.add_argument('--dropout', type=float, default=0.05, help='dropout')",
+   "source": "repo:run_longExp.py@0c11366",
+   "rank": "argparse default",
+   "number": 0.05,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "7",
+   "quote": "def __init__(self, patience=7, verbose=False, delta=0):",
+   "source": "repo:utils/tools.py@0c11366",
+   "rank": "code",
+   "number": 7,
+   "enforce": true,
+   "alternatives": [
+    {
+     "value": "3",
+     "source": "repo:run_longExp.py@0c11366",
+     "rank": "argparse default",
+     "quote": "parser.add_argument('--patience', type=int, default=3, help='early stopping patience')"
+    }
+   ],
+   "note": ""
+  },
+  {
+   "key": "seq_len",
+   "value": "336",
+   "quote": "--seq_len 336",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+   "rank": "start script",
+   "number": 336,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": 2,
+    "quote": "LTSF-Linear is a linear model with two linear layers at most, it costs much lower memory and fewer parameters and has a faster inference speed than existing Transformers",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/DLinear.py@0c11366",
+  "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+  "repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366",
+  "repo:utils/tools.py@0c11366 (function body)",
+  "repo:data_provider/data_loader.py@0c11366 (function body)",
+  "repo:data_provider/data_factory.py@0c11366 (function body)",
+  "repo:exp/exp_main.py@0c11366 (function body)",
+  "repo:utils/tools.py@0c11366 (function body)",
+  "repo:utils/metrics.py@0c11366 (function body)",
+  "repo:data_provider/data_loader.py@0c11366 (function body)"
+ ],
+ "missing": [
+  "weight_decay",
+  "hidden",
+  "layers"
+ ],
+ "excerpt": "=== repo:models/DLinear.py@0c11366 ===\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport numpy as np\n\nclass moving_avg(nn.Module):\n    \"\"\"\n    Moving average block to highlight the trend of time series\n    \"\"\"\n    def __init__(self, kernel_size, stride):\n        super(moving_avg, self).__init__()\n        self.kernel_size = kernel_size\n        self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=0)\n\n    def forward(self, x):\n        # padding on the both ends of time series\n        front = x[:, 0:1, :].repeat(1, (self.kernel_size - 1) // 2, 1)\n        end = x[:, -1:, :].repeat(1, (self.kernel_size - 1) // 2, 1)\n        x = torch.cat([front, x, end], dim=1)\n        x = self.avg(x.permute(0, 2, 1))\n        x = x.permute(0, 2, 1)\n        return x\n\n\nclass series_decomp(nn.Module):\n    \"\"\"\n    Series decomposition block\n    \"\"\"\n    def __init__(self, kernel_size):\n        super(series_decomp, self).__init__()\n        self.moving_avg = moving_avg(kernel_size, stride=1)\n\n    def forward(self, x):\n        moving_mean = self.moving_avg(x)\n        res = x - moving_mean\n        return res, moving_mean\n\nclass Model(nn.Module):\n    \"\"\"\n    Decomposition-Linear\n    \"\"\"\n    def __init__(self, configs):\n        super(Model, self).__init__()\n        self.seq_len = configs.seq_len\n        self.pred_len = configs.pred_len\n\n        # Decompsition Kernel Size\n        kernel_size = 25\n        self.decompsition = series_decomp(kernel_size)\n        self.individual = configs.individual\n        self.channels = configs.enc_in\n\n        if self.individual:\n            self.Linear_Seasonal = nn.ModuleList()\n            self.Linear_Trend = nn.ModuleList()\n            \n            for i in range(self.channels):\n                self.Linear_Seasonal.append(nn.Linear(self.seq_len,self.pred_len))\n                self.Linear_Trend.append(nn.Linear(self.seq_len,self.pred_len))\n\n                # Use this two lines if you want to visualize the weights\n                # self.Linear_Seasonal[i].weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n                # self.Linear_Trend[i].weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n        else:\n            self.Linear_Seasonal = nn.Linear(self.seq_len,self.pred_len)\n            self.Linear_Trend = nn.Linear(self.seq_len,self.pred_len)\n            \n            # Use this two lines if you want to visualize the weights\n            # self.Linear_Seasonal.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n            # self.Linear_Trend.weight = nn.Parameter((1/self.seq_len)*torch.ones([self.pred_len,self.seq_len]))\n\n    def forward(self, x):\n        # x: [Batch, Input length, Channel]\n        seasonal_init, trend_init = self.decompsition(x)\n        seasonal_init, trend_init = seasonal_init.permute(0,2,1), trend_init.permute(0,2,1)\n        if self.individual:\n            seasonal_output = torch.zeros([seasonal_init.size(0),seasonal_init.size(1),self.pred_len],dtype=seasonal_init.dtype).to(seasonal_init.device)\n            trend_output = torch.zeros([trend_init.size(0),trend_init.size(1),self.pred_len],dtype=trend_init.dtype).to(trend_init.device)\n            for i in range(self.channels):\n                seasonal_output[:,i,:] = self.Linear_Seasonal[i](seasonal_init[:,i,:])\n                trend_output[:,i,:] = self.Linear_Trend[i](trend_init[:,i,:])\n        else:\n            seasonal_output = self.Linear_Seasonal(seasonal_init)\n            trend_output = self.Linear_Trend(trend_init)\n\n        x = seasonal_output + trend_output\n        return x.permute(0,2,1) # to [Batch, Output length, Channel]\n\n\n=== repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366 ===\n\nif [ ! -d \"./logs\" ]; then\n    mkdir ./logs\nfi\n\nif [ ! -d \"./logs/LongForecasting\" ]; then\n    mkdir ./logs/LongForecasting\nfi\nseq_len=336\nmodel_name=DLinear\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 96 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'96.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'192 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 192 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'192.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'336 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 336 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'336.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'720 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 720 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --learning_rate 0.005 >logs/LongForecasting/$model_name'_'Etth1_$seq_len'_'720.log\n\n=== repo:scripts/EXP-LongForecasting/Linear/univariate/etth1.sh@0c11366 ===\nif [ ! -d \"./logs\" ]; then\n    mkdir ./logs\nfi\n\nif [ ! -d \"./logs/LongForecasting\" ]; then\n    mkdir ./logs/LongForecasting\nfi\n\nif [ ! -d \"./logs/LongForecasting/univariate\" ]; then\n    mkdir ./logs/LongForecasting/univariate\nfi\nmodel_name=DLinear\n\n# ETTh1, univariate results, pred_len= 24 48 96 192 336 720\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_24 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 24 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_24.log\n \npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_48 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 48 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_48.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 96 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_96.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_192 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 192 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_192.log\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_336 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 336 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_336.log\n\n\npython -u run_longExp.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_336_720 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --seq_len 336 \\\n  --pred_len 720 \\\n  --enc_in 1 \\\n  --des 'Exp' \\\n  --itr 1 --batch_size 32 --feature S --learning_rate 0.005 >logs/LongForecasting/$model_name'_'fS_ETTh1_336_720.log\n\n\n\n=== repo:utils/tools.py@0c11366 (function body) ===\n    def transform(self, data):\n        return (data - self.mean) / self.std\n\n\n=== repo:data_provider/data_loader.py@0c11366 (function body) ===\n    def inverse_transform(self, data):\n        return self.scaler.inverse_transform(data)\n\n\n\n=== repo:data_provider/data_factory.py@0c11366 (function body) ===\ndef data_provider(args, flag):\n    Data = data_dict[args.data]\n    timeenc = 0 if args.embed != 'timeF' else 1\n    train_only = args.train_only\n\n    if flag == 'test':\n        shuffle_flag = False\n        drop_last = False\n        batch_size = args.batch_size\n        freq = args.freq\n    elif flag == 'pred':\n        shuffle_flag = False\n        drop_last = False\n        batch_size = 1\n        freq = args.freq\n        Data = Dataset_Pred\n    else:\n        shuffle_flag = True\n        drop_last = True\n        batch_size = args.batch_size\n        freq = args.freq\n\n    data_set = Data(\n        root_path=args.root_path,\n        data_path=args.data_path,\n        flag=flag,\n        size=[args.seq_len, args.label_len, args.pred_len],\n        features=args.features,\n        target=args.target,\n        timeenc=timeenc,\n        freq=freq,\n        train_only=train_only\n    )\n    print(flag, len(data_set))\n    data_loader = DataLoader(\n        data_set,\n        batch_size=batch_size,\n        shuffle=shuffle_flag,\n        num_workers=args.num_workers,\n        drop_last=drop_last)\n    return data_set, data_loader\n\n\n=== repo:exp/exp_main.py@0c11366 (function body) ===\n    def vali(self, vali_data, vali_loader, criterion):\n        total_loss = []\n        self.model.eval()\n        with torch.no_grad():\n            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):\n                batch_x = batch_x.float().to(self.device)\n                batch_y = batch_y.float()\n\n                batch_x_mark = batch_x_mark.float().to(self.device)\n                batch_y_mark = batch_y_mark.float().to(self.device)\n\n                # decoder input\n                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()\n                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)\n                # encoder - decoder\n                if self.args.use_amp:\n                    with torch.cuda.amp.autocast():\n                        if 'Linear' in self.args.model:\n                            outputs = self.model(batch_x)\n                        else:\n                            if self.args.output_attention:\n                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]\n                            else:\n                                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)\n                else:\n                    if 'Linear' in self.args.model:\n                        outputs = self.model(batch_x)\n                    else:\n                        if self.args.output_attention:\n                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]\n                        else:\n                            outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)\n                f_dim = -1 if self.args.features == 'MS' else 0\n                outputs = outputs[:, -self.args.pred_len:, f_dim:]\n                batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)\n\n                pred = outputs.detach().cpu()\n                true = batch_y.detach().cpu()\n\n                loss = criterion(pred, true)\n\n                total_loss.append(loss)\n        total_loss = np.average(total_loss)\n        self.model.train()\n        return total_loss\n\n\n=== repo:utils/tools.py@0c11366 (function body) ===\ndef adjust_learning_rate(optimizer, epoch, args):\n    # lr = args.learning_rate * (0.2 ** (epoch // 2))\n    if args.lradj == 'type1':\n        lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}\n    elif args.lradj == 'type2':\n        lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }\n    elif args.lradj == '3':\n        lr_adjust = {epoch: args.learning_rate if epoch < 10 else args.learning_rate*0.1}\n    elif args.lradj == '4':\n        lr_adjust = {epoch: args.learning_rate if epoch < 15 else args.learning_rate*0.1}\n    elif args.lradj == '5':\n        lr_adjust = {epoch: args.learning_rate if epoch < 25 else args.learning_rate*0.1}\n    elif args.lradj == '6':\n        lr_adjust = {epoch: args.learning_rate if epoch < 5 else args.learning_rate*0.1}  \n    if epoch in lr_adjust.keys():\n        lr = lr_adjust[epoch]\n        for param_group in optimizer.param_groups:\n            param_group['lr'] = lr\n        print('Updating learning rate to {}'.format(lr))\n\n\n\n=== repo:utils/metrics.py@0c11366 (function body) ===\ndef metric(pred, true):\n    mae = MAE(pred, true)\n    mse = MSE(pred, true)\n    rmse = RMSE(pred, true)\n    mape = MAPE(pred, true)\n    mspe = MSPE(pred, true)\n    rse = RSE(pred, true)\n    corr = CORR(pred, true)\n\n    return mae, mse, rmse, mape, mspe, rse, corr\n\n\n=== repo:data_provider/data_loader.py@0c11366 (function body) ===\n    def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h', train_only=False):\n        # size [seq_len, label_len, pred_len]\n        # info\n        if size == None:\n            self.seq_len = 24 * 4 * 4\n            self.label_len = 24 * 4\n            self.pred_len = 24 * 4\n        else:\n            self.seq_len = size[0]\n            self.label_len = size[1]\n            self.pred_len = size[2]\n        # init\n        assert flag in ['train', 'test', 'val']\n        type_map = {'train': 0, 'val': 1, 'test': 2}\n        self.set_type = type_map[flag]\n\n        self.features = features\n        self.target = target\n        self.scale = scale\n        self.timeenc = timeenc\n        self.freq = freq\n\n        self.root_path = root_path\n        self.data_path = data_path\n        self.__read_data__()\n",
+ "dropped_defaults": []
+}

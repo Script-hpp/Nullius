@@ -1,0 +1,119 @@
+{
+ "model": "GAT",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.005",
+   "quote": "...with an initial learning rate of 0.01 for Pubmed, and 0.005 for all other datasets.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 0.005,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.0005",
+   "quote": "During training, we apply L2 regulariza-tion with \u03bb = 0 .0005 .",
+   "source": "paper",
+   "rank": "paper",
+   "number": 0.0005,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "nb_epochs = 100000",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "batch_size",
+   "value": "2",
+   "quote": "We utilize a batch size of 2 graphs during training.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 2,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0.6",
+   "quote": "dropout (Srivastava et al., 2014) with p = 0 .6 is applied to both layers\u2019 inputs, as well as to the normalized attention coefficients",
+   "source": "paper",
+   "rank": "paper",
+   "number": 0.6,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "hidden",
+   "value": "K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features)",
+   "quote": "The first layer consists of K = 8 attention heads computing F \u2032 = 8 features each (for a total of 64 features), followed by an exponential linear unit (ELU) (Clevert et al., 2016) nonlinearity.",
+   "source": "paper",
+   "rank": "paper",
+   "number": null,
+   "enforce": false,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "100",
+   "quote": "patience = 100",
+   "source": "repo:execute_cora.py@5af87e7",
+   "rank": "start script",
+   "number": 100,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "heads",
+   "value": "8",
+   "quote": "The first layer consists of K = 8 attention heads",
+   "source": "paper",
+   "rank": "paper",
+   "number": 8,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "layers",
+    "value": "2",
+    "quote": "we apply a two-layer GAT model",
+    "source": "paper"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/gat.py@5af87e7",
+  "repo:execute_cora.py@5af87e7",
+  "repo:execute_cora_sparse.py@5af87e7",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/process.py@5af87e7 (function body)",
+  "repo:utils/layers.py@5af87e7"
+ ],
+ "missing": [
+  "layers"
+ ],
+ "excerpt": "=== repo:models/gat.py@5af87e7 ===\nimport numpy as np\nimport tensorflow as tf\n\nfrom utils import layers\nfrom models.base_gattn import BaseGAttN\n\nclass GAT(BaseGAttN):\n    def inference(inputs, nb_classes, nb_nodes, training, attn_drop, ffd_drop,\n            bias_mat, hid_units, n_heads, activation=tf.nn.elu, residual=False):\n        attns = []\n        for _ in range(n_heads[0]):\n            attns.append(layers.attn_head(inputs, bias_mat=bias_mat,\n                out_sz=hid_units[0], activation=activation,\n                in_drop=ffd_drop, coef_drop=attn_drop, residual=False))\n        h_1 = tf.concat(attns, axis=-1)\n        for i in range(1, len(hid_units)):\n            h_old = h_1\n            attns = []\n            for _ in range(n_heads[i]):\n                attns.append(layers.attn_head(h_1, bias_mat=bias_mat,\n                    out_sz=hid_units[i], activation=activation,\n                    in_drop=ffd_drop, coef_drop=attn_drop, residual=residual))\n            h_1 = tf.concat(attns, axis=-1)\n        out = []\n        for i in range(n_heads[-1]):\n            out.append(layers.attn_head(h_1, bias_mat=bias_mat,\n                out_sz=nb_classes, activation=lambda x: x,\n                in_drop=ffd_drop, coef_drop=attn_drop, residual=False))\n        logits = tf.add_n(out) / n_heads[-1]\n    \n        return logits\n\n\n=== repo:execute_cora.py@5af87e7 ===\nimport time\nimport numpy as np\nimport tensorflow as tf\n\nfrom models import GAT\nfrom utils import process\n\ncheckpt_file = 'pre_trained/cora/mod_cora.ckpt'\n\ndataset = 'cora'\n\n# training params\nbatch_size = 1\nnb_epochs = 100000\npatience = 100\nlr = 0.005  # learning rate\nl2_coef = 0.0005  # weight decay\nhid_units = [8] # numbers of hidden units per each attention head in each layer\nn_heads = [8, 1] # additional entry for the output layer\nresidual = False\nnonlinearity = tf.nn.elu\nmodel = GAT\n\nprint('Dataset: ' + dataset)\nprint('----- Opt. hyperparams -----')\nprint('lr: ' + str(lr))\nprint('l2_coef: ' + str(l2_coef))\nprint('----- Archi. hyperparams -----')\nprint('nb. layers: ' + str(len(hid_units)))\nprint('nb. units per layer: ' + str(hid_units))\nprint('nb. attention heads: ' + str(n_heads))\nprint('residual: ' + str(residual))\nprint('nonlinearity: ' + str(nonlinearity))\nprint('model: ' + str(model))\n\nadj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = process.load_data(dataset)\nfeatures, spars = process.preprocess_features(features)\n\nnb_nodes = features.shape[0]\nft_size = features.shape[1]\nnb_classes = y_train.shape[1]\n\nadj = adj.todense()\n\nfeatures = features[np.newaxis]\nadj = adj[np.newaxis]\ny_train = y_train[np.newaxis]\ny_val = y_val[np.newaxis]\ny_test = y_test[np.newaxis]\ntrain_mask = train_mask[np.newaxis]\nval_mask = val_mask[np.newaxis]\ntest_mask = test_mask[np.newaxis]\n\nbiases = process.adj_to_bias(adj, [nb_nodes], nhood=1)\n\nwith tf.Graph().as_default():\n    with tf.name_scope('input'):\n        ftr_in = tf.placeholder(dtype=tf.float32, shape=(batch_size, nb_nodes, ft_size))\n        bias_in = tf.placeholder(dtype=tf.float32, shape=(batch_size, nb_nodes, nb_nodes))\n        lbl_in = tf.placeholder(dtype=tf.int32, shape=(batch_size, nb_nodes, nb_classes))\n        msk_in = tf.placeholder(dtype=tf.int32, shape=(batch_size, nb_nodes))\n        attn_drop = tf.placeholder(dtype=tf.float32, shape=())\n        ffd_drop = tf.placeholder(dtype=tf.float32, shape=())\n        is_train = tf.placeholder(dtype=tf.bool, shape=())\n\n    logits = model.inference(ftr_in, nb_classes, nb_nodes, is_train,\n                                attn_drop, ffd_drop,\n                                bias_mat=bias_in,\n                                hid_units=hid_units, n_heads=n_heads,\n                                residual=residual, activation=nonlinearity)\n    log_resh = tf.reshape(logits, [-1, nb_classes])\n    lab_resh = tf.reshape(lbl_in, [-1, nb_classes])\n    msk_resh = tf.reshape(msk_in, [-1])\n    loss = model.masked_softmax_cross_entropy(log_resh, lab_resh, msk_resh)\n    accuracy = model.masked_accuracy(log_resh, lab_resh, msk_resh)\n\n    train_op = model.training(loss, lr, l2_coef)\n\n    saver = tf.train.Saver()\n\n    init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())\n\n    vlss_mn = np.inf\n    vacc_mx = 0.0\n    curr_step = 0\n\n    with tf.Session() as sess:\n        sess.run(init_op)\n\n        train_loss_avg = 0\n        train_acc_avg = 0\n        val_loss_avg = 0\n        val_acc_avg = 0\n\n        for epoch in range(nb_epochs):\n            tr_step = 0\n            tr_size = features.shape[0]\n\n            while tr_step * batch_size < tr_size:\n                _, loss_value_tr, acc_tr = sess.run([train_op, loss, accuracy],\n                    feed_dict={\n                        ftr_in: features[tr_step*batch_size:(tr_step+1)*batch_size],\n                        bias_in: biases[tr_step*batch_size:(tr_step+1)*batch_size],\n                        lbl_in: y_train[tr_step*batch_size:(tr_step+1)*batch_size],\n                        msk_in: train_mask[tr_step*batch_size:(tr_step+1)*batch_size],\n                        is_train: True,\n                        attn_drop: 0.6, ffd_drop: 0.6})\n                train_loss_avg += loss_value_tr\n                train_acc_avg += acc_tr\n                tr_step += 1\n\n            vl_step = 0\n            vl_size = features.shape[0]\n\n            while vl_step * batch_size < vl_size:\n                loss_value_vl, acc_vl = sess.run([loss, accuracy],\n                    feed_dict={\n                        ftr_in: features[vl_step*batch_size:(vl_step+1)*batch_size],\n                        bias_in: biases[vl_step*batch_size:(vl_step+1)*batch_size],\n                        lbl_in: y_val[vl_step*batch_size:(vl_step+1)*batch_size],\n                        msk_in: val_mask[vl_step*batch_size:(vl_step+1)*batch_size],\n                        is_train: False,\n                        a\n\n=== repo:execute_cora_sparse.py@5af87e7 ===\nimport time\nimport scipy.sparse as sp\nimport numpy as np\nimport tensorflow as tf\nimport argparse\n\nfrom models import GAT\nfrom models import SpGAT\nfrom utils import process\n\ncheckpt_file = 'pre_trained/cora/mod_cora.ckpt'\n\ndataset = 'cora'\n\n# training params\nbatch_size = 1\nnb_epochs = 100000\npatience = 100\nlr = 0.005  # learning rate\nl2_coef = 0.0005  # weight decay\nhid_units = [8] # numbers of hidden units per each attention head in each layer\nn_heads = [8, 1] # additional entry for the output layer\nresidual = False\nnonlinearity = tf.nn.elu\n# model = GAT\nmodel = SpGAT\n\nprint('Dataset: ' + dataset)\nprint('----- Opt. hyperparams -----')\nprint('lr: ' + str(lr))\nprint('l2_coef: ' + str(l2_coef))\nprint('----- Archi. hyperparams -----')\nprint('nb. layers: ' + str(len(hid_units)))\nprint('nb. units per layer: ' + str(hid_units))\nprint('nb. attention heads: ' + str(n_heads))\nprint('residual: ' + str(residual))\nprint('nonlinearity: ' + str(nonlinearity))\nprint('model: ' + str(model))\n\nsparse = True\n\nadj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = process.load_data(dataset)\nfeatures, spars = process.preprocess_features(features)\n\nnb_nodes = features.shape[0]\nft_size = features.shape[1]\nnb_classes = y_train.shape[1]\n\nfeatures = features[np.newaxis]\ny_train = y_train[np.newaxis]\ny_val = y_val[np.newaxis]\ny_test = y_test[np.newaxis]\ntrain_mask = train_mask[np.newaxis]\nval_mask = val_mask[np.newaxis]\ntest_mask = test_mask[np.newaxis]\n\nif sparse:\n    biases = process.preprocess_adj_bias(adj)\nelse:\n    adj = adj.todense()\n    adj = adj[np.newaxis]\n    biases = process.adj_to_bias(adj, [nb_nodes], nhood=1)\n\nwith tf.Graph().as_default():\n    with tf.name_scope('input'):\n        ftr_in = tf.placeholder(dtype=tf.float32, shape=(batch_size, nb_nodes, ft_size))\n        if sparse:\n            #bias_idx = tf.placeholder(tf.int64)\n            #bias_val = tf.placeholder(tf.float32)\n            #bias_shape = tf.placeholder(tf.int64)\n            bias_in = tf.sparse_placeholder(dtype=tf.float32)\n        else:\n            bias_in = tf.placeholder(dtype=tf.float32, shape=(batch_size, nb_nodes, nb_nodes))\n        lbl_in = tf.placeholder(dtype=tf.int32, shape=(batch_size, nb_nodes, nb_classes))\n        msk_in = tf.placeholder(dtype=tf.int32, shape=(batch_size, nb_nodes))\n        attn_drop = tf.placeholder(dtype=tf.float32, shape=())\n        ffd_drop = tf.placeholder(dtype=tf.float32, shape=())\n        is_train = tf.placeholder(dtype=tf.bool, shape=())\n\n    logits = model.inference(ftr_in, nb_classes, nb_nodes, is_train,\n                                attn_drop, ffd_drop,\n                                bias_mat=bias_in,\n                                hid_units=hid_units, n_heads=n_heads,\n                                residual=residual, activation=nonlinearity)\n    log_resh = tf.reshape(logits, [-1, nb_classes])\n    lab_resh = tf.reshape(lbl_in, [-1, nb_classes])\n    msk_resh = tf.reshape(msk_in, [-1])\n    loss = model.masked_softmax_cross_entropy(log_resh, lab_resh, msk_resh)\n    accuracy = model.masked_accuracy(log_resh, lab_resh, msk_resh)\n\n    train_op = model.training(loss, lr, l2_coef)\n\n    saver = tf.train.Saver()\n\n    init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())\n\n    vlss_mn = np.inf\n    vacc_mx = 0.0\n    curr_step = 0\n\n    with tf.Session() as sess:\n        sess.run(init_op)\n\n        train_loss_avg = 0\n        train_acc_avg = 0\n        val_loss_avg = 0\n        val_acc_avg = 0\n\n        for epoch in range(nb_epochs):\n            tr_step = 0\n            tr_size = features.shape[0]\n\n            while tr_step * batch_size < tr_size:\n                if sparse:\n                    bbias = biases\n                else:\n                    bbias = biases[tr_step*batch_size:(tr_step+1)*batch_size]\n\n                _, loss_value_tr, acc_tr = sess.run([train_op, loss, accuracy],\n                    feed_dict={\n                        ftr_in: features[tr_step*batch_size:(tr_step+1)*batch_size],\n                        bias_in: bbias,\n                        lbl_in: y_train[tr_step*batch_size:(tr_step+1)*batch_size],\n                        msk_in: train_mask[tr_step*batch_size:(tr_step+1)*batch_size],\n                        is_train: True,\n                        attn_drop: 0.6, ffd_drop: 0.6})\n                train_loss_avg += loss_value_tr\n                train_acc_avg += acc_tr\n                tr_step += 1\n\n            vl_step = 0\n            vl_size = features.shape[0]\n\n          \n\n=== repo:utils/process.py@5af87e7 (function body) ===\ndef load_data(dataset_str): # {'pubmed', 'citeseer', 'cora'}\n    \"\"\"Load data.\"\"\"\n    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']\n    objects = []\n    for i in range(len(names)):\n        with open(\"data/ind.{}.{}\".format(dataset_str, names[i]), 'rb') as f:\n            if sys.version_info > (3, 0):\n                objects.append(pkl.load(f, encoding='latin1'))\n            else:\n                objects.append(pkl.load(f))\n\n    x, y, tx, ty, allx, ally, graph = tuple(objects)\n    test_idx_reorder = parse_index_file(\"data/ind.{}.test.index\".format(dataset_str))\n    test_idx_range = np.sort(test_idx_reorder)\n\n    if dataset_str == 'citeseer':\n        # Fix citeseer dataset (there are some isolated nodes in the graph)\n        # Find isolated nodes, add them as zero-vecs into the right position\n        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)\n        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))\n        tx_extended[test_idx_range-min(test_idx_range), :] = tx\n        tx = tx_extended\n        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))\n        ty_extended[test_idx_range-min(test_idx_range), :] = ty\n        ty = ty_extended\n\n    features = sp.vstack((allx, tx)).tolil()\n    features[test_idx_reorder, :] = features[test_idx_range, :]\n    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))\n\n    labels = np.vstack((ally, ty))\n    labels[test_idx_reorder, :] = labels[test_idx_range, :]\n\n    idx_test = test_idx_range.tolist()\n    idx_train = range(len(y))\n    idx_val = range(len(y), len(y)+500)\n\n    train_mask = sample_mask(idx_train, labels.shape[0])\n    val_mask = sample_mask(idx_val, labels.shape[0])\n    test_mask = sample_mask(idx_test, labels.shape[0])\n\n    y_train = np.zeros(labels.shape)\n    y_val = np.zeros(labels.shape)\n    y_test = np.zeros(labels.shape)\n    y_train[train_mask, :] = labels[train_mask, :]\n    y_val[val_mask, :] = labels[val_mask, :]\n    y_test[test_mask, :] = labels[test_mask, :]\n\n    print(adj.shape)\n    print(features.shape)\n\n    return adj, features, y_train, y_val, y_test, train_mask, val_mask, test_mask\n\n\n=== repo:utils/process.py@5af87e7 (function body) ===\ndef preprocess_features(features):\n    \"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"\n    rowsum = np.array(features.sum(1))\n    r_inv = np.power(rowsum, -1).flatten()\n    r_inv[np.isinf(r_inv)] = 0.\n    r_mat_inv = sp.diags(r_inv)\n    features = r_mat_inv.dot(features)\n    return features.todense(), sparse_to_tuple(features)\n\n\n=== repo:utils/process.py@5af87e7 (function body) ===\ndef preprocess_adj_bias(adj):\n    num_nodes = adj.shape[0]\n    adj = adj + sp.eye(num_nodes)  # self-loop\n    adj[adj > 0.0] = 1.0\n    if not sp.isspmatrix_coo(adj):\n        adj = adj.tocoo()\n    adj = adj.astype(np.float32)\n    indices = np.vstack((adj.col, adj.row)).transpose()  # This is where I made a mistake, I used (adj.row, adj.col) instead\n    # return tf.SparseTensor(indices=indices, values=adj.data, dense_shape=adj.shape)\n    return indices, adj.data, adj.shape\n\n\n=== repo:utils/layers.py@5af87e7 ===\nimport numpy as np\nimport tensorflow as tf\n\nconv1d = tf.layers.conv1d\n\ndef attn_head(seq, out_sz, bias_mat, activation, in_drop=0.0, coef_drop=0.0, residual=False):\n    with tf.name_scope('my_attn'):\n        if in_drop != 0.0:\n            seq = tf.nn.dropout(seq, 1.0 - in_drop)\n\n        seq_fts = tf.layers.conv1d(seq, out_sz, 1, use_bias=False)\n\n        # simplest self-attention possible\n        f_1 = tf.layers.conv1d(seq_fts, 1, 1)\n        f_2 = tf.layers.conv1d(seq_fts, 1, 1)\n        logits = f_1 + tf.transpose(f_2, [0, 2, 1])\n        coefs = tf.nn.softmax(tf.nn.leaky_relu(logits) + bias_mat)\n\n        if coef_drop != 0.0:\n            coefs = tf.nn.dropout(coefs, 1.0 - coef_drop)\n        if in_drop != 0.0:\n            seq_fts = tf.nn.dropout(seq_fts, 1.0 - in_drop)\n\n        vals = tf.matmul(coefs, seq_fts)\n        ret = tf.contrib.layers.bias_add(vals)\n\n        # residual connection\n        if residual:\n            if seq.shape[-1] != ret.shape[-1]:\n                ret = ret + conv1d(seq, ret.shape[-1], 1) # activation\n            else:\n                ret = ret + seq\n\n        return activation(ret)  # activation\n\n# Experimental sparse attention head (for running on datasets such as Pubmed)\n# N.B. Because of limitations of current TF implementation, will work _only_ if batch_size = 1!\ndef sp_attn_head(seq, out_sz, adj_mat, activation, nb_nodes, in_drop=0.0, coef_drop=0.0, residual=False):\n    with tf.name_scope('sp_attn'):\n        if in_drop != 0.0:\n            seq = tf.nn.dropout(seq, 1.0 - in_drop)\n\n        seq_fts = tf.layers.conv1d(seq, out_sz, 1, use_bias=False)\n\n        # simplest self-attention possible\n        f_1 = tf.layers.conv1d(seq_fts, 1, 1)\n        f_2 = tf.layers.conv1d(seq_fts, 1, 1)",
+ "dropped_defaults": []
+}

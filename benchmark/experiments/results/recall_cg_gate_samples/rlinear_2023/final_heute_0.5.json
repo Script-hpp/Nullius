@@ -1,0 +1,1 @@
+{"unit": "rlinear_2023", "arm": "heute", "temp": 0.5, "urteil": "nicht reproduziert", "mean": 0.795713259079857, "std": 0.01848995186574502, "n_ok": 5, "n_seeds": 5, "code_missing": false, "attempts_seed0": 2, "target_reached": false, "seconds": 1882.7, "note": "", "facts": {"seq336": true, "lr0.005": false, "halve_each_epoch": false, "batch128": true, "revin": false}}

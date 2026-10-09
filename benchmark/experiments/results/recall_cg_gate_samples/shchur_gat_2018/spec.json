@@ -1,0 +1,103 @@
+{
+ "model": "GAT",
+ "family": "graph",
+ "items": [
+  {
+   "key": "epochs",
+   "value": "100000",
+   "quote": "Maximum number of epochs: 100000.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 100000,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "100",
+   "quote": "stop optimization if neither the validation loss nor the validation accuracy improve for 100 epochs.",
+   "source": "paper",
+   "rank": "paper",
+   "number": 100,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "heads",
+   "value": "8",
+   "quote": "GAT uses a multi-head architecture with 8 heads",
+   "source": "paper",
+   "rank": "paper",
+   "number": 8,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "lr",
+    "value": 0.01,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "weight_decay",
+    "value": 0.01,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "dropout",
+    "value": "0.6/0.3",
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "hidden",
+    "value": 64,
+    "quote": "Hidden size for GAT: 64 0.01 0.6/0.3 0.01 92 K",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "layers",
+    "value": 2,
+    "quote": "num_layers: 2",
+    "source": "repo:config/optimized/gat.conf.yaml"
+   },
+   "reason": "Quelle unbekannt"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:gnnbench/models/gat.py@1e72912",
+  "repo:gnnbench/train.py@1e72912",
+  "repo:config/reference/gat.conf.yaml@1e72912",
+  "repo:config/optimized/gat.conf.yaml@1e72912",
+  "repo:config/train.conf.yaml@1e72912"
+ ],
+ "missing": [
+  "lr",
+  "weight_decay",
+  "batch_size",
+  "dropout",
+  "hidden",
+  "layers"
+ ],
+ "excerpt": "=== repo:gnnbench/models/gat.py@1e72912 ===\n\"\"\"Code in this file is inspired by Velickovic et al. - Graph Attention Networks\nand Master's Thesis of Johannes Klicpera (TUM, KDD).\"\"\"\nimport numpy as np\nimport tensorflow as tf\nimport tensorflow.contrib.slim as slim\nfrom sacred import Ingredient\n\nfrom gnnbench.data.preprocess import row_normalize, add_self_loops\nfrom gnnbench.models.base_model import GNNModel\nfrom gnnbench.util import dropout_supporting_sparse_tensors, to_sparse_tensor\n\nATTENTION_WEIGHTS = \"attention_weights\"\nFILTER_WEIGHTS = \"filter_weights\"\n\n\ndef attention_mechanism(features, graph_adj, adj_with_self_loops_indices, coefficient_dropout_prob, weight_decay, name):\n    # apply a feedforward network parametrized with a weight vector to the transformed features.\n    input_dim = int(features.get_shape()[1])\n    a_i = tf.get_variable(f\"{name}-att_i\", [input_dim, 1], dtype=tf.float32,\n                          initializer=tf.glorot_uniform_initializer(),\n                          regularizer=slim.l2_regularizer(weight_decay))\n    a_j = tf.get_variable(f\"{name}-att_j\", [input_dim, 1], dtype=tf.float32,\n                          initializer=tf.glorot_uniform_initializer(),\n                          regularizer=slim.l2_regularizer(weight_decay))\n    tf.add_to_collection(ATTENTION_WEIGHTS, a_i)\n    tf.add_to_collection(ATTENTION_WEIGHTS, a_j)\n\n    # dims: num_nodes x input_dim, input_dim, 1 -> num_nodes x 1\n    att_i = tf.matmul(features, a_i)\n    att_i = tf.contrib.layers.bias_add(att_i)\n    # dims: num_nodes x input_dim, input_dim, 1 -> num_nodes x 1\n    att_j = tf.matmul(features, a_j)\n    att_j = tf.contrib.layers.bias_add(att_j)\n\n    # Extracts the relevant attention coefficients with respect to the 1-hop neighbours of each node\n    # Method: first extract all the attention coefficients of the left nodes of each edge, then those\n    # of the right nodes and add them up.\n    # The result is a list of relevant attention weights ordered in the same way as the edges in the\n    # sparse adjacency matrix.\n    # dims: num_nodes x 1, num_edges, num_nodes x 1, num_edges -> 1 x num_edges x 1\n    attention_weights_of_edges = tf.gather(att_i, adj_with_self_loops_indices[0], axis=0) + \\\n                                 tf.gather(att_j, adj_with_self_loops_indices[1], axis=0)\n    # dims: 1 x num_edges x 1 -> num_edges\n    attention_weights_of_edges = tf.squeeze(attention_weights_of_edges)\n\n    # blow list of attention weights up into a sparse matrix. Use the coordinates from the original\n    # adjacency matrix to specify which attention weight belongs to which edge.\n    # Simultaneously applies the LeakyReLU as given in the paper.\n    # dims: num_nodes x num_nodes, num_edges -> num_nodes x num_nodes\n    attention_weight_matrix = tf.SparseTensor(\n        indices=graph_adj.indices,\n        values=tf.nn.leaky_relu(attention_weights_of_edges, alpha=0.2),\n        dense_shape=graph_adj.dense_shape\n    )\n\n    # finish the attention by normalizing coefficients using softmax\n    attention_coefficients = tf.sparse_softmax(attention_weight_matrix)\n\n    # apply dropout to attention coefficients, meaning that in every epoch a single node is only exposed to a\n    # sampled subset of its neighbour\n    attention_coefficients = tf.cond(\n        tf.cast(coefficient_dropout_prob, tf.bool),\n        true_fn=(lambda: dropout_supporting_sparse_tensors(attention_coefficients, 1.0 - coefficient_dropout_prob)),\n        false_fn=(lambda: attention_coefficients)\n    )\n\n    return attention_coefficients\n\n\ndef attention_head(inputs, output_dim, graph_adj, adj_with_self_loops_indices, activation_fn,\n                   input_dropout_prob, coefficient_dropout_prob,\n                   weight_decay,\n                   name):\n    with tf.name_scope(name):\n        input_dim = int(inputs.get_shape()[1])\n        # apply dropout to the inputs\n        inputs = tf.cond(\n            tf.cast(input_dropout_prob, tf.bool),\n            true_fn=(lambda: dropout_supporting_sparse_tensors(inputs, 1.0 - input_dropout_prob)),\n            false_fn=(lambda: inputs)\n        )\n\n        linear_transform_weights = tf.get_variable(\n            f\"{name}-linear_transform_weights\",\n            [input_dim, output_dim], dtype=tf.float32,\n            initializer=tf.glorot_uniform_initializer(),\n            regularizer=slim.l2_regularizer(weight_decay)\n        )\n        tf.add_to_collection(FILTER_WEIGHTS, linear_transform_weights)\n\n        # dims: num_nodes x input_dim, input_dim x output_dim -> num_nodes x output_dim\n        if isinstance(inputs, tf.SparseTensor):\n            transformed_features = tf.sparse_tensor_dense_matmul(inputs, linear_transform_weights)\n        else:\n            transformed_features = tf.matmul(inputs, linear_transform_weights)\n\n        # dims: num_nodes x num_output -> num_nodes x num_nodes\n        attention_coefficients = attention_mechanism(transformed_features, graph_adj, adj_with_self_loops_indices,\n                                                     coefficient_dropout_prob, weight_decay, name)\n\n        # this additional dropout is used in the official implementation, but is not described in the paper.\n        transformed_features = tf.cond(\n            tf.cast(input_dropout_prob, tf.bool),\n            true_fn=(lambda: dropout_supporting_sparse_tensors(transformed_features, 1.0 - input_dropout_prob)),\n            false_fn=(lambda: transformed_features),\n        )\n\n        # normal feedforward layer to finish up\n        # dims: num_nodes x num_nodes, num_nodes x output_dim -> num_nodes x output_dim\n        output = tf.sparse_tensor_dense_matmul(attention_coefficients, transformed_features)\n        output = tf.contrib.layers.bias_add(output)\n\n        if activation_fn is not None:\n            output = activation_fn(output)\n        return output\n\n\ndef attention_layer(inputs, output_dim, num_heads, graph_adj, adj_with_self_loops_indices, activation_fn,\n                    use_averaging,\n                    input_dropout_prob, coefficient_dropout_prob,\n                    we\n\n=== repo:gnnbench/train.py@1e72912 ===\nimport numpy as np\nimport tensorflow as tf\n\nimport gnnbench.metrics\nfrom gnnbench.early_stopping import GCNCriterion, GATCriterion, KDDCriterion, NoStoppingCriterion, \\\n    GATCriterionWithTolerance\n\n\ndef build_train_ops(sess, model, early_stopping_tolerance, early_stopping_criterion, improvement_tolerance,\n                    _run, _log):\n    learning_rate_placeholder = tf.placeholder(dtype=tf.float32, shape=[])\n\n    global_step = tf.get_variable(\n        name=\"global_step\",\n        shape=[],\n        dtype=tf.int64,\n        initializer=tf.zeros_initializer(),\n        trainable=False,\n        collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.GLOBAL_STEP])\n\n    train_step = model.optimize(learning_rate_placeholder, global_step)\n\n    if early_stopping_criterion == 'gcn':\n        early_stopping = GCNCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == 'gat':\n        early_stopping = GATCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == 'gnnbench':\n        early_stopping = KDDCriterion(early_stopping_tolerance, sess, _log)\n    elif early_stopping_criterion == \"gat_tol\":\n        early_stopping = GATCriterionWithTolerance(early_stopping_tolerance, improvement_tolerance, sess, _log)\n    else:\n        _log.warn(\"Disabled early stopping.\")\n        early_stopping = NoStoppingCriterion(early_stopping_tolerance, sess, _log)\n\n    init_op = tf.global_variables_initializer()\n\n    return train_step, early_stopping, learning_rate_placeholder, global_step, init_op\n\n\ndef run_train_ops(sess, train_step, early_stopping, learning_rate_placeholder, global_step, init_op,\n                  train_feed, trainval_feed, val_feed, test_feed, metrics_to_use,\n                  model, learning_rate, num_epochs, early_stopping_criterion,\n                  alternating_optimization_interval, lr_decay_factor, lr_decay_steps,\n                  report_interval, _run, run_no, _log, traces):\n    # reset all training progress\n    sess.run(init_op)\n    early_stopping.reset()\n\n    start_iteration = sess.run(global_step)\n\n    _log.info(\"Started training for %s epochs.\" % num_epochs)\n\n    for epoch in range(start_iteration, num_epochs):\n\n        # add learning rate to feed dict\n        train_feed[learning_rate_placeholder] = learning_rate\n\n        if isinstance(train_step, list):\n            # triggers alternating optimization as needed for MoNet\n            loss_to_optimize = int(epoch / alternating_optimization_interval) % len(train_step)\n            _, train_loss = sess.run([train_step[loss_to_optimize], model.loss], feed_dict=train_feed)\n        else:\n            _, train_loss = sess.run([train_step, model.loss], feed_dict=train_feed)\n\n        # compute metrics needed for logging and early stopping\n        val_loss = sess.run(model.loss, feed_dict=val_feed)\n        val_metrics = compute_metrics(sess, model, val_feed, metrics_to_use)\n\n        # report some statistics to the logs\n        if (epoch + 1) % report_interval == 0:\n            train_metrics = compute_metrics(sess, model, trainval_feed, metrics_to_use)\n            metrics_string = build_metrics_string(train_loss, val_loss, train_metrics, val_metrics)\n            _log.debug(f\"After {sess.run(global_step)} epochs:\\n\" + metrics_string)\n\n            _run.log_scalar(f\"train.loss-{run_no}\", train_loss, epoch + 1)\n            _run.log_scalar(f\"val.loss-{run_no}\", val_loss, epoch + 1)\n            for name, value in train_metrics.items():\n                _run.log_scalar(f\"train.{name}-{run_no}\", value, epoch + 1)\n            for name, value in val_metrics.items():\n                _run.log_scalar(f\"val.{name}-{run_no}\", value, epoch + 1)\n\n        # test early stopping criterion\n        if early_stopping.should_stop(epoch, val_loss, val_metrics['accuracy']):\n            _log.debug(f\"Early stopping by {early_stopping_criterion} criterion\"\n                       f\" after {sess.run(global_step)} epochs.\")\n            break\n\n        # decay learning rate if enabled\n        if lr_decay_factor > 0.0 and lr_decay_steps:\n            if lr_decay_factor >= 1.0:\n                raise ValueError(f\"A learning rate decay factor of {lr_decay_factor} will not \"\n                                 f\"decay the learning rate.\")\n            if epoch + 1 in lr_decay_steps:\n                learning_rate *= lr_decay_factor\n                _log.debug(f\"Decaying learning rate to {learning_rate}.\")\n\n    # run after-stopping operations of early stopping criterion\n    e\n\n=== repo:config/reference/gat.conf.yaml@1e72912 ===\nmodel_name: \"GAT\"\nnum_layers: 2\nhidden_size: 8\nnum_heads:\n    - 8\n    - 1\n\ninput_dropout_prob: 0.6\ncoefficient_dropout_prob: 0.6\n\nalt_opt: false  # whether or not to use alternating optimization between the filter weights and the attention\n    # weights. Note that this is not used in the original implementation, but employed here to compare GAT to MoNet\n    # since they both use the same multi-headed architecture.\n\nlearning_rate: 0.01\nweight_decay: !!float 5e-4\n\n=== repo:config/optimized/gat.conf.yaml@1e72912 ===\nmodel_name: \"GAT\"\nnum_layers: 2\nhidden_size: 8\n\n# Number of attention heads for each layer.\nnum_heads:\n    - 8\n    - 1\n\ninput_dropout_prob: 0.6\ncoefficient_dropout_prob: 0.3\n\nalt_opt: false  # whether or not to use alternating optimization between the filter weights and the attention\n    # weights. Note that this is not used in the original implementation, but employed here to compare GAT to MoNet\n    # since they both use the same multi-headed architecture.\n\nlearning_rate: 0.01\nweight_decay: 0.01\n\n\n=== repo:config/train.conf.yaml@1e72912 ===\n# This file provides the default values for all parameters of the training procedure.\n# You can OVERRIDE these defaults by specifying values in respective model config files (such as gcn.conf.yaml).\n\n# ---\n# Training procedure parameters.\n\n# Maximum number of epochs to train for. Should be large enough for early stopping to take effect.\nnum_epochs: 100000\n\n# The early stopping criterion to use. Must be one of\n#     - gcn        Early stopping criterion used in [1]. Early stopping if validation loss is larger than the mean of\n#                  the validation losses of the last <patience> epochs.\n#     - gat        Early stopping criterion used in [2]. Early stopping if neither validation loss nor validation\n#                  accuracy improve, reset of variables after stopping.\n#     - gnnbench   Early stopping criterion used in our paper. Early stopping only by improvement of validation loss,\n#                  reset of variables after stopping.\n# Set to null to disable early stopping.\n#\n# [1] Kipf & Welling (2016). Semi-supervised classification with graph convolutional networks.\n# [2] Velickovic et al. (2017). Graph attention networks.\nearly_stopping_criterion: \"gnnbench\"\n\n# The tolerance (or patience) of the early stopping criterion. To correspond to the criterion in [1] this must be set to\n# 10, to correspond to the criterion in [2] this must be set to 100.\nearly_stopping_tolerance: 50\n\n# Always set to 0.0. Only needed for LabelProp where it is updated in corresponding config files.\n# This \"dummy parameter\" is needed here in order for the parameter to be defined in Sacred before the model is\n# instantiated. Only needed for model-specific training parameters, not for model parameters.\nimprovement_tolerance: 0.0\n\n# Initial learning rate.\nlearning_rate: 0.01\n\n# Strength of the L2 regularization.\nweight_decay: !!float 5e-4\n\n# Only needed for MoNet. Number of consecutive steps to either optimize filter weights or kernel weights.\nalternating_optimization_interval: 12\n\n# Only needed for MoNet. Multiplicative factor to decay learning rate after each entry of lr_decay_steps. Set to 0.0 to\n# disable learning rate decay.\nlr_decay_factor: 0.0\n\n# Only needed for MoNet. List of steps after which to decay the learning rate. Set to empty list or null to disable\n# learning rate decay.\nlr_decay_steps: null\n\n\n# ---\n# Dataset parameters\n\n# Number of samples (i.e. nodes) in the train/val/test sets.\n# For each of the [train, val, test] sets use one of\n#     - <set_name>_examples_per_class    Randomly sample this many examples per class. Total number of <set_name> samples\n#                                        is then num_classes * <set_name>_examples_per_class.\n#     - <set_name>_size                  Randomly samples this many examples in total.\n# If test_size and test_examples_per_class are both null, the remainder of the samples is used as test set.\nsplit:\n    train_examples_per_class: 20\n    val_examples_per_class: 30\n    test_size: null\n# For example, in the Planetoid paper the following configuration is used.\n#split:\n#    train_examples_per_class: 20\n#    val_size: 500\n#    test_size: 1000\n\n# Should the input graph be standardized?\n# Standardizing includes:\n#  - Making the graph undirected\n#  - Making the graph unweighted\n#  - Selecting the largest connected component (LCC)\nstandardize_graph: true\n\n# Should the attribute matrix (X) be row-normalized s.t. each row has L2 norm equal to 1?\nnormalize_features: false\n\n\n# ---\n# Logging parameters\n# The number of epochs after which t",
+ "dropped_defaults": []
+}

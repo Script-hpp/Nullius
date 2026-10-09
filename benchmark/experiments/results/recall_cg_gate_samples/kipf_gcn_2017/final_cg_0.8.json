@@ -1,0 +1,1 @@
+{"unit": "kipf_gcn_2017", "arm": "cg", "temp": 0.8, "urteil": "nicht reproduziert", "mean": 0.7833, "std": 0.08956071807562856, "n_ok": 10, "n_seeds": 10, "code_missing": false, "attempts_seed0": 1, "target_reached": false, "seconds": 4046.5, "note": "", "facts": {}}

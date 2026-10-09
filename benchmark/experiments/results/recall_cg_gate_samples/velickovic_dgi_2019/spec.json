@@ -1,0 +1,136 @@
+{
+ "model": "DGI",
+ "family": "graph",
+ "items": [
+  {
+   "key": "lr",
+   "value": "0.001",
+   "quote": "lr = 0.001",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 0.001,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "weight_decay",
+   "value": "0.0",
+   "quote": "l2_coef = 0.0",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 0.0,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "epochs",
+   "value": "10000",
+   "quote": "nb_epochs = 10000",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 10000,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "batch_size",
+   "value": "1",
+   "quote": "batch_size = 1",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 1,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "dropout",
+   "value": "0.0",
+   "quote": "drop_prob = 0.0",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 0.0,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "hidden",
+   "value": "512",
+   "quote": "hid_units = 512",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 512,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  },
+  {
+   "key": "patience",
+   "value": "20",
+   "quote": "patience = 20",
+   "source": "repo:execute.py@61baf67",
+   "rank": "start script",
+   "number": 20,
+   "enforce": true,
+   "alternatives": [],
+   "note": ""
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "key": "batch_size",
+    "value": "256",
+    "quote": "Minibatch size: 256 nodes",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "hidden",
+    "value": "512",
+    "quote": "Feature dimension: 512 features in each MP layer",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  },
+  {
+   "item": {
+    "key": "layers",
+    "value": "1",
+    "quote": "self.gcn = GCN(n_in, n_h, activation)",
+    "source": "repo:models/dgi.py@61baf67"
+   },
+   "reason": "Zahl des Werts nicht im Zitat"
+  },
+  {
+   "item": {
+    "key": "patience",
+    "value": "20",
+    "quote": "Early stopping patience (transductive): 20 epochs",
+    "source": "paper"
+   },
+   "reason": "Zitat nicht im Quelltext"
+  }
+ ],
+ "excerpt_docs": [
+  "repo:models/dgi.py@61baf67",
+  "repo:execute.py@61baf67",
+  "repo:utils/process.py@61baf67 (function body)",
+  "repo:utils/process.py@61baf67 (function body)",
+  "repo:utils/process.py@61baf67 (function body)",
+  "repo:layers/gcn.py@61baf67",
+  "repo:layers/discriminator.py@61baf67"
+ ],
+ "missing": [
+  "layers",
+  "heads"
+ ],
+ "excerpt": "=== repo:models/dgi.py@61baf67 ===\nimport torch\nimport torch.nn as nn\nfrom layers import GCN, AvgReadout, Discriminator\n\nclass DGI(nn.Module):\n    def __init__(self, n_in, n_h, activation):\n        super(DGI, self).__init__()\n        self.gcn = GCN(n_in, n_h, activation)\n        self.read = AvgReadout()\n\n        self.sigm = nn.Sigmoid()\n\n        self.disc = Discriminator(n_h)\n\n    def forward(self, seq1, seq2, adj, sparse, msk, samp_bias1, samp_bias2):\n        h_1 = self.gcn(seq1, adj, sparse)\n\n        c = self.read(h_1, msk)\n        c = self.sigm(c)\n\n        h_2 = self.gcn(seq2, adj, sparse)\n\n        ret = self.disc(c, h_1, h_2, samp_bias1, samp_bias2)\n\n        return ret\n\n    # Detach the return variables\n    def embed(self, seq, adj, sparse, msk):\n        h_1 = self.gcn(seq, adj, sparse)\n        c = self.read(h_1, msk)\n\n        return h_1.detach(), c.detach()\n\n\n\n=== repo:execute.py@61baf67 ===\nimport numpy as np\nimport scipy.sparse as sp\nimport torch\nimport torch.nn as nn\n\nfrom models import DGI, LogReg\nfrom utils import process\n\ndataset = 'cora'\n\n# training params\nbatch_size = 1\nnb_epochs = 10000\npatience = 20\nlr = 0.001\nl2_coef = 0.0\ndrop_prob = 0.0\nhid_units = 512\nsparse = True\nnonlinearity = 'prelu' # special name to separate parameters\n\nadj, features, labels, idx_train, idx_val, idx_test = process.load_data(dataset)\nfeatures, _ = process.preprocess_features(features)\n\nnb_nodes = features.shape[0]\nft_size = features.shape[1]\nnb_classes = labels.shape[1]\n\nadj = process.normalize_adj(adj + sp.eye(adj.shape[0]))\n\nif sparse:\n    sp_adj = process.sparse_mx_to_torch_sparse_tensor(adj)\nelse:\n    adj = (adj + sp.eye(adj.shape[0])).todense()\n\nfeatures = torch.FloatTensor(features[np.newaxis])\nif not sparse:\n    adj = torch.FloatTensor(adj[np.newaxis])\nlabels = torch.FloatTensor(labels[np.newaxis])\nidx_train = torch.LongTensor(idx_train)\nidx_val = torch.LongTensor(idx_val)\nidx_test = torch.LongTensor(idx_test)\n\nmodel = DGI(ft_size, hid_units, nonlinearity)\noptimiser = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=l2_coef)\n\nif torch.cuda.is_available():\n    print('Using CUDA')\n    model.cuda()\n    features = features.cuda()\n    if sparse:\n        sp_adj = sp_adj.cuda()\n    else:\n        adj = adj.cuda()\n    labels = labels.cuda()\n    idx_train = idx_train.cuda()\n    idx_val = idx_val.cuda()\n    idx_test = idx_test.cuda()\n\nb_xent = nn.BCEWithLogitsLoss()\nxent = nn.CrossEntropyLoss()\ncnt_wait = 0\nbest = 1e9\nbest_t = 0\n\nfor epoch in range(nb_epochs):\n    model.train()\n    optimiser.zero_grad()\n\n    idx = np.random.permutation(nb_nodes)\n    shuf_fts = features[:, idx, :]\n\n    lbl_1 = torch.ones(batch_size, nb_nodes)\n    lbl_2 = torch.zeros(batch_size, nb_nodes)\n    lbl = torch.cat((lbl_1, lbl_2), 1)\n\n    if torch.cuda.is_available():\n        shuf_fts = shuf_fts.cuda()\n        lbl = lbl.cuda()\n    \n    logits = model(features, shuf_fts, sp_adj if sparse else adj, sparse, None, None, None) \n\n    loss = b_xent(logits, lbl)\n\n    print('Loss:', loss)\n\n    if loss < best:\n        best = loss\n        best_t = epoch\n        cnt_wait = 0\n        torch.save(model.state_dict(), 'best_dgi.pkl')\n    else:\n        cnt_wait += 1\n\n    if cnt_wait == patience:\n        print('Early stopping!')\n        break\n\n    loss.backward()\n    optimiser.step()\n\nprint('Loading {}th epoch'.format(best_t))\nmodel.load_state_dict(torch.load('best_dgi.pkl'))\n\nembeds, _ = model.embed(features, sp_adj if sparse else adj, sparse, None)\ntrain_embs = embeds[0, idx_train]\nval_embs = embeds[0, idx_val]\ntest_embs = embeds[0, idx_test]\n\ntrain_lbls = torch.argmax(labels[0, idx_train], dim=1)\nval_lbls = torch.argmax(labels[0, idx_val], dim=1)\ntest_lbls = torch.argmax(labels[0, idx_test], dim=1)\n\ntot = torch.zeros(1)\ntot = tot.cuda()\n\naccs = []\n\nfor _ in range(50):\n    log = LogReg(hid_units, nb_classes)\n    opt = torch.optim.Adam(log.parameters(), lr=0.01, weight_decay=0.0)\n    log.cuda()\n\n    pat_steps = 0\n    best_acc = torch.zeros(1)\n    best_acc = best_acc.cuda()\n    for _ in range(100):\n        log.train()\n        opt.zero_grad()\n\n        logits = log(train_embs)\n        loss = xent(logits, train_lbls)\n        \n        loss.backward()\n        opt.step()\n\n    logits = log(test_embs)\n    preds = torch.argmax(logits, dim=1)\n    acc = torch.sum(preds == test_lbls).float() / test_lbls.shape[0]\n    accs.append(acc * 100)\n    print(acc)\n    tot += acc\n\nprint('Average accuracy:', tot / 50)\n\naccs = torch.stack(accs)\nprint(accs.mean())\nprint(accs.std())\n\n\n\n=== repo:utils/process.py@61baf67 (function body) ===\ndef load_data(dataset_str): # {'pubmed', 'citeseer', 'cora'}\n    \"\"\"Load data.\"\"\"\n    names = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']\n    objects = []\n    for i in range(len(names)):\n        with open(\"data/ind.{}.{}\".format(dataset_str, names[i]), 'rb') as f:\n            if sys.version_info > (3, 0):\n                objects.append(pkl.load(f, encoding='latin1'))\n            else:\n                objects.append(pkl.load(f))\n\n    x, y, tx, ty, allx, ally, graph = tuple(objects)\n    test_idx_reorder = parse_index_file(\"data/ind.{}.test.index\".format(dataset_str))\n    test_idx_range = np.sort(test_idx_reorder)\n\n    if dataset_str == 'citeseer':\n        # Fix citeseer dataset (there are some isolated nodes in the graph)\n        # Find isolated nodes, add them as zero-vecs into the right position\n        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder)+1)\n        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))\n        tx_extended[test_idx_range-min(test_idx_range), :] = tx\n        tx = tx_extended\n        ty_extended = np.zeros((len(test_idx_range_full), y.shape[1]))\n        ty_extended[test_idx_range-min(test_idx_range), :] = ty\n        ty = ty_extended\n\n    features = sp.vstack((allx, tx)).tolil()\n    features[test_idx_reorder, :] = features[test_idx_range, :]\n    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))\n\n    labels = np.vstack((ally, ty))\n    labels[test_idx_reorder, :] = labels[test_idx_range, :]\n\n    idx_test = test_idx_range.tolist()\n    idx_train = range(len(y))\n    idx_val = range(len(y), len(y)+500)\n\n    return adj, features, labels, idx_train, idx_val, idx_test\n\n\n=== repo:utils/process.py@61baf67 (function body) ===\ndef preprocess_features(features):\n    \"\"\"Row-normalize feature matrix and convert to tuple representation\"\"\"\n    rowsum = np.array(features.sum(1))\n    r_inv = np.power(rowsum, -1).flatten()\n    r_inv[np.isinf(r_inv)] = 0.\n    r_mat_inv = sp.diags(r_inv)\n    features = r_mat_inv.dot(features)\n    return features.todense(), sparse_to_tuple(features)\n\n\n=== repo:utils/process.py@61baf67 (function body) ===\ndef normalize_adj(adj):\n    \"\"\"Symmetrically normalize adjacency matrix.\"\"\"\n    adj = sp.coo_matrix(adj)\n    rowsum = np.array(adj.sum(1))\n    d_inv_sqrt = np.power(rowsum, -0.5).flatten()\n    d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.\n    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)\n    return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocoo()\n\n\n\n=== repo:layers/gcn.py@61baf67 ===\nimport torch\nimport torch.nn as nn\n\nclass GCN(nn.Module):\n    def __init__(self, in_ft, out_ft, act, bias=True):\n        super(GCN, self).__init__()\n        self.fc = nn.Linear(in_ft, out_ft, bias=False)\n        self.act = nn.PReLU() if act == 'prelu' else act\n        \n        if bias:\n            self.bias = nn.Parameter(torch.FloatTensor(out_ft))\n            self.bias.data.fill_(0.0)\n        else:\n            self.register_parameter('bias', None)\n\n        for m in self.modules():\n            self.weights_init(m)\n\n    def weights_init(self, m):\n        if isinstance(m, nn.Linear):\n            torch.nn.init.xavier_uniform_(m.weight.data)\n            if m.bias is not None:\n                m.bias.data.fill_(0.0)\n\n    # Shape of seq: (batch, nodes, features)\n    def forward(self, seq, adj, sparse=False):\n        seq_fts = self.fc(seq)\n        if sparse:\n            out = torch.unsqueeze(torch.spmm(adj, torch.squeeze(seq_fts, 0)), 0)\n        else:\n            out = torch.bmm(adj, seq_fts)\n        if self.bias is not None:\n            out += self.bias\n        \n        return self.act(out)\n\n\n\n=== repo:layers/discriminator.py@61baf67 ===\nimport torch\nimport torch.nn as nn\n\nclass Discriminator(nn.Module):\n    def __init__(self, n_h):\n        super(Discriminator, self).__init__()\n        self.f_k = nn.Bilinear(n_h, n_h, 1)\n\n        for m in self.modules():\n            self.weights_init(m)\n\n    def weights_init(self, m):\n        if isinstance(m, nn.Bilinear):\n            torch.nn.init.xavier_uniform_(m.weight.data)\n            if m.bias is not None:\n                m.bias.data.fill_(0.0)\n\n    def forward(self, c, h_pl, h_mi, s_bias1=None, s_bias2=None):\n        c_x = torch.unsqueeze(c, 1)\n        c_x = c_x.expand_as(h_pl)\n\n        sc_1 = torch.squeeze(self.f_k(h_pl, c_x), 2)\n        sc_2 = torch.squeeze(self.f_k(h_mi, c_x), 2)\n\n        if s_bias1 is not None:\n            sc_1 += s_bias1\n        if s_bias2 is not None:\n            sc_2 += s_bias2\n\n        logits = torch.cat((sc_1, sc_2), 1)\n\n        return logits\n\n",
+ "dropped_defaults": []
+}
