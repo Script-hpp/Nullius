@@ -1,0 +1,1937 @@
+{
+  "paper_id": "disc_2501_01087",
+  "claims": [
+    {
+      "id": "disc_2501_01087_mse",
+      "text": "GLinear erreicht 0.382 MSE auf ETTh1 (Horizont 96)",
+      "metric": "mse",
+      "target": 0.382,
+      "tolerance": 0.01,
+      "source": "discovery: https://arxiv.org/html/2501.01087v1, Zitat: TABLE II : Multivariate Forecasting performance comparison across datasets and models (lower MSE/MAE is better). Input Sequence Length for all experiments is 336 and a range of Prediction Length {12, 24, 48, 96, 192, 336, 720} are used. The top-performing results are marked in bold . The second-best results are underlined . Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001 Methods | Autoformer | NLinear | DLinear | RLinear | GLinear Dataset / Output Horizon (Prediction Length) | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE ETTh1 | 12 | 0.3991 | 0.4422 | 0.3069 | 0.3564 | 0.2976 | 0.3494 | 0.2862 | 0.3412 | 0.2848 | 0.3448 24 | 0.4759 | 0.4733 | 0.3474 | 0.3842 | 0.3194 | 0.3627 | 0.3090 | 0.3559 | 0.3142 | 0.3654 48 | 0.5046 | 0.4831 | 0.3553 | 0.3845 | 0.3477 | 0.3803 | 0.3454 | 0.3766 | 0.3537 | 0.3869 96 | 0.5392 | 0.4979 | 0.3731 | 0.3941 | 0.3705 | 0.3919 | 0.3901 | 0.4054 | 0.3820 | 0.4025",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://arxiv.org/html/2501.01087v1"
+      ],
+      "target_evidence": null
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-a0612e21",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "a036d87bba51",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 297, in <module>\n    main()\n  File \"/work/train.py\", line 232, in main\n    model = GLinear(args).to(device)\n            ^^^^^^^^^^^^^\n  File \"/work/train.py\", line 74, in __init__\n    self.seq_len = configs.seq_len\n                   ^^^^^^^^^^^^^^^\nAttributeError: 'Args' object has no attribute 'seq_len'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.14112150000000004,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-ff339db8",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "0a456e62158a",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 297, in <module>\n    main()\n  File \"/work/train.py\", line 236, in main\n    early_stopping = EarlyStopping(patience=args.patience, verbose=True)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 123, in __init__\n    self.val_loss_min = np.Inf\n                        ^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/numpy/__init__.py\", line 778, in __getattr__\n    raise AttributeError(\nAttributeError: `np.Inf` was removed in the NumPy 2.0 release. Use `np.inf` instead.\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.14669070000000003,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-85d59e4f",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "8945d562ca09",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.38347443228381023,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15193620000000002,
+      "metrics": {
+        "mse": 0.38347443228381023,
+        "mae": 0.4040909583794125
+      },
+      "coverage": {
+        "executed": [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          19,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          31,
+          32,
+          33,
+          35,
+          36,
+          37,
+          38,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          66,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          76,
+          77,
+          78,
+          80,
+          82,
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          94,
+          96,
+          97,
+          116,
+          117,
+          118,
+          119,
+          120,
+          123,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          135,
+          137,
+          138,
+          139,
+          142,
+          145,
+          146,
+          147,
+          148,
+          150,
+          151,
+          152,
+          155,
+          158,
+          159,
+          160,
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          172,
+          175,
+          176,
+          179,
+          180,
+          186,
+          194,
+          195,
+          197,
+          198,
+          199,
+          200,
+          202,
+          203,
+          205,
+          206,
+          209,
+          210,
+          212,
+          213,
+          214,
+          217,
+          218,
+          219,
+          220,
+          222,
+          224,
+          225,
+          226,
+          227,
+          228,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          238,
+          239,
+          240,
+          241,
+          242,
+          243,
+          244,
+          245,
+          247,
+          251,
+          252,
+          253,
+          254,
+          256,
+          257,
+          258,
+          259,
+          261,
+          262,
+          265,
+          266,
+          267,
+          268,
+          269,
+          270,
+          271,
+          272,
+          273,
+          275,
+          276,
+          279,
+          280,
+          281,
+          283,
+          289,
+          290,
+          291,
+          292,
+          295,
+          298,
+          299
+        ],
+        "missing": [
+          65,
+          98,
+          99,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115
+        ]
+      },
+      "diagnostics": {
+        "pred_std": 0.9157802721048562,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8113586888916013
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.38341465516071666,
+          "mae": 0.40408349334867266,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.38224284738277775,
+          "mae": 0.4041627452266538,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.38098901521434536,
+          "mae": 0.403903820848732,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.37744116241818626,
+          "mae": 0.40177871732356457,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 0,
+      "chosen": false,
+      "val": {
+        "metric": "mse",
+        "value": 0.7205825373224244,
+        "baselines": {}
+      }
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-ae08b0d5",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "3b8cabaf40ba",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.37938501427351407,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15193620000000002,
+      "metrics": {
+        "mse": 0.37938501427351407,
+        "mae": 0.40002483681829526
+      },
+      "coverage": {
+        "executed": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          21,
+          26,
+          27,
+          28,
+          31,
+          32,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          51,
+          53,
+          54,
+          68,
+          69,
+          70,
+          71,
+          72,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          84,
+          86,
+          87,
+          88,
+          90,
+          91,
+          92,
+          93,
+          95,
+          96,
+          97,
+          98,
+          99,
+          100,
+          101,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          119,
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          131,
+          132,
+          133,
+          135,
+          137,
+          139,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          151,
+          152,
+          153,
+          154,
+          156,
+          161,
+          162,
+          163,
+          164,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          176,
+          177,
+          179,
+          180,
+          182,
+          183,
+          188,
+          189,
+          190,
+          192,
+          193,
+          198,
+          199,
+          200,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          210,
+          211,
+          212,
+          213,
+          214,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          228,
+          230,
+          233,
+          234,
+          235,
+          236,
+          238,
+          239,
+          240,
+          241,
+          244,
+          245,
+          247,
+          252,
+          254,
+          255,
+          256,
+          257,
+          258,
+          263,
+          264,
+          265,
+          267,
+          268,
+          273,
+          274,
+          275,
+          276,
+          277,
+          278,
+          279,
+          280,
+          285
+        ],
+        "missing": [
+          29,
+          30,
+          55,
+          56,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          118
+        ]
+      },
+      "diagnostics": {
+        "pred_std": 0.9130072455874615,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8129957374546056
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.37932555206171764,
+          "mae": 0.4000126550225282,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.37804283751607076,
+          "mae": 0.3998105591403925,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.37592390548388516,
+          "mae": 0.3991858746443098,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.37253517360657135,
+          "mae": 0.3970295449223733,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 1,
+      "chosen": false,
+      "val": {
+        "metric": "mse",
+        "value": 0.6858576693654628,
+        "baselines": {}
+      }
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-cb9a7357",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "526a8a5ed1fe",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.3916445479443492,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.15193620000000002,
+      "metrics": {
+        "mse": 0.3916445479443492,
+        "mae": 0.40994187461317055
+      },
+      "coverage": {
+        "executed": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          9,
+          21,
+          22,
+          23,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          34,
+          35,
+          36,
+          38,
+          39,
+          40,
+          41,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          67,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          80,
+          81,
+          82,
+          83,
+          84,
+          85,
+          86,
+          87,
+          88,
+          90,
+          92,
+          93,
+          107,
+          108,
+          109,
+          110,
+          111,
+          113,
+          114,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          139,
+          140,
+          141,
+          142,
+          143,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          151,
+          152,
+          153,
+          154,
+          156,
+          157,
+          158,
+          159,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          169,
+          170,
+          171,
+          172,
+          173,
+          174,
+          175,
+          176,
+          177,
+          178,
+          179,
+          181,
+          182,
+          183,
+          185,
+          187,
+          188,
+          189,
+          190,
+          192,
+          193,
+          194,
+          197,
+          198,
+          202,
+          203,
+          207,
+          209,
+          212,
+          213,
+          214,
+          216,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          229,
+          231,
+          232,
+          233,
+          234,
+          236,
+          237,
+          238,
+          239,
+          240,
+          241,
+          242,
+          243,
+          244,
+          245,
+          246,
+          247,
+          249,
+          250,
+          251,
+          252,
+          253,
+          254,
+          255,
+          256,
+          257,
+          258,
+          259,
+          260,
+          261,
+          262,
+          263,
+          264,
+          265,
+          268,
+          269,
+          272,
+          274,
+          275,
+          276,
+          277,
+          278,
+          279,
+          280,
+          281,
+          282,
+          283,
+          284,
+          285,
+          287,
+          291,
+          292,
+          294,
+          295
+        ],
+        "missing": [
+          66,
+          94,
+          95,
+          99,
+          100,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          135,
+          136,
+          137,
+          199,
+          200,
+          204,
+          205,
+          288,
+          289
+        ]
+      },
+      "diagnostics": {
+        "pred_std": 0.9272765351833219,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8075244010510073
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.3915706175431141,
+          "mae": 0.4099236854848801,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.3897274728300213,
+          "mae": 0.4093733145093008,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.38710986438226863,
+          "mae": 0.40846020546727746,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.38222722156057654,
+          "mae": 0.406008403772044,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 2,
+      "chosen": false,
+      "val": {
+        "metric": "mse",
+        "value": 0.7079625818735776,
+        "baselines": {}
+      }
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-7efa9779",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "67dae24762de",
+      "seed": 0,
+      "status": "stabil",
+      "measured": 0.37938501427351407,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.17002290000000003,
+      "metrics": {
+        "mse": 0.37938501427351407,
+        "mae": 0.40002483681829526
+      },
+      "coverage": {
+        "executed": [
+          17,
+          18,
+          19,
+          20,
+          21,
+          23,
+          28,
+          29,
+          30,
+          33,
+          34,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          53,
+          55,
+          56,
+          70,
+          71,
+          72,
+          73,
+          74,
+          79,
+          80,
+          86,
+          87,
+          88,
+          89,
+          90,
+          91,
+          93,
+          95,
+          96,
+          98,
+          99,
+          100,
+          101,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          109,
+          111,
+          112,
+          113,
+          114,
+          115,
+          116,
+          117,
+          119,
+          120,
+          121,
+          122,
+          123,
+          124,
+          126,
+          131,
+          135,
+          136,
+          138,
+          139,
+          140,
+          142,
+          143,
+          144,
+          146,
+          148,
+          150,
+          151,
+          153,
+          154,
+          155,
+          157,
+          158,
+          159,
+          164,
+          165,
+          166,
+          167,
+          169,
+          174,
+          175,
+          176,
+          177,
+          182,
+          183,
+          184,
+          185,
+          186,
+          187,
+          189,
+          190,
+          192,
+          193,
+          195,
+          196,
+          201,
+          202,
+          203,
+          205,
+          206,
+          211,
+          212,
+          213,
+          215,
+          216,
+          217,
+          218,
+          219,
+          220,
+          221,
+          222,
+          223,
+          224,
+          225,
+          226,
+          227,
+          229,
+          230,
+          231,
+          232,
+          233,
+          234,
+          235,
+          236,
+          237,
+          238,
+          241,
+          243,
+          246,
+          247,
+          248,
+          249,
+          251,
+          252,
+          253,
+          254,
+          257,
+          258,
+          260,
+          265,
+          267,
+          268,
+          269,
+          270,
+          271,
+          276,
+          277,
+          278,
+          280,
+          281,
+          286,
+          287,
+          288,
+          289,
+          290,
+          291,
+          292,
+          293,
+          298
+        ],
+        "missing": [
+          31,
+          32,
+          57,
+          58,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          125
+        ]
+      },
+      "diagnostics": {
+        "pred_std": 0.9130072455874615,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8129957374546056
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.37932555206171764,
+          "mae": 0.4000126550225282,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.37804283751607076,
+          "mae": 0.3998105591403925,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.37592390548388516,
+          "mae": 0.3991858746443098,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.37253517360657135,
+          "mae": 0.3970295449223733,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 1,
+      "chosen": true,
+      "val": {
+        "metric": "mse",
+        "value": 0.6858576693654628,
+        "baselines": {}
+      }
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-0f628dec",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "67dae24762de",
+      "seed": 1,
+      "status": "stabil",
+      "measured": 0.3794497776933394,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.17002290000000003,
+      "metrics": {
+        "mse": 0.3794497776933394,
+        "mae": 0.3999438011006306
+      },
+      "coverage": null,
+      "diagnostics": {
+        "pred_std": 0.9099988822754833,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8127637923773239
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.37939817336267134,
+          "mae": 0.3999363115053507,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.37800032432092445,
+          "mae": 0.39969379447088077,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.37595605504898316,
+          "mae": 0.3990844182127983,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.3725438823000816,
+          "mae": 0.39693615918545655,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "branch_id": "repro-branch-af16c965",
+      "parent_snapshot": "repro-snapshot-disc-2501-01087-20261010-161916",
+      "code_hash": "67dae24762de",
+      "seed": 2,
+      "status": "stabil",
+      "measured": 0.3799138635466628,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.17002290000000003,
+      "metrics": {
+        "mse": 0.3799138635466628,
+        "mae": 0.4002171978278898
+      },
+      "coverage": null,
+      "diagnostics": {
+        "pred_std": 0.9124547542651792,
+        "target_std": 1.0527909706034841,
+        "corr": 0.8126489447579243
+      },
+      "metrics_droplast": {
+        "32": {
+          "mse": 0.3798536846136604,
+          "mae": 0.40020530709112007,
+          "windows": 2784,
+          "dropped": 1
+        },
+        "64": {
+          "mse": 0.37864066336412155,
+          "mae": 0.40004234963972135,
+          "windows": 2752,
+          "dropped": 33
+        },
+        "128": {
+          "mse": 0.37665902151680536,
+          "mae": 0.3994555637283729,
+          "windows": 2688,
+          "dropped": 97
+        },
+        "256": {
+          "mse": 0.3729093371881111,
+          "mae": 0.3971178085201815,
+          "windows": 2560,
+          "dropped": 225
+        }
+      },
+      "candidate": 1,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_2501_01087_mse",
+      "urteil": "reproduziert",
+      "measured_mean": 0.37958288517117206,
+      "measured_std": 0.0002884589900119613,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0003. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.382 +/- 0.01, discovery: https://arxiv.org/html/2501.01087v1, Zitat: TABLE II : Multivariate Forecasting performance comparison across datasets and models (lower MSE/MAE is better). Input Sequence Length for all experiments is 336 and a range of Prediction Length {12, 24, 48, 96, 192, 336, 720} are used. The top-performing results are marked in bold . The second-best results are underlined . Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001 Methods | Autoformer | NLinear | DLinear | RLinear | GLinear Dataset / Output Horizon (Prediction Length) | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE ETTh1 | 12 | 0.3991 | 0.4422 | 0.3069 | 0.3564 | 0.2976 | 0.3494 | 0.2862 | 0.3412 | 0.2848 | 0.3448 24 | 0.4759 | 0.4733 | 0.3474 | 0.3842 | 0.3194 | 0.3627 | 0.3090 | 0.3559 | 0.3142 | 0.3654 48 | 0.5046 | 0.4831 | 0.3553 | 0.3845 | 0.3477 | 0.3803 | 0.3454 | 0.3766 | 0.3537 | 0.3869 96 | 0.5392 | 0.4979 | 0.3731 | 0.3941 | 0.3705 | 0.3919 | 0.3901 | 0.4054 | 0.3820 | 0.4025): Mittel 0.3796. Code-Kandidaten: 3, gewaehlt Kandidat 1 (Code 3b8cabaf40ba) nach Validierungs-Metrik (0: mse 0.7206, 1: mse 0.6859, 2: mse 0.7080); Rueckfall ohne Val-Wert; Repo-Abgleich: 1 Abweichungen, Code 3b8cabaf40ba durch 67dae24762de ersetzt",
+      "sources": [
+        "https://arxiv.org/html/2501.01087v1"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "input length",
+      "value": "configs.seq_len",
+      "quote": "self.seq_len = configs.seq_len",
+      "source": "repo:models/GLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "self.seq_len = configs.seq_len"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "input length",
+      "value": "configs.seq_len",
+      "quote": "self.seq_len = configs.seq_len",
+      "source": "repo:models/DNGLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "not stated",
+        "setting": "not stated",
+        "quote": "class Model(nn.Module):\n    \"\"\"\n    Normalization-Linear\n    \"\"\""
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning-rate schedule",
+      "value": "Adam optimizer with learning rate = args.learning_rate",
+      "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)",
+      "source": "repo:exp/exp_main.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning-rate schedule",
+      "value": "Learning rate adjusted each epoch via adjust_learning_rate",
+      "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)",
+      "source": "repo:exp/exp_main.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning-rate schedule",
+      "value": "type1: lr = args.learning_rate * (0.5 ** ((epoch - 1) // 1))",
+      "quote": "lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}",
+      "source": "repo:utils/tools.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning-rate schedule",
+      "value": "type2: lr_adjust = {2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6, 10: 5e-7, 15: 1e-7, 20: 5e-8}",
+      "quote": "lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }",
+      "source": "repo:utils/tools.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "patience",
+      "value": "self.args.patience",
+      "quote": "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)",
+      "source": "repo:exp/exp_main.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "patience",
+      "value": "7",
+      "quote": "class EarlyStopping:\n    def __init__(self, patience=7, verbose=False, delta=0):\n        self.patience = patience",
+      "source": "repo:utils/tools.py@f54bc96",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "class EarlyStopping:\n    def __init__(self, patience=7, verbose=False, delta=0):\n        self.patience = patience"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "kernel_size = 25",
+      "quote": "kernel_size = 25",
+      "source": "repo:models/DNGLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "self.DLinear = DLinearModel(self.seq_len, self.pred_len, self.in_num_features)"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other settings",
+      "value": "rev=True",
+      "quote": "configs.rev  = True",
+      "source": "repo:models/RLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "ETTh1",
+        "setting": "not stated",
+        "quote": "class Model(nn.Module):\n    def __init__(self, configs):\n        super(Model, self).__init__()\n\n        configs.rev  = True\n        configs.individual  = True"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name RLinear.py)"
+    },
+    {
+      "topic": "other settings",
+      "value": "individual=True",
+      "quote": "configs.individual  = True",
+      "source": "repo:models/RLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "ETTh1",
+        "setting": "not stated",
+        "quote": "class Model(nn.Module):\n    def __init__(self, configs):\n        super(Model, self).__init__()\n\n        configs.rev  = True\n        configs.individual  = True"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name RLinear.py)"
+    },
+    {
+      "topic": "other settings",
+      "value": "dropout=0.1",
+      "quote": "self.dropout = nn.Dropout(0.1)",
+      "source": "repo:models/RLinear.py@f54bc96",
+      "applies_to": {
+        "model": "glinear",
+        "dataset": "ETTh1",
+        "setting": "not stated",
+        "quote": "self.dropout = nn.Dropout(0.1)\n        self.rev = RevIN(configs.enc_in) if configs.rev else None"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name RLinear.py)"
+    },
+    {
+      "topic": "learning_rate",
+      "value": "0.001",
+      "quote": "extbf{Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001}",
+      "source": "paper",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "extbf{Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001}"
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "input length",
+      "value": "336",
+      "quote": "TABLE II : Multivariate Forecasting performance comparison across datasets and models (lower MSE/MAE is better). Input Sequence Length for all experiments is 336 and a range of Prediction Length {12, 24, 48, 96, 192, 336, 720} are used. The top-performing results are marked in bold . The second-best results are underlined . Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001 Methods | Autoformer | NLinear | DLinear | RLinear | GLinear Dataset / Output Horizon (Prediction Length) | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE ETTh1 | 12 | 0.3991 | 0.4422 | 0.3069 | 0.3564 | 0.2976 | 0.3494 | 0.2862 | 0.3412 | 0.2848 | 0.3448 24 | 0.4759 | 0.4733 | 0.3474 | 0.3842 | 0.3194 | 0.3627 | 0.3090 | 0.3559 | 0.3142 | 0.3654 48 | 0.5046 | 0.4831 | 0.3553 | 0.3845 | 0.3477 | 0.3803 | 0.3454 | 0.3766 | 0.3537 | 0.3869 96 | 0.5392 | 0.4979 | 0.3731 | 0.3941 | 0.3705 | 0.3919 | 0.3901 | 0.4054 | 0.3820 | 0.4025",
+      "source": "discovery"
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/t-rizvi/GLinear",
+    "commit": "f54bc961ea9434a6b88b17c42fa4d681e98e9672",
+    "files": [
+      "README.md",
+      "data_provider/data_factory.py",
+      "data_provider/data_loader.py",
+      "exp/exp_basic.py",
+      "exp/exp_main.py",
+      "layers/AutoCorrelation.py",
+      "layers/Autoformer_EncDec.py",
+      "layers/Embed.py",
+      "models/Autoformer.py",
+      "models/DLinear.py",
+      "models/DNGLinear.py",
+      "models/GLinear.py",
+      "models/Invertible.py",
+      "models/Linear.py",
+      "models/NLinear.py",
+      "models/RLinear.py",
+      "models/RevIN.py",
+      "utils/metrics.py",
+      "utils/timefeatures.py",
+      "utils/tools.py"
+    ],
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "arXiv id 2501.01087 in README"
+  },
+  "baselines": {
+    "repeat": {
+      "mse": 1.2943705947845083,
+      "mae": 0.7131813544413363
+    },
+    "zero": {
+      "mse": 1.1099284100805409,
+      "mae": 0.7959633803546952
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://export.arxiv.org/e-print/2501.01087",
+      "mode": "fixture",
+      "n_chars": 52284,
+      "retrieved_at": "2026-10-10T14:19:19+00:00",
+      "sha256": "7006923024736e2f8cf75d7e4c5ccd2b1b0c64a0990e6874715feb9485b8259f"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/t-rizvi/GLinear",
+      "mode": "live",
+      "n_chars": 20757,
+      "retrieved_at": "2026-10-10T14:21:06+00:00",
+      "sha256": "f533268d0c16ca0ba0900ffa95ad28f043c100b48871b3b29b36e3b43b2e85a0"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/t-rizvi/GLinear",
+      "mode": "live",
+      "n_chars": 6493,
+      "retrieved_at": "2026-10-10T14:32:29+00:00",
+      "sha256": "54fc39183059bde5070a824d79b4c5c1e7508a77b726fce851dddea2bce6468d"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/masaoAshtine/SOFTX-D-25-00886/blob/main/docs/models.md",
+      "mode": "live",
+      "n_chars": 13576,
+      "retrieved_at": "2026-10-10T14:32:29+00:00",
+      "sha256": "5a45d51adc69fc61ff1d4656cd2e0765aaa0f74e42841982a3ec46fd0189450c"
+    }
+  ],
+  "ablations": {},
+  "mode": "nachbau_autorencode",
+  "graph_repairs": {},
+  "fault_repairs": {},
+  "droplast_notes": {},
+  "community": {
+    "findings": [],
+    "dropped": 0,
+    "pages": [
+      {
+        "url": "https://github.com/t-rizvi/GLinear",
+        "n_chars": 6493,
+        "sha256": "54fc39183059bde5070a824d79b4c5c1e7508a77b726fce851dddea2bce6468d"
+      },
+      {
+        "url": "https://github.com/masaoAshtine/SOFTX-D-25-00886/blob/main/docs/models.md",
+        "n_chars": 13576,
+        "sha256": "5a45d51adc69fc61ff1d4656cd2e0765aaa0f74e42841982a3ec46fd0189450c"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "search",
+        "title": "Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction"
+      },
+      {
+        "kind": "method_search",
+        "method": "GLinear",
+        "dataset": "ETTh1"
+      },
+      {
+        "kind": "critique_search",
+        "method": "GLinear",
+        "dataset": "ETTh1",
+        "queries": [
+          "GLinear ETTh1 reproduce results differ",
+          "GLinear bug evaluation",
+          "GLinear baseline re-evaluation fixed",
+          "we re-run GLinear on ETTh1 and compare with the reported numbers"
+        ]
+      },
+      {
+        "kind": "repo_search",
+        "repo": "t-rizvi/GLinear"
+      },
+      {
+        "kind": "crawl",
+        "url": "https://github.com/t-rizvi/GLinear/issues"
+      }
+    ],
+    "reused_discovery": false,
+    "calls": [
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "crawl"
+    ],
+    "hits": [
+      {
+        "url": "https://github.com/masaoAshtine/SOFTX-D-25-00886/blob/main/docs/models.md",
+        "title": "SOFTX-D-25-00886/docs/models.md at main · masaoAshtine/SOFTX-D-25-00886 · GitHub",
+        "n_chars": 13576
+      },
+      {
+        "url": "https://github.com/t-rizvi/GLinear",
+        "title": "GitHub - t-rizvi/GLinear",
+        "n_chars": 6493
+      },
+      {
+        "url": "https://github.com/state-spaces/s4/issues/113",
+        "title": "Unable to reproduce univariate and multivariate time series forecasting · Issue #113 · state-spaces/s4 · GitHub",
+        "n_chars": 1660
+      },
+      {
+        "url": "https://arxiv.org/html/2606.27282v1",
+        "title": "How Good Can Linear Models Be for Time-Series Forecasting?",
+        "n_chars": 51892
+      },
+      {
+        "url": "https://arxiv.org/html/2602.02729v1",
+        "title": "CAPS: Unifying Attention, Recurrence, and Alignment in Transformer-based Time Series Forecasting",
+        "n_chars": 60579
+      },
+      {
+        "url": "https://arxiv.org/html/2604.23968v1",
+        "title": "DecompKAN: Decomposed Patch-KAN for Long-Term Time Series Forecasting",
+        "n_chars": 51527
+      },
+      {
+        "url": "https://arxiv.org/html/2610.04925v1",
+        "title": "TSAE: Structured Sparse Autoencoders for Interpreting Time-Series Forecasting Models",
+        "n_chars": 63483
+      },
+      {
+        "url": "https://arxiv.org/abs/2510.08338",
+        "title": "[2510.08338] LLMs Reproduce Human Purchase Intent via Semantic Similarity Elicitation of Likert Ratings",
+        "n_chars": 1282
+      },
+      {
+        "url": "https://github.com/leonardokong486/interPDN",
+        "title": "GitHub - leonardokong486/interPDN: [AAAI 2026] Official implementation of \"Time Series Forecasting via Direct Per-Step Probability Distribution Modeling\" · GitHub",
+        "n_chars": 3948
+      },
+      {
+        "url": "https://github.com/deepseek-ai/Janus/issues/210",
+        "title": "Settings for reproduce the text-to-image evaluation results · Issue #210 · deepseek-ai/Janus · GitHub",
+        "n_chars": 9428
+      },
+      {
+        "url": "https://github.com/SalesforceAIResearch/uni2ts/discussions/185",
+        "title": "Reproduce results from the MOIRAI-MoE paper · SalesforceAIResearch/uni2ts · Discussion #185 · GitHub",
+        "n_chars": 2154
+      },
+      {
+        "url": "https://github.com/t-rizvi/GLinear",
+        "title": "GitHub - t-rizvi/GLinear",
+        "n_chars": 6493
+      },
+      {
+        "url": "https://arxiv.org/abs/2510.03788",
+        "title": "[2510.03788] Lightweight and Data-Efficient MultivariateTime Series Forecasting using Residual-Stacked Gaussian (RS-GLinear) Architecture",
+        "n_chars": 1330
+      },
+      {
+        "url": "https://arxiv.org/html/2605.28700v3",
+        "title": "The Importance of Being Statistically Earnest:A Critical Re-evaluation of GSM-Symbolic",
+        "n_chars": 76922
+      },
+      {
+        "url": "https://arxiv.org/html/2608.20980v1",
+        "title": "A Critical Audit of Spatiotemporal Forecasting Benchmark Datasets and Baselines",
+        "n_chars": 50401
+      },
+      {
+        "url": "https://arxiv.org/html/2609.31204v1",
+        "title": "FlatClip: A Geometry-Aware Surface-Level Baseline for fMRI Representation Learning",
+        "n_chars": 76006
+      },
+      {
+        "url": "https://arxiv.org/html/2605.04727v1",
+        "title": "Ensuring Reliability in Programming Knowledge Tracing: A Re-evaluation of Attention-augmented Models and Experimental Protocols",
+        "n_chars": 34979
+      },
+      {
+        "url": "https://arxiv.org/html/2607.14004v1",
+        "title": "Do Agent Optimizers Compound?A Continual-Learning Evaluation on Terminal-Bench 2.0",
+        "n_chars": 51336
+      },
+      {
+        "url": "https://arxiv.org/html/2607.00728v2",
+        "title": "When to Repair a Graph ANN Index:A Matched-Budget Negative Result, and the Interpolated-Baseline Trap That Hid It",
+        "n_chars": 25077
+      },
+      {
+        "url": "https://arxiv.org/html/2606.28925v2",
+        "title": "Multi-Agent Routing as Set-Valued Prediction: A WildChat Benchmark and Cost-Aware Evaluation",
+        "n_chars": 41358
+      },
+      {
+        "url": "https://arxiv.org/html/2606.05122v1",
+        "title": "Self-Evaluation Is Already There: Eliciting Latent Judge Calibration in Base LLMs with Minimal Data",
+        "n_chars": 42897
+      },
+      {
+        "url": "https://arxiv.org/html/2609.36281v1",
+        "title": "GNA: Granular Neighbor Assembly for Retrieval-Augmented Multivariate Time-Series Forecasting",
+        "n_chars": 70661
+      },
+      {
+        "url": "https://arxiv.org/html/2410.18318v1",
+        "title": "Self-Supervised Learning for Time Series A Review & Critique of FITS",
+        "n_chars": 116148
+      },
+      {
+        "url": "https://arxiv.org/html/2610.03491v1",
+        "title": "Dual-Context Analog Retrieval forTime-Series Forecasting",
+        "n_chars": 68799
+      },
+      {
+        "url": "https://arxiv.org/html/2606.27282v1",
+        "title": "How Good Can Linear Models Be for Time-Series Forecasting?",
+        "n_chars": 51892
+      },
+      {
+        "url": "https://arxiv.org/html/2304.08424v4",
+        "title": "Long-term Forecasting with TiDE: Time-series Dense Encoder",
+        "n_chars": 61064
+      },
+      {
+        "url": "https://arxiv.org/html/2605.02689v1",
+        "title": "MSMixer: Learned Multi-Scale Temporal Mixing with Complementary Linear Shortcut for Long-Term Time Series Forecasting",
+        "n_chars": 43149
+      },
+      {
+        "url": "https://github.com/cyd3x",
+        "title": "cyd3x · GitHub",
+        "n_chars": 13892
+      },
+      {
+        "url": "https://github.com/t-rizvi/GLinear",
+        "title": "GitHub - t-rizvi/GLinear",
+        "n_chars": 6493
+      }
+    ],
+    "not_read": [
+      "https://github.com/state-spaces/s4/issues/113",
+      "https://arxiv.org/html/2606.27282v1",
+      "https://arxiv.org/html/2602.02729v1",
+      "https://arxiv.org/html/2604.23968v1",
+      "https://arxiv.org/html/2610.04925v1",
+      "https://arxiv.org/abs/2510.08338",
+      "https://github.com/leonardokong486/interPDN",
+      "https://github.com/deepseek-ai/Janus/issues/210",
+      "https://github.com/SalesforceAIResearch/uni2ts/discussions/185",
+      "https://arxiv.org/abs/2510.03788",
+      "https://arxiv.org/html/2605.28700v3",
+      "https://arxiv.org/html/2608.20980v1",
+      "https://arxiv.org/html/2609.31204v1",
+      "https://arxiv.org/html/2605.04727v1",
+      "https://arxiv.org/html/2607.14004v1",
+      "https://arxiv.org/html/2607.00728v2",
+      "https://arxiv.org/html/2606.28925v2",
+      "https://arxiv.org/html/2606.05122v1",
+      "https://arxiv.org/html/2609.36281v1",
+      "https://arxiv.org/html/2410.18318v1",
+      "https://arxiv.org/html/2610.03491v1",
+      "https://arxiv.org/html/2606.27282v1",
+      "https://arxiv.org/html/2304.08424v4",
+      "https://arxiv.org/html/2605.02689v1",
+      "https://github.com/cyd3x"
+    ],
+    "not_extracted": [],
+    "dropped_items": [],
+    "candidates": [],
+    "mode": "live",
+    "queried_at": "2026-10-10T14:32:29+00:00"
+  },
+  "summary": {
+    "text": "The paper introduces GLinear, which reportedly yields a low error value on the ETTh1 electricity transformer dataset.",
+    "source": "arXiv abstract (2501.01087) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Syed Tahir Hussain Rizvi",
+      "Neel Kanwal",
+      "Muddasar Naeem"
+    ],
+    "year": 2025,
+    "authors_source": "arXiv abstract page (2501.01087)",
+    "institutions": [
+      {
+        "name": "Politecnico di Torino",
+        "quote": "Ph.D. in Computer and Control Engineering from Politecnico di Torino, Italy, in 2018."
+      },
+      {
+        "name": "University of Stavanger",
+        "quote": "Postdoctoral Researcher at the Department of Electronics and Telecommunications (DET), Politecnico di Torino, and the Department of Electrical Engineering and Computer Science, University of Stavanger, Norway."
+      },
+      {
+        "name": "National University of Computer & Emerging Sciences",
+        "quote": "bachelor's degree in Electronics Engineering from the National University of Computer & Emerging Sciences in 2015"
+      },
+      {
+        "name": "FAST University",
+        "quote": "Previously, he worked as a laboratory engineer at FAST University, Karachi."
+      },
+      {
+        "name": "Quaid-i-Azam University",
+        "quote": "received his bachelor's degree in Electronics from the Quaid-i-Azam University in 2010"
+      },
+      {
+        "name": "IQRA University",
+        "quote": "Master's degree in Telecommuniation \\& Networks from IQRA University in 2015"
+      },
+      {
+        "name": "University of Naples Parthenope",
+        "quote": "He got his Ph.D. at the University of Naples Parthenope, Italy, in Information and Communication Technology and Engineering in 2021."
+      },
+      {
+        "name": "Università Giustino Fortunato",
+        "quote": "He is the coordinator of the Artificial Intelligence and Robotics (AIR) Laboratory at the Università Giustino Fortunato."
+      },
+      {
+        "name": "ICAR-CNR",
+        "quote": "Previously, he worked as a Researcher at ICAR-CNR, Naples."
+      },
+      {
+        "name": "Università degli Studi Giustino Fortunato-Telematica",
+        "quote": "is a full professor at the Università degli Studi Giustino Fortunato-Telematica."
+      },
+      {
+        "name": "Institute for High Performance Computing and Networking of the National Research Council of Italy",
+        "quote": "He has been a senior researcher at the Institute for High Performance Computing and Networking of the National Research Council of Italy."
+      },
+      {
+        "name": "University of Naples “Federico II”",
+        "quote": "has led courses of Software Engineering at the University of Naples “Federico II”."
+      }
+    ],
+    "institutions_source": "arXiv text v1, read with Tavily Extract"
+  },
+  "explanations": {},
+  "setup_missing": [
+    "batch size",
+    "epochs"
+  ],
+  "val_label_check": {},
+  "edge_direction": {},
+  "repo_diff": {
+    "disc_2501_01087_mse": {
+      "deviations": [
+        {
+          "aspect": "stopping criterion",
+          "file": "utils/tools.py",
+          "repo_quote": "elif score < self.best_score + self.delta:\n            self.counter += 1\n            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')\n            if self.counter >= self.patience:\n                self.early_stop = True",
+          "our_quote": "if avg_val_loss < best_val_loss - 1e-6:\n            best_val_loss = avg_val_loss\n            best_state = model.state_dict()\n            epochs_no_improve = 0\n        else:\n            epochs_no_improve += 1\n            if epochs_no_improve >= PATIENCE:\n                print(f'Early stopping triggered after {epoch+1} epochs.')\n                break",
+          "difference": "The reproducer requires a minimum improvement of 1e-6 in validation loss to reset the early stopping counter, while the original considers any non-increase (validation loss not exceeding the best) as an improvement and resets the counter."
+        }
+      ],
+      "dropped": 0,
+      "truncation": [
+        {
+          "file": "utils/tools.py",
+          "kept_chars": 3454,
+          "of_chars": 3913
+        },
+        {
+          "file": "utils/metrics.py",
+          "kept_chars": 0,
+          "of_chars": 951
+        },
+        {
+          "file": "utils/timefeatures.py",
+          "kept_chars": 0,
+          "of_chars": 3743
+        },
+        {
+          "file": "models/RevIN.py",
+          "kept_chars": 0,
+          "of_chars": 1694
+        },
+        {
+          "file": "layers/Embed.py",
+          "kept_chars": 0,
+          "of_chars": 6572
+        },
+        {
+          "file": "layers/AutoCorrelation.py",
+          "kept_chars": 0,
+          "of_chars": 6539
+        },
+        {
+          "file": "layers/Autoformer_EncDec.py",
+          "kept_chars": 0,
+          "of_chars": 6162
+        },
+        {
+          "file": "models/Invertible.py",
+          "kept_chars": 0,
+          "of_chars": 1732
+        }
+      ],
+      "from_hash": "3b8cabaf40ba",
+      "result": "adopted",
+      "reason": "Fehler-Check, Ablation und Validierung bestanden",
+      "val_old": 0.6858576693654628,
+      "val_new": 0.6858576693654628,
+      "to_hash": "67dae24762de"
+    }
+  },
+  "warnings": [
+    "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren.",
+    "Rolle 2 konnte den Zielwert im Paper nicht gegenpruefen (Modellantwort enthaelt kein JSON); es gilt der Wert der Discovery 0.382."
+  ],
+  "nachlauf": {},
+  "objection_checks": [],
+  "spec": {
+    "model": "GLinear",
+    "family": "forecast",
+    "items": [
+      {
+        "key": "lr",
+        "value": "0.001",
+        "quote": "extbf{Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001}",
+        "source": "paper",
+        "rank": "paper",
+        "number": 0.001,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "patience",
+        "value": "7",
+        "quote": "def __init__(self, patience=7, verbose=False, delta=0):\n        self.patience = patience",
+        "source": "repo:utils/tools.py@f54bc96",
+        "rank": "code",
+        "number": 7,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      },
+      {
+        "key": "seq_len",
+        "value": "336",
+        "quote": "extbf{Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001}",
+        "source": "paper",
+        "rank": "paper",
+        "number": 336,
+        "enforce": true,
+        "alternatives": [],
+        "note": "",
+        "specific": true,
+        "origin": "model",
+        "tie": []
+      }
+    ],
+    "dropped": [],
+    "excerpt_docs": [
+      "repo:models/GLinear.py@f54bc96",
+      "repo:exp/exp_main.py@f54bc96",
+      "repo:utils/tools.py@f54bc96 (function body)",
+      "repo:utils/tools.py@f54bc96 (function body)",
+      "repo:data_provider/data_loader.py@f54bc96 (function body)",
+      "repo:models/RevIN.py@f54bc96",
+      "repo:exp/exp_main.py@f54bc96 (function body)"
+    ],
+    "missing": [
+      "weight_decay",
+      "epochs",
+      "batch_size",
+      "dropout",
+      "hidden",
+      "layers"
+    ],
+    "excerpt_chars": 8925
+  }
+}

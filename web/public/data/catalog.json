@@ -593,5 +593,48 @@
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
   }
+ },
+ {
+  "id": "disc_2501_01087",
+  "arxiv_id": "2501.01087",
+  "title": "Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction",
+  "dataset": "ETTh1",
+  "task": "ETTh1",
+  "claim": {
+   "method": "GLinear",
+   "metric": "mse",
+   "target": 0.382,
+   "horizon": 96,
+   "quote": "TABLE II : Multivariate Forecasting performance comparison across datasets and models (lower MSE/MAE is better). Input Sequence Length for all experiments is 336 and a range of Prediction Length 12, 24, 48, 96, 192, 336, 720 are used. The top-performing results are marked in bold . The second-best results are underlined . Lookup Window (Input Sequence Length) = 336 Learning Rate 0.001 Methods | Autoformer | NLinear | DLinear | RLinear | GLinear Dataset / Output Horizon (Prediction Length) | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE | MSE | MAE ETTh1 | 12 | 0.3991 | 0.4422 | 0.3069 | 0.3564 | 0.2976 | 0.3494 | 0.2862 | 0.3412 | 0.2848 | 0.3448 24 | 0.4759 | 0.4733 | 0.3474 | 0.3842 | 0.3194 | 0.3627 | 0.3090 | 0.3559 | 0.3142 | 0.3654 48 | 0.5046 | 0.4831 | 0.3553 | 0.3845 | 0.3477 | 0.3803 | 0.3454 | 0.3766 | 0.3537 | 0.3869 96 | 0.5392 | 0.4979 | 0.3731 | 0.3941 | 0.3705 | 0.3919 | 0.3901 | 0.4054 | 0.3820 | 0.4025",
+   "input_length": 336
+  },
+  "protocol": "passt",
+  "column_check": "nicht pruefbar",
+  "github_url": "https://github.com/t-rizvi/GLinear",
+  "source_url": "https://arxiv.org/html/2501.01087v1",
+  "origin": "discovery",
+  "benchmark": null,
+  "status": "geprueft",
+  "reason": null,
+  "checked_at": "2026-10-10T14:32:53Z",
+  "cost_gross_usd": 0.2047,
+  "verdict": {
+   "urteil": "reproduziert",
+   "measured_mean": 0.379583,
+   "measured_std": 0.000288,
+   "seeds": 3,
+   "target": 0.382,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "mode": "nachbau_autorencode",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_2501_01087/20261010-161916"
+  },
+  "run_id": "disc_2501_01087--20261010-161916",
+  "jury": {
+   "ready": true,
+   "reason": "Gesamtaussage: vorlaeufig"
+  }
  }
 ]

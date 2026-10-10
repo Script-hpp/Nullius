@@ -149,5 +149,14 @@
   "mode": "nachbau_autorencode",
   "catalog_id": "disc_2405_00946",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2501_01087--20261010-161916",
+  "paper_id": "disc_2501_01087",
+  "title": "Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction",
+  "timestamp": "20261010-161916",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2501_01087",
+  "gesamtaussage": "vorlaeufig"
  }
 ]
