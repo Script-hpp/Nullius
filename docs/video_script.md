@@ -18,7 +18,7 @@ On screen: **Paper claim → own experiment → independent measurement → evid
 
 Tie the demonstrated result to a practical decision: whether a researcher or ML team should investigate the paper further before building on it. Show the PDF certificate as a portable record of the result, setup and evidence. State inference costs as inference costs; do not claim measured time savings or general success rates without evidence.
 
-Evidence for the new cut: TSMixer and SparseTSF are post-development, manually selected examples; 7/8 refers to development units matching the reference verdict. Keep these separate and keep method fidelity marked as unchecked. GLinear is currently being tried and must not appear as a success before its recorded outcome exists.
+Evidence for the new cut: TSMixer and SparseTSF are post-development, manually selected examples; 7/8 refers to development units matching the reference verdict. Keep these separate and keep method fidelity marked as unchecked. GLinear has now reached its fixed target: MSE 0.3796 +/- 0.0003 versus 0.3820, three seeds, 0.205 dollars gross inference, preliminary. See [paper_candidates_20261010.md](paper_candidates_20261010.md) for the run and limits. Its website export is still pending; keep it out of recorded website scenes until evidence is accessible there.
 
 **User decisions:** one person will test the product at the end. Wait for the test results before deciding the next live-demo steps. Later outreach to authors is an idea for presenting the project and its concrete reproduction findings; no emails have been commissioned or sent, and no email-draft button belongs in the product.
 
