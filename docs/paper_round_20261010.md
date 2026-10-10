@@ -2,6 +2,10 @@
 
 Stand: 2026-10-10. Manuelle Quellensuche und Abgleich mit dem bestehenden Produkt. Noch keine Reproduktionslaeufe dieser Runde gestartet. Auswahl ist gezielt nach Machbarkeit; keine zufaellige Stichprobe oder allgemeine Erfolgsquote. Die Papers sind keine Einheiten des bisherigen Acht-Einheiten-Benchmarks. Ihre Namen tauchen teilweise bereits in vorhandenen Quellen auf; „bisher voellig unbekannt“ waere nicht belegt.
 
+**Nachpruefung auf Nutzerhinweis:** CycleNet wurde bereits am 2026-10-09 in der Seeded-Discovery-Runde im Workspace `catalog-live` angefragt. Der protokollierte Durchgang um 18:41:45 UTC meldete `REJECT 2409.18479: [extract] Volltext nicht lesbar`; der Abschlussbericht bestaetigte, dass diese Ablehnung nicht gecacht wurde. Quelle: gespeicherte Orca/Claude-Session `475f2a0c-ec31-4307-ba40-cb608ff7672e`. Zuvor trat in derselben Runde auch arXiv HTTP 429 auf. Das ist ein belegter frueherer Discovery-Versuch, kein abgeschlossener Reproduktionslauf. In den geprueften Run-Verzeichnissen, Dossiers und Git-Historien wurde kein eigener CycleNet-Experimentlauf gefunden. CycleNet ist daher ein erneuter Discovery-Kandidat mit inzwischen lesbarem LaTeX-Volltext, kein erstmals entdecktes Paper.
+
+Ausserdem wurde CycleNet im SparseTSF-Lauf vom 2026-10-09 als Community-Quelle und im gelesenen README erwaehnt. Auch das ist keine CycleNet-Reproduktion.
+
 ## Drei Kandidaten, feste Reihenfolge
 
 | Reihenfolge | Paper / Variante | Vorab festgelegter Zielwert | Setup | Einschaetzung |
