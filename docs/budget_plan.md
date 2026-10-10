@@ -52,6 +52,8 @@ Nicht mehr geplant: Benchmark v5 und ein zweiter Probelauf (vom Nutzer gestriche
 
 ## Jury-Phase (30.10. bis 15.12., 47 Tage)
 
+**Update 2026-10-10:** The allocation table below is an older plan. The current deployment reference is [`docs/deploy.md`](deploy.md#limits-bis-1512) and `deploy/.env.example` ($12 server allocation, $0.50 run threshold). Verify the current console balance before deploying; historical balances are not current funds. [`Cost policy review`](cost_policy_review.md) documents why these thresholds are not guaranteed spending caps.
+
 Die Demo muss erreichbar und kostenlos testbar bleiben. Juroren müssen nicht selbst testen; ein gesperrter Live-Lauf ist kein Ausfall, das Frontend zeigt dann die Wiedergabe.
 
 **Einstellungen auf dem Server** (`deploy/.env` bzw. Coolify):

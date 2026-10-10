@@ -15,7 +15,7 @@
 
 ## Contents
 
-[What the benchmark shows](#what-the-benchmark-shows) · [Our own small bitter lesson](#our-own-small-bitter-lesson) · [Who uses it](#who-uses-it-and-how) · [Product tour](#product-tour) · [How it works](#how-it-works) · [Nemotron](#how-we-use-nvidia-nemotron) · [Token Factory](#where-nebius-token-factory-helped) · [Sandboxes](#other-nebius-services-sandboxes) · [Tavily](#how-we-use-tavily) · [Benchmark](#benchmark) · [Related work](#related-work) · [Setup](#setup-and-usage) · [Limits](#limitations-and-roadmap)
+[What the benchmark shows](#what-the-benchmark-shows) · [Recent catalog checks](#beyond-the-benchmark-recent-catalog-checks) · [Our own small bitter lesson](#our-own-small-bitter-lesson) · [Who uses it](#who-uses-it-and-how) · [Product tour](#product-tour) · [How it works](#how-it-works) · [Nemotron](#how-we-use-nvidia-nemotron) · [Token Factory](#where-nebius-token-factory-helped) · [Sandboxes](#other-nebius-services-sandboxes) · [Tavily](#how-we-use-tavily) · [Benchmark](#benchmark) · [Related work](#related-work) · [Setup](#setup-and-usage) · [Limits](#limitations-and-roadmap)
 
 ## What the benchmark shows
 
@@ -29,6 +29,21 @@ Nullius is a **high-precision checker**: when it says a target value was reached
 | **Recall, paper and authors' code** (default mode, one run, 22 counted runs) | **7 of 8** development units matched; the one held-out paper (RLinear) missed, **0 of 1** | development units are **in-sample**; see the next section |
 
 **Method fidelity was not checked.** "Reproduced" means "target value reached according to the harness", not "method reproduced". Details: [Benchmark](#benchmark).
+
+## Beyond the benchmark: recent catalog checks
+
+**Two more papers reached their targets outside the eight development units:** Google's **TSMixer** measured **0.3624 MSE against 0.361**, and **SparseTSF** measured **0.3653 against 0.359**. On 9 Oct 2026, both checks used the paper-and-authors'-code mode on ETTh1 (horizon 96, tolerance ±0.01 MSE), each with three valid seeds. The stored dossiers and event logs agree with these [catalog records](benchmark/catalog.yaml):
+
+| Paper | Claimed MSE | Measured mean ± std | Result with our setup | Inference cost, gross |
+|---|---|---|---|---|
+| TSMixer (Google), arXiv 2303.06053 | 0.361 | 0.362416 ± 0.000331 | reproduced; target value reached | $0.2354 |
+| SparseTSF, arXiv 2405.00946 | 0.359 | 0.365314 ± 0.003391 | reproduced; target value reached | $0.2035 |
+
+Run IDs: `disc_2303_06053/20261009-201230` and `disc_2405_00946/20261009-220822`. The TSMixer dossier records the official Google Research `tsmixer` subdirectory; SparseTSF records the authors' `lss-1138/SparseTSF` repository. Both use Nemotron Super for code and reasoning on Token Factory. TSMixer's certificate additionally flags an unverified protocol and table-column assignment. Method fidelity is not checked, so both overall statements remain provisional.
+
+**Failures stay visible.** SL-GCN did not reach its target; HaKAN failed in setup. Acacia has no completed reproduction verdict in the catalog (status: unchecked); the team reports it is not feasible within the demo scope. These outcomes are not evidence that those papers are wrong.
+
+**How to read this evidence.** These are post hoc product examples, not a pre-registered, randomly sampled held-out evaluation. Candidates were partly selected by us. They show successful checks beyond the eight development units; they do not establish a general success rate or change recall cg v1's failed RLinear holdout (0 of 1). They are never combined with its 7 of 8 in-sample result.
 
 ## Our own small bitter lesson
 
@@ -78,7 +93,7 @@ Placebo claims in the same run: **0 of 9 confirmed** (8 rejected, 1 without a ve
 - **An author** adds the badge of a finished check to the README: `[![Nullius](<badge-url>)](<certificate-url>)`. The Evidence page of every run shows the snippet ("Add this badge to your README"). The badge says "reproduced with our setup" plus measured against claimed value and "method not checked", and links to the certificate.
 - **A PhD student or ML team** checks the headline number of a paper before building on it, instead of discovering a gap after days of work. Discovery (Tavily) lists new papers on supported benchmarks.
 
-**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96) and, since the dataset extension of 7 Oct 2026, CiteSeer (Planetoid split; its harness passed three reference solutions, but no agent run on it exists yet). PubMed, ETTh2, ETTm1 and ETTm2 are built but not released because a reference solution missed the pre-registered tolerance ([validation results](benchmark/experiments/results/datasets_v2_validation.md)). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes. "Reproduced" means the target value was reached; method fidelity is not checked. "Not reproduced" means not reached with our setup and says nothing yet about the paper.
+**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, ETTh1 (horizon 96) and, since the dataset extension of 7 Oct 2026, CiteSeer (Planetoid split; its harness passed three reference solutions, and a catalog GCN check on 9 Oct 2026 reached 0.7086 accuracy against 0.703 over ten seeds). PubMed, ETTh2, ETTm1 and ETTm2 are built but not released because a reference solution missed the pre-registered tolerance ([validation results](benchmark/experiments/results/datasets_v2_validation.md)). A new dataset needs a one-time task and harness; new papers on existing datasets work out of the box. CPU only, claims that run in minutes. "Reproduced" means the target value was reached; method fidelity is not checked. "Not reproduced" means not reached with our setup and says nothing yet about the paper.
 
 ## Product tour
 

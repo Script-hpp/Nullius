@@ -109,9 +109,11 @@ Voraussetzungen: Nebius-Projekt mit Compute-Zugang, `nebius` CLI angemeldet (`ne
 
 ## Limits bis 15.12.
 
+**Pruefung 2026-10-10:** Die Zahlen unten sind Planungswerte, keine bewiesenen harten Obergrenzen. Ein laufender Modellaufruf kann eine Schwelle ueberschreiten; direkte Extraktionsaufrufe umgehen die Orchestrator-Laufbremse, und der Watchdog beendet den Worker nicht. Der Kontostand vom 9.10. ist vor Deployment neu zu verifizieren. Befunde und naechste Schritte: [`cost_policy_review.md`](cost_policy_review.md).
+
 Stand 2026-10-09. Konsolen-Kontostand **17,02 $** (11:11 UTC); der Anteil des Servers ist **12,00 $ brutto**, rund 5 $ bleiben für den lokalen Rechner (Rest-Benchmarks, Video-Aufnahmen). Die Anteile von Server und Rechner dürfen zusammen nie über dem Konsolen-Kontostand liegen (`docs/budget_plan.md`, „Zwei Logs, ein Konto“); der lokale `BUDGET_TOTAL_USD` ist danach auf den Rechner-Anteil zu setzen. Werte in `deploy/.env.example`; der Nutzer setzt sie in Coolify und deployt neu (nicht während eines laufenden Jobs).
 
-Mehrere Schichten, jede für sich schon eine harte Grenze:
+Mehrere Schutzschichten mit unterschiedlichen Pruefzeitpunkten:
 
 | Schicht | Wert | Wirkung |
 |---|---|---|
@@ -119,7 +121,7 @@ Mehrere Schichten, jede für sich schon eine harte Grenze:
 | Schnellprüfung erzwungen | `ALLOW_FULL_RUNS=0` | Ein Client kann keinen teuren Vollauf (10 Seeds) anfordern |
 | Tagesbudget | `MAX_DAILY_COST_USD` | Kein Start mehr, wenn die Bruttokosten des Tages (aus `costs.jsonl`, überlebt Neustarts) die Grenze erreicht haben; Grund `daily_limit` mit Reset |
 | Tageslimits | `MAX_DAILY_REPRO_JOBS`, `MAX_DAILY_JOBS`, je IP 1 | Aus `live_jobs.jsonl` nach Neustart wiederhergestellt |
-| Untergrenze Budget | `LIVE_MIN_BUDGET_USD` | Kein Start, wenn `BUDGET_TOTAL_USD` minus Kosten seit `BUDGET_SINCE` darunter liegt (harte Gesamtgrenze) |
+| Untergrenze Budget | `LIVE_MIN_BUDGET_USD` | Kein Start, wenn `BUDGET_TOTAL_USD` minus Kosten seit `BUDGET_SINCE` darunter liegt (Startschwelle; laufende Kosten werden nicht reserviert) |
 | Globale Bremse im LLM-Client | 95 % von `BUDGET_TOTAL_USD` | Kein Modellaufruf mehr, auch mitten im Lauf (`BudgetExceeded`) |
 | Ein Job gleichzeitig, Wanduhr | 45 min Reproduktion, 15 min Discovery | Hängt ein Lauf, meldet der Stream einen Fehler und die Sperre wird frei |
 
@@ -141,13 +143,13 @@ Zwei Stufen:
 
 | Fall | Rechnung | Summe |
 |---|---|---|
-| Absolute Obergrenze des Servers | min(95 % × 12,00 $ = 11,40 $; 12,00 $ − 1,00 $ Untergrenze Stufe 2 + 0,50 $ letzter Lauf = 11,50 $) | **11,40 $**; Konto bleibt ≥ 0,60 $, wenn der Rechner seine 5 $ nicht überschreitet |
+| Server-Planungsgrenze (ohne Ueberschreitungen laufender Aufrufe) | min(95 % × 12,00 $ = 11,40 $; 12,00 $ − 1,00 $ Untergrenze Stufe 2 + 0,50 $ letzter Lauf = 11,50 $) | **11,40 $** als Planungsziel; verbleibender Puffer ist ohne Reservierungen nicht garantiert |
 | Stufe 1, jeder Tag ausgereizt | höchstens 1 Lauf × 0,50 $ + Discovery 0,02 $ = 0,52 $ je Tag; die Untergrenze 6,0 $ stoppt nach 12 − 6 + 0,5 = **6,50 $** (in etwa 12 Tagen), danach Wiedergabe bis 30.11. | 6,50 $ |
 | Stufe 2, jeder Tag ausgereizt | höchstens 2 × 0,50 $ + 0,02 $ = 1,02 $ je Tag × 15 Tage = 15,30 $ ohne Untergrenze; die Untergrenze 1,0 $ begrenzt auf den Rest der Stufe 1 minus 1,00 $ plus 0,50 $, also bei ausgeschöpfter Stufe 1 auf 5,00 $ | 5,00 $ (Stufe 1 + 2 zusammen ≤ 11,40 $) |
 | Erwartet (Jury) | 20 bis 30 Schnellprüfungen × 0,14 bis 0,25 $ + wenige Discovery-Läufe | 3 bis 7 $ |
 | Erwartet, Stufe 2 allein, 2 Läufe an allen 15 Tagen × 0,14 $ (gemessene Schnellprüfung) | 30 × 0,14 $ + 15 × 0,02 $ | 4,50 $, passt in die Reserve |
 
-Fazit: Selbst bei böswilliger Dauernutzung gibt der Server nie mehr als 11,40 $ aus; die Stufe-1-Reserve sichert, dass die Bewertung Live-Läufe sieht (4,50 $ Nutzbudget in Stufe 2 reichen für rund 9 Läufe an der Kostengrenze oder rund 30 Schnellprüfungen). Beim ersten echten Live-Lauf den Messwert gegen 0,14 $ prüfen und die Tabelle anpassen (Anteil = Läufe Stufe 2 × Messwert + Untergrenze).
+Planungsziel: 11,40 $ Serververbrauch; dies ist wegen laufender Anfragen, direkter Extraktionsaufrufe und weiterlaufender Timeout-Worker keine garantierte Obergrenze. Die Stufe-1-Reserve soll das Bewertungsfenster schuetzen (4,50 $ Nutzbudget in Stufe 2 entsprechen rund 9 Laeufen zu 0,50 $ oder rund 30 Schnellpruefungen zu 0,14 $). Vor Deployment Kontostand und Kostenpolitik pruefen; gemessene Kosten bestehender Laeufe fuer die Planung nutzen.
 
 **Restrisiko:** Wer jeden Tag kurz nach Mitternacht (Reset) startet, belegt das einzige Tageslimit der Stufe 1 und hält andere ab; die Wiedergabe bleibt nutzbar. In Stufe 2 braucht ein Angreifer zwei IPs. Ein Zugangscode nur für Live-Läufe wurde bewusst nicht gebaut (Entscheidung des Nutzers vom 2026-10-05: offene Demo).
 
