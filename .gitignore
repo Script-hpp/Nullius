@@ -1,6 +1,8 @@
 .env
 runs/*
 !runs/.gitkeep
+# Runtime accounting is local, including worktree symlinks.
+/logs
 logs/*
 !logs/.gitkeep
 __pycache__/
