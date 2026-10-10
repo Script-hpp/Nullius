@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 import threading
 import time
@@ -18,6 +19,7 @@ import httpx
 
 from .config import Settings, load_settings
 from .costs import BudgetExceeded, budget_status, gross, logged_gross_total
+from . import spend_guard
 
 # "extract": strukturierte Extraktion (Rollen 2/4). Nutzt das code-Modell (Super).
 Role = Literal["fast", "code", "reasoning", "extract"]
@@ -86,6 +88,10 @@ class LLMClient:
         self._cost_lock = threading.Lock()
         self._blocked: str | None = None     # gesetzt = alle weiteren Aufrufe scheitern sofort
         self._warned_budget = False
+        self._budget = spend_guard.current_budget.get()
+        self._owns_budget = self._budget is None
+        if self._budget is None and self.settings.budget_total_usd > 0 and self.settings.llm.provider == "tokenfactory":
+            self._budget = spend_guard.JobBudget(self.settings.max_cost_per_run_usd)
         if self.settings.llm_cache:
             self._load_cache()
 
@@ -97,6 +103,11 @@ class LLMClient:
                 continue
             entry = json.loads(line)
             self._cache[entry["key"]] = entry["response"]
+
+    def begin_run(self) -> None:
+        """A CLI orchestrator may run multiple papers; API jobs keep their shared cap."""
+        if self._owns_budget and self._budget is not None:
+            self._budget = spend_guard.JobBudget(self.settings.max_cost_per_run_usd)
 
     def _cache_key(self, role: Role, messages: list[dict], temperature: float) -> str:
         model = self._model_for_role(role)
@@ -124,6 +135,8 @@ class LLMClient:
     ) -> LLMResponse:
         if self._blocked:
             raise BillingBlocked(self._blocked)
+        if self._budget:
+            self._budget.check()
         model = self._model_for_role(role)
         cache_key = self._cache_key(role, messages, temperature)
 
@@ -135,7 +148,6 @@ class LLMClient:
 
         self._check_budget()
         response = self._call_with_retry(model, messages, temperature, max_tokens, timeout_s)
-        self._book(response)
 
         if self.settings.llm_cache and response.finish_reason != "length":   # abgeschnittene Antworten nie cachen
             self._append_cache(cache_key, response)
@@ -181,6 +193,23 @@ class LLMClient:
     ) -> LLMResponse:
         last_error: Exception | None = None
         for attempt in range(MAX_RETRIES):
+            self._check_budget()
+            reservation = None
+            if self._budget:
+                self._budget.check()
+                if model not in TF_PRICES or self.settings.llm.provider != "tokenfactory":
+                    raise BudgetExceeded(f"No bounded request price configured for {model}.")
+                if any(not isinstance(message.get("content"), str) for message in messages):
+                    raise BudgetExceeded("Only text requests have a configured cost bound.")
+                max_tokens = 16000 if max_tokens is None else max_tokens
+                if not isinstance(max_tokens, int) or max_tokens <= 0:
+                    raise BudgetExceeded("Output token limit must be positive.")
+                # UTF-8 bytes conservatively bound text tokens, plus chat framing.
+                inputs = len(json.dumps(messages, ensure_ascii=False).encode()) + 256 * (len(messages) + 1)
+                pin, pout = TF_PRICES[model]
+                reservation = spend_guard.reserve_model(
+                    COST_LOG_PATH, self.settings, self._budget, inputs * pin + max_tokens * pout
+                )
             try:
                 body: dict = {"model": model, "messages": messages, "temperature": temperature}
                 if max_tokens is not None:
@@ -190,7 +219,12 @@ class LLMClient:
                     "/chat/completions", json=body, timeout=timeout_s or httpx.USE_CLIENT_DEFAULT
                 )
                 if resp.status_code >= 400 and is_billing_error(resp.status_code, resp.text):
+                    if reservation:
+                        spend_guard.release(COST_LOG_PATH, reservation)
                     self._block(resp.status_code, resp.text)
+                if resp.status_code == 429 and reservation:
+                    spend_guard.release(COST_LOG_PATH, reservation)
+                    reservation = None
                 resp.raise_for_status()
                 data = resp.json()
                 if data.get("error") and is_billing_error(resp.status_code, str(data["error"])):
@@ -204,10 +238,17 @@ class LLMClient:
                 finish = (data.get("choices") or [{}])[0].get("finish_reason")
                 if not content:
                     if usage.get("prompt_tokens") or usage.get("completion_tokens"):
-                        self._book(self._response(model, "", usage, finish, "bad_response"))   # bezahlt
+                        response = self._response(model, "", usage, finish, "bad_response")
+                        self._settle(reservation, response)
+                        reservation = None
                     raise BadResponse(f"Antwort ohne Inhalt: {str(data.get('error', data))[:200]}")
 
-                return self._response(model, content, usage, finish, "ok")
+                response = self._response(model, content, usage, finish, "ok")
+                if reservation and (not isinstance(usage.get("prompt_tokens"), int) or not isinstance(usage.get("completion_tokens"), int)
+                                    or usage["prompt_tokens"] < 0 or usage["completion_tokens"] <= 0):
+                    raise BudgetExceeded("Provider omitted usage; reservation retained, request stopped.")
+                self._settle(reservation, response)
+                return response
             except (httpx.HTTPStatusError, httpx.TransportError, BadResponse, ValueError) as exc:
                 last_error = exc
                 if attempt == MAX_RETRIES - 1:
@@ -217,6 +258,12 @@ class LLMClient:
         raise RuntimeError(
             f"LLM-Aufruf fehlgeschlagen nach {MAX_RETRIES} Versuchen (Modell {model}): {last_error}"
         )
+
+    def _settle(self, reservation, response):
+        if reservation:
+            spend_guard.settle_model(COST_LOG_PATH, self.settings, self._budget, reservation, response, self._book)
+        else:
+            self._book(response)
 
     def _response(self, model: str, content: str, usage: dict, finish: str | None, status: str) -> LLMResponse:
         details = usage.get("completion_tokens_details") or {}
@@ -253,6 +300,9 @@ class LLMClient:
         }
         with self._cost_lock, COST_LOG_PATH.open("a") as f:   # parallele Kandidaten: Zeilen nie verschraenkt
             f.write(json.dumps(entry) + "\n")
+            if self._budget:
+                f.flush()
+                os.fsync(f.fileno())  # Durable booking before releasing the reservation.
 
     def _append_cache(self, key: str, response: LLMResponse) -> None:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)

@@ -152,3 +152,35 @@ def test_status_has_no_secrets(open_gate):
     spend_budget(open_gate, 1)
     text = client.get("/api/status").text
     assert "usd" not in text.lower() and "credits" not in text.lower()
+
+
+def test_discovery_timeout_stops_stream_but_holds_worker_slot(monkeypatch):
+    import threading
+    import time
+    from repro_agent import spend_guard
+    entered, finish = threading.Event(), threading.Event()
+    scopes = []
+    class FakeAgent:
+        def discover(self, datasets, on_event):
+            scopes.append(spend_guard.current_budget.get())
+            entered.set()
+            assert finish.wait(3)
+    monkeypatch.setattr(api, "DiscoveryAgent", FakeAgent)
+    monkeypatch.setattr(api, "DISCOVERY_TIMEOUT_S", .1)
+    with TestClient(api.app) as c:
+        job = c.post("/api/discover", json={"datasets": ["Cora"]}).json()["job_id"]
+        try:
+            assert entered.wait(1)
+            response = c.get(f"/api/discover/{job}/stream")
+            assert "too long" in response.text
+            assert api.job_semaphore.locked() and scopes[0].cancelled.is_set()
+            assert scopes[0].limit_usd == .25 and scopes[0].live
+            assert c.get("/api/jobs/current").json()["busy"]
+            assert c.post("/api/reproduce", json={"catalog_id": "any"}).status_code == 429
+        finally:
+            finish.set()
+        for _ in range(50):
+            if not api.job_semaphore.locked():
+                break
+            time.sleep(.01)
+        assert not api.job_semaphore.locked()

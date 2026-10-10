@@ -1,6 +1,6 @@
 # Deployment: Demo-URL bis mindestens 15.12.2026
 
-**Aktueller Deploy-Check (10.10.):** [Pruefergebnis und Coolify-Konfiguration](deploy_readiness_20261010.md). Fuer das erste oeffentliche Deployment `deploy/coolify-preview.env.example` verwenden: Katalog, Evidenz, Replays und PDF funktionieren; kostenpflichtige Starts sind gesperrt. Die Live-Kostenbremsen sind noch keine harten Ausgabenobergrenzen ([Befunde](cost_policy_review.md)).
+**Aktueller Deploy-Check (10.10.):** [Pruefergebnis und Coolify-Konfiguration](deploy_readiness_20261010.md). Fuer das erste oeffentliche Deployment `deploy/coolify-preview.env.example` verwenden: Katalog, Evidenz, Replays und PDF funktionieren; kostenpflichtige Starts sind gesperrt. Modellversuche und Tavily-Aufrufe reservieren jetzt vorab ihr Budget; Grenzen der Schaetzung und Betriebsanforderungen stehen im [Kostenreview](cost_policy_review.md).
 
 Official Rules: Demo muss bis 15.12.2026 erreichbar und kostenlos testbar sein (Bewertung 01.–15.12.). Zwei Schichten: **Live-Server** (Container mit API und Web-App) und **statischer Spiegel** auf GitHub Pages als Absicherung (nur Exporte, Replay, keine Live-Steuerung). Stand der Preise: Nebius-Preisseite am 2026-10-01 abgerufen; Werte mit **[zu prüfen]** vor der Buchung gegenlesen.
 
@@ -119,13 +119,13 @@ Mehrere Schutzschichten mit unterschiedlichen Pruefzeitpunkten:
 
 | Schicht | Wert | Wirkung |
 |---|---|---|
-| Kostenbremse je Lauf | `MAX_COST_PER_RUN_USD=0.50` | Abbruch im Orchestrator; gemessen: Schnellprüfung 0,14 $, Mittel 0,25 $, Maximum 0,46 $ (zwei Claims) |
+| Kostenbremse je Job | Reproduktion `MAX_COST_PER_RUN_USD=0.50`, Discovery `MAX_COST_PER_DISCOVERY_USD=0.25` | Jeder Modellversuch reserviert seinen geschaetzten Maximalpreis; alle Rollen, Extraktionen und Retries teilen das Joblimit |
 | Schnellprüfung erzwungen | `ALLOW_FULL_RUNS=0` | Ein Client kann keinen teuren Vollauf (10 Seeds) anfordern |
-| Tagesbudget | `MAX_DAILY_COST_USD` | Kein Start mehr, wenn die Bruttokosten des Tages (aus `costs.jsonl`, überlebt Neustarts) die Grenze erreicht haben; Grund `daily_limit` mit Reset |
+| Tagesbudget | `MAX_DAILY_COST_USD` | Kosten des Tages plus offene Reservierungen plus naechster Modellversuch duerfen die Grenze nicht ueberschreiten; auch innerhalb eines Jobs |
 | Tageslimits | `MAX_DAILY_REPRO_JOBS`, `MAX_DAILY_JOBS`, je IP 1 | Aus `live_jobs.jsonl` nach Neustart wiederhergestellt |
-| Untergrenze Budget | `LIVE_MIN_BUDGET_USD` | Kein Start, wenn `BUDGET_TOTAL_USD` minus Kosten seit `BUDGET_SINCE` darunter liegt (Startschwelle; laufende Kosten werden nicht reserviert) |
+| Untergrenzen | `LIVE_MIN_BUDGET_USD`, `LIVE_MIN_TAVILY_CREDITS` | Vor jedem Modell-/Tavily-Versuch geprueft, einschliesslich der naechsten Reservierung; offene Anfragen zaehlen mit |
 | Globale Bremse im LLM-Client | 95 % von `BUDGET_TOTAL_USD` | Kein Modellaufruf mehr, auch mitten im Lauf (`BudgetExceeded`) |
-| Ein Job gleichzeitig, Wanduhr | 45 min Reproduktion, 15 min Discovery | Hängt ein Lauf, meldet der Stream einen Fehler und die Sperre wird frei |
+| Ein Job gleichzeitig, Wanduhr | 45 min Reproduktion, 15 min Discovery | Timeout beendet den Stream und sperrt neue Anbieteraufrufe des Jobs. Der Platz bleibt belegt, bis der Worker wirklich endet; kein spaeterer Erfolgsexport |
 
 Zwei Stufen:
 
@@ -151,7 +151,9 @@ Zwei Stufen:
 | Erwartet (Jury) | 20 bis 30 Schnellprüfungen × 0,14 bis 0,25 $ + wenige Discovery-Läufe | 3 bis 7 $ |
 | Erwartet, Stufe 2 allein, 2 Läufe an allen 15 Tagen × 0,14 $ (gemessene Schnellprüfung) | 30 × 0,14 $ + 15 × 0,02 $ | 4,50 $, passt in die Reserve |
 
-Planungsziel: 11,40 $ Serververbrauch; dies ist wegen laufender Anfragen, direkter Extraktionsaufrufe und weiterlaufender Timeout-Worker keine garantierte Obergrenze. Die Stufe-1-Reserve soll das Bewertungsfenster schuetzen (4,50 $ Nutzbudget in Stufe 2 entsprechen rund 9 Laeufen zu 0,50 $ oder rund 30 Schnellpruefungen zu 0,14 $). Vor Deployment Kontostand und Kostenpolitik pruefen; gemessene Kosten bestehender Laeufe fuer die Planung nutzen.
+Planungsziel: 11,40 $ Serververbrauch. Vor jedem Modellversuch werden bekannte Tokenpreise, ein konservativer Texteingabe-Zuschlag und ein explizites Ausgabetokenlimit reserviert. Diese Schaetzung ist keine Garantie fuer Anbieterrechnungen; Sandbox-, Hosting- und externe Kontonutzung sind nicht im Modellbudget enthalten. Die Stufe-1-Reserve soll das Bewertungsfenster schuetzen (4,50 $ Nutzbudget in Stufe 2 entsprechen rund 9 Laeufen zu 0,50 $ oder rund 30 Schnellpruefungen zu 0,14 $). Vor Deployment Kontostand und Kostenpolitik pruefen; gemessene Kosten bestehender Laeufe fuer die Planung nutzen.
+
+**Reservierungen persistent halten:** Neben den bisherigen Logs liegen `costs.reservations.json`, `tavily_usage.reservations.json` und `*.spend.lock` im selben `logs/`-Volume. Unsichere Modellanfragen (Netzwerkfehler, fehlende Usage) behalten ihre Reservierung ohne automatischen Ablauf, auch nach Neustart. Erst nach Abgleich mit dem Anbieter, bei gestopptem Server und ohne laufende Clients, einen belegten Eintrag korrigieren; nicht pauschal das Log oder die Reservierungsdateien loeschen. Schreibfehler sperren bezahlte Aufrufe. Genau einen API-Prozess betreiben; die Dateisperre koordiniert Ausgaben, Jobplaetze und Tageszaehler bleiben pro API-Prozess.
 
 **Restrisiko:** Wer jeden Tag kurz nach Mitternacht (Reset) startet, belegt das einzige Tageslimit der Stufe 1 und hält andere ab; die Wiedergabe bleibt nutzbar. In Stufe 2 braucht ein Angreifer zwei IPs. Ein Zugangscode nur für Live-Läufe wurde bewusst nicht gebaut (Entscheidung des Nutzers vom 2026-10-05: offene Demo).
 

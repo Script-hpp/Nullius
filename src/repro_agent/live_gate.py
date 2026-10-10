@@ -14,7 +14,7 @@ import os
 import time
 from pathlib import Path
 
-from . import costs, llm, tavily_usage
+from . import costs, llm, tavily_usage, spend_guard
 
 REASONS = ("budget_floor", "tavily_floor", "daily_limit", "busy")
 MESSAGES = {
@@ -36,17 +36,17 @@ def budget_remaining_usd() -> float:
     """Token-Factory-Budget brutto: BUDGET_TOTAL_USD minus Bruttokosten seit BUDGET_SINCE (costs.py, nicht neu gerechnet)."""
     total = _f("BUDGET_TOTAL_USD", 29.75)
     spent = costs.logged_gross_total(llm.COST_LOG_PATH, _f("VAT_RATE", 0.19), os.environ.get("BUDGET_SINCE", ""))
-    return total - spent
+    return total - spent - costs.gross(spend_guard.pending(llm.COST_LOG_PATH), _f("VAT_RATE", 0.19))
 
 
 def tavily_remaining() -> int:
-    return int(_f("TAVILY_CREDITS_TOTAL", 1000)) - tavily_usage.used_credits(os.environ.get("TAVILY_CREDITS_SINCE", ""))
+    return int(_f("TAVILY_CREDITS_TOTAL", 1000)) - tavily_usage.used_credits(os.environ.get("TAVILY_CREDITS_SINCE", "")) - int(spend_guard.pending(tavily_usage.TAVILY_LOG_PATH))
 
 
 def daily_cost_usd() -> float:
     """Bruttokosten seit lokaler Mitternacht (Serverdatum wie die Tageslimits), aus dem Kosten-Log, ueberlebt Neustarts."""
     midnight = dt.datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    return costs.gross(sum(e["cost_usd"] for e in costs.read_log(llm.COST_LOG_PATH) if e["ts"] >= midnight), _f("VAT_RATE", 0.19))
+    return costs.gross(sum(e["cost_usd"] for e in costs.read_log(llm.COST_LOG_PATH) if e["ts"] >= midnight) + spend_guard.pending(llm.COST_LOG_PATH), _f("VAT_RATE", 0.19))
 
 
 def misconfigured() -> bool:
@@ -55,6 +55,16 @@ def misconfigured() -> bool:
 
 
 def floor_reason() -> str | None:
+    try:
+        for name, default in (("BUDGET_TOTAL_USD", 29.75), ("VAT_RATE", .19), ("LIVE_MIN_BUDGET_USD", 3),
+                              ("MAX_DAILY_COST_USD", 0), ("TAVILY_CREDITS_TOTAL", 1000), ("LIVE_MIN_TAVILY_CREDITS", 300)):
+            spend_guard.number(name, default)
+        return _floor_reason()
+    except (OSError, ValueError, costs.BudgetExceeded):
+        return "budget_floor"
+
+
+def _floor_reason() -> str | None:
     if misconfigured() or budget_remaining_usd() < _f("LIVE_MIN_BUDGET_USD", 3.0):
         return "budget_floor"
     cap = _f("MAX_DAILY_COST_USD", 0.0)   # 0 = aus; Grund bleibt "daily_limit": das Frontend zeigt Tageslimit mit Reset
@@ -133,14 +143,13 @@ def jobs_log_path() -> Path:
 
 
 def record_start(kind: str, ip: str) -> None:
-    """Start eines Live-Jobs anhaengen (Zeit, Art, IP-Hash). Fehler beim Schreiben duerfen den Start nie verhindern."""
-    try:
-        p = jobs_log_path()
-        p.parent.mkdir(parents=True, exist_ok=True)
-        with p.open("a") as f:
-            f.write(json.dumps({"ts": time.time(), "kind": kind, "ip": IpLimits.key(ip)}) + "\n")
-    except OSError:
-        pass
+    """Persist admission before starting paid work; unavailable storage blocks live."""
+    p = jobs_log_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a") as f:
+        f.write(json.dumps({"ts": time.time(), "kind": kind, "ip": IpLimits.key(ip)}) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
 
 
 def todays_starts() -> list[dict]:

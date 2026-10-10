@@ -30,6 +30,7 @@ from contree_sdk.sdk.exceptions import OperationTimedOutError
 from contree_sdk.sdk.exceptions.api import ApiTimeoutError
 
 from .base import Branch, RunResult, SandboxSetupError, SandboxUnavailable, SnapshotId, setup_failure
+from .. import spend_guard
 
 # SDK-Default `transport_timeout` = 10 s (HTTP-Lesetimeout je Anfrage, auch fuers Abfragen des Operationsstatus). Unter
 # paralleler Last antwortete die Beta-API teils nicht in 10 s: ApiTimeoutError beendete ganze Benchmark-Laeufe (3 Abbrueche).
@@ -43,8 +44,14 @@ _CHUNK = 7 * 1024 * 1024  # base64 -> ~9.3 MiB
 
 class NebiusSandbox:
     def __init__(self) -> None:
+        self._budget = spend_guard.current_budget.get()
         self._client = ContreeSync(config=ContreeConfig(transport_timeout=TRANSPORT_TIMEOUT_S))
         self._sessions: dict[Branch, object] = {}
+
+    def _check_cancelled(self):
+        budget = getattr(self, "_budget", None)
+        if budget:
+            budget.check()
 
     @staticmethod
     def _guard(what: str, call):
@@ -58,11 +65,13 @@ class NebiusSandbox:
     def base_snapshot(
         self, image: str, setup_cmds: list[str], label: str | None = None
     ) -> SnapshotId:
+        self._check_cancelled()
         img = self._client.images.oci(image)
         for cmd in setup_cmds:
             img = self._run_setup(img, cmd)
         # label = Lauf-ID/Claim, damit cleanup_snapshots.py gezielt aufraeumen kann.
         tag = f"{SNAPSHOT_PREFIX}{label or uuid_lib.uuid4().hex[:12]}"
+        self._check_cancelled()
         img = img.tag_as(tag)
         return tag
 
@@ -72,10 +81,11 @@ class NebiusSandbox:
         Ergebnis wie ein Session-Run unter `.result` (exit_code, stdout, stderr)."""
         failure: SandboxSetupError | None = None
         for _ in range(2):
+            self._check_cancelled()
             try:
                 new = self._guard("setup", lambda: img.run(shell=cmd, disposable=False).wait())
                 result = new.result
-            except SandboxUnavailable:
+            except (SandboxUnavailable, spend_guard.BudgetExceeded):
                 raise
             except Exception as exc:   # z. B. Image im Zustand FAILED
                 failure = SandboxSetupError(f"Setup-Befehl fehlgeschlagen ({type(exc).__name__}): {cmd[:200]}\n{str(exc)[-1500:]}")
@@ -86,7 +96,9 @@ class NebiusSandbox:
         raise failure
 
     def branch(self, snapshot: SnapshotId) -> Branch:
+        self._check_cancelled()
         img = self._client.images.use(snapshot)
+        self._check_cancelled()
         session = img.session()
         branch_id = f"repro-branch-{uuid_lib.uuid4().hex[:8]}"
         self._sessions[branch_id] = session
@@ -95,6 +107,7 @@ class NebiusSandbox:
     def run(
         self, branch: Branch, cmd: str, timeout_s: int, *, truncate_output_at: int | None = None
     ) -> RunResult:
+        self._check_cancelled()
         session = self._sessions[branch]
         try:
             session = self._guard("run", lambda: session.run(
@@ -114,10 +127,12 @@ class NebiusSandbox:
         )
 
     def put_file(self, branch: Branch, path: str, content: bytes) -> None:
+        self._check_cancelled()
         session = self._sessions[branch]
         self._sessions[branch] = self._guard("put_file", lambda: session.apply_files({path: content}))
 
     def put_files(self, branch: Branch, files: dict[str, bytes]) -> None:
+        self._check_cancelled()
         # Ein apply_files-Aufruf = eine Sandbox-Operation statt einer pro Datei.
         session = self._sessions[branch]
         self._sessions[branch] = self._guard("put_files", lambda: session.apply_files(files))

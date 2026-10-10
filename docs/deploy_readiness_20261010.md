@@ -1,6 +1,6 @@
 # Deploy-Bereitschaft — 10. Oktober 2026
 
-**Ergebnis: bereit fuer Coolify mit vorhandenen Ergebnissen und gesperrten Live-Laeufen. Fuer oeffentliche bezahlte Starts fehlen noch belastbare Kostenobergrenzen.** Das Deployment selbst uebernimmt der Nutzer. Kein bezahltes Experiment wurde fuer diese Pruefung gestartet.
+**Ergebnis: bereit fuer Coolify mit vorhandenen Ergebnissen und gesperrten Live-Laeufen. Die Kostenbremsen wurden nach diesem Erstcheck repariert und offline geprueft; vor Live-Freigabe Kontostaende und persistente Speicher abstimmen.** Das Deployment selbst uebernimmt der Nutzer. Kein bezahltes Experiment wurde fuer diese Pruefung gestartet.
 
 ## Behobene Produktfehler
 
@@ -24,9 +24,9 @@ Ein leeres Datenvolume wird mit den Exporten aus dem Image befuellt. Ein bereits
 
 Vorhanden und durch Offline-Tests geprueft: Budget-/Tavily-Startschwellen, Tages- und IP-Limits, drei Seeds statt voller Laeufe, geteilte Job-Sperre, persistente Startzaehler, globale Budgetpruefung vor logischen Modellaufrufen sowie Buchung bezahlter leerer Antworten.
 
-Die bestehenden Grenzen reichen fuer eine harte Kostenfreigabe nicht: direkte Extraktionsaufrufe umgehen die Laufbremse; laufende Aufrufe und Wiederholungen reservieren keine Kosten vorab; unbekannte Modellpreise koennen als null geschaetzt werden; der Watchdog gibt die Sperre frei, obwohl der Worker weiterlaufen kann; Tavily prueft seine Reserve nur beim Jobstart. Tageskosten sind ebenfalls eine Startschwelle und koennen durch den bereits laufenden Job ueberschritten werden. Sandbox-/Anbieterkosten werden nicht durch die Inferenzschaetzung garantiert begrenzt.
+**Nachtraeglicher Fix:** Alle Modellrollen und Retries teilen jetzt ein API-Jobbudget; vor jedem Versuch werden Kosten reserviert und Gesamtbudget, Tagesbudget und Reserve geprueft. Discovery bekommt ein eigenes Modelllimit (Standard 0,25 $), Reproduktion bleibt bei 0,50 $. Unbekannte Modellpreise blockieren Anfragen. Tavily reserviert Credits vor jedem SDK-Versuch. Der Watchdog sperrt weitere Anbieteraufrufe und haelt den Jobplatz bis zum Worker-Ende. Kostenbuchungen werden vor Freigabe einer Reservierung dauerhaft geschrieben; unklare Anfragen behalten ihre Reservierung ueber Neustarts. Sandbox-/Hostingkosten und externe Kontonutzung bleiben ausserhalb der Inferenzschaetzung.
 
-Deshalb beide Startlimits fuer das erste Deployment bei **0** lassen. Vor Live-Freigabe die [offenen Kostenbefunde](cost_policy_review.md#priorities-before-deployment) beheben und die echten Kontostaende/Reservierungen abstimmen. Die historischen 12-Dollar-/Tavily-Werte aus Beispieldateien sind kein verifizierter aktueller Kontostand.
+Beide Startlimits fuer das erste Preview-Deployment bei **0** lassen. Vor Live-Freigabe den [aktuellen Kostenreview](cost_policy_review.md#production-fix--10-oct-after-review) beachten und die echten Kontostaende/Reservierungen abstimmen. Die historischen 12-Dollar-/Tavily-Werte aus Beispieldateien sind kein verifizierter aktueller Kontostand.
 
 ## Validierung
 

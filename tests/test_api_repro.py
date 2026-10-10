@@ -248,16 +248,20 @@ def test_catalog_id_length_is_limited(env):
     assert start(env, catalog_id="x" * 500).status_code == 422
 
 
-def test_watchdog_frees_the_lock_and_tells_the_stream(env, monkeypatch):
+def test_watchdog_holds_the_lock_until_worker_exits(env, monkeypatch):
     monkeypatch.setattr(api, "JOB_TIMEOUT_S", 0.3)
     FakeOrch.gate = threading.Event()
     job = start(env).json()["job_id"]
     evts = read_stream(env, job)                                               # endet, obwohl der Worker haengt
     assert evts[-1]["type"] == "error" and evts[-1]["status"] == "timeout"
-    assert api.current_job == {} and not api.job_semaphore.locked()
+    assert api.current_job["job_id"] == job and api.job_semaphore.locked()
+    assert api._budgets[job].cancelled.is_set()
+    assert start(env).status_code == 429
     FakeOrch.gate.set()                                                        # Worker endet spaeter: kein doppeltes Freigeben
     time.sleep(0.5)
     assert api.job_semaphore._value == 1
+    assert api.current_job == {}
+    assert not any(e["type"] == "finished" for e in api.repro_jobs[job].events)
 
 
 def test_stream_slot_limit_returns_429(env, monkeypatch):
@@ -273,3 +277,20 @@ def test_last_event_id_garbage_does_not_crash(env):
     for bad in ("9" * 30, "-1", "x"):
         with env.client.stream("GET", f"/api/reproduce/{job}/stream", headers={"Last-Event-ID": bad}) as r:
             assert r.status_code == 200
+
+
+def test_failed_admission_log_blocks_paid_job(env, monkeypatch):
+    def fail(*args):
+        raise OSError("read-only storage")
+    monkeypatch.setattr(live_gate, "record_start", fail)
+    assert start(env).status_code == 503
+    assert FakeOrch.instances == []
+    assert not api.job_semaphore.locked()
+
+
+@pytest.mark.parametrize("value", ["nan", "bad", "0", "-1"])
+def test_invalid_job_budget_blocks_without_holding_slot(env, monkeypatch, value):
+    monkeypatch.setenv("MAX_COST_PER_RUN_USD", value)
+    assert start(env).status_code == 503
+    assert FakeOrch.instances == []
+    assert not api.job_semaphore.locked()

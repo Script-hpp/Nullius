@@ -1731,6 +1731,8 @@ class Orchestrator:
         for w in self._warnings:
             self._emit("warning", text=w)
         self._cost_base = self.llm.total_cost_usd
+        if hasattr(self.llm, "begin_run"):
+            self.llm.begin_run()
         if self.use_tavily:
             self.resolve_targets(paper, claims)
         paper_head = self._paper_summary_round(paper, claims)   # nach Rolle 2; nur Bericht

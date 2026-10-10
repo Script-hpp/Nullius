@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from . import catalog as cat
-from . import live_gate, site_export, web_guard
+from . import live_gate, site_export, web_guard, spend_guard
 from .discovery import DiscoveryAgent
 from .dossier import REPO_ROOT
 
@@ -35,10 +35,36 @@ app.add_middleware(web_guard.GuardMiddleware, state=app.state)   # Rate-Limit je
 job_semaphore = asyncio.Semaphore(1)
 daily_limit = {"date": None, "count": 0}
 MAX_DAILY_JOBS = int(os.environ.get("MAX_DAILY_JOBS", 5))
-JOB_TIMEOUT_S = 2700            # Wanduhr je Reproduktion: danach meldet der Stream einen Fehler und die Sperre wird frei
+JOB_TIMEOUT_S = 2700            # Stream reports timeout; slot stays held until the worker exits
 DISCOVERY_TIMEOUT_S = 900
 STREAM_MAX_S = 3600             # laengste Dauer einer SSE-Verbindung (Reconnect mit from=<n> liefert den Rest)
 _held: set[str] = set()         # Job-IDs, die den Semaphor halten (genau einmal freigeben, auch bei Watchdog + Worker-Ende)
+_budgets: dict[str, spend_guard.JobBudget] = {}
+
+
+def _run_budgeted(job_id, worker):
+    token = spend_guard.current_budget.set(_budgets[job_id])
+    try:
+        worker()
+    finally:
+        spend_guard.current_budget.reset(token)
+
+
+def _new_budget(kind):
+    try:
+        limit = spend_guard.number("MAX_COST_PER_DISCOVERY_USD" if kind == "discovery" else "MAX_COST_PER_RUN_USD", .25 if kind == "discovery" else .50)
+        if limit <= 0:
+            raise ValueError("A positive job budget is required.")
+        return spend_guard.JobBudget(limit, live=True)
+    except (ValueError, spend_guard.BudgetExceeded) as exc:
+        raise HTTPException(503, detail="Live spending limits are misconfigured.") from exc
+
+
+def _record_start(kind, ip):
+    try:
+        live_gate.record_start(kind, ip)
+    except OSError as exc:
+        raise HTTPException(503, detail="Live accounting storage is unavailable.") from exc
 
 
 def restore_counters() -> None:
@@ -60,6 +86,7 @@ def _release_lock(job_id: str) -> None:
     """Semaphor einmal je Job freigeben (Watchdog und Worker koennen beide enden)."""
     if job_id in _held:
         _held.discard(job_id)
+        _budgets.pop(job_id, None)
         job_semaphore.release()
 
 
@@ -112,12 +139,13 @@ async def start_discovery(req: DiscoverRequest, request: Request):
 
     ip = live_gate.client_ip(request)
     check_live("discovery", ip)
+    budget = _new_budget("discovery")
     today = datetime.date.today()
     if daily_limit["date"] != today:
         daily_limit["date"], daily_limit["count"] = today, 0
+    _record_start("discovery", ip)
     daily_limit["count"] += 1
     ip_limits.add("discovery", ip)
-    live_gate.record_start("discovery", ip)
 
     job_id = str(uuid.uuid4())
     queue = asyncio.Queue()
@@ -127,6 +155,7 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     # We use asyncio.to_thread because the DiscoveryAgent uses synchronous httpx/Tavily calls.
     def discovery_worker():
         def on_event(evt):
+            budget.check()
             # Put the event into the queue in a thread-safe manner
             if job_id not in jobs:
                 raise RuntimeError("Client disconnected, aborting discovery loop.")
@@ -150,10 +179,14 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     loop = asyncio.get_running_loop()
     await job_semaphore.acquire()
     _held.add(job_id)
+    _budgets[job_id] = budget
     current_job.update({"kind": "discovery", "job_id": job_id, "catalog_id": None, "started_at": time.time()})
-    _arm_watchdog(job_id, DISCOVERY_TIMEOUT_S, lambda: queue.put_nowait({"type": "error", "message": "Search took too long and was stopped."}))
+    def on_timeout():
+        queue.put_nowait({"type": "error", "message": "Search took too long and was stopped."})
+        queue.put_nowait({"type": "done"})
+    _arm_watchdog(job_id, DISCOVERY_TIMEOUT_S, on_timeout)
     # Start the worker thread
-    task = asyncio.create_task(asyncio.to_thread(discovery_worker))
+    task = asyncio.create_task(asyncio.to_thread(_run_budgeted, job_id, discovery_worker))
     background_tasks.add(task)
     task.add_done_callback(background_tasks.discard)
 
@@ -161,17 +194,12 @@ async def start_discovery(req: DiscoverRequest, request: Request):
 
 
 def _arm_watchdog(job_id: str, seconds: float, on_timeout) -> None:
-    """Haengt ein Job (Sandbox, Netz), meldet der Stream nach `seconds` einen Fehler und die Sperre wird frei.
-    Der Worker-Thread laeuft weiter, ist aber durch MAX_COST_PER_RUN_USD und das globale Budget nach oben begrenzt."""
+    """Cancel future paid requests; keep the slot until the actual worker exits."""
     async def watch():
         await asyncio.sleep(seconds)
         if job_id in _held:
-            try:
-                on_timeout()
-            finally:
-                if current_job.get("job_id") == job_id:
-                    current_job.clear()
-                _release_lock(job_id)
+            _budgets[job_id].cancelled.set()
+            on_timeout()
 
     task = asyncio.create_task(watch())
     background_tasks.add(task)
@@ -349,6 +377,7 @@ def _prune_jobs() -> None:
 async def start_reproduction(req: ReproduceRequest, request: Request):
     ip = live_gate.client_ip(request)
     check_live("reproduction", ip)
+    budget = _new_budget("reproduction")
     if not full_runs_allowed():
         req.quick = True
     entry = next((e for e in cat.load_catalog(CATALOG_PATH) if e["id"] == req.catalog_id), None)
@@ -362,9 +391,9 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     today = datetime.date.today()
     if repro_daily["date"] != today:
         repro_daily["date"], repro_daily["count"] = today, 0
+    _record_start("reproduction", ip)
     repro_daily["count"] += 1
     ip_limits.add("reproduction", ip)
-    live_gate.record_start("reproduction", ip)
 
     _prune_jobs()
     job = ReproJob(id=str(uuid.uuid4()), catalog_id=entry["id"], quick=req.quick)
@@ -374,6 +403,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     loop = asyncio.get_running_loop()
     await job_semaphore.acquire()
     _held.add(job.id)
+    _budgets[job.id] = budget
     current_job.update({"kind": "reproduction", "job_id": job.id, "catalog_id": entry["id"], "started_at": time.time()})
 
     def on_timeout():
@@ -387,6 +417,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             orch = make_orchestrator(req.quick, req.author_code)
             orch.on_event = lambda evt: job.add(sanitize(evt))
             outcome = cat.run_candidate(orch, entry)
+            budget.check()
             if outcome.status == cat.CHECKED and outcome.dossier is not None and outcome.dossier.verdicts:
                 seeds = getattr(orch, "seeds", None) or cat.build_paper(entry)[0]["seeds"]
                 note = f"live quick check, {seeds} seeds" if req.quick else f"live run, {seeds} seeds"
@@ -398,14 +429,15 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
                 job.add({"ts": time.time(), "type": "error", "message": sanitize_text(outcome.reason or "Run failed", 300),
                          "status": outcome.status})
         except Exception as exc:   # kein Absturz der API durch einen Lauf
-            job.add({"ts": time.time(), "type": "error", "message": sanitize_text(f"{type(exc).__name__}: {exc}", 300)})
+            if not job.done:
+                job.add({"ts": time.time(), "type": "error", "message": sanitize_text(f"{type(exc).__name__}: {exc}", 300)})
         finally:
             job.done = True
             if current_job.get("job_id") == job.id:
                 current_job.clear()
             loop.call_soon_threadsafe(_release_lock, job.id)
 
-    task = asyncio.create_task(asyncio.to_thread(worker))
+    task = asyncio.create_task(asyncio.to_thread(_run_budgeted, job.id, worker))
     background_tasks.add(task)
     task.add_done_callback(background_tasks.discard)
     return {"job_id": job.id}
