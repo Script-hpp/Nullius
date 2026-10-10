@@ -20,6 +20,7 @@ import { CommunityFindings, Explanations, communityCount, explanationItems, hasC
 import { FindingExperiments, FindingPreview, experimentCount } from './FindingExperiments'
 import { Hint } from './Hint'
 import { Trust } from './Trust'
+import { CertificateActions } from './CertificateActions'
 import { WhatIf } from './WhatIf'
 import { useHead } from '../useHead'
 import { headFromSummary } from '../paperhead'
@@ -152,6 +153,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} onTavily={() => goTab('sources')} />
       </div>
 
+      {v && <CertificateActions run={run} />}
       <RunTabs tab={tab} onTab={(t) => goTab(t)} icons={ICONS} barRef={barRef} />
 
       <div ref={panelRef} role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={-1} className="scroll-mt-12 pt-10 outline-none">
