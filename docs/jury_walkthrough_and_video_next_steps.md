@@ -48,7 +48,7 @@ Spaeterer Outreach-Gedanke des Nutzers: Autorinnen/Autoren passender Papers mit 
 
 ## Nächster Videoschnitt
 
-Den bestehenden visuellen Stil behalten. Das alte Video liegt im Reviewer-Workspace unter `video/out/film.mp4`; die dortige Kritik steht in `docs/video_review_20261010.md`. Hier wurde zunaechst die Website verbessert und der naechste Schnitt geplant. Die spaetere CEO-Umsetzung steht am Ende dieses Dokuments.
+Den bestehenden visuellen Stil behalten. Das alte Video liegt im Reviewer-Workspace unter `video/out/film.mp4`; die dortige Kritik steht in `docs/video_review_20261010.md`. Hier wurde die Website verbessert und der naechste Schnitt geplant; ein neues MP4 ist noch zu produzieren.
 
 Ziel: ca. 2:30 Minuten, ein klarer Hauptweg. Pro Einstellung eine lesbare Aussage; Details gehoeren ins anklickbare Produkt.
 
@@ -81,9 +81,3 @@ Naechste Arbeit in dieser Reihenfolge:
 - Lokal mit statischen Produktionsbelegen getestet. Keine neuen kostenpflichtigen Modell-/Sandbox-Laeufe und keine Veroeffentlichung auf dem Demo-Server. Live-Budget-, Busy- und Netzwerkfehlerzustaende in dieser Runde nicht neu end-to-end geprueft.
 - Bekannte Build-Warnung: grosses JavaScript-Bundle. Fuer gemessene schlechte Ladezeiten waere Aufteilung ein naechster Hebel; daraus wird hier keine unbelegte Performance-Zusage.
 - Kosten-/Worker-Baustellen bleiben in [cost_policy_review.md](cost_policy_review.md) dokumentiert. Aus den zwei neuen Beispielen folgt weiterhin keine allgemeine Reproduktionsquote oder bestaetigte Methodentreue.
-
-## Umsetzung im CEO-Workspace — 10 Oct 2026
-
-Der neue Schnitt ist in `video/` reproduzierbar vorbereitet: aktuelle lokale Website, GLinear als Hauptweg, drei getrennte Katalogbeispiele, 7/8 In-Sample und RLinear 0/1, v4-Kontrollen separat, echtes PDF aus der Exportansicht. Devpost-Texte und README sind auf diese Aussagen abgestimmt; Detailauswertung liegt in `evaluation_notes.md`. Neuer aktueller Brief: `video_script.md`; v8-Brief separat archiviert. Kein neuer bezahlter Lauf.
-
-Nutzeradresse fuer die geplante Demo: `https://nullius.akca.dev`, noch nicht veroeffentlicht. Schlusslink im lokalen Film deshalb zum Repository. Produkt-Testplan: `product_test_20261010.md`, Beobachtungen weiterhin ausstehend. Weitere Live-Demo-Schritte und Autorenansprache bleiben von diesen Beobachtungen abhaengig.

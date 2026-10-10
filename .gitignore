@@ -12,7 +12,3 @@ __pycache__/
 
 # Autorenliste enthaelt personenbezogene Daten (Kontaktadressen), nie committen
 docs/outreach/authors.md
-
-# Local video artifacts and dependencies.
-/video/out/
-/video/node_modules/

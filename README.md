@@ -185,7 +185,6 @@ npm test
 | [web](web) | React product and stored production evidence. |
 | [benchmark](benchmark) | Claims, protocols, reference solutions and evaluation results. |
 | [docs](docs) | Research notes, deployment, video and submission drafts. |
-| [video](video) | Local capture and rendering tools for the current cut. |
 
 ## Related work
 
