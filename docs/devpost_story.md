@@ -1,63 +1,62 @@
+# Devpost story — updated draft, 10 Oct 2026
+
+English submission narrative. Same results and limits as [video_script.md](video_script.md) and [devpost_submission.md](devpost_submission.md). Unpublished draft; no user-test results claimed.
+
 ## Inspiration
 
-*Nullius in verba*: take nobody's word for it. Many machine learning results are hard to reproduce. Rebuilding a paper costs days of broken code, missing hyperparameters and numbers that do not come out, and whether a claim holds is usually known only after someone has paid that price. Coding agents today fix code until the tests pass. We wanted an agent for which **the paper is the test suite**.
+*Nullius in verba*: take nobody's word for it. Coding agents fix code until tests pass. We wanted an agent whose test is a reported scientific claim, with evidence a researcher can inspect before building on a paper.
 
 ## What it does
 
-You give Nullius a machine learning paper (an arXiv link or a catalog entry). It then:
+Before a researcher or ML team builds on a machine learning paper, Nullius helps check whether its reported number can be reached. **Here, the paper is the test suite:** a claim becomes the acceptance criterion for an independently measured experiment.
 
-1. reads the paper with **Tavily** Extract and pulls out checkable claims with target values; every number is quoted verbatim and re-checked against the text,
-2. collects setup details (hyperparameters, data splits) from the paper, the README and the repository, each with a verbatim quote and its source,
-3. lets **NVIDIA Nemotron** plan and write its own experiment code and runs it in **Nebius Sandbox** branches, one branch per seed, with no network during training,
-4. lets an **independent harness** score the result: the agent delivers only `predictions.csv`; the harness loads the test labels itself and computes the metric with fixed, tested code,
-5. issues a certificate per claim: *target reached*, *partially reproduced* or *not reproduced with our setup*, with the measured mean, the spread over seeds, the sources and the branch tree as evidence.
+Give Nullius an arXiv link or open a catalog entry. Tavily reads claims and setup details at run time. **The default mode rebuilds from the paper and the authors' code:** NVIDIA Nemotron on Nebius Token Factory reads repository files as reference material, then writes its own experiment. The authors' program is never executed. If reference code is unavailable, Nullius falls back to a paper rebuild and displays the actual mode.
 
-The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks), **Catalog**, **Live run** (plan, code, branches, measurements and repairs stream in live) and **Evidence** (the certificate with a step-by-step replay).
+Nebius Sandboxes execute the generated code in branches. The agent supplies predictions; an independent harness loads the test labels and computes the metric. A certificate records the claim, measured mean, spread across seeds, tolerance, sources, program versions and branches. The Evidence page offers a recorded replay and a browser print preview that can be saved as a **PDF certificate**. The PDF uses the stored result, not the What-if slider.
 
-**Who uses it, and how.**
-- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
-- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
-- *A PhD student or ML team* checks the number before building on a paper.
+Use that evidence to decide what to investigate before building on a paper. We have not measured user time savings or completed a user study.
 
-**What Nullius found.** A recent paper on a supported benchmark, the Stuart-Landau Oscillatory GNN (arXiv 2511.08094), reports 82.92 ± 1.39 % for SL-GCN on Cora with random splits (Table 2, arXiv v2). Nullius rebuilt the experiment and measured 0.783 ± 0.018 over 10 seeds (tolerance ±0.01), so the certificate says "not reproduced with our setup": one generated program, 10 of 10 seeds valid, no repairs, 0.025 $ gross, and the graph ablation confirms the code uses the graph. Read this with care: Nullius agreed with the reference verdict on only 2 of 8 benchmark units, so a miss can be a weakness of our agent; the paper averages over 100 splits where we use 10 seeds; method fidelity is not checked, so the overall statement stays provisional. We have not contacted the authors and claim nothing about them. Sources: `benchmark/catalog.yaml` (`disc_2511_08094`), `web/public/data/disc_2511_08094/20260930-200050/` (`zeugnis.md`, `dossier.json`, `events.jsonl`); Evidence page `#/run/disc_2511_08094--20260930-200050`.
+## Results and their scope
 
-**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (fixed and random splits) and ETTh1 (horizon 96). CPU only, claims that run in minutes. "Reproduced" means the target value was reached according to the harness; **method fidelity is not checked**.
+Three later catalog checks reached their fixed targets on ETTh1, forecast horizon 96, three seeds each, tolerance ±0.01 MSE. MSE is prediction error; lower is better. **All three are preliminary: method fidelity is not checked.**
+
+| Paper | Claimed MSE | Measured mean ± standard deviation | Gross inference cost |
+|---|---:|---:|---:|
+| TSMixer (Google) | 0.361 | 0.3624 ± 0.0003 | $0.2354 |
+| SparseTSF | 0.359 | 0.3653 ± 0.0034 | $0.2035 |
+| GLinear | 0.3820 | 0.3796 ± 0.0003 | $0.2047 |
+
+Evidence: `web/public/data/disc_2303_06053/20261009-201230/`, `disc_2405_00946/20261009-220822/`, and `disc_2501_01087/20261010-161916/`; dossiers contain measurements, event logs contain inference costs. Costs include configured VAT and exclude Tavily and sandbox costs. These examples were selected manually after development, outside the eight development units. They are not a blind test or a new general success rate. GLinear was already present in earlier search results.
+
+GLinear's source was checked manually in paper v1 Table II before the run. Automatic target extraction returned no JSON, and automatic column assignment remained unchecked; the certificate keeps these warnings. TSMixer also retains protocol and table-column warnings. Reaching the target does not establish that the authors' method or exact training configuration was reproduced. See [paper_candidates_20261010.md](paper_candidates_20261010.md) and the certificates for details.
+
+**Author-code development evaluation:** 7 of 8 development units matched the reference verdict, **in-sample**, after fixes were designed using those units. This counts agreement with reference verdicts, including a partial verdict, not seven fully reproduced papers. The separate **RLinear held-out check matched 0 of 1**. **0 of 9** planted controls were confirmed; one had no verdict. We do not combine these counts or claim a general recall improvement. Source: `benchmark/experiments/results/recall_cg_v1.md`. This evaluation used stored source fixtures, so it does not measure a Tavily accuracy gain.
+
+**Earlier paper-only benchmark v4:** six papers, eight paper-claim units, 48 runs, three generations per unit and arm. With Tavily, majority verdicts matched the reference on 2 of 8 units; without Tavily, 1 of 8. **0 of 48 planted false targets were confirmed.** All 7 target-reached verdicts for real claims agreed with our reference solution (post hoc, small sample). This is evidence within that evaluation, not a universal precision guarantee. v4 used a different mode and historical model configuration; do not subtract its 2/8 from the development 7/8 or pool its controls with the later evaluation. Sources: `benchmark/experiments/results/benchmark_v4.md`, `docs/benchmark_history.md`.
+
+Failed checks remain visible: SL-GCN missed its target, HaKAN failed in setup, and Acacia has no completed catalog verdict. A miss can reflect an agent or setup weakness; it is not a finding that a paper is wrong.
+
+**Scope:** Cora (fixed and random splits), CiteSeer (Planetoid split), and ETTh1 (horizon 96), CPU only. Other datasets require a validated harness. “Target reached” means the numerical target was reached with our setup. Method fidelity is not checked, so overall conclusions stay provisional.
 
 ## How we built it
 
-- **Orchestrator** (Python): per claim, Tavily reads target value and setup details, Nemotron plans and writes code, the sandbox runs it, the harness scores it, checks run, the code is repaired if needed, then all seeds run in parallel branches.
-- **NVIDIA Nemotron on Nebius Token Factory**, one OpenAI-compatible endpoint: Nemotron 3.5 Lightning for table and target-value extraction, Nemotron 3 Super for writing and repairing code and for setup details, Nemotron 3 Super also for the research plan (Nemotron 3 Ultra planned until Token Factory removed it on 2026-10-09; benchmark v2 to v4 ran with Ultra for that role). Every quote a model returns is re-checked against the source and dropped if it does not occur there.
-- **Nebius Sandboxes** (`contree-sdk`): the base image is built once as a snapshot; every seed, repair attempt and ablation is a branch of it. Rollback of a failed attempt is free.
-- **Tavily** Search and Extract at run time for discovery of new papers (the live catalog), claims, setup details and error search; after the verdict a community check reports what others found, with quotes, and never changes the verdict. Every source is stored with mode, timestamp and SHA-256.
-- **Checks without an LLM:** a smoke run on a tiny subset, trivial baselines, a graph ablation, a test for training on validation labels, an edge-direction probe, and a detector for a known data-loader bug (`drop_last`) in time-series papers.
-- **Product:** FastAPI with a queue, daily and per-IP limits, a budget floor and Server-Sent Events; a React app for the five pages.
+- **NVIDIA Nemotron on Nebius Token Factory:** Super plans, writes and repairs experiments and extracts setup details; Lightning extracts target values. Benchmark v2–v4 used Ultra for planning before its removal on 9 Oct; current runs use Super. Model-returned quotations are checked against source text; warnings remain when validation cannot complete.
+- **Nebius Sandboxes:** snapshot branching for attempts and seeds, network disabled during training, static code checks, fresh harness and independently loaded test labels.
+- **Tavily Search and Extract:** discovery, paper text, setup and error research at run time. Sources carry mode, timestamp and SHA-256. After the verdict, community findings and possible explanations are reported separately; measurable findings may become additional experiments, without altering the original verdict. We do not claim Tavily improves reproduction accuracy.
+- **Python orchestrator and FastAPI, React product:** Overview, Discover, Catalog, Live run and Evidence; recorded checks remain accessible when live admission is paused. The catalog includes successful checks, failed checks and unchecked candidates.
+- **Verification:** smoke checks, baselines, graph ablations and recorded repairs. The harness computes results from predictions; the agent never grades itself.
+- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The production per-call reservations and worker-timeout handling still have documented gaps (`docs/cost_policy_review.md`); we do not advertise a proven hard total-spend bound.
 
-## Challenges we ran into
+## Challenges and what we learned
 
-- **Keeping the agent honest.** An agent that writes code and reports numbers can fool itself. So the agent delivers predictions only; harness, labels and metric are ours. In our benchmark one generated program trained on the validation labels and won the candidate selection with a validation accuracy of up to 1.0. We added a check that catches this.
-- **Telling a paper fault from an agent fault.** A low number can mean the paper does not hold or the generated code is wrong. Baselines, the form check and the ablation separate the cases; a result below a trivial baseline is reported as "agent fault suspected", not as a finding about the paper.
-- **The web can mislead.** A README tip ("it is often helpful to standardise the features") was followed faithfully by the agent and cost about eight accuracy points on one paper. We verified the cause with a counter-experiment and now mark such statements as optional advice.
-- **Method fidelity.** We built an LLM checker for "did the code implement the method" and calibrated it three times. It missed its pre-registered threshold each time (5/10, 7/10, 8/11). We stopped and report that axis as "not checked".
-- **Reasoning models that think inside the answer** used the whole token budget on a simple extraction. We split inputs into small sections and never cache truncated answers.
+Separating agent errors from paper results matters more than a confident verdict. A result below a trivial baseline is flagged as an agent fault suspicion. Validation-label leakage, misleading repository advice and missing setup details required checks and documented counter-experiments.
 
-## Accomplishments that we're proud of
+Our method-fidelity checker missed three calibration thresholds (5/10, 7/10, 8/11). We stopped and label that dimension “not checked”. We also publish failed improvement steps and the separate held-out miss. Small, selected examples are useful demonstrations, but they do not establish performance on unseen papers.
 
-- A complete loop from arXiv paper to certificate, watchable live.
-- **A pre-registered benchmark, with the failures reported.** Six papers, eight paper-claim units, each with and without Tavily, three fresh generations per unit, plus a deliberately wrong "placebo" claim in every run as negative control. Rules were fixed in the repository before the first run. Result of the latest version (v4, 48 runs): **none of the 48 placebo verdicts was "reproduced"** (also 0 of 48 in v2 and v3, runs with different code), and all 7 "reproduced" verdicts for real claims agreed with our reference solution (post hoc, small sample). Nullius is a high-precision checker. Recall is low: with Tavily **2 of 8** units matched the reference verdict, without Tavily **1 of 8**, mostly near misses. We publish it as it is, together with a failure analysis that names the cause run by run. Method fidelity was not checked.
-- **A finding about a published number** (a manual check by the team, not an agent result): for RLinear on ETTh1, the authors' code prints an MSE of 0.366, exactly the value in the paper, but it scores only 2688 of the 2785 test windows because the test loader drops the last batch. On all windows the same model reaches 0.370. Our harness reports both.
-- Negative results are first-class output: three failed calibrations and one improvement step that missed its own pre-registered goal are documented, not hidden.
+Sandbox branches preserve failed attempts and let seeds run from the same snapshot. Stored sources, exact code and independent measurements make a certificate inspectable even after a web page changes.
 
-## What we learned
+## What's next
 
-- Free-form agent output needs a verifier the agent cannot touch. Verdict and number must not come from the same component.
-- Most misses were not coding errors. The decisive detail was missing from the collected setup details, or it was quoted correctly but belonged to a different model or setting. Of the details that were collected, the code used 84 %.
-- The variation between two generations of the code is larger than the variation between seeds. One run of an agent proves little; we count majorities over three generations.
-- A narrow, well-documented benchmark says more than a broad one with shaky tasks. Eight units are counts with caveats, not a significance test.
-- Sandbox branching fits this problem: seeds run in parallel from one snapshot, and every attempt stays inspectable.
+One person will test the finished product. We will record that person's observations before deciding further live-demo steps or author outreach. No authors have been contacted for this phase, and no email drafting button is part of the product. TimeBase, then SOFTS, are future paper candidates; **no new paid paper runs are being started**.
 
-## What's next for Nullius in verba
-
-- **A second mode, "re-run":** run the authors' own code in the sandbox and measure it with the same harness, next to the agent's rebuild. A prototype works on two repositories (RLinear, DLinear; values identical to our manual check), but on four unseen repositories it found no valid run in two pre-registered attempts (0 of 4): finding the right documented command in a large repository is the bottleneck (`benchmark/experiments/results/nachlauf_v1.md`). It is not part of the product or the benchmark.
-- A method-fidelity check that passes calibration.
-- More datasets and a real negative case in the benchmark.
-- Notifying paper authors with the certificate (the README badge for authors already exists).
+Longer-term work includes a calibrated method-fidelity check, more validated datasets and source findings tested as their own experiments. Those are plans, not current capabilities.

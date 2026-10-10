@@ -1,141 +1,101 @@
-# Devpost submission text (draft)
+# Devpost submission — updated draft, 10 Oct 2026
 
-Draft of every text field of the submission form. English. `README.md` is the reference: where this text and the README differ, the README wins. Every claim points to a file in the repository. Benchmark numbers are from Benchmark v4 (`benchmark/experiments/results/benchmark_v4.md`, pre-registration `benchmark/experiments/benchmark_v2.md` and `benchmark_v4.md`); values marked `TBD` depend on the deployment (demo URL, video, mirror). Deadline: 30 Oct 2026, 10:00 PDT (18:00 German time).
+Unpublished English draft. Measurements come from stored production dossiers and evaluation reports. Demo and video URLs remain unpublished. Narrative matches [devpost_story.md](devpost_story.md) and [video_script.md](video_script.md).
 
 ## Project name
 
 Nullius
 
-## Tagline (one sentence)
+## Tagline
 
-Other agents fix code until the tests pass; Nullius takes one claim from a machine learning paper, rebuilds the experiment in Nebius Sandboxes and lets an independent harness measure whether the number holds. A high-precision checker: it never reported a deliberately wrong claim as reproduced.
+Here, the paper is the test suite: Nullius rebuilds a reported experiment and independently measures whether its target is reached, with a certificate you can inspect and save as PDF.
 
 ## Track and prizes
 
-- Track: Coding and Agentic Engineering.
-- Bonus prize: Best Use of Tavily (Tavily is called live at run time; the calls are visible in the event log and on the evidence page, `README.md` section "How we use Tavily").
-- Feedback prize: the feedback field points to [`docs/nebius_feedback.md`](nebius_feedback.md).
+- Coding and Agentic Engineering.
+- Best Use of Tavily: real run-time Search and Extract, with recorded provenance.
+- Feedback: [nebius_feedback.md](nebius_feedback.md).
 
 ## What it does
 
-*Nullius in verba*: take nobody's word for it. Many machine learning results are hard to reproduce. Rebuilding a paper costs days, and whether a claim holds is usually known only after someone has paid that price. Nullius is for reviewers who want a quick check of a headline number, PhD students who want to build on a paper, and ML teams that depend on published results.
+Before a researcher or ML team builds on a machine learning paper, Nullius helps check whether its reported number can be reached. **Here, the paper is the test suite:** a claim becomes the acceptance criterion for an independently measured experiment.
 
-You give Nullius a paper (an arXiv link or an entry of the catalog). It then:
+Give Nullius an arXiv link or open a catalog entry. Tavily reads claims and setup details at run time. **The default mode rebuilds from the paper and the authors' code:** NVIDIA Nemotron on Nebius Token Factory reads repository files as reference material, then writes its own experiment. The authors' program is never executed. If reference code is unavailable, Nullius falls back to a paper rebuild and displays the actual mode.
 
-1. reads the paper with Tavily Extract and extracts checkable claims with target values; each number is quoted verbatim and re-checked against the text and the table header,
-2. collects setup details (hyperparameters, data splits) from the paper, the README and the repository, each with a verbatim quote,
-3. writes its own experiment code and runs it in Nebius Sandbox branches, one branch per seed,
-4. lets an **independent harness** score the predictions: the agent delivers only `predictions.csv`, the harness loads the test labels itself and computes the metric with fixed, tested code,
-5. issues a certificate: a verdict per claim with measured mean, spread over seeds, sources and the branch tree as evidence.
+Nebius Sandboxes execute the generated code in branches. The agent supplies predictions; an independent harness loads the test labels and computes the metric. A certificate records the claim, measured mean, spread across seeds, tolerance, sources, program versions and branches. The Evidence page offers a recorded replay and a browser print preview that can be saved as a **PDF certificate**. The PDF uses the stored result, not the What-if slider.
 
-**Who uses it, and how.**
-- *A reviewer* checks a headline number on a supported benchmark in minutes for cents: the reference run for Kipf & Welling (GCN on Cora, 10 seeds) was reproduced at 0.815 ± 0.011 in about 10 minutes for 0.139 $ gross, with sources and branch tree on the certificate (`web/public/data/kipf_gcn_2017/20261002-110746`).
-- *An author* adds the badge of a finished check to the README (snippet on every Evidence page): "reproduced with our setup", measured against claimed value, "method not checked", linked to the certificate.
-- *A PhD student or ML team* checks the number before building on a paper.
+Use that evidence to decide what to investigate before building on a paper. We have not measured user time savings or completed a user study.
 
-**What the benchmark shows** (v4, 48 runs on Token Factory, `README.md` "Benchmark"): Nullius is a high-precision checker. When it reports a target as reached, it was (7 of 7 "reproduced" verdicts for real claims agreed with our reference solution; post hoc, small sample), and none of 48 deliberately wrong claims was reported as reproduced (pre-registered negative control). It often does not reach the target: 2 of 8 paper-claim units with Tavily, 1 of 8 without; most misses are near misses ("partially"). Method fidelity was not checked.
+## Results and their scope
 
-The product has five pages: Overview, **Discover** (Tavily finds new papers on supported benchmarks and proposes claims), **Catalog** (candidates that already ran once through the full loop), **Live run** (the loop streams over Server-Sent Events: Tavily findings, plan, code, branches, measurements, repairs) and **Evidence** (the certificate, with a step-by-step replay). If a live run cannot start, the UI says so and offers the last finished run as a replay (`README.md`, "Product tour").
+Three later catalog checks reached their fixed targets on ETTh1, forecast horizon 96, three seeds each, tolerance ±0.01 MSE. MSE is prediction error; lower is better. **All three are preliminary: method fidelity is not checked.**
 
-Verdicts are worded carefully: "not reproduced *with our setup*", always with the attempts. A verdict has two axes; axis 2 (method fidelity) is **not checked** in this submission, so "reproduced" means "target value reached according to the harness", not "method reproduced" (`README.md`, "How it works" and "Benchmark").
+| Paper | Claimed MSE | Measured mean ± standard deviation | Gross inference cost |
+|---|---:|---:|---:|
+| TSMixer (Google) | 0.361 | 0.3624 ± 0.0003 | $0.2354 |
+| SparseTSF | 0.359 | 0.3653 ± 0.0034 | $0.2035 |
+| GLinear | 0.3820 | 0.3796 ± 0.0003 | $0.2047 |
 
-**Honest scope.** Nullius checks papers that evaluate on benchmarks it already supports: Cora (Planetoid split), Cora with random splits, and ETTh1 (horizon 96). A new dataset needs a one-time task and harness; new papers on existing datasets work without one. CPU only, claims that run in minutes (`README.md`, "Limitations and roadmap").
+Evidence: `web/public/data/disc_2303_06053/20261009-201230/`, `disc_2405_00946/20261009-220822/`, and `disc_2501_01087/20261010-161916/`; dossiers contain measurements, event logs contain inference costs. Costs include configured VAT and exclude Tavily and sandbox costs. These examples were selected manually after development, outside the eight development units. They are not a blind test or a new general success rate. GLinear was already present in earlier search results.
+
+GLinear's source was checked manually in paper v1 Table II before the run. Automatic target extraction returned no JSON, and automatic column assignment remained unchecked; the certificate keeps these warnings. TSMixer also retains protocol and table-column warnings. Reaching the target does not establish that the authors' method or exact training configuration was reproduced. See [paper_candidates_20261010.md](paper_candidates_20261010.md) and the certificates for details.
+
+**Author-code development evaluation:** 7 of 8 development units matched the reference verdict, **in-sample**, after fixes were designed using those units. This counts agreement with reference verdicts, including a partial verdict, not seven fully reproduced papers. The separate **RLinear held-out check matched 0 of 1**. **0 of 9** planted controls were confirmed; one had no verdict. We do not combine these counts or claim a general recall improvement. Source: `benchmark/experiments/results/recall_cg_v1.md`. This evaluation used stored source fixtures, so it does not measure a Tavily accuracy gain.
+
+**Earlier paper-only benchmark v4:** six papers, eight paper-claim units, 48 runs, three generations per unit and arm. With Tavily, majority verdicts matched the reference on 2 of 8 units; without Tavily, 1 of 8. **0 of 48 planted false targets were confirmed.** All 7 target-reached verdicts for real claims agreed with our reference solution (post hoc, small sample). This is evidence within that evaluation, not a universal precision guarantee. v4 used a different mode and historical model configuration; do not subtract its 2/8 from the development 7/8 or pool its controls with the later evaluation. Sources: `benchmark/experiments/results/benchmark_v4.md`, `docs/benchmark_history.md`.
+
+Failed checks remain visible: SL-GCN missed its target, HaKAN failed in setup, and Acacia has no completed catalog verdict. A miss can reflect an agent or setup weakness; it is not a finding that a paper is wrong.
+
+**Scope:** Cora (fixed and random splits), CiteSeer (Planetoid split), and ETTh1 (horizon 96), CPU only. Other datasets require a validated harness. “Target reached” means the numerical target was reached with our setup. Method fidelity is not checked, so overall conclusions stay provisional.
 
 ## How we built it
 
-- **Orchestrator:** a Python loop (`src/repro_agent/loop.py`) per claim: Tavily reads target value and setup details, Nemotron plans and writes code, the sandbox runs seed 0 in a branch, the harness scores it, checks run, the code is repaired if needed, then the remaining seeds run in parallel branches with exactly that code. The verdict rests on the mean over all seeds against a tolerance fixed before the run.
-- **NVIDIA Nemotron on Nebius Token Factory** through one OpenAI-compatible endpoint (`src/repro_agent/llm.py`): Nemotron 3.5 Lightning (table and target-value extraction), Nemotron 3 Super 120B-A12B (writes and repairs the experiment code, extracts setup details), also writes the research plan (Nemotron 3 Ultra 550B-A55B did this until Token Factory removed it on 2026-10-09; benchmark v2 to v4 ran with Ultra for the plan, later runs with Super). Every quote a model returns is re-checked against the source text and dropped if it does not occur there.
-- **Nebius Sandboxes** (`contree-sdk`, `src/repro_agent/sandbox/nebius.py`): the base image (Python, numpy, scipy, torch) is built once as a snapshot; every seed, repair attempt and graph ablation is a branch of it. The agent's training run has no network (`unshare -n`), a static code check rejects network access, downloads and process spawning, and the harness is copied in fresh afterwards.
-- **Tavily** (`src/repro_agent/tavily_tools.py`, `discovery.py`, `community.py`): Search and Extract at run time for discovery of new papers (the live catalog), claims, setup details and error search; after the verdict a community check reports what others found and possible explanations, each with a quote, and never changes the verdict. Every source is recorded with mode, timestamp and SHA-256 in the dossier and in `events.jsonl`.
-- **Checks and repair loops:** a smoke run on a tiny subset (`SMOKE=1`), trivial baselines (a result below the best trivial baseline is flagged "agent fault suspected"), a graph ablation for graph models (validated 9/10, `benchmark/experiments/results/ablation_gcn_validation.md`), a plan validator, a crash repair from the end of stderr, and a deterministic table-column check.
-- **Cost control:** per-run limit, global budget with a cut-off, retries with back-off, hard stop on billing or authentication errors (`CLAUDE.md`, section "Budget und Kostenkontrolle"; `src/repro_agent/llm.py`).
-- **Product:** FastAPI (`src/repro_agent/api.py`: queue with one job at a time, daily and per-IP limits, budget floor, SSE) and a React app (`web/`). Container and hosting: `Dockerfile`, `deploy/`, `docs/deploy.md`.
+- **NVIDIA Nemotron on Nebius Token Factory:** Super plans, writes and repairs experiments and extracts setup details; Lightning extracts target values. Benchmark v2–v4 used Ultra for planning before its removal on 9 Oct; current runs use Super. Model-returned quotations are checked against source text; warnings remain when validation cannot complete.
+- **Nebius Sandboxes:** snapshot branching for attempts and seeds, network disabled during training, static code checks, fresh harness and independently loaded test labels.
+- **Tavily Search and Extract:** discovery, paper text, setup and error research at run time. Sources carry mode, timestamp and SHA-256. After the verdict, community findings and possible explanations are reported separately; measurable findings may become additional experiments, without altering the original verdict. We do not claim Tavily improves reproduction accuracy.
+- **Python orchestrator and FastAPI, React product:** Overview, Discover, Catalog, Live run and Evidence; recorded checks remain accessible when live admission is paused. The catalog includes successful checks, failed checks and unchecked candidates.
+- **Verification:** smoke checks, baselines, graph ablations and recorded repairs. The harness computes results from predictions; the agent never grades itself.
+- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The production per-call reservations and worker-timeout handling still have documented gaps (`docs/cost_policy_review.md`); we do not advertise a proven hard total-spend bound.
 
-Where Token Factory helped (stated only where the repository shows it, `README.md` section "Where Nebius Token Factory helped"): one endpoint for all three Nemotron models; token counts in the API's `usage` field agreed with the console within its rounding (net 1.256 $ in our log, 1.26 $ in the console on 29 Sep 2026); catalog runs cost between 0.025 $ and 0.093 $ per paper (gross, model cost only, Tavily excluded).
+## Challenges and what we learned
 
-## Challenges
+Separating agent errors from paper results matters more than a confident verdict. A result below a trivial baseline is flagged as an agent fault suspicion. Validation-label leakage, misleading repository advice and missing setup details required checks and documented counter-experiments.
 
-- **Keeping the agent honest.** An agent that writes code and reports numbers can fool itself or the user. The agent therefore delivers predictions only; the harness, the labels and the metric are ours. Leak protection has three layers (no network in training, static code check, labels never in the agent's dataset).
-- **Telling a paper fault from an agent fault.** A low number can mean the paper does not hold or the generated code is wrong. Trivial baselines, the form check and the graph ablation separate the cases; a result below a trivial baseline is reported as "agent fault suspected", not as a finding about the paper.
-- **Method fidelity.** We built an LLM checker for "did the code implement the method" and calibrated it three times. It failed its pre-registered thresholds each time (5/10, 7/10, 8/11; `benchmark/experiments/results/calibration_fidelity_v1.md`, `_v2.md`, `_v3.md`). We stopped calibrating and report axis 2 as "not checked".
-- **Reasoning models that think inside the answer.** Nemotron 3.5 Lightning used its whole token budget on reasoning for a simple extraction and returned no JSON (`docs/nebius_feedback.md`). We split inputs into small sections, raised `max_tokens`, never cache truncated answers and use Super for extraction.
-- **Parallel sandbox load.** Status polling of long operations hit the SDK's 10 s HTTP timeout under parallel load and ended benchmark processes; workaround and suggestions are in `docs/nebius_feedback.md`.
-- **Infrastructure reliability and cost.** Retries with back-off, billing-error detection that stops instead of retrying, and a budget counter that reconciles with the console.
+Our method-fidelity checker missed three calibration thresholds (5/10, 7/10, 8/11). We stopped and label that dimension “not checked”. We also publish failed improvement steps and the separate held-out miss. Small, selected examples are useful demonstrations, but they do not establish performance on unseen papers.
 
-## Accomplishments that we're proud of
-
-- A complete loop from arXiv paper to certificate: Tavily-read claims, Nemotron-written code, Sandbox branches, an independent harness, a two-axis verdict, all watchable live.
-- **Precision, measured against a negative control.** Benchmark v4: six papers, eight paper-claim units, each with and without Tavily, three fresh generations per unit and arm, plus a deliberately wrong "placebo" claim per run (`benchmark/experiments/benchmark_v2.md`, `benchmark_v4.md`, fixed before the runs; evaluation `scripts/eval_benchmark_v2.py`). **0 of 48** placebo verdicts were "reproduced" (also 0 of 48 in each of v2 and v3, runs with different code) and all 16 placebo majorities were "not reproduced" (pre-registered). **7 of 7** "reproduced" verdicts for real claims agreed with the reference (post hoc, small sample). Recall is low and reported as it is: the majority verdict matched the reference for **2 of 8** units with Tavily and **1 of 8** without (pre-registered primary metric; our expectation of an improvement over v3 was not met). Method fidelity was not checked (`benchmark/experiments/results/benchmark_v4.md`).
-- Cheap checks: between 0.025 $ and 0.093 $ of model cost per catalog paper (`README.md`).
-- Every Tavily call is a run-time call that answers a question the agent could not answer otherwise, and every source is stored with a hash so a run stays traceable if the web page changes.
-- Negative results are first-class output: three failed calibrations of our own checker and a v4 that missed its own pre-registered goal are documented in the repository, not hidden (`docs/benchmark_history.md`).
-
-## What we learned
-
-- Free-form agent output needs a verifier the agent cannot touch; verdicts and numbers must not come from the same component.
-- Reasoning models need small tasks and large token limits for extraction, and truncated answers must not be cached.
-- A narrow, well-documented benchmark proves more than a broad one with shaky tasks; eight units are counts with caveats, not a significance test (`README.md`, "Benchmark").
-- Reference verdicts from our own human reference solutions are not independent of our protocol choices; only Shchur et al. give an independent re-measurement for two units (`benchmark/experiments/benchmark_v2.md`).
-- Sandbox branching suits this problem: rollback of a failed attempt is free, and seeds run in parallel from one snapshot.
+Sandbox branches preserve failed attempts and let seeds run from the same snapshot. Stored sources, exact code and independent measurements make a certificate inspectable even after a web page changes.
 
 ## What's next
 
-(`README.md`, "Limitations and roadmap"; `docs/idea_author_notification.md`)
+One person will test the finished product. We will record that person's observations before deciding further live-demo steps or author outreach. No authors have been contacted for this phase, and no email drafting button is part of the product. TimeBase, then SOFTS, are future paper candidates; **no new paid paper runs are being started**.
 
-- Notify paper authors with the certificate (idea only, not built).
-- A method-fidelity checker that passes calibration, and ablations for non-graph models (DLinear, NLinear).
-- More tasks and datasets; a real negative case for the benchmark (Dacrema et al. was considered and dropped because MovieLens-1M gives no negative).
-- The paused Tavily v2: objection search, bundled setup details, explanations of deviations as their own branches.
+Longer-term work includes a calibrated method-fidelity check, more validated datasets and source findings tested as their own experiments. Those are plans, not current capabilities.
 
 ## Built with
 
-Python 3.11, FastAPI, uvicorn, httpx, PyYAML, NVIDIA Nemotron 3.5 Lightning, NVIDIA Nemotron 3 Super 120B-A12B, Nebius Token Factory, Nebius Sandboxes (`contree-sdk`), Tavily (Search, Extract), React 19, Vite, Tailwind CSS, Recharts, React Flow (`@xyflow/react`), Framer Motion, Lucide icons, PyTorch, NumPy, SciPy, Docker, Server-Sent Events, MIT licence.
+Python, FastAPI, NVIDIA Nemotron 3.5 Lightning and Nemotron 3 Super, Nebius Token Factory, Nebius Sandboxes (`contree-sdk`), Tavily Search and Extract, React, Vite, Tailwind CSS, Recharts, React Flow, Framer Motion, PyTorch, NumPy, SciPy, Docker, Server-Sent Events. MIT licence. Exact package versions: `pyproject.toml` and `web/package.json`.
 
-Sources of the list: `pyproject.toml`, `web/package.json`, `README.md` (base image: Python, numpy, scipy, torch).
+## Links and publication status
 
-## Links
-
-| Field | Value |
+| Field | Draft value |
 |---|---|
-| Repository | <https://github.com/Script-hpp/Nullius> (`README.md`) |
-| Licence | MIT, `LICENSE`; must appear in the GitHub "About" box (`CLAUDE.md`, "Hackathon-Regeln"). `<!-- REVIEW: check after the push that GitHub shows the licence -->` |
-| Demo URL | `TBD` (deployment open: `docs/deploy.md`; must stay reachable and free to test until 15 Dec 2026) |
-| Video | `TBD` (YouTube, public, under 3 minutes; script: `docs/video_script.md`) |
-| Mirror (fallback) | `TBD` (static GitHub Pages mirror, replay only, `docs/deploy.md`) |
+| Repository | https://github.com/Script-hpp/Nullius |
+| Demo | Not published. User's proposed hostname: **https://nullius.akca.dev**. Verify reachability before entering it as the demo URL. |
+| Video | Not uploaded. Current recording brief: [video_script.md](video_script.md). |
+| Mirror | Not published. |
 
-## Testing instructions for the judges
+## Testing instructions for judges
 
-Demo URL: `TBD`. No access code is needed: every page and the replay are open, and live checks start with one click. Live checks pause when the daily limit or the budget floor is reached; the page then shows the recorded run (`README.md`, "Product tour").
+Finished recorded checks are open without an access code. Begin with the homepage and open a finished certificate. Open the source and code shortcuts, inspect per-seed measurements and save the PDF through the print preview. The replay is labelled **Recorded run**.
 
-What to try in five minutes:
+Suggested checks:
 
-1. **Overview** (`#overview`): read the scope statement and open a finished certificate (one card per paper claim, earlier runs fold out below it).
-2. **Evidence** (`#/run/<id>`): on the left, what Tavily found and the verified target value with its quote; on the right, what the sandbox measured (mean, spread, seeds, tolerance); below, the branch tree; use the replay to step through the event log. The badge next to each Tavily call shows whether it was live.
-3. **Catalog** (`#/catalog`): candidates with claimed and measured value. Start a **quick check** (3 seeds). One run at a time, daily and per-IP limits apply, and live checks pause when the budget floor is reached (the recorded run is shown then); if another run is active, try again later. Expect a few minutes; the page shows the typical duration (from the timestamps of the exported runs) and links the pre-computed result.
-4. **Live run** (`#/live/<job>`): watch Tavily calls, plan, code, branches and measurements arrive. If the run cannot start, the page offers the last finished run as a replay.
-5. **Discover** (`#/discover`): let Tavily search for new papers on Cora or ETTh1 (real Tavily calls, daily and per-IP limits).
+1. TSMixer: `#/run/disc_2303_06053--20261009-201230`.
+2. SparseTSF: `#/run/disc_2405_00946--20261009-220822`.
+3. GLinear: `#/run/disc_2501_01087--20261010-161916`; read the automated source-validation warnings.
+4. Benchmark page: development 7/8, separate RLinear 0/1 and earlier paper-only v4 are distinct.
+5. Catalog: inspect unsuccessful checks and unchecked candidates as well as target-reached results.
 
-Notes for reading results:
+A fresh live check makes paid service calls and takes minutes. Live admission can pause at limits and offer recorded evidence instead. The planned human test starts with stored evidence; further live-demo steps will be decided after its observations. No fresh run is required to inspect the certificates.
 
-- The green badge reads "Reproduced": the target value was reached according to the harness; **method fidelity is not checked**. Runs of the same claim are grouped under one card on the Overview.
-- "Agent fault suspected" means the result is far below a trivial baseline; it says nothing about the paper.
-- "Not reproducible (setup)" means our setup could not produce a valid run within the attempt limit.
-- Overall statements in live runs are "provisional" because axis 2 is not checked.
-- Only supported datasets work: Cora (Planetoid split), Cora with random splits, ETTh1.
-
-Run the repository locally: `README.md`, section "Setup and usage" (needs a Token Factory key, a Nebius Sandboxes project and a Tavily key).
-
-## Feedback field (Token Factory, AI Cloud, NVIDIA tools and models)
-
-See [`docs/nebius_feedback.md`](nebius_feedback.md). Paste its content into the form field; nothing is duplicated here.
-
-## Differences and conflicts with `README.md` to report
-
-0. **Use cases (added 4 Oct):** "Who uses it, and how" is in the README, this text and `devpost_story.md` with the same three cases. Numbers come from `run_end` and the first and last event of `web/public/data/kipf_gcn_2017/20261002-110746/events.jsonl` (10.4 min, 0.139 $ gross) and the dossier (0.8151 ± 0.0107, target 0.815, 10 seeds). No user numbers or quotes exist and none are claimed.
-
-1. **Demo access:** no access code; the demo is open with a hard budget floor and daily limits (decision of the user, 2026-10-05). The test notes say so.
-2. **Benchmark numbers:** filled from `benchmark/experiments/results/benchmark_v4.md` (v4 is the main result; v2 and v3 are in `docs/benchmark_history.md`). The README and this text give the same v4 numbers. `CLAUDE.md` still describes the v2 pre-registration as "Stand"; the reviewer updates it.
-3. **Nebius Compute VM as further Nebius service:** `docs/deploy.md` recommends Coolify. If the demo runs on Coolify, "Built with" and the "other Nebius services" statement name only Token Factory and Sandboxes. No conflict as long as that holds.
-4. **Speed comparison with OpenRouter free endpoints:** no measured comparison exists; neither document makes a speed claim.
-5. **Screenshots:** all images in `docs/img/` (light and `-dark` variants) and `docs/screenshots/` were retaken headless on 9 Oct 2026 from the current web app (1280 wide, mobile 390 wide); the live-run views replay a recorded run through a stand-in API, since a real live run needs the server and real calls.
-6. **Roles 3 and 6 of Tavily:** the previous README said they are not built; the community check (`src/repro_agent/community.py`, report only) exists, the README now says so. Tavily Research (role 7) and objections as their own experiments are not built.
+Local setup: `README.md`, “Setup and usage”. Feedback form text: [nebius_feedback.md](nebius_feedback.md).
