@@ -36,6 +36,17 @@ UNOFFICIAL_README = "# tsmixer-pytorch\nUnofficial PyTorch re-implementation of 
 
 
 # ---- A: Links im Paper-Text ------------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("text, expected", [
+    ("", None),
+    ("This paper contains no implementation link.", None),
+    ("matrix where aij \n\n1https://github.com/Tiiiger/SGC \n\nvi and", "https://github.com/Tiiiger/SGC"),
+    ("Code is available at https://github.com/lss-1138/SegRNN", "https://github.com/lss-1138/SegRNN"),
+])
+def test_repo_links_come_only_from_the_supplied_paper(text, expected):
+    assert find_repo_url(text) == expected
+    assert all(link.target in text for link in find_repo_links(text))
+
+
 def test_paper_link_with_subfolder_beats_footnote_repo():
     text = PAPER_HEAD + "x " * 3000 + PAPER_FOOT
     links = find_repo_links(text)
