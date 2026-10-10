@@ -1,4 +1,30 @@
-# Demo video script (draft, under 3 minutes)
+# Demo video: current revision brief and historical script
+
+## Current revision brief — 2026-10-10
+
+The next cut follows [jury_walkthrough_and_video_next_steps.md](jury_walkthrough_and_video_next_steps.md), targeting about 2:30. The existing rendered MP4 has not yet been updated. The historical scene list below is not the current recording brief.
+
+**Quality of the Idea:** make the central idea visible in the first 15 seconds and demonstrate it in the experiment sequence. A paper's claim becomes the acceptance criterion for an independently measured experiment.
+
+Suggested opening voice-over:
+
+> Before your team builds on a machine learning paper, can you reach its reported result? Nullius turns a paper's claim into a test. Here, the paper is the test suite.
+
+Suggested voice-over during source, generated code and measurement:
+
+> Nemotron, running on Nebius Token Factory, reads the paper and the authors' code, then writes its own experiment. Nebius Sandboxes run it. Our independent checker measures its predictions against a target fixed before the run.
+
+On screen: **Paper claim → own experiment → independent measurement → evidence certificate.** Show the source, the generated experiment and the actual measurements in that order. Use one recorded run; label it as recorded and label shortened waiting time. If showing a repair, use an actual documented failure and repair from that run.
+
+Tie the demonstrated result to a practical decision: whether a researcher or ML team should investigate the paper further before building on it. Show the PDF certificate as a portable record of the result, setup and evidence. State inference costs as inference costs; do not claim measured time savings or general success rates without evidence.
+
+Evidence for the new cut: TSMixer and SparseTSF are post-development, manually selected examples; 7/8 refers to development units matching the reference verdict. Keep these separate and keep method fidelity marked as unchecked. GLinear is currently being tried and must not appear as a success before its recorded outcome exists.
+
+**User decisions:** one person will test the product at the end. Wait for the test results before deciding the next live-demo steps. Later outreach to authors is an idea for presenting the project and its concrete reproduction findings; no emails have been commissioned or sent, and no email-draft button belongs in the product.
+
+Official guidance: [four equally weighted criteria](https://nebiusglobalaihackathon.devpost.com/updates/46204-here-s-how-judging-works), [pitch and explicit Nebius/NVIDIA roles in audio](https://nebiusglobalaihackathon.devpost.com/updates/46205-how-to-build-a-winning-project).
+
+## Historical script (preserved for reference)
 
 Superseded by the rendered film (reviewer worktree, `video/`); this script is historical.
 

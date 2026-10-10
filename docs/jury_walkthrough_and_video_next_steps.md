@@ -19,6 +19,21 @@ Subjektive Hackathon-Einschaetzung, keine offizielle Bewertung und keine Vorhers
 
 Die Umsetzung wird besser demonstriert; die zugrunde liegende Reproduktionsleistung wurde durch diese Website-Aenderungen nicht neu verbessert oder evaluiert. Das staerkere Framing kommt aus belegbaren Beispielen und leichterer Navigation.
 
+## Naechste Hebel nach den offiziellen Kriterien
+
+Am 2026-10-10 erneut geprueft: [Veranstalter zur Bewertung](https://nebiusglobalaihackathon.devpost.com/updates/46204-here-s-how-judging-works). Vier gleich gewichtete Kriterien, je 1 bis 5 Punkte: Technological Implementation, Design, Potential Impact und Quality of the Idea. Die obige 10er-Skala ist ausschliesslich unsere subjektive Orientierung; Produkterlebnis ist hier eine Unterdimension von Design, kein fuenftes offizielles Kriterium.
+
+Prioritaet nach den bereits umgesetzten Website-Aenderungen:
+
+1. Nach Nutzerentscheidung testet eine Person am Ende den Hauptweg: Ergebnis finden, Bedeutung des Urteils erklaeren, Beleg oeffnen und PDF exportieren. Schwierigkeiten dokumentieren, dann die groesste Huerde beheben. Keine erfundenen Nutzerstimmen oder Zeitersparnisse.
+2. Video und Devpost auf den aktuellen Stand bringen. Im Video ein echter Fehler mit begruendeter Reparatur und unabhaengiger Messung; Erfolg, Kosten und exportiertes Zeugnis lesbar zeigen. Nebius Token Factory, NVIDIA Nemotron und Sandbox-Rolle konkret und auch im Ton nennen. [Veranstalterhinweise](https://nebiusglobalaihackathon.devpost.com/updates/46205-how-to-build-a-winning-project).
+3. Weitere Live-Demo-Schritte warten nach Nutzerentscheidung auf die abschliessenden Testergebnisse. Bekannte Kosten-/Worker-Luecken bleiben dokumentiert; der begrenzte Einmal-Driver eines Paper-Versuchs repariert nicht automatisch die allgemeinen Produktpfade.
+4. Quality of the Idea durch den bestehenden Kern erklaeren: „Das Paper ist die Testsuite“. Ein Claim wird in einen eigenen messbaren Versuch uebersetzt. Quellen, Autorencode und erzeugtes Experiment sichtbar auseinanderhalten; reale Messung macht den Nutzen glaubhaft.
+
+Ein weiterer erfolgreicher Paper-Versuch hilft als zusaetzlicher Beleg. Er ersetzt weder Produktverstaendlichkeit noch reale Nutzerbeobachtung. Weitere grosse Features sind fuer diese Hebel nicht noetig.
+
+Spaeterer Outreach-Gedanke des Nutzers: Autorinnen/Autoren passender Papers mit einem konkreten Reproduktionsbefund auf Nullius aufmerksam machen und das Projekt per Mail vorstellen. Erst nach Auswertung des Befunds und Produkttest weiter konkretisieren. Keine Kontaktaufnahme in dieser Runde beauftragt; der entfernte Email-Draft-Knopf bleibt entfernt.
+
 ## Auf der Website umgesetzt
 
 - Einstieg nennt die Entscheidung: ein Paper pruefen, bevor man darauf aufbaut. Primaeraktion heisst „Watch a check in 30 seconds“ und ist als aufgezeichnet, mit echten Messungen und ohne Anmeldung beschrieben.
@@ -39,13 +54,13 @@ Ziel: ca. 2:30 Minuten, ein klarer Hauptweg. Pro Einstellung eine lesbare Aussag
 
 | Zeit | Bild / konkreter Weg | Aussage fuer die Jury |
 |---|---|---|
-| 0:00–0:15 | Bestehender Hook, Paper-Claim und Messpunkte | „Before you build on a paper, check its claim.“ Wer profitiert: Forschende und ML-Teams. |
+| 0:00–0:15 | Bestehender Hook, Paper-Claim und Messpunkte | „Before your team builds on a machine learning paper, can you reach its reported result? Nullius turns a paper's claim into a test. Here, the paper is the test suite.“ Zielgruppe und Kernidee zusammen erklaeren. |
 | 0:15–0:35 | Startseite → aufgezeichneter Check | Ein echtes Ergebnis in wenigen Klicks. Aufzeichnung erkennbar kennzeichnen. |
-| 0:35–1:05 | Quelle → eigenes Programm → Crash → Reparatur → Messung | „Reads the paper and authors’ code. Writes its own experiment. Measures independently.“ Original-Autorencode wird als Text gelesen. |
+| 0:35–1:05 | Quelle → eigenes Programm → dokumentierter Crash/Reparatur → Messung | „Nemotron, running on Nebius Token Factory, reads the paper and the authors' code, then writes its own experiment. Nebius Sandboxes run it. Our independent checker measures its predictions against a target fixed before the run.“ Original-Autorencode wird als Text gelesen; nur echte dokumentierte Reparatur zeigen. |
 | 1:05–1:20 | TSMixer und SparseTSF, jeweils ein Ergebnis gross | Zwei weitere Papers ausserhalb der acht Entwicklungseinheiten: 0.3624 vs. 0.361 und 0.3653 vs. 0.359. Drei Wiederholungen je Beispiel, Toleranz ±0.01. Lesbarer kurzer Hinweis: „Selected after development · preliminary“. |
 | 1:20–1:35 | Zahl 7/8 und separate Held-out-Zahl | „7 of 8 development units matched the reference verdict.“ In-sample sichtbar neben 7/8; RLinear-Held-out 0/1 getrennt. Das ist Uebereinstimmung mit dem Referenzurteil, keine allgemeine Erfolgsquote. |
 | 1:35–1:50 | Claim-Regler; Messpunkte bleiben stehen | „Change the claim. The measurements stay.“ Dann: „48 planted false targets. None confirmed. Benchmark v4.“ |
-| 1:50–2:15 | Quelle, Code, Messungen, Beleg und Kostenbeleg | Die Jury kann den Beleg selbst verfolgen. Inferenzkosten als solche beschriften; keine Garantie eines harten Gesamtbudgets suggerieren. |
+| 1:50–2:15 | Quelle, Code, Messungen, PDF-Export und Kostenbeleg | Die Jury kann den Beleg selbst verfolgen und das Zeugnis mitnehmen. Praktische Entscheidung erklaeren: das Paper weiter untersuchen, bevor man darauf aufbaut. Inferenzkosten als solche beschriften; keine Garantie eines harten Gesamtbudgets suggerieren. |
 | 2:15–2:30 | Motto + echte Demo-Adresse | Eine eindeutige Aktion: aufgezeichneten Check ansehen oder belegte Ergebnisse erkunden. |
 
 Die Zeitfenster sind Schnittziele, keine bereits gerenderte Timeline. 10–15 Sekunden der bisherigen wiederholten Ablauferklaerungen kuerzen und fuer neue Ergebnisse einsetzen. Veralteten Zugangscode entfernen. Aktuelle Modellrollen verwenden; historische Kostenbelege mit historischen Modellen als historischen Lauf zeigen.
