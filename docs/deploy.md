@@ -1,5 +1,7 @@
 # Deployment: Demo-URL bis mindestens 15.12.2026
 
+**Aktueller Deploy-Check (10.10.):** [Pruefergebnis und Coolify-Konfiguration](deploy_readiness_20261010.md). Fuer das erste oeffentliche Deployment `deploy/coolify-preview.env.example` verwenden: Katalog, Evidenz, Replays und PDF funktionieren; kostenpflichtige Starts sind gesperrt. Die Live-Kostenbremsen sind noch keine harten Ausgabenobergrenzen ([Befunde](cost_policy_review.md)).
+
 Official Rules: Demo muss bis 15.12.2026 erreichbar und kostenlos testbar sein (Bewertung 01.–15.12.). Zwei Schichten: **Live-Server** (Container mit API und Web-App) und **statischer Spiegel** auf GitHub Pages als Absicherung (nur Exporte, Replay, keine Live-Steuerung). Stand der Preise: Nebius-Preisseite am 2026-10-01 abgerufen; Werte mit **[zu prüfen]** vor der Buchung gegenlesen.
 
 ## Was der Dienst braucht

@@ -338,6 +338,8 @@ Pflicht bei Einreichung:
 - [ ] Öffentliches Repo mit Open-Source-Lizenz
 - [ ] Demo-URL
 - [ ] Demo-Video (max. 3 Min.)
+- **Video-Entscheidung 2026-10-10:** Separate Variante 2 (2:52.5, Python-generierte Musik, keine Stimme) liegt im benachbarten Ordner `nullius-video-review-20261010/video/out/film_v8_updated_REVIEW.mp4`. Nutzer findet sie besser und schneidet selbst weiter. Original v8 und seine Quellen im Worktree `reviewer` unveraendert lassen; Variante 2 nicht als Ersatz mergen oder hochladen.
+- **Coolify-Check 2026-10-10:** Nutzer deployt selbst. Web-/Docker-Build, Browsernavigation und API-/Kosten-Tests bestanden; PDF-Druckknopf fuer die Produktions-CSP repariert. Erstes Deployment mit `deploy/coolify-preview.env.example` (beide Tages-Startlimits 0). Live-Kostenobergrenzen bleiben unbewiesen; Befunde und Anleitung: `docs/deploy_readiness_20261010.md`. Keine bezahlten Laeufe zur Deploy-Pruefung starten.
 - [ ] Feedback zu Nebius Token Factory, AI Cloud und NVIDIA-Tools/Modellen (Pflichtbestandteil der Einreichung laut Devpost; Preis: 10 × 100 $; Entwurf `docs/nebius_feedback.md`). Abgabe: 30.10.2026, 10:00 PDT
 - [ ] README: Architektur, Benchmark-Ergebnisse, Hinweis auf verwandte Arbeiten (PaperBench, CORE-Bench) und unser Unterschied
 

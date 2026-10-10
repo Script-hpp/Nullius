@@ -23,11 +23,14 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
   const canRun = live.available && e.status !== 'nicht_laufbar'
   const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
   const recorded = live.latestLive ?? e.run_id
+  const href = evidenceHref(e)
   return (
-    <article className="rounded-xl border border-line bg-surface p-6">
+    <article className={`relative rounded-xl border border-line bg-surface p-6 ${href ? 'transition-colors hover:border-line-strong focus-within:border-line-strong' : ''}`}>
       <p className="m-0 mb-3 text-sm font-semibold text-fg">Dataset check: {e.task ?? e.dataset ?? 'Not specified'}</p>
       <div className="flex items-start justify-between gap-4">
-        <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">{e.title}</h3>
+        <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">
+          {href ? <a href={href} className="text-inherit no-underline after:absolute after:inset-0 after:rounded-xl focus-visible:underline focus-visible:underline-offset-4">{e.title}</a> : e.title}
+        </h3>
         <span className="shrink-0 font-mono text-[10px] text-muted">{e.arxiv_id}</span>
       </div>
       {samePaper && <p className="mb-0 mt-2 text-[12px] leading-relaxed text-muted">Same paper, separate dataset check. This result is for {e.task ?? e.dataset}.</p>}
@@ -43,11 +46,11 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
         <div className="mt-3 space-y-1">
           <Badge tone="gray" icon={<Library className="w-4 h-4" />} title="A paper from our benchmark with a known reference result">Reference paper</Badge>
           <p className="m-0 text-[12px] leading-relaxed text-muted">
-            {referenceShort(e.benchmark)} <a href="#benchmark" className="text-fg-3 hover:text-fg-max">Benchmark results</a>
+            {referenceShort(e.benchmark)} <a href="#benchmark" className="relative z-10 text-fg-3 hover:text-fg-max">Benchmark results</a>
           </p>
         </div>
       )}
-      <PaperHead head={head} compact />
+      <div className="relative z-10"><PaperHead head={head} compact /></div>
 
       {v ? (
         <div className="mt-4 space-y-4">
@@ -67,7 +70,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
       )}
 
       {canRun && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="relative z-10 mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <button onClick={live.onRun} disabled={!!why || live.starting} title={why}
             className="inline-flex items-center gap-2 rounded-lg border border-line-strong px-3 py-1.5 text-[12px] font-medium text-fg hover:bg-raised transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
             {live.starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}Run reproduction
@@ -79,7 +82,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px]">
+      <div className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px]">
         <span className="inline-flex items-center gap-1.5 text-fg-4" title={e.jury ? translateJuryReason(e.jury.reason) : undefined}>
           {e.jury?.ready && e.run_id ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleSlash className="w-3.5 h-3.5" />}
           {v && !e.run_id ? 'Evidence not published here' : e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${translateJuryReason(e.jury.reason)}`) : 'Not jury ready: not run yet'}

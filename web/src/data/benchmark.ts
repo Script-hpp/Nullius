@@ -5,7 +5,7 @@ export const REPO_BLOB = 'https://github.com/Script-hpp/Nullius/blob/main'
 export const SOURCES = {
   v4: 'benchmark/experiments/results/benchmark_v4.md',
   cg: 'benchmark/experiments/results/recall_cg_v1.md',
-  readme: 'README.md#our-own-small-bitter-lesson',
+  readme: 'docs/evaluation_notes.md#our-own-small-bitter-lesson',
 } as const
 
 export type UnitId = 'kipf' | 'sgc' | 'dlinear' | 'nlinear' | 'shchurGcn' | 'shchurGat' | 'velGat' | 'dgi'

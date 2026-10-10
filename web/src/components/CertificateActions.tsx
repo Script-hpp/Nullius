@@ -12,6 +12,7 @@ export function CertificateActions({ run }: { run: RunData }) {
     preview.document.open()
     preview.document.write(certificateHtml(run, location.href))
     preview.document.close()
+    preview.document.getElementById('certificate-print')?.addEventListener('click', () => preview.print())
     preview.focus()
     setNotice('Certificate opened. Choose “Save as PDF / Print” in the new tab.')
   }

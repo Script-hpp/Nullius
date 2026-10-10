@@ -88,6 +88,10 @@ In v4, all **7 target-reached verdicts** for real claims agreed with our referen
 
 [Author-code evaluation](benchmark/experiments/results/recall_cg_v1.md) · [Benchmark v4](benchmark/experiments/results/benchmark_v4.md) · [Benchmark history](docs/benchmark_history.md) · [Detailed evaluation and research notes](docs/evaluation_notes.md)
 
+## Our own small bitter lesson
+
+Reading the authors' code improved reference-verdict agreement on our eight development units. This was an in-sample observation; the separate held-out RLinear check missed. [Read the full lesson, evidence and limits](docs/evaluation_notes.md#our-own-small-bitter-lesson).
+
 ## How it works
 
 ```mermaid
