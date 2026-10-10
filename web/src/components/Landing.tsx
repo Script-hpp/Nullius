@@ -7,6 +7,7 @@ import { REPO } from '../data/benchmark'
 import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
+import { RecentChecks } from './RecentChecks'
 
 // Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke (under a second), above one sentence, one button and one quiet link.
 // Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
@@ -39,13 +40,15 @@ function Hero() {
           <span className="block text-fg">we measure them.</span>
         </h1>
         <p className="mx-auto mb-0 mt-7 max-w-xl text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
-          Nullius rebuilds a paper&rsquo;s experiment and measures it independently. Tavily researches live.
+          Before you build on a paper, check its claim. Nullius rebuilds the experiment and measures it independently.
         </p>
       </div>
       <div className="mt-10 flex flex-col items-center gap-3">
         <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-          <Play className="h-4 w-4" aria-hidden />See it in action
+          <Play className="h-4 w-4" aria-hidden />Watch a check in 30 seconds
         </a>
+        <span className="text-[12px] text-muted">Recorded run · real code, sources and measurements · no sign-in</span>
+        <a href="#catalog" className="mt-1 text-sm text-fg-4 underline underline-offset-4 hover:text-fg">Explore checked papers</a>
       </div>
       <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14">
         <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
@@ -108,6 +111,7 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
     <div className="landing relative min-h-screen font-sans">
       <TopBar />
       <Hero />
+      <RecentChecks />
       <Problem run={run} />
       <Steps />
       <CertificatePreview run={run} />

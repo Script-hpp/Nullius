@@ -140,5 +140,14 @@
   "mode": "nachbau_autorencode",
   "catalog_id": "disc_2303_06053",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2405_00946--20261009-220822",
+  "paper_id": "disc_2405_00946",
+  "title": "SparseTSF: Modeling Long-term Time Series Forecasting with 1k Parameters",
+  "timestamp": "20261009-220822",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2405_00946",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

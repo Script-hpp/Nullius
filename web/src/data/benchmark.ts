@@ -59,7 +59,7 @@ export const README_TAVILY = `${REPO_BLOB}/README.md#how-we-use-tavily`
 // Scope limit stated in the README ("Limitations and roadmap") and CLAUDE.md; shown next to LIMITS on the start page.
 export const SCOPE_LIMIT = { title: 'Narrow scope', text: 'Graph and time-series papers on CPU, on datasets with a ready-made task (Cora, ETTh1). No GPU training, no large models. A new dataset needs a task and a harness built once.' }
 
-// Links that do not exist yet. They are shown as "TBD" until the submission links are known; nothing is invented.
+// Submission links appear in the footer once supplied; unpublished destinations are omitted.
 export const SUBMISSION_LINKS: { label: string; href: string | null }[] = [
   { label: 'Demo video', href: null },
   { label: 'Devpost submission', href: null },

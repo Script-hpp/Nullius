@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle, Search } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -7,7 +7,7 @@ import { useHead } from '../useHead'
 import { NextStep, PageIntro } from './page'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
-import { translateJuryReason, translateReason } from '../labels'
+import { catalogLabel, translateJuryReason, translateReason } from '../labels'
 import { startReproduction, useJobInfo, useLiveStatus } from '../live'
 import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
 import { referenceShort } from '../referenceBench'
@@ -17,7 +17,7 @@ const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
 type LiveControl = { available: boolean; busy: boolean; paused: boolean; starting: boolean; error: string | null; errorIsNotice: boolean; latestLive: string | null; onRun: () => void }
 
-function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
+function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveControl; samePaper: boolean }) {
   const v = e.verdict
   const head = useHead(e.id)
   const canRun = live.available && e.status !== 'nicht_laufbar'
@@ -25,17 +25,19 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
   const recorded = live.latestLive ?? e.run_id
   return (
     <article className="rounded-xl border border-line bg-surface p-6">
+      <p className="m-0 mb-3 text-sm font-semibold text-fg">Dataset check: {e.task ?? e.dataset ?? 'Not specified'}</p>
       <div className="flex items-start justify-between gap-4">
         <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">{e.title}</h3>
         <span className="shrink-0 font-mono text-[10px] text-muted">{e.arxiv_id}</span>
       </div>
+      {samePaper && <p className="mb-0 mt-2 text-[12px] leading-relaxed text-muted">Same paper, separate dataset check. This result is for {e.task ?? e.dataset}.</p>}
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
         <span>Task <span className="text-fg-3">{e.task ?? '–'}</span></span>
         <span>Claim <span className="text-fg-3">{e.claim.method ?? '–'}</span></span>
         <span>{STATUS_TEXT[e.status]}</span>
       </div>
       {e.origin !== 'reference' && e.checked_at && (
-        <p className="m-0 mt-3 flex items-center gap-1.5 text-[12px] text-muted"><Search className="h-3 w-3" aria-hidden /><span>Found by Tavily · {new Date(e.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span></p>
+        <p className="m-0 mt-3 text-[12px] text-muted">Checked · {new Date(e.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
       )}
       {e.origin === 'reference' && (
         <div className="mt-3 space-y-1">
@@ -79,8 +81,8 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px]">
         <span className="inline-flex items-center gap-1.5 text-fg-4" title={e.jury ? translateJuryReason(e.jury.reason) : undefined}>
-          {e.jury?.ready ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleSlash className="w-3.5 h-3.5" />}
-          {e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${translateJuryReason(e.jury.reason)}`) : 'Not jury ready: not run yet'}
+          {e.jury?.ready && e.run_id ? <CheckCircle2 className="w-3.5 h-3.5" /> : <CircleSlash className="w-3.5 h-3.5" />}
+          {v && !e.run_id ? 'Evidence not published here' : e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${translateJuryReason(e.jury.reason)}`) : 'Not jury ready: not run yet'}
         </span>
         <span className="flex flex-wrap items-center gap-4">
           <EvidenceLink entry={e}>View evidence</EvidenceLink>
@@ -97,7 +99,7 @@ function CatalogCard({ e, live }: { e: CatalogEntry; live: LiveControl }) {
 
 export function Catalog() {
   const entries = useCatalog()
-  const [juryOnly, setJuryOnly] = useState(true)
+  const [juryOnly, setJuryOnly] = useState(false)
   const { available, info, refresh } = useJobInfo()
   const { status, refresh: refreshStatus } = useLiveStatus()
   const repro = statusFor(status, 'reproduction')
@@ -117,13 +119,22 @@ export function Catalog() {
       refresh(); refreshStatus()
     } finally { setStarting(null) }
   }
-  const shown = useMemo(() => (entries ?? []).filter((e) => !juryOnly || e.jury?.ready), [entries, juryOnly])
+  const shown = useMemo(() => {
+    const rank = (e: CatalogEntry) => {
+      if (!e.verdict) return 5
+      const tone = catalogLabel(e.verdict.urteil, e.verdict.gesamtaussage).tone
+      return ({ green: 0, amber: 1, red: 2, violet: 3, gray: 4 })[tone]
+    }
+    return (entries ?? [])
+      .filter((e) => !juryOnly || (e.jury?.ready && e.run_id))
+      .sort((a, b) => rank(a) - rank(b) || (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))
+  }, [entries, juryOnly])
   const total = entries?.length ?? 0
 
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
-        what="Papers found and read with Tavily, each run end to end."
+        what="Finished checks, failed runs and candidates awaiting a check. Open a result to inspect its evidence."
         look="Open an entry marked Jury ready, or start a quick check." />
 
       <details className="group mb-10 border-t border-line pt-6">
@@ -133,7 +144,7 @@ export function Catalog() {
             <ol className="m-0 list-none space-y-3 p-0 text-[15px] leading-relaxed text-fg-4">
               <li><span className="mr-3 font-mono text-fg-3">01</span><span className="font-medium text-fg">Collect.</span> Reference papers and Tavily finds with a quotable claim.</li>
               <li><span className="mr-3 font-mono text-fg-3">02</span><span className="font-medium text-fg">One full run.</span> Rebuilt by the agent, measured by the harness.</li>
-              <li><span className="mr-3 font-mono text-fg-3">03</span><span className="font-medium text-fg">Listed.</span> Jury ready: the run finished cleanly and implemented the method.</li>
+              <li><span className="mr-3 font-mono text-fg-3">03</span><span className="font-medium text-fg">Listed.</span> Jury ready: a finished check with measurements and evidence to explore. Method fidelity is not verified.</li>
             </ol>
             <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A live check can differ from the stored result: the agent writes new code each time.</p>
           </div>
@@ -157,7 +168,7 @@ export function Catalog() {
         {available && info?.busy && (
           <span className="text-[12px] text-tone-amber">A {info.kind === 'discovery' ? 'discovery' : 'reproduction'} run is active. Live runs are one at a time.</span>
         )}
-        <span className={label}>{entries ? `${shown.length} of ${total} shown` : 'Loading'}</span>
+        <span className={label}>{entries ? `${shown.length} of ${total} shown · Reproduced first` : 'Loading'}</span>
       </div>
       <p className="mb-6 mt-0 max-w-3xl text-[13px] leading-relaxed text-muted">
         {available ? 'Live checks need no sign-in.' : 'Live checks are off here; finished runs and replays are open.'}
@@ -171,7 +182,7 @@ export function Catalog() {
 
       <div className="grid gap-5 md:grid-cols-2">
         {shown.map((e) => (
-          <CatalogCard key={e.id} e={e} live={{
+          <CatalogCard key={e.id} e={e} samePaper={(entries ?? []).filter((other) => other.arxiv_id === e.arxiv_id).length > 1} live={{
             available, busy: !!info?.busy, paused, starting: starting === e.id, error: error?.id === e.id ? error.msg : null, errorIsNotice: !!error?.notice,
             latestLive: latestLive(e.id), onRun: () => run(e.id),
           }} />

@@ -2,6 +2,7 @@ import { CheckCircle2, MinusCircle, Target } from 'lucide-react'
 import { Badge } from './ui'
 import { Glossed } from './Glossed'
 import { TwoModes } from './TwoModes'
+import { RecentChecks } from './RecentChecks'
 import { NextStep, PageIntro } from './page'
 import { useBenchmark, type BenchArm, type BenchUnit, type BenchVersion } from '../benchmark'
 import { RESULT, de2en } from '../labels'
@@ -158,11 +159,12 @@ export function Benchmark() {
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
         what="Papers with known results: how often does Nullius agree?"
-        look={latest ? 'Precision first: no wrong claim was ever certified.' : 'Results appear once the evaluation has run.'} />
+        look={latest ? 'Start with target agreement, then inspect the false-target checks and recent catalog evidence.' : 'Results appear once the evaluation has run.'} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>
         : latest ? (
           <>
             <TwoModes />
+            <RecentChecks />
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
               <Tiles v={latest} />

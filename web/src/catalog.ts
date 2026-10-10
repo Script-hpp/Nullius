@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getText } from './data'
+import { getText, loadIndex } from './data'
 import type { ReferenceBenchmark } from './referenceBench'
 
 export type CatalogVerdict = {
@@ -40,7 +40,14 @@ let cached: Promise<CatalogEntry[]> | null = null
 
 // catalog.json is static and written by scripts/export_site_data.py; missing file = empty catalog.
 export function loadCatalog(): Promise<CatalogEntry[]> {
-  cached ??= getText('catalog.json', true).then((t) => (t ? (JSON.parse(t) as CatalogEntry[]) : []))
+  cached ??= Promise.all([getText('catalog.json', true), loadIndex()]).then(([text, runs]) => {
+    const published = new Set(runs.map((r) => r.id))
+    return (text ? JSON.parse(text) as CatalogEntry[] : []).map((entry) => ({
+      ...entry,
+      // The catalog can contain checks whose artifacts have not been published in this build.
+      run_id: entry.run_id && published.has(entry.run_id) ? entry.run_id : null,
+    }))
+  })
   return cached
 }
 export const reloadCatalog = () => { cached = null; return loadCatalog() }

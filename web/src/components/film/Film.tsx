@@ -87,7 +87,7 @@ export function Film({ events, dossier, claim, title, tone, resultLabel, sentenc
             </button>
           ))}
         </div>
-        {took && <span className="ml-auto text-[12px] text-muted">The real run took {took}. This film shows it in 30 seconds.</span>}
+        <span className="ml-auto text-[12px] text-muted">Recorded run.{took && ` The real run took ${took}.`} This replay shows it in 30 seconds.</span>
       </div>
     </section>
   )

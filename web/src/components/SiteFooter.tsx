@@ -18,7 +18,7 @@ export function SiteFooter({ className = '' }: { className?: string }) {
         <li><a href="#benchmark" className={a}>Benchmark</a></li>
         <li><a href={REPO} target="_blank" rel="noreferrer" className={a}>GitHub</a></li>
         <li><a href={`${REPO_BLOB}/README.md`} target="_blank" rel="noreferrer" className={a}>README</a></li>
-        {SUBMISSION_LINKS.map((l) => (
+        {SUBMISSION_LINKS.filter((l) => l.href).map((l) => (
           <li key={l.label}>
             {l.href
               ? <a href={l.href} target="_blank" rel="noreferrer" className={a}>{l.label}</a>

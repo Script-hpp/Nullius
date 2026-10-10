@@ -167,6 +167,14 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <StepList steps={steps} onStep={onStep} />
               <p className="mb-0 mt-3 text-[12px] text-muted">Click a step to open it.</p>
             </section>
+            <section aria-label="Use this check" className="rounded-xl border border-line bg-surface p-6">
+              <h3 className={h3}>Before you build on this result</h3>
+              <p className="mb-0 mt-3 max-w-2xl text-[14px] leading-relaxed text-fg-4">Choosing a paper to build on? Start with its claim and our measurement above. Open the sources to see where the target came from, then inspect the program and repeated runs. This helps researchers decide what to investigate next. Matching the number still needs a review of the method.</p>
+              <div className="mt-5 flex flex-wrap gap-4">
+                <button onClick={() => goTab('sources')} className="cursor-pointer border-0 bg-transparent p-0 text-sm text-fg underline underline-offset-4">Inspect sources &amp; setup</button>
+                <button onClick={() => goTab('code')} className="cursor-pointer border-0 bg-transparent p-0 text-sm text-fg underline underline-offset-4">Inspect code &amp; measurements</button>
+              </div>
+            </section>
             {nExp > 0 && (
               <section aria-label="Findings that became experiments">
                 <h3 className={h3}>Findings that became experiments</h3>

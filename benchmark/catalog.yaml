@@ -457,12 +457,12 @@ candidates:
       protocol_reason: Protokoll-Zitat fehlt oder steht nicht im Text
       column_check: unchecked
       protocol_evidence: Protokoll nicht belegt
-    github_url: null
-    feasibility: no_repo
+    github_url: https://github.com/google-research/google-research/tree/HEAD/tsmixer
+    feasibility: ok
     source_url: https://arxiv.org/pdf/2303.06053
     protocol: unklar
     found_by: tavily
-    reason: kein passendes Repo gefunden
+    reason: Repository source verified from the completed run dossier
     community:
     - url: https://github.com/giuliomattolin/tsmixer-pytorch
       title: 'GitHub - giuliomattolin/tsmixer-pytorch: PyTorch Implementation of "TSMixer: An All-MLP Architecture for Time
@@ -649,7 +649,7 @@ candidates:
       protocol_quote: The dataset splitting follows the procedures of FITS and Autoformer, where the ETT datasets are divided
         into proportions of 6:2:2
       protocol_reason: The paper states that ETT datasets are split into 6:2:2 proportions, matching the ETTh1 protocol.
-    github_url: https://github.com/lzlptm/SparseTSF
+    github_url: https://github.com/lss-1138/SparseTSF
     repo_status: official
     feasibility: ok
     source_url: https://arxiv.org/abs/2405.00946
