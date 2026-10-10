@@ -1,6 +1,6 @@
 # Repository publication review — 10 Oct 2026
 
-Read-only GitHub inspection and local checks, with README and presentation edits. Visibility remains private; no deployment or visibility change performed. Push to main is the final step after local validation, following the user’s push question.
+Read-only GitHub inspection and local checks, with README and presentation edits. Visibility remains private; no deployment or visibility change performed. After local validation, commit `af76980` was fast-forwarded into main and pushed successfully, including the ten prior local commits.
 
 - `git fetch --all --prune` completed. Remote `main` is `c8b2021`; local `main` is `e925298`, ten commits ahead and contains remote main. New presentation work was prepared in the CEO checkout for a fast-forward into main.
 - GitHub reports `Script-hpp/Nullius` as **PRIVATE**. Description exists; homepage is empty. The user's proposed hostname is `nullius.akca.dev`, not published yet.
@@ -11,4 +11,4 @@ Read-only GitHub inspection and local checks, with README and presentation edits
 - Some fixtures quote public authors' contact details or local paths from upstream READMEs; they are source evidence, not the private outreach list. Existing local documentation also includes historical absolute paths. They were not rewritten or removed from history by this presentation update.
 - Current screenshots and PDF were captured from stored production evidence with `/api/` calls blocked. No paid paper run or fresh discovery search was launched.
 
-README results, video narration and Devpost drafts now separate the 7/8 development agreement, RLinear 0/1 held-out miss, later selected catalog examples and paper-only v4 controls. Publication and the planned human usability test remain pending.
+README results, video narration and Devpost drafts now separate the 7/8 development agreement, RLinear 0/1 held-out miss, later selected catalog examples and paper-only v4 controls. Public visibility, hosted publication and the planned human usability test remain pending.

@@ -109,4 +109,3 @@ Each version ran different code; v2 and v3 in full: [`docs/benchmark_history.md`
 - The v4 evaluation covered Cora and ETTh1, CPU only; DGI was meant as a Tavily holdout and is no longer clean ([`tavily_v2_holdout.md`](../benchmark/experiments/tavily_v2_holdout.md)).
 
 All numbers in this README and in the video come from production runs on Token Factory.
-
