@@ -14,10 +14,10 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
+
+from repro_agent.catalog import load_catalog
 
 DATASETS = ("ETTh1", "Cora", "CiteSeer")
 
@@ -31,10 +31,9 @@ def known_ids(root: Path = ROOT) -> dict[str, str]:
         for m in pat.finditer(papers.read_text()):
             found.setdefault(m.group(1), "benchmark/papers.yaml")
     catalog = root / "benchmark" / "catalog.yaml"
-    if catalog.exists():
-        for e in yaml.safe_load(catalog.read_text()) or []:
-            if isinstance(e, dict) and e.get("arxiv_id"):
-                found.setdefault(str(e["arxiv_id"]), "benchmark/catalog.yaml")
+    for e in load_catalog(catalog):
+        if isinstance(e, dict) and e.get("arxiv_id"):
+            found.setdefault(str(e["arxiv_id"]), "benchmark/catalog.yaml")
     return found
 
 

@@ -16,6 +16,17 @@ def test_known_ids_reads_benchmark():
     assert "2305.10721" in di.known_ids()
 
 
+def test_known_ids_reads_catalog_candidates(tmp_path):
+    benchmark = tmp_path / "benchmark"
+    benchmark.mkdir()
+    (benchmark / "catalog.yaml").write_text(
+        "candidates:\n- id: disc_2405_00946\n  arxiv_id: '2405.00946'\n"
+    )
+    known = di.known_ids(tmp_path)
+    assert known["2405.00946"] == "benchmark/catalog.yaml"
+    assert di.split_ids("2405.00946v2", known) == ([], {"2405.00946": "benchmark/catalog.yaml"})
+
+
 def test_main_passes_seed_ids(capsys):
     class FakeAgent:
         def discover(self, datasets, seed_ids=None, on_event=None):
