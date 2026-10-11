@@ -102,7 +102,6 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
 export function Catalog() {
   const entries = useCatalog()
-  const [juryOnly, setJuryOnly] = useState(false)
   const { available, info, refresh } = useJobInfo()
   const { status, refresh: refreshStatus } = useLiveStatus()
   const repro = statusFor(status, 'reproduction')
@@ -129,15 +128,15 @@ export function Catalog() {
       return ({ green: 0, amber: 1, red: 2, violet: 3, gray: 4 })[tone]
     }
     return (entries ?? [])
-      .filter((e) => !juryOnly || (e.jury?.ready && e.run_id))
+      .filter((e) => e.jury?.ready && e.run_id)
       .sort((a, b) => rank(a) - rank(b) || (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))
-  }, [entries, juryOnly])
+  }, [entries])
   const total = entries?.length ?? 0
 
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
-        what="Finished checks, failed runs and candidates awaiting a check. Open a result to inspect its evidence."
+        what="Finished checks with measurements and published evidence. Open a result to inspect its evidence."
         look="Open an entry marked Jury ready, or start a quick check." />
 
       <details className="group mb-10 border-t border-line pt-6">
@@ -164,10 +163,7 @@ export function Catalog() {
       </details>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-3">
-          <input type="checkbox" checked={juryOnly} onChange={(ev) => setJuryOnly(ev.target.checked)} className="accent-fg-3" />
-          Jury-ready only
-        </label>
+        <span className="text-sm text-fg-3">Jury-ready papers</span>
         {available && info?.busy && (
           <span className="text-[12px] text-tone-amber">A {info.kind === 'discovery' ? 'discovery' : 'reproduction'} run is active. Live runs are one at a time.</span>
         )}
@@ -194,7 +190,7 @@ export function Catalog() {
       {entries && !shown.length && (
         <div className="rounded-xl border border-line bg-surface p-6 text-[13px] text-muted">
           <Badge tone="gray">Nothing to show</Badge>
-          <p className="mt-2">{total ? 'No entry is jury ready yet. Turn the filter off to see every candidate and why it is held back.' : 'The catalog is empty.'}</p>
+          <p className="mt-2">No jury-ready checks have been published yet.</p>
         </div>
       )}
       {(() => {

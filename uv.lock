@@ -839,6 +839,8 @@ dependencies = [
     { name = "contree-sdk" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "tavily-python" },
@@ -847,8 +849,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pytest" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -859,6 +859,7 @@ requires-dist = [
     { name = "contree-sdk", specifier = ">=0.3.6" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "numpy", specifier = ">=2.4.6" },
     { name = "python-dotenv", specifier = ">=1.2.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "tavily-python", specifier = ">=0.8.4" },
@@ -867,7 +868,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "numpy", specifier = ">=2.4.6" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "scipy", specifier = ">=1.17.1" },
 ]

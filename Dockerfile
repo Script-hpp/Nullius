@@ -15,7 +15,7 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1 PATH="/app/.venv/
 WORKDIR /app
 COPY pyproject.toml uv.lock LICENSE README.md ./
 COPY src/ src/
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev && .venv/bin/python -c "from repro_agent.loop import Orchestrator"
 COPY benchmark/ benchmark/
 COPY deploy/serve.py deploy/serve.py
 COPY --from=web /web/dist web/dist
