@@ -169,7 +169,10 @@ class GuardMiddleware:
                 names = {k.lower() for k, _ in headers}
                 is_html = any(k.lower() == b"content-type" and v.startswith(b"text/html") for k, v in headers)
                 csp = page_csp if (is_html and page_csp) else API_CSP
-                headers += [(k, v) for k, v in security_headers(csp) if k not in names]
+                # StaticFiles omits Content-Type on 304. Keep the cached response's
+                # CSP instead of overwriting the HTML policy with the API policy.
+                headers += [(k, v) for k, v in security_headers(csp) if k not in names
+                            and not (message["status"] == 304 and k == b"content-security-policy")]
                 if path.startswith("/api/") and b"cache-control" not in names:
                     headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": headers}

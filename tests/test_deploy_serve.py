@@ -70,6 +70,14 @@ def test_page_csp_hashes_inline_script_and_headers_reach_the_page(tmp_path):
         c = TestClient(s.app)
         page = c.get("/")
         assert page.headers["content-security-policy"] == csp and page.headers["x-content-type-options"] == "nosniff"
+        for path in ("/", "/index.html", "/data/index.json"):
+            original = c.get(path)
+            for validator in (("if-none-match", "etag"), ("if-modified-since", "last-modified")):
+                cached = c.get(path, headers={validator[0]: original.headers[validator[1]]})
+                assert cached.status_code == 304, cached.text
+                # A 304 must preserve the cached representation's CSP, not replace it with the API policy.
+                assert "content-security-policy" not in cached.headers, (path, dict(cached.headers))
+                assert cached.headers["x-content-type-options"] == "nosniff"
         assert c.get("/data/index.json").headers["content-security-policy"].startswith("default-src 'none'")   # Nicht-HTML: strenge Policy
         assert c.get("/docs").status_code == 404 and c.get("/api/health").json() == {"ok": True}
         print("ok")
