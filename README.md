@@ -11,7 +11,7 @@ A machine learning paper makes a claim. Nullius writes an experiment, runs it in
 
 **NVIDIA Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily**
 
-[Explore the evidence](#three-recent-checks) · [Run locally](#run-locally) · [How it works](#how-it-works) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
+[Try the demo](https://nullius.akca.dev/) · [Explore the evidence](#three-recent-checks) · [Run locally](#run-locally) · [How it works](#how-it-works) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
 
 </div>
 
@@ -22,7 +22,7 @@ A machine learning paper makes a claim. Nullius writes an experiment, runs it in
 
 Built for the **Nebius × NVIDIA Global AI Hackathon**, Coding and Agentic Engineering, with Tavily for discovery and evidence research. *Nullius in verba* means “take nobody’s word for it.”
 
-**Publication status:** the hosted demo and new video are not published yet. The proposed demo address is `nullius.akca.dev`; it is not a working demo link. You can browse the stored [certificates](#three-recent-checks) here or preview the product locally without API keys.
+**Publication status:** the [hosted demo](https://nullius.akca.dev/) is reachable (checked 12 Oct 2026). Recorded evidence is open without sign-in; fresh runs depend on live admission limits. The new submission video and Devpost entry are not published yet. You can also browse the stored [certificates](#three-recent-checks) here or preview the product locally without API keys.
 
 ## From a paper to a decision
 
@@ -68,7 +68,7 @@ TSMixer retains protocol and table-column warnings. GLinear’s target was check
 | **Live run** | Watch sources, plan, generated code, repairs and measurements arrive. A fresh run makes paid calls. |
 | **Evidence** | Inspect the claim, source quotations, code, branch tree and per-seed measurements; export a PDF certificate. |
 
-The **What-if** control changes the target, while measured predictions stay fixed. PDF export always uses the stored result, including its limitations.
+The **What-if** control changes the target, while measured predictions stay fixed. Result charts, seed measurements, replay and PDF use the selected attempts that contribute to the recorded verdict. Other candidates and repairs remain in the branch tree. Legacy runs without selection markers retain their recorded measured attempts. PDF export always uses the stored result, including its limitations.
 
 ## What we measured
 
@@ -177,7 +177,7 @@ npm test
 
 - **Supported:** Cora (Planetoid and random splits), CiteSeer (Planetoid split), ETTh1 (forecast horizon 96). CPU experiments on small models. PubMed and other ETT datasets remain unreleased after reference validation misses: [validation results](benchmark/experiments/results/datasets_v2_validation.md).
 - **Unverified:** method fidelity, general performance on unseen papers and user time savings. Executing the authors’ own program is not a product mode.
-- **Live controls:** admission floors, daily/per-IP limits and recorded fallback exist. Production per-call cost reservations and worker-timeout handling still have gaps; these controls do not prove a hard total-spend bound. [Cost-policy review](docs/cost_policy_review.md).
+- **Live controls:** admission floors, daily/per-IP limits and recorded fallback exist. The 10 Oct production fix added shared per-job inference budgets, durable request reservations, Tavily credit reservations and cooperative timeout cancellation. Offline tests verify the controls; provider prices, actual balances, sandbox/hosting costs and spending from other machines remain outside that proof. [Cost-policy review](docs/cost_policy_review.md#production-fix--10-oct-after-review).
 - **Next:** one person tests the finished product. Their observations precede decisions about further live-demo steps and author outreach. [Test plan](docs/product_test_20261010.md). TimeBase, then SOFTS, remain candidates; no new paid paper runs are being started.
 
 ## Repository guide

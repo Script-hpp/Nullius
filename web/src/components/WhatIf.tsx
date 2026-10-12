@@ -5,6 +5,7 @@ import { Badge } from './ui'
 import { RESULT, TONE_VAR, de2en, resultHint } from '../labels'
 import { fromUnits, sliderRange, toUnits, verdictForSlider, whatIfEligible } from '../whatif'
 import type { Json } from '../data'
+import { measuredAttempts } from '../measurements'
 
 // "Try to fool Nullius": the same measurements against a claim the reader drags. Only the verdict changes (rule: whatif.ts, same as the
 // harness). The real verdict above stays untouched; this card is a what-if view and runs no new check.
@@ -12,7 +13,7 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
   dossier: Json; claim: Json; verdict: Json | undefined; fmt: (x: number) => string; fmtSpread: (x: number) => string
 }) {
   const id = useId()
-  const vals: number[] = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claim.id && typeof a.measured === 'number').map((a: Json) => a.measured)
+  const vals: number[] = measuredAttempts(dossier, claim.id).map((a) => a.measured)
   const eligible = whatIfEligible(verdict, vals.length, claim.tolerance)
   const mean: number = verdict?.measured_mean
   const tol: number = claim.tolerance

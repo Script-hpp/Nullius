@@ -10,7 +10,7 @@ export function PreliminaryChip() {
   return (
     <span title="The code was not checked against the method described in the paper, so this result says nothing about the paper itself."
       className="inline-flex items-center gap-1 rounded border border-line-strong px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
-      Preliminary
+      Method not verified
     </span>
   )
 }

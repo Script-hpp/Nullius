@@ -1,4 +1,4 @@
-import { BookOpen, CircleDashed, Search, ShieldCheck } from 'lucide-react'
+import { BookOpen, Search, ShieldCheck } from 'lucide-react'
 import { Hint } from '../Hint'
 import { ModeNote } from '../ModeNote'
 import { ExtArrow, ICON_MD, INLINE, toPercent } from '../ui'
@@ -26,6 +26,7 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
       <div className="grid items-start gap-x-14 gap-y-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0">
           <h2 title={resultHint(verdict?.urteil)} className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl ${color}`}>{res.label}</h2>
+          {fidelityUnchecked && <p className="mb-0 mt-3 text-lg font-semibold text-fg-2">{verdict?.urteil === 'reproduziert' ? 'Target value reached' : 'Numerical check only'} · method not verified <Hint text={FIDELITY_HINT} /></p>}
           <p className="mb-0 mt-4 max-w-2xl text-lg leading-snug text-fg-2">{sentence}</p>
           <p className="mb-0 mt-4 max-w-2xl text-[14px] leading-relaxed text-fg-4"><span className="text-muted">Claim · </span>{claimText}</p>
         </div>
@@ -47,9 +48,6 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
       </div>
       <ul className="m-0 mt-8 flex list-none flex-wrap items-center gap-x-6 gap-y-2 border-t border-line p-0 pt-5 text-[12.5px] text-fg-4">
         <li><ModeNote dossier={dossier} events={events} compact /></li>
-        {fidelityUnchecked && (
-          <li className={INLINE}><CircleDashed className={`${ICON_MD} text-muted`} aria-hidden />Method fidelity not checked<Hint text={FIDELITY_HINT} /></li>
-        )}
         {overall && <li>{overall}</li>}
         {chip && (
           <li><button type="button" onClick={onTavily} data-testid="tavily-chip" title="Open Sources & Tavily"

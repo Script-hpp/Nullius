@@ -281,7 +281,7 @@ function SandboxScene({ d, p }: { d: SceneData; p: number }) {
 
 // ---- 5. Harness: measurements fall into the band ----
 function HarnessScene({ d, p }: { d: SceneData; p: number }) {
-  const vals = measurements(d.events, d.claim.id)
+  const vals = measurements(d.events, d.claim.id, d.dossier)
   const k = Math.min(vals.length, Math.floor(ramp(p, 0.08, 0.82) * vals.length + 1e-9))
   const verdict = p > 0.9
   // fixed axis from the first frame: it covers the band and every measurement

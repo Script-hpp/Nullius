@@ -1,5 +1,7 @@
 # Paper-Reproduktions-Agent
 
+**Jury-Fixes (2026-10-12):** Befunde `docs/jury_review_20261012.md`, Umsetzung und offene Aufgaben `docs/jury_fixes_20261012.md`. Ergebnisdiagramme, Seed-Tabelle, Replay und PDF verwenden die vom Orchestrator mit `chosen` markierten Endmessungen; andere Kandidaten bleiben in der Versuchshistorie. Der Nutzerbegriff REPRODUCED bleibt, mit sichtbarer numerischer Einordnung und ungepruefter Methode. Demo https://nullius.akca.dev/ erreichbar; lokale Aenderungen nicht automatisch deployed. Menschlicher Produkttest und neues Einreichungsvideo bleiben offen.
+
 **Jury-Verstaendlichkeit (Nutzer, 2026-10-10):** Hackathon-Jury ohne vorausgesetztes ML-/Statistik-Fachwissen behandeln; keine wissenschaftliche Fachjury voraussetzen. Hauptweg auf Website und im Video: Was behauptet das Paper? Was hat Nullius selbst gemessen? Wo ist der Beleg? Kurze erklaerte Begriffe, klare Navigation und konkrete Nutzungsentscheidung zuerst; wissenschaftliche Einordnung und Details erreichbar/aufklappbar halten. Framing soll belegte Erfolge zeigen und Grenzen passend zuordnen, ohne unbelegte Erfolgsquoten oder Garantien.
 
 Nebius x NVIDIA Global AI Hackathon (Devpost). Track: Coding and Agentic Engineering, zusätzlich Best Use of Tavily.

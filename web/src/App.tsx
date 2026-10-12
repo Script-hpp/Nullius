@@ -68,7 +68,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Runs" title="Finished checks"
-        what="Nullius is a high-precision checker: when it reports a target reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses, usually narrowly. Each card is one paper claim; older runs fold out below it."
+        what="An independent harness measures whether each target is reached. Method fidelity is not verified. In benchmark v4, none of 48 deliberately false targets was confirmed; that is a result of that evaluation, not a guarantee for new papers. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
         { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: ready ? reproduced.length : 0, tone: 'green' },
@@ -187,7 +187,7 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
+        {hash === 'discover' ? <Discovery /> : hash.split('?')[0] === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>

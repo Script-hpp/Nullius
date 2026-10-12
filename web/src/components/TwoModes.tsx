@@ -120,7 +120,7 @@ export function TwoModes() {
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Two modes, never added up</div>
         <p className="font-grotesk m-0 mt-4 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
-          A precise checker. What it reaches depends on what it reads.
+          Two rebuild modes. Separate evaluations.
         </p>
       </div>
       <Precision />

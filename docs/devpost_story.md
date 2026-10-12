@@ -45,7 +45,7 @@ Failed checks remain visible: SL-GCN missed its target, HaKAN failed in setup, a
 - **Tavily Search and Extract:** discovery, paper text, setup and error research at run time. Sources carry mode, timestamp and SHA-256. After the verdict, community findings and possible explanations are reported separately; measurable findings may become additional experiments, without altering the original verdict. We do not claim Tavily improves reproduction accuracy.
 - **Python orchestrator and FastAPI, React product:** Overview, Discover, Catalog, Live run and Evidence; recorded checks remain accessible when live admission is paused. The catalog includes successful checks, failed checks and unchecked candidates.
 - **Verification:** smoke checks, baselines, graph ablations and recorded repairs. The harness computes results from predictions; the agent never grades itself.
-- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The production per-call reservations and worker-timeout handling still have documented gaps (`docs/cost_policy_review.md`); we do not advertise a proven hard total-spend bound.
+- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The 10 Oct production fix added shared job budgets, durable model-request and Tavily-credit reservations, and cooperative timeout cancellation, verified with simulated providers. Actual provider billing, sandbox/hosting costs and external account usage remain outside that proof (`docs/cost_policy_review.md`).
 
 ## Challenges and what we learned
 

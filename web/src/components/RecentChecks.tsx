@@ -41,7 +41,7 @@ export function RecentChecks({ flush = false }: { flush?: boolean }) {
       <Disclosure summary="How these examples were selected" className="mt-3 text-[13px] leading-relaxed text-fg-4" summaryClassName="text-[13px] text-fg-3 hover:text-fg">
         <p className="mb-0 mt-3">Candidates were partly selected by the team. These checks are post hoc, outside the eight benchmark units, and do not establish a general success rate. Method fidelity remains unchecked.</p>
       </Disclosure>
-      <p className="mb-0 mt-3 text-[13px] leading-relaxed text-fg-4">The catalog also records SL-GCN missing its target and HaKAN failing in setup. <GoLink href="#catalog" className="text-fg underline underline-offset-4 hover:text-fg-max">Explore all outcomes</GoLink></p>
+      <p className="mb-0 mt-3 text-[13px] leading-relaxed text-fg-4">The catalog also records SL-GCN missing its target and HaKAN failing in setup. <GoLink href="#catalog?view=all" className="text-fg underline underline-offset-4 hover:text-fg-max">Explore all outcomes</GoLink></p>
     </section>
   )
 }

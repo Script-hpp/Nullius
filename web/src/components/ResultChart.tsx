@@ -2,6 +2,7 @@ import type { Json } from '../data'
 import { TONE_VAR, type Tone } from '../labels'
 import { Term } from './Glossed'
 import { LegendSwatch } from './ui'
+import { measuredAttempts } from '../measurements'
 
 const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
 
@@ -21,9 +22,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
 }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
   const verdict = (dossier.verdicts ?? []).find((v: Json) => v.claim_id === claimId)
-  const vals: number[] = (dossier.attempts ?? [])
-    .filter((a: Json) => a.claim_id === claimId && typeof a.measured === 'number')
-    .map((a: Json) => a.measured)
+  const vals: number[] = measuredAttempts(dossier, claimId).map((a) => a.measured)
   if (!claim) return null
   const target: number = claimed ?? claim.target
   const lo = target - claim.tolerance
@@ -54,7 +53,7 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
         {showKey && vals.length > 0 && <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
           <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-3 rounded-full border border-fg-4 bg-fg-4/40" /></LegendSwatch><span>Each dot is one <Term term="seed">run with a different random start</Term>.</span></li>
           <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-6 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /></LegendSwatch><span>The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</span></li>
-          <li className="flex items-start gap-3"><LegendSwatch><span className="block h-4 w-0.5 rounded-full" style={{ background: color }} /></LegendSwatch><span>The solid line is our mean over all runs; the dashed line is the claim.</span></li>
+          <li className="flex items-start gap-3"><LegendSwatch><span className="block h-4 w-0.5 rounded-full" style={{ background: color }} /></LegendSwatch><span>The solid line is the verdict mean over the selected runs; the dashed line is the claim.</span></li>
         </ul>}
         <figure className="m-0 mt-2" aria-label={`Claimed ${fmt(target)}; measured ${vals.map(fmt).join(', ')}`}>
           <div className="relative h-24 mx-2">

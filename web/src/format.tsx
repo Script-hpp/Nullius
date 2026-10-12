@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, HelpCircle, Info, XCircle } from 'lucide-react'
-import { toPercent } from './components/ui'
+import { formatMetric, formatSpread } from './metricFormat'
 import { NOT_ASSESSABLE, type Tone } from './labels'
 import type { Json } from './data'
 
@@ -27,7 +27,7 @@ export function iconForTone(tone: Tone) {
 }
 
 // MSE/MAE are plain decimals, never percent; accuracy is a share shown as percent.
-export const showValue = (metric: string | undefined, x: any) => (metric && metric !== 'accuracy' ? (x == null ? '–' : Number(x).toFixed(3)) : toPercent(x))
+export const showValue = formatMetric
 
 export function getDelta(measured: any, target: any, metric?: string) {
   if (measured === null || measured === undefined || target === null || target === undefined) return null
@@ -42,7 +42,7 @@ export function getDelta(measured: any, target: any, metric?: string) {
   const diff = mVal - tVal
   if (plain) {
     if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-muted' }
-    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-tone-green' : 'text-tone-red' }
+    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-tone-red' : 'text-tone-green' }
   }
   // percentage points, same wording as the catalog
   if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-muted' }
@@ -74,7 +74,7 @@ export function resultSentence(claim: Json, v: Json | undefined, gesamt?: string
   if (!v || v.measured_mean == null || gesamt === NOT_ASSESSABLE) {
     return v ? getCatalogStatement(target, showValue(claim.metric, v.measured_mean), v.urteil, gesamt) : `No verdict yet for the claimed ${target}.`
   }
-  const spread = v.measured_std == null ? '' : ` (± ${claim.metric === 'accuracy' ? (v.measured_std * 100).toFixed(1) : Number(v.measured_std).toFixed(3)})`
+  const spread = v.measured_std == null ? '' : ` (± ${formatSpread(claim.metric, v.measured_std)})`
   const verdict = RESULT_WORDS[String(v.urteil)] ?? 'no valid verdict with our setup'
   return `Our rebuild reached ${showValue(claim.metric, v.measured_mean)}${spread} against the claimed ${target}: ${verdict}.`
 }

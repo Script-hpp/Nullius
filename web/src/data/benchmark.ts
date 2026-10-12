@@ -54,7 +54,7 @@ export const BITTER_LESSON = 'Days of hand-built cleverness left the count at 2 
 // Wording for the start page and the judges page. Numbers are not repeated here: pages read FIGURES, HELD_OUT and UNITS.
 export const REPO = 'https://github.com/Script-hpp/Nullius'
 export const SUTTON_URL = 'http://www.incompleteideas.net/IncIdeas/BitterLesson.html'
-export const README_TAVILY = `${REPO_BLOB}/README.md#how-we-use-tavily`
+export const README_TAVILY = `${REPO_BLOB}/docs/evaluation_notes.md#how-we-use-tavily`
 
 // Scope limit stated in the README ("Limitations and roadmap") and CLAUDE.md; shown next to LIMITS on the start page.
 export const SCOPE_LIMIT = { title: 'Narrow scope', text: 'Graph and time-series papers on CPU, on datasets with a ready-made task (Cora, ETTh1). No GPU training, no large models. A new dataset needs a task and a harness built once.' }

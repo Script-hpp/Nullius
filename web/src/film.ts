@@ -3,6 +3,7 @@
 import type { Event, Json } from './data'
 import { splitFormulas } from './latex.ts'
 import { buildStory, lineDiff, type Card, type DiffLine } from './repairStory.ts'
+import { measuredAttempts } from './measurements.ts'
 
 export const FILM_MS = 30_000
 
@@ -130,13 +131,15 @@ export function branches(events: Event[]): Branch[] {
 export const branchX = (i: number, n: number) => (n <= 1 ? 0.5 : 0.06 + (0.88 * i) / (n - 1))
 
 // Valid measurements in the order the harness received them.
-export const measurements = (events: Event[], claimId: string): number[] =>
-  events.filter((e) => e.type === 'attempt' && e.claim_id === claimId && typeof e.measured === 'number').map((e) => e.measured as number)
+export const measurements = (events: Event[], claimId: string, dossier?: Json): number[] =>
+  dossier?.attempts?.length ? measuredAttempts(dossier, claimId).map((a) => a.measured) :
+    events.filter((e) => e.type === 'attempt' && e.claim_id === claimId && typeof e.measured === 'number').map((e) => e.measured as number)
 
 // The dossier at a moment of the harness scene: the first k measurements and, once the scene is nearly done, the verdict (mean line).
 export function dossierAt(dossier: Json, claimId: string, events: Event[], k: number, withVerdict: boolean): Json {
-  const vals = events.filter((e) => e.type === 'attempt' && e.claim_id === claimId && typeof e.measured === 'number').slice(0, k)
-  return { ...dossier, attempts: vals.map((e) => ({ claim_id: claimId, seed: e.seed, measured: e.measured })), verdicts: withVerdict ? dossier.verdicts : [] }
+  const vals = (dossier.attempts?.length ? measuredAttempts(dossier, claimId) :
+    events.filter((e) => e.type === 'attempt' && e.claim_id === claimId && typeof e.measured === 'number')).slice(0, k)
+  return { ...dossier, attempts: vals, verdicts: withVerdict ? dossier.verdicts : [] }
 }
 
 // ---- the repair scene ----

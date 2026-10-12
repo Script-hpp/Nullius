@@ -10,6 +10,8 @@ import { statusFor } from '../livestatus'
 import { Matrix } from './TwoModes'
 import { Badge, Chevron, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
 import { Hint } from './Hint'
+import { measuredAttempts } from '../measurements'
+import { formatSpread } from '../metricFormat'
 
 // The sections of the start page after the hero. They read as one story while scrolling: problem, how it works,
 // one real certificate, Tavily, proof and lesson, limits, try it. One thought per section, at most one link.
@@ -53,7 +55,7 @@ export function Problem({ run }: { run: RunData | null }) {
           A paper claims a number. Checking it costs days.
         </p>
         <div className="md:col-span-2 md:pl-6">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Kipf &amp; Welling report</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{run?.ref.title ?? 'Paper'} reports</div>
           <div className="mt-3 font-mono text-6xl font-light tracking-tight text-fg-3 sm:text-7xl">{claim ? showValue(claim.metric, claim.target) : ' '}</div>
         </div>
       </div>
@@ -62,7 +64,7 @@ export function Problem({ run }: { run: RunData | null }) {
 }
 
 const STEPS = [
-  { title: 'Read', text: 'Tavily finds the paper, the target and the setup, live. Every number comes with a quote.' },
+  { title: 'Read', text: 'Read paper sources and quoted targets. Tavily researches repositories, setup details and repair hints at run time.' },
   { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run) and runs it in Nebius Sandboxes.' },
   { title: 'Measure', text: 'An independent harness loads the true labels itself and scores the predictions.' },
 ]
@@ -89,8 +91,8 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
   const v = run?.dossier?.verdicts?.[0]
   if (!claim || !v) return <Block id="certificate" label="A real certificate"><h2 className={lead}>Every check ends in a certificate.</h2><div className="mt-10 h-48 rounded-2xl border border-line" aria-hidden /></Block>
   const res = de2en(RESULT, v.urteil)
-  const seeds = new Set<number>((run!.dossier.attempts ?? []).filter((a: { measured: number | null }) => a.measured != null).map((a: { seed: number }) => a.seed)).size
-  const std = claim.metric === 'accuracy' ? `${(v.measured_std * 100).toFixed(1)}` : v.measured_std.toFixed(3)
+  const seeds = new Set<number>(measuredAttempts(run!.dossier, claim.id).map((a) => a.seed)).size
+  const std = formatSpread(claim.metric, v.measured_std)
   return (
     <Block id="certificate" label="A real certificate">
       <h2 className={lead}>Every check ends in a certificate.</h2>
@@ -112,7 +114,7 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
           </div>
         </dl>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[13px] text-fg-4">
-          <span>Method fidelity not checked.</span>
+          <span>Target value reached · method not verified.</span>
           <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open <GoArrow /></span>
         </div>
       </a>
@@ -125,7 +127,8 @@ export function Proof() {
   const num = 'font-mono text-3xl font-light tracking-tight text-fg sm:text-4xl'
   return (
     <Block id="proof" label="Proof">
-      <h2 className={lead}>A reached target is a real one.</h2>
+      <h2 className={lead}>Independent measurements. Tested with false targets.</h2>
+      <p className={`${body} mt-6`}>These controls describe benchmark v4, not a guarantee for other papers. Reaching a number does not verify the method.</p>
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         <div>
           <div className={num}>{placebo.v4[0]} of {placebo.v4[1]}</div>

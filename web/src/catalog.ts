@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getText, loadIndex } from './data'
 import type { ReferenceBenchmark } from './referenceBench'
+import { formatMetric, formatSpread } from './metricFormat'
 
 export type CatalogVerdict = {
   urteil: string
@@ -73,17 +74,14 @@ const isShare = (metric?: string) => metric === 'accuracy'
 export function fmtMeasured(e: CatalogEntry): string {
   const v = e.verdict
   if (!v || v.measured_mean == null) return '–'
-  const share = isShare(e.claim.metric)
-  const k = share ? 100 : 1
-  const d = share ? 1 : 3
-  const std = v.measured_std == null ? '' : ` ± ${(v.measured_std * k).toFixed(d)}`
-  return `${(v.measured_mean * k).toFixed(d)}${share ? '%' : ''}${std}`
+  const std = v.measured_std == null ? '' : ` ± ${formatSpread(e.claim.metric, v.measured_std)}`
+  return `${formatMetric(e.claim.metric, v.measured_mean)}${std}`
 }
 
 export function fmtClaimed(e: CatalogEntry): string {
   const t = e.claim.target
   if (t == null) return '–'
-  return isShare(e.claim.metric) ? `${(t <= 1 ? t * 100 : t).toFixed(2)}%` : t.toFixed(3)
+  return isShare(e.claim.metric) ? `${(t <= 1 ? t * 100 : t).toFixed(2)}%` : formatMetric(e.claim.metric, t)
 }
 
 // Measured minus claimed: percentage points for accuracy, absolute for MSE/MAE.

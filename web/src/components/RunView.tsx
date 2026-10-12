@@ -31,6 +31,7 @@ import { parseTab, tabHash, type HowView, type RunTab } from '../runtabs'
 import { tavilySummary } from '../tavilysummary'
 import { GoLink, TAB_BTN, toPercent } from './ui'
 import { flashSection } from '../sectionScroll'
+import { formatSpread } from '../metricFormat'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const INFO = 'The certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it.'
@@ -105,7 +106,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const res = v ? (isCatalog ? catalogLabel(v.urteil, ref_.gesamtaussage) : de2en(RESULT, v.urteil)) : { label: 'NO VERDICT', tone: 'gray' as const }
   const fidelityUnchecked = !v?.methode || v.methode === 'nicht geprueft'
   const fmt = (x: number) => showValue(claim.metric, x)
-  const fmtSpread = (x: number) => (claim.metric === 'accuracy' ? (x * 100).toFixed(1) : x.toFixed(3))
+  const fmtSpread = (x: number) => formatSpread(claim.metric, x)
   const sentence = resultSentence(claim, v, ref_.gesamtaussage)   // one string for the verdict card and the time-lapse
   const steps = buildSteps(run.events, d, { running: false, hasPlan: !!run.plan, metric: claim.metric })
   const notes = isCatalog ? (({ items, warnings }) => items.length + warnings.length)(catalogNotes(run, claim.id)) : 0

@@ -1,6 +1,7 @@
 import type { Json, RunData } from './data'
 import { RESULT, METHOD, OVERALL, catalogLabel, de2en, translateClaim, translateWarning } from './labels'
 import { runMode } from './mode'
+import { measuredAttempts } from './measurements'
 import interFont from '@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2?url'
 import serifFont from '@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url'
 
@@ -14,12 +15,12 @@ const brand = '<div class="brand"><svg width="26" height="26" viewBox="0 0 24 24
 export function certificateHtml(run: RunData, evidenceUrl: string): string {
   const d=run.dossier, mode=runMode(d,run.events)
   const notes=[...(d.warnings ?? []).map(translateWarning),...(d.setup_missing ?? []).map((x:string)=>`Unverified setup detail: ${x}`)]
-  const claims=(d.claims ?? []).map((c:Json)=>({c,v:(d.verdicts ?? []).find((v:Json)=>v.claim_id===c.id),attempts:(d.attempts ?? []).filter((a:Json)=>a.claim_id===c.id && a.measured!=null)}))
+  const claims=(d.claims ?? []).map((c:Json)=>({c,v:(d.verdicts ?? []).find((v:Json)=>v.claim_id===c.id),attempts:measuredAttempts(d,c.id)}))
   const summaries=claims.map(({c,v,attempts}:{c:Json;v:Json;attempts:Json[]},i:number)=>{
     const r=result(run,v), untested=!v?.methode || v.methode==='nicht geprueft', seeds=new Set(attempts.map(a=>a.seed)).size
     return `<article class="sheet summary"><header>${brand}<span class="eyebrow">Reproduction certificate</span></header>
       <div class="paper"><p class="eyebrow">Independent check · ${escape(run.ref.timestamp.slice(0,8).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1–$2–$3'))}${claims.length>1?` · Claim ${i+1} / ${claims.length}`:''}</p><h1>${escape(run.ref.title)}</h1><p class="claim">${escape(translateClaim(c.text))}</p></div>
-      <div class="outcome ${escape(r.tone)}"><span class="dot"></span><h2>${escape(r.label)}</h2><span class="scope">${escape(OVERALL[run.ref.gesamtaussage ?? ''] ?? (untested?'Method unverified':'With our setup'))}</span></div>
+      <div class="outcome ${escape(r.tone)}"><span class="dot"></span><h2>${escape(r.label)}</h2><span class="scope">${escape(untested ? 'Method not verified' : OVERALL[run.ref.gesamtaussage ?? ''] ?? 'With our setup')}</span></div>
       <div class="scores"><div><p class="eyebrow">Paper claim</p><strong>${escape(value(c.metric,c.target))}</strong><span>${escape(c.metric.toUpperCase())}</span></div><div class="${escape(r.tone)}"><p class="eyebrow">Measured by Nullius</p><strong>${escape(value(c.metric,v?.measured_mean))}</strong><span>${escape(c.metric.toUpperCase())} · mean over seeds</span></div></div>
       <div class="stats"><div><span>Measured seeds</span><b>${seeds}</b></div><div><span>Spread over seeds</span><b>± ${escape(value(c.metric,v?.measured_std))}</b></div><div><span>Acceptance tolerance</span><b>± ${escape(value(c.metric,c.tolerance))}</b></div></div>
       <section class="method"><p class="eyebrow">How this was checked</p><h3>${escape(mode?.label ?? 'Rebuild mode unverified')}</h3><p>${escape(mode?.explain ?? 'The rebuild mode was not recorded.')}</p></section>
@@ -28,7 +29,7 @@ export function certificateHtml(run: RunData, evidenceUrl: string): string {
   }).join('')
   const evidence=claims.map(({c,v,attempts}:{c:Json;v:Json;attempts:Json[]})=>`<section class="evidence-block"><p class="eyebrow">Claim · ${escape(c.id)}</p><h3>${escape(translateClaim(c.text))}</h3>
     ${c.target_evidence?`<p>${link(c.target_evidence.url)}</p><div class="quote">${escape(c.target_evidence.quote)}</div><p class="small muted">Source version: ${escape(c.target_evidence.arxiv_version ?? 'unverified')} · Column check: ${escape(c.target_evidence.column_check ?? 'unverified')}</p>`:`<p class="small">${escape(c.source ?? 'Source not recorded')}. No automatically verified target quotation is available.</p>`}
-    ${attempts.length?`<h4>Recorded measured attempts</h4><table><thead><tr><th>Seed</th><th>${escape(c.metric.toUpperCase())}</th><th>Code hash</th></tr></thead><tbody>${attempts.map(a=>`<tr><td>${escape(a.seed)}</td><td>${escape(value(c.metric,a.measured))}</td><td class="mono">${escape(a.code_hash)}</td></tr>`).join('')}</tbody></table>`:''}${v?.explanation?`<h4>Recorded explanation</h4><p class="small">${escape(v.explanation)}</p>`:''}</section>`).join('')
+    ${attempts.length?`<h4>Selected measurements used in the verdict</h4><table><thead><tr><th>Seed</th><th>${escape(c.metric.toUpperCase())}</th><th>Code hash</th></tr></thead><tbody>${attempts.map(a=>`<tr><td>${escape(a.seed)}</td><td>${escape(value(c.metric,a.measured))}</td><td class="mono">${escape(a.code_hash)}</td></tr>`).join('')}</tbody></table><p class="small muted">Other candidates and repair attempts remain available in the linked evidence page.</p>`:''}${v?.explanation?`<h4>Recorded explanation</h4><p class="small">${escape(v.explanation)}</p>`:''}</section>`).join('')
   const fontUrl=(path:string)=>{try{return escape(new URL(path,evidenceUrl).href)}catch{return ''}}
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nullius certificate — ${escape(run.ref.title)}</title><style>
     @font-face{font-family:Inter;src:url("${fontUrl(interFont)}") format("woff2");font-weight:100 900;font-display:swap}@font-face{font-family:Instrument;src:url("${fontUrl(serifFont)}") format("woff2");font-style:italic;font-display:swap}

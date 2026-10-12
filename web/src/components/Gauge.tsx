@@ -1,15 +1,18 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Json } from '../data'
-import { LegendSwatch, toPercent } from './ui'
+import { LegendSwatch } from './ui'
+import { measuredAttempts } from '../measurements'
+import { formatMetric } from '../metricFormat'
 
 export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: string }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
-  const attempts = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId && a.measured !== null && a.measured !== undefined)
+  const attempts = measuredAttempts(dossier, claimId)
   if (!claim || attempts.length === 0) return <p className="text-sm text-muted italic">No valid measurements.</p>
   const data = [...attempts].sort((a: Json, b: Json) => a.seed - b.seed)   // seed order #0..#n (stable: retries of a seed stay in run order)
     .map((a: Json, i: number) => ({ name: `#${a.seed}`, i, value: a.measured, status: a.status }))
   const vals = data.map((d: Json) => d.value as number)
-  const mean = vals.reduce((s: number, v: number) => s + v, 0) / vals.length
+  const verdict = (dossier.verdicts ?? []).find((v: Json) => v.claim_id === claimId)
+  const mean = verdict?.measured_mean ?? vals.reduce((s: number, v: number) => s + v, 0) / vals.length
   const baselines: [string, number][] = []
   for (const [k, v] of Object.entries(dossier.baselines ?? {})) {
     const val = (v as Json)[claim.metric]
@@ -20,14 +23,14 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
   const domain: [number, number] = [Math.min(...vals, lo) - pad, Math.max(...vals, hi) + pad]
   const shownBase = baselines.filter(([, v]) => v >= domain[0] && v <= domain[1])
   
-  const f = (v: number) => (claim.metric === 'accuracy' ? toPercent(v) : v.toFixed(3))
+  const f = (v: number) => formatMetric(claim.metric, v)
 
   return (
     <div className="flex flex-col flex-1">
       <ul className="m-0 mb-5 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
         <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-4 rounded-sm bg-fill-mid opacity-60" /></LegendSwatch><span>Each bar is one run: one seed, in its own sandbox branch.</span></li>
         <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-6 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /></LegendSwatch><span>The band is the claimed value ± tolerance ({f(lo)} to {f(hi)}); the dashed line is the claim, the dotted line our mean.</span></li>
-        <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-3 rounded-full border border-fg-4" /></LegendSwatch><span>The verdict uses the mean of all runs, so single bars may fall outside the band.{shownBase.length ? ' Gray lines are trivial baselines.' : ''}</span></li>
+        <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-3 rounded-full border border-fg-4" /></LegendSwatch><span>The verdict uses the mean of the selected runs, so single bars may fall outside the band.{shownBase.length ? ' Gray lines are trivial baselines.' : ''}</span></li>
       </ul>
       <div style={{ width: '100%', height: 260, minHeight: 260 }} className="flex-1 mt-2">
         <ResponsiveContainer width="100%" height="100%" minHeight={260}>

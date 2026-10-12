@@ -1,4 +1,5 @@
-import { toPercent } from './ui'
+import { formatMetric } from '../metricFormat'
+import { measuredAttempts } from '../measurements'
 import { AttemptChart } from './Gauge'
 import type { Json } from '../data'
 
@@ -23,7 +24,7 @@ export function TargetEvidence({ claim }: { claim: Json }) {
     <div className="min-w-0">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Target value</span>
-        <span className="font-mono text-lg font-semibold text-fg">{toPercent(claim.target)}</span>
+        <span className="font-mono text-lg font-semibold text-fg">{formatMetric(claim.metric, claim.target)} {claim.metric?.toUpperCase()}</span>
       </div>
       <blockquote className="m-0 rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] italic leading-relaxed text-tone-amber-fg/90">“{ev.quote}”</blockquote>
       <p className="mb-0 mt-3 text-[12px] leading-relaxed text-fg-4">
@@ -36,12 +37,14 @@ export function TargetEvidence({ claim }: { claim: Json }) {
 
 // One line per seed run: which seed, whether it gave a valid result, what it measured. The selected branch of the tree is highlighted.
 export function SeedMeasurements({ claimId, dossier, selected }: { claimId: string; dossier: Json; selected: Json | null }) {
-  const attempts: Json[] = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId).sort((a: Json, b: Json) => a.seed - b.seed)
-  const ok = attempts.filter((a) => a.measured != null)
+  const attempts = measuredAttempts(dossier, claimId).sort((a, b) => a.seed - b.seed)
+  const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
+  const historyCount = (dossier.attempts ?? []).filter((a: Json) => a.claim_id === claimId).length - attempts.length
   return (
     <div className="min-w-0">
       <p className="m-0 mb-3 text-[12px] leading-relaxed text-muted">
-        {ok.length} of {attempts.length} runs gave a valid result, one seed per sandbox branch. The verdict uses the mean of all seeds; single seeds may fall outside the band.
+        {attempts.length} selected measurements contribute to the verdict, one seed per sandbox branch. Single seeds may fall outside the band.
+        {historyCount > 0 && <> {historyCount} other attempts remain in the branch tree above.</>}
       </p>
       <div className="max-h-[300px] overflow-auto border-y border-line">
         <table className="w-full text-left text-[12px]">
@@ -57,7 +60,7 @@ export function SeedMeasurements({ claimId, dossier, selected }: { claimId: stri
               <tr key={i} className={selected?.branch_id === a.branch_id ? 'bg-tone-blue-solid/10' : ''}>
                 <td className="px-3 py-2 font-mono text-fg-4">{a.seed}</td>
                 <td className="px-3 py-2 text-fg-4">{a.measured != null ? 'Valid' : 'No valid result'}</td>
-                <td className="px-3 py-2 text-right font-mono font-medium text-fg-2">{toPercent(a.measured)}</td>
+                <td className="px-3 py-2 text-right font-mono font-medium text-fg-2">{formatMetric(claim?.metric, a.measured)}</td>
               </tr>
             ))}
           </tbody>

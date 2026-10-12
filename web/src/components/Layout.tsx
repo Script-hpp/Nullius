@@ -19,7 +19,7 @@ export const NAV_LINKS: { label: string; href: string; hash: string; title?: str
 // App bar in the style of the landing page (wordmark, quiet links, one outlined "Try it"). The page scrolls inside <main>.
 export function Layout({ children, currentHash }: { children: ReactNode; currentHash: string }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const links = NAV_LINKS.map((l) => ({ ...l, active: currentHash === l.hash }))
+  const links = NAV_LINKS.map((l) => ({ ...l, active: currentHash.split('?')[0] === l.hash }))
   const link = (active: boolean) => `text-sm no-underline transition-colors ${active ? 'text-fg underline decoration-fg-4 decoration-1 underline-offset-[6px]' : 'text-fg-4 hover:text-fg'}`
 
   return (

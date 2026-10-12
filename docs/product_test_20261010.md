@@ -1,6 +1,6 @@
 # Human product test — pending
 
-One person tests the finished product before we decide further live-demo steps or author outreach. This is a usability observation, not a scientific performance evaluation. No result is claimed yet. Suggested hostname: https://nullius.akca.dev, not published; a local preview is sufficient for the recorded-evidence test.
+One person tests the finished product before we decide further live-demo steps or author outreach. This is a usability observation, not a scientific performance evaluation. No result is claimed yet. The demo at https://nullius.akca.dev/ was reachable on 12 Oct 2026; the jury-review fixes need deployment before testing them on that address. A local preview is sufficient for the recorded-evidence test.
 
 ## Tasks (about ten minutes)
 

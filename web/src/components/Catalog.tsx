@@ -13,6 +13,7 @@ import { startReproduction, useJobInfo, useLiveStatus } from '../live'
 import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
 import { referenceShort } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
+import { catalogFilterFromHash, matchesCatalogFilter, type CatalogFilter } from '../catalogFilter'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
@@ -116,6 +117,16 @@ export function Catalog() {
   const [starting, setStarting] = useState<string | null>(null)
   const [error, setError] = useState<{ id: string; msg: string; notice: boolean } | null>(null)
   const [runs, setRuns] = useState<RunRef[]>([])
+  const [filter, setFilter] = useState<CatalogFilter>(() => catalogFilterFromHash(location.hash))
+  useEffect(() => {
+    const sync = () => setFilter(catalogFilterFromHash(location.hash))
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [])
+  const chooseFilter = (view: CatalogFilter) => {
+    setFilter(view)
+    history.replaceState(null, '', `#catalog${view === 'featured' ? '' : `?view=${view}`}`)
+  }
   useEffect(() => { loadIndex().then(setRuns) }, [])
   const latestLive = (id: string) => runs.filter((r) => r.live && r.catalog_id === id).map((r) => r.id).sort().pop() ?? null
   const run = async (id: string) => {
@@ -135,16 +146,16 @@ export function Catalog() {
       return ({ green: 0, amber: 1, red: 2, violet: 3, gray: 4 })[tone]
     }
     return (entries ?? [])
-      .filter((e) => e.jury?.ready && e.run_id)
+      .filter((e) => matchesCatalogFilter(e, filter))
       .sort((a, b) => rank(a) - rank(b) || (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))
-  }, [entries])
+  }, [entries, filter])
   const total = entries?.length ?? 0
 
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
-        what="Finished checks with measurements and published evidence. Open a result to inspect its evidence."
-        look="Open an entry marked Jury ready, or start a quick check." />
+        what="Featured checks offer published evidence to explore. All entries also includes unsuccessful checks, setup failures and candidates that have not been run."
+        look="Open a finished check, or choose All entries to inspect every outcome. A failed check does not prove the paper wrong." />
 
       <details className="group mb-10 border-t border-line pt-6">
         <summary className={`nx-summary ${INLINE} cursor-pointer text-[11px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-fg-3`}>How this catalog is made · supported datasets<Chevron className="h-3.5 w-3.5" /></summary>
@@ -170,7 +181,11 @@ export function Catalog() {
       </details>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm text-fg-3">Jury-ready papers</span>
+        <div role="group" aria-label="Filter catalog" className="flex flex-wrap gap-2">
+          {([{ value: 'featured', label: 'Featured checks' }, { value: 'all', label: 'All entries' }, { value: 'failed', label: 'Failed checks' }, { value: 'unchecked', label: 'Unchecked' }] as const).map((item) => (
+            <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => chooseFilter(item.value)} className={`cursor-pointer rounded-full border px-3 py-1.5 text-[12px] font-medium ${filter === item.value ? 'border-fg bg-inverse text-on-inverse' : 'border-line-strong bg-transparent text-fg-3 hover:bg-raised'}`}>{item.label}</button>
+          ))}
+        </div>
         {available && info?.busy && (
           <span className="text-[12px] text-tone-amber">A {info.kind === 'discovery' ? 'discovery' : 'reproduction'} run is active. Live runs are one at a time.</span>
         )}
@@ -197,7 +212,7 @@ export function Catalog() {
       {entries && !shown.length && (
         <div className="rounded-xl border border-line bg-surface p-6 text-[13px] text-muted">
           <Badge tone="gray">Nothing to show</Badge>
-          <p className="mt-2">No jury-ready checks have been published yet.</p>
+          <p className="mt-2">No entries match this filter. <GoLink href="#catalog?view=all">View all entries</GoLink></p>
         </div>
       )}
       {(() => {

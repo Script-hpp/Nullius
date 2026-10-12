@@ -1,6 +1,6 @@
 # Devpost submission — updated draft, 10 Oct 2026
 
-Unpublished English draft. Measurements come from stored production dossiers and evaluation reports. Demo and video URLs remain unpublished. Narrative matches [devpost_story.md](devpost_story.md) and [video_script.md](video_script.md).
+Unpublished English submission draft. Measurements come from stored production dossiers and evaluation reports. Demo reachable at https://nullius.akca.dev/ (checked 12 Oct 2026); submission video remains unpublished. Narrative matches [devpost_story.md](devpost_story.md) and [video_script.md](video_script.md).
 
 ## Project name
 
@@ -55,7 +55,7 @@ Failed checks remain visible: SL-GCN missed its target, HaKAN failed in setup, a
 - **Tavily Search and Extract:** discovery, paper text, setup and error research at run time. Sources carry mode, timestamp and SHA-256. After the verdict, community findings and possible explanations are reported separately; measurable findings may become additional experiments, without altering the original verdict. We do not claim Tavily improves reproduction accuracy.
 - **Python orchestrator and FastAPI, React product:** Overview, Discover, Catalog, Live run and Evidence; recorded checks remain accessible when live admission is paused. The catalog includes successful checks, failed checks and unchecked candidates.
 - **Verification:** smoke checks, baselines, graph ablations and recorded repairs. The harness computes results from predictions; the agent never grades itself.
-- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The production per-call reservations and worker-timeout handling still have documented gaps (`docs/cost_policy_review.md`); we do not advertise a proven hard total-spend bound.
+- **Cost controls:** logged inference costs, admission floors and daily/per-IP limits exist. The 10 Oct production fix added shared job budgets, durable model-request and Tavily-credit reservations, and cooperative timeout cancellation, verified with simulated providers. Actual provider billing, sandbox/hosting costs and external account usage remain outside that proof (`docs/cost_policy_review.md`).
 
 ## Challenges and what we learned
 
@@ -80,7 +80,7 @@ Python, FastAPI, NVIDIA Nemotron 3.5 Lightning and Nemotron 3 Super, Nebius Toke
 | Field | Draft value |
 |---|---|
 | Repository | https://github.com/Script-hpp/Nullius |
-| Demo | Not published. User's proposed hostname: **https://nullius.akca.dev**. Verify reachability before entering it as the demo URL. |
+| Demo | **https://nullius.akca.dev/** · reachability checked 12 Oct 2026; no fresh paid run started for that check. |
 | Video | Not uploaded. Current recording brief: [video_script.md](video_script.md). |
 | Mirror | Not published. |
 
@@ -94,7 +94,7 @@ Suggested checks:
 2. SparseTSF: `#/run/disc_2405_00946--20261009-220822`.
 3. GLinear: `#/run/disc_2501_01087--20261010-161916`; read the automated source-validation warnings.
 4. Benchmark page: development 7/8, separate RLinear 0/1 and earlier paper-only v4 are distinct.
-5. Catalog: inspect unsuccessful checks and unchecked candidates as well as target-reached results.
+5. Catalog: select **All entries**, **Failed checks** or **Unchecked** to inspect outcomes beyond the featured checks (`#catalog?view=all`).
 
 A fresh live check makes paid service calls and takes minutes. Live admission can pause at limits and offer recorded evidence instead. The planned human test starts with stored evidence; further live-demo steps will be decided after its observations. No fresh run is required to inspect the certificates.
 
