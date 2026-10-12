@@ -102,6 +102,48 @@ def test_source_table_never_overrides_an_explicit_feasibility_rejection(monkeypa
     assert any(e["type"] == "reject" and e["stage"] == "feasibility" for e in events)
 
 
+PROTOCOL_QUOTE = r"The look-back window length is set to 720, and we evaluate four forecasting horizons, i.e., $H\in\{96,192,336,720\}$."
+
+
+@pytest.mark.parametrize("escapes", [1, 2, 4])
+def test_live_saraf_protocol_quote_accepts_only_source_backed_escape_repairs(monkeypatch, tmp_path, escapes):
+    quote = PROTOCOL_QUOTE.replace("\\", "\\" * escapes)
+    model = Model({"protocol": "passt", "matched_task": "ETTh1", "protocol_quote": quote})
+    agent = agent_for(monkeypatch, tmp_path, model, [PAPERS[0]])
+    monkeypatch.setitem(SOURCES, "2606.04135", SOURCES["2606.04135"] + "\n" + PROTOCOL_QUOTE)
+    result = agent.discover(["ETTh1"])
+    assert len(result) == 1 and result[0].protocol == "passt"
+    assert result[0].claim["protocol_quote"] == PROTOCOL_QUOTE
+    assert result[0].claim["matched_task"] == "ETTh1"
+
+
+@pytest.mark.parametrize("changed", ["look-back window length is set to 721", "evaluate three forecasting horizons"])
+def test_escape_repair_cannot_confirm_invented_setup(monkeypatch, tmp_path, changed):
+    altered = PROTOCOL_QUOTE.replace("look-back window length is set to 720", changed) if "721" in changed else PROTOCOL_QUOTE.replace("evaluate four forecasting horizons", changed)
+    model = Model({"protocol": "passt", "matched_task": "ETTh1", "protocol_quote": altered.replace("\\", "\\\\")})
+    agent = agent_for(monkeypatch, tmp_path, model, [PAPERS[0]])
+    monkeypatch.setitem(SOURCES, "2606.04135", SOURCES["2606.04135"] + "\n" + PROTOCOL_QUOTE)
+    result = agent.discover(["ETTh1"])
+    assert result[0].protocol == "unklar" and result[0].claim["matched_task"] is None
+
+
+def test_affected_cached_claim_is_reread_without_rewriting_stored_history(monkeypatch, tmp_path):
+    quote = PROTOCOL_QUOTE.replace("\\", "\\\\")
+    old = {"cache_version": discovery.CACHE_VERSION, "status": "ungeprueft", "arxiv_id": "2606.04135",
+           "claim": {"protocol": "unklar", "protocol_quote": quote,
+                     "protocol_reason": "Protokoll-Zitat fehlt oder steht nicht im Text"}}
+    model = Model({"protocol": "passt", "matched_task": "ETTh1", "protocol_quote": quote})
+    agent = agent_for(monkeypatch, tmp_path, model, [PAPERS[0]])
+    monkeypatch.setitem(SOURCES, "2606.04135", SOURCES["2606.04135"] + "\n" + PROTOCOL_QUOTE)
+    (tmp_path / "cache.json").write_text(json.dumps({"2606.04135": old}))
+    events = []
+    result = agent.discover(["ETTh1"], on_event=events.append)
+    assert result[0].protocol == "passt"
+    assert any(e["type"] == "extracting" for e in events)
+    assert not (tmp_path / "candidates.json").exists()  # no retrospective stored-claim mutation
+    assert not discovery._protocol_cache_needs_recheck({"claim": {"protocol_quote": "missing quote"}})
+
+
 def test_data_embedding_comparison_is_not_a_new_times2d_method(monkeypatch, tmp_path):
     model = Model({"method": "Times2D", "target": .378, "metric": "mse", "horizon": 96,
                    "quote": "placeholder"})

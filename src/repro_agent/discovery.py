@@ -69,6 +69,19 @@ def _norm_quote(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _repair_protocol_escapes(quote: str) -> str:
+    """Decoded model JSON can still overescape LaTeX commands and escaped braces."""
+    return re.sub(r"\\{2,}(?=[a-zA-Z{}])", lambda _: "\\", quote)
+
+
+def _protocol_cache_needs_recheck(data: dict) -> bool:
+    claim = data.get("claim")
+    if not isinstance(claim, dict) or claim.get("protocol_reason") != "Protokoll-Zitat fehlt oder steht nicht im Text":
+        return False
+    quote = claim.get("protocol_quote")
+    return isinstance(quote, str) and _repair_protocol_escapes(quote) != quote
+
+
 METHOD_CONTEXT_CHARS = 2000   # Tabellen nennen die Methode im Spaltenkopf, nicht in der Zeile
 TITLE_STOPWORDS = {"with", "from", "that", "this", "towards", "toward", "using", "based", "into", "over", "their", "than", "have", "more"}
 COMMUNITY_TITLE_SHARE = 0.6
@@ -498,6 +511,13 @@ class DiscoveryAgent:
         level = str(claim_data.get("protocol") or "").strip().lower()
         pq = claim_data.get("protocol_quote")
         quote_ok = isinstance(pq, str) and bool(pq.strip()) and norm_ws(pq) in norm_ws(text)
+        if not quote_ok and isinstance(pq, str):
+            repaired = _repair_protocol_escapes(pq)
+            if repaired != pq and norm_ws(repaired) in norm_ws(text):
+                # Repair serialization only when the complete quote actually
+                # occurs in the source. Never infer setup from an invented quote.
+                claim_data["protocol_quote"] = pq = repaired
+                quote_ok = True
         if level == "passt":
             if not quote_ok:
                 return "unklar", "Protokoll-Zitat fehlt oder steht nicht im Text"
@@ -507,7 +527,6 @@ class DiscoveryAgent:
         if level == "passt_nicht":
             if not quote_ok:
                 return "unklar", "Abweichendes Protokoll ohne gueltiges Zitat"
-            import re
             said = f"{pq} {claim_data.get('protocol_reason') or ''}".lower()
             for task in _tasks_for(dataset):
                 for kw in TASK_KEYWORDS.get(task, []):
@@ -736,6 +755,7 @@ class DiscoveryAgent:
                     loaded = json.load(f)
                 cache = {k: v for k, v in loaded.items()
                          if isinstance(v, dict) and v.get("cache_version") == CACHE_VERSION
+                         and not _protocol_cache_needs_recheck(v)
                          and not (v.get("status") == "rejected" and v.get("reason") == NO_REPO_REASON)}   # frueher hart abgelehnt, jetzt markiert
             except Exception:
                 pass

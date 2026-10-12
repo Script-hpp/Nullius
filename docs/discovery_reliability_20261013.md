@@ -82,3 +82,32 @@ data-volume change or new user flow. After deployment, use the existing normal
 ETTh1 live search when the daily gate permits. Inspect the **new** source-selected
 claim; the previously saved SARAF 0.366 entry remains historical and should not
 be confused with a corrected fresh claim.
+
+## Live confirmation and protocol quote follow-up
+
+The user's next deployed search (`discovery_start` 1791843199.6977184) found
+SARAF again. Server replay confirms `source_claim` **0.371**, with the model also
+selecting 0.371; the candidate is **not cached** and was saved as
+`disc_2606_04135_f7b4e6db785fdb63`, `runnable: true`. The old
+`disc_2606_04135_e3e2931687c224d2` with 0.366 remains separate historical data.
+Reproduction was disabled by its daily gate, rather than claim eligibility.
+
+The source-backed live claim exposed another false-negative protocol warning:
+decoded model JSON still contained two backslashes before LaTeX commands and
+escaped braces in the setup quote. Comparing the full original SARAF source
+proved the overescaped quote did not match, while correcting only those escapes
+matched the complete original sentence exactly.
+
+`_judge_protocol` now permits that serialization repair **only** when the entire
+repaired quote occurs in the source. Numbers, words, task matching and semantic
+protocol rules stay unchanged. Invented setup statements remain unknown. Only
+cache entries carrying this precise failed-quote reason and overescaped syntax
+are reread; the cache version and unrelated entries remain unchanged. Existing
+published candidate events and recordings are not rewritten.
+
+163 focused Discovery, persistence and reproduction-API tests passed (the same
+two known query-limit tests deselected). Normal, doubled and quadrupled escapes,
+invented setup statements and affected-cache rereading have regression coverage.
+No paid run or deployment was initiated. The already saved correct 0.371 claim
+can be checked when the reproduction gate allows it; another discovery is not
+required merely to start that existing claim.
