@@ -1,5 +1,7 @@
 # Paper-Reproduktions-Agent
 
+**Discovery-Startfix (2026-10-12):** `docs/discovery_failure_20261012.md`. Nutzer-Container meldete fehlenden `OPENROUTER_API_KEY`; Produktionsmodus in Coolify auf `LLM_PROVIDER=tokenfactory` setzen. SSE-Fehler bisher unsichtbar und als Finished/NaNs dargestellt; Fix mit explizitem Ende, Zeitstempeln und redigiertem Fehlerlog. 51 API- und 132 Frontend-Tests bestanden; zwei bestehende Discovery-Suchlimit-Tests erwarten 3 statt unveraenderter 5. Keine bezahlte Suche fuer die Reparatur.
+
 **Jury-Fixes (2026-10-12):** Befunde `docs/jury_review_20261012.md`, Umsetzung und offene Aufgaben `docs/jury_fixes_20261012.md`. Ergebnisdiagramme, Seed-Tabelle, Replay und PDF verwenden die vom Orchestrator mit `chosen` markierten Endmessungen; andere Kandidaten bleiben in der Versuchshistorie. Der Nutzerbegriff REPRODUCED bleibt, mit sichtbarer numerischer Einordnung und ungepruefter Methode. Demo https://nullius.akca.dev/ erreichbar; lokale Aenderungen nicht automatisch deployed. Menschlicher Produkttest und neues Einreichungsvideo bleiben offen.
 
 **UI/UX-Fixes (2026-10-12):** Erstnutzer-Durchgang und anschliessende Umsetzung `docs/ux_walkthrough_20261012.md`. Originalquelle auch bei fehlgeschlagener automatischer Extraktion, Setup-Referenzen mit Herkunft, direkte Code-/Messungsaktionen, eindeutige Film-/Log-Links, Katalogfilter/Scroll-Rueckweg und kompakte mobile Einleitungen. 129 Frontend-Tests; neues Deployment fuer diese Folgeaenderungen erforderlich. Keine neuen bezahlten Laeufe, menschlicher Test weiter offen.

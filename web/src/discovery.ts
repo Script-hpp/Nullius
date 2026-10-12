@@ -2,6 +2,14 @@ import type { Json } from './data'
 
 export type DEvent = { type: string; ts: number; seq?: number; [k: string]: Json }
 
+export function parseLiveEvent(data: string, now = Date.now() / 1000): DEvent | null {
+  try {
+    const event = JSON.parse(data)
+    if (!event || typeof event.type !== 'string' || !event.type) return null
+    return { ...event, ts: typeof event.ts === 'number' && Number.isFinite(event.ts) ? event.ts : now }
+  } catch { return null }
+}
+
 export type PaperState = 'reading' | 'claim' | 'searching' | 'candidate' | 'rejected'
 
 export type DClaim = {
@@ -144,7 +152,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       const endpoint = e.endpoint === 'extract' ? 'extract' : 'search'
       const topHits = (e.top_hits ?? []).filter((h: Json) => h?.url)
       feed.push({ seq: e.seq ?? feed.length, purpose: e.purpose, endpoint, query: String(e.query ?? ''), hits, durationMs: dur, topHits })
-      timeline.push({ kind: 'tavily', start: e.ts - dur / 1000, end: e.ts, label: `Tavily ${endpoint}` })
+      if (Number.isFinite(e.ts)) timeline.push({ kind: 'tavily', start: e.ts - dur / 1000, end: e.ts, label: `Tavily ${endpoint}` })
       if (e.purpose === 'find_papers' && Array.isArray(e.arxiv_ids)) {
         legacySearch = false
         for (const id of e.arxiv_ids) foundIds.add(id)
@@ -165,7 +173,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       if (e.cached) cachedLlmCalls++
       costUsd += e.cached ? 0 : Number(e.cost_usd) || 0
       const dur = Number(e.duration_ms) || 0
-      timeline.push({ kind: 'llm', start: e.ts - dur / 1000, end: e.ts, label: e.cached ? 'Model call (cached)' : 'Model call' })
+      if (Number.isFinite(e.ts)) timeline.push({ kind: 'llm', start: e.ts - dur / 1000, end: e.ts, label: e.cached ? 'Model call (cached)' : 'Model call' })
     } else if (e.type === 'extracting') {
       extractingCount++
       seen.add(e.arxiv_id)
@@ -229,8 +237,9 @@ export function deriveView(events: DEvent[]): DiscoveryView {
     { label: 'Candidate', value: candidates },
   ]
 
-  const t0 = events.length ? Math.min(events[0].ts, ...timeline.map((t) => t.start)) : 0
-  const tEnd = events.length ? events[events.length - 1].ts : 0
+  const times = events.map((e) => e.ts).filter((ts) => typeof ts === 'number' && Number.isFinite(ts))
+  const t0 = times.length ? Math.min(times[0], ...timeline.map((t) => t.start)) : 0
+  const tEnd = times.length ? times[times.length - 1] : 0
   return {
     feed, papers: [...papers.values()], tavilyCalls, llmCalls, cachedLlmCalls, costUsd, funnel, timeline, t0, tEnd, activeId, notes,
   }
@@ -327,7 +336,7 @@ export function benchmarkText(p: DPaper): string {
 // Runtime shown while a run is going: the last event's runtime plus the wall time since that event (times `rate` for a
 // sped-up replay), so the timer ticks between events. Never below the event runtime; frozen once the run is not running.
 export function tickedRuntime(eventRuntime: number, sinceEventMs: number, rate: number, running: boolean): number {
-  const base = Math.max(0, eventRuntime)
+  const base = Number.isFinite(eventRuntime) ? Math.max(0, eventRuntime) : 0
   if (!running) return base
   return base + Math.max(0, sinceEventMs) / 1000 * rate
 }

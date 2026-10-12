@@ -1,5 +1,7 @@
 import asyncio
 import json
+import logging
+import math
 import os
 import threading
 import time
@@ -122,6 +124,7 @@ stream_slots = StreamSlots()
 # In-memory registry for jobs and their queues
 jobs: Dict[str, asyncio.Queue] = {}
 background_tasks = set()
+logger = logging.getLogger(__name__)
 
 class DiscoverRequest(BaseModel):
     datasets: list[str] = Field(["Cora", "ETTh1"], max_length=8)
@@ -150,6 +153,14 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     job_id = str(uuid.uuid4())
     queue = asyncio.Queue()
     jobs[job_id] = queue
+    queue.put_nowait({"type": "discovery_start", "ts": time.time(), "datasets": datasets})
+
+    def emit(evt):
+        event = sanitize(evt)
+        stamp = event.get("ts")
+        if not isinstance(stamp, (int, float)) or not math.isfinite(stamp):
+            event["ts"] = time.time()
+        loop.call_soon_threadsafe(queue.put_nowait, event)
 
     # Run the discovery loop in a background thread or task.
     # We use asyncio.to_thread because the DiscoveryAgent uses synchronous httpx/Tavily calls.
@@ -159,20 +170,19 @@ async def start_discovery(req: DiscoverRequest, request: Request):
             # Put the event into the queue in a thread-safe manner
             if job_id not in jobs:
                 raise RuntimeError("Client disconnected, aborting discovery loop.")
-            try:
-                loop.call_soon_threadsafe(queue.put_nowait, sanitize(evt))
-            except Exception:
-                pass
+            emit(evt)
 
         try:
             agent = DiscoveryAgent()   # im try: ein Fehler im Konstruktor darf die Sperre nie dauerhaft halten
             agent.discover(datasets, on_event=on_event)
         except Exception as e:
-            loop.call_soon_threadsafe(queue.put_nowait, {"type": "error", "message": sanitize_text(f"{type(e).__name__}: {e}", 300)})
+            message = sanitize_text(f"{type(e).__name__}: {e}", 300)
+            logger.error("Discovery job %s failed: %s", job_id, message)
+            emit({"type": "error", "message": message})
         finally:
             if current_job.get("job_id") == job_id:
                 current_job.clear()
-            loop.call_soon_threadsafe(queue.put_nowait, {"type": "done"})
+            emit({"type": "done"})
             loop.call_soon_threadsafe(_release_lock, job_id)
             loop.call_soon_threadsafe(lambda: loop.call_later(JOB_KEEP_SECONDS, jobs.pop, job_id, None))   # nie gelesene Warteschlangen wegraeumen
 
@@ -182,8 +192,8 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     _budgets[job_id] = budget
     current_job.update({"kind": "discovery", "job_id": job_id, "catalog_id": None, "started_at": time.time()})
     def on_timeout():
-        queue.put_nowait({"type": "error", "message": "Search took too long and was stopped."})
-        queue.put_nowait({"type": "done"})
+        queue.put_nowait({"type": "error", "ts": time.time(), "message": "Search took too long and was stopped."})
+        queue.put_nowait({"type": "done", "ts": time.time()})
     _arm_watchdog(job_id, DISCOVERY_TIMEOUT_S, on_timeout)
     # Start the worker thread
     task = asyncio.create_task(asyncio.to_thread(_run_budgeted, job_id, discovery_worker))
@@ -228,10 +238,9 @@ async def stream_discovery(job_id: str, request: Request):
                     # Wait for an event with a 15-second timeout for keepalive
                     evt = await asyncio.wait_for(queue.get(), timeout=15.0)
                     
+                    yield f"data: {json.dumps(evt)}\n\n"
                     if evt.get("type") == "done":
                         break
-                        
-                    yield f"data: {json.dumps(evt)}\n\n"
                     
                 except asyncio.TimeoutError:
                     # Emit keepalive to prevent proxy disconnects

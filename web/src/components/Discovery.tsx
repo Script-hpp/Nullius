@@ -10,14 +10,14 @@ import { fetchJobInfo, useLiveStatus } from '../live'
 import { TavilyMark } from './TavilyMark'
 import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
-  deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime,
+  deriveView, domainOf, formatMetric, humanReject, parseJsonl, parseLiveEvent, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
 } from '../discovery'
 import { Glossed } from './Glossed'
 import { NextStep, PageIntro } from './page'
 import { useSummary } from '../summaries'
 
-type Mode = 'idle' | 'live' | 'replay' | 'done'
+type Mode = 'idle' | 'live' | 'replay' | 'done' | 'failed'
 
 const DATASETS = ['Cora', 'CiteSeer', 'ETTh1']
 const DEFAULT_DATASETS = ['Cora', 'ETTh1']   // each ticked benchmark costs Tavily credits, so the default stays at two
@@ -347,7 +347,7 @@ export function Discovery() {
         if (cancelled) return
         setEvents(all.slice(0, i + 1))
         i++
-        if (i >= all.length) { setMode('done'); return }
+        if (i >= all.length) { setMode(all.some((e) => e.type === 'error') ? 'failed' : 'done'); return }
         const gap = Math.min((all[i].ts - all[i - 1].ts) * 1000, 2500) / speedRef.current
         timer = window.setTimeout(step, gap)
       }
@@ -384,15 +384,29 @@ export function Discovery() {
     }
     const { job_id } = await res.json()
     const es = new EventSource(`/api/discover/${job_id}/stream`)
-    let received = 0
+    let failed = false
+    let completed = false
     stop.current = () => es.close()
     es.onmessage = (m) => {
-      try { const e = JSON.parse(m.data) as DEvent; received++; setEvents((x) => [...x, e]) } catch { /* ignore keepalive noise */ }
+      const e = parseLiveEvent(m.data)
+      if (!e) return
+      if (e.type === 'done') {
+        completed = true
+        es.close()
+        setEvents((x) => [...x, e])
+        setMode(failed ? 'failed' : 'done')
+        refreshStatus()
+        return
+      }
+      if (e.type === 'error') { failed = true; setError(String(e.message || 'The discovery failed.')) }
+      setEvents((x) => [...x, e])
     }
     es.onerror = () => {
       es.close()
-      if (received === 0) setError('The live stream could not be opened.')
-      setMode(received === 0 ? 'idle' : 'done')
+      if (completed) return
+      setError((previous) => previous ?? 'The live stream ended before completion was confirmed. The search may still be running; check its status before retrying.')
+      setMode('failed')
+      refreshStatus()
     }
   }
 
@@ -406,7 +420,8 @@ export function Discovery() {
   useEffect(() => { if (paused && mode === 'idle' && !events.length) startReplay() }, [paused, mode, events.length, startReplay])
 
   const toggle = (d: string) => setDatasets((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
-  const status = running ? 'Running' : mode === 'done' ? 'Finished' : 'Ready'
+  const status = running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? 'Finished' : 'Ready'
+  const displayedError = error ?? view.notes.find((note) => note.kind === 'error')?.message
   const papers = [...view.papers].reverse()
 
   return (
@@ -462,7 +477,7 @@ export function Discovery() {
           <span role="status" className={`${INLINE} font-medium uppercase tracking-wider ${running ? 'text-tone-green' : 'text-fg-3'}`}>
             {running
               ? <span className="relative flex h-2 w-2" aria-hidden><span className="absolute inline-flex h-full w-full rounded-full bg-tone-green-solid opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-tone-green-solid" /></span>
-              : mode === 'done' ? <CheckCircle2 className={ICON_MD} aria-hidden /> : <span className="h-2 w-2 rounded-full bg-line-stronger" aria-hidden />}
+              : mode === 'failed' ? <XCircle className={`${ICON_MD} text-tone-red`} aria-hidden /> : mode === 'done' ? <CheckCircle2 className={ICON_MD} aria-hidden /> : <span className="h-2 w-2 rounded-full bg-line-stronger" aria-hidden />}
             {status}{running && mode === 'replay' && <span className="font-normal normal-case tracking-normal text-muted">· replay</span>}
           </span>
           <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>
@@ -477,12 +492,13 @@ export function Discovery() {
             <span>{offline ? 'Live search is not available on this site.' : 'Live search is paused.'} Showing the last stored run{events.length ? `, recorded ${fmtDate(events[0].ts)}` : ''}.</span>
           </p>
         )}
-        {error && (
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-tone-amber">
-            <span className="inline-flex items-center gap-2"><AlertCircle className="w-4 h-4" />{error}</span>
+        {displayedError && (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-tone-amber">
+            <span className="inline-flex items-center gap-2"><AlertCircle className="w-4 h-4" />{displayedError}</span>
             <button onClick={startReplay} className="text-fg-2 underline underline-offset-4 cursor-pointer hover:text-fg-max">Show recorded run instead</button>
           </div>
         )}
+        {view.notes.filter((note) => note.kind === 'warning').map((note, i) => <p key={i} className="mb-0 mt-3 text-[12px] text-tone-amber">{note.message}</p>)}
       </div>
 
       {!events.length && mode === 'idle' ? (

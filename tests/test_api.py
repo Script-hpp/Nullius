@@ -184,3 +184,46 @@ def test_discovery_timeout_stops_stream_but_holds_worker_slot(monkeypatch):
                 break
             time.sleep(.01)
         assert not api.job_semaphore.locked()
+
+
+def test_discovery_constructor_error_is_timestamped_visible_and_logged(monkeypatch, caplog):
+    import json
+    import math
+    import logging
+    monkeypatch.setenv('TEST_API_KEY', 'test-secret-value-12345')
+
+    class BrokenAgent:
+        def __init__(self):
+            raise RuntimeError('Missing configuration test-secret-value-12345')
+
+    monkeypatch.setattr(api, 'DiscoveryAgent', BrokenAgent)
+    with caplog.at_level(logging.ERROR), TestClient(api.app) as c:
+        job = c.post('/api/discover', json={'datasets': ['Cora']}).json()['job_id']
+        response = c.get(f'/api/discover/{job}/stream')
+    events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+    errors = [event for event in events if event['type'] == 'error']
+    assert len(errors) == 1
+    assert math.isfinite(errors[0].get('ts', float('nan')))
+    assert 'Missing configuration' in errors[0]['message']
+    assert 'test-secret-value-12345' not in response.text
+    assert events[-1]['type'] == 'done'
+    assert math.isfinite(events[-1]['ts'])
+    assert any(job in record.message and 'Missing configuration' in record.message for record in caplog.records)
+    assert 'test-secret-value-12345' not in caplog.text
+    assert not api.job_semaphore.locked()
+
+
+def test_discovery_success_sends_explicit_completion(monkeypatch):
+    import json
+
+    class FakeAgent:
+        def discover(self, datasets, on_event):
+            on_event({'type': 'pending', 'ts': 123.0, 'dataset': datasets[0]})
+
+    monkeypatch.setattr(api, 'DiscoveryAgent', FakeAgent)
+    with TestClient(api.app) as c:
+        job = c.post('/api/discover', json={'datasets': ['Cora']}).json()['job_id']
+        response = c.get(f'/api/discover/{job}/stream')
+    events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
+    assert any(event['type'] == 'pending' for event in events)
+    assert events[-1]['type'] == 'done'
