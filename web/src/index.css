@@ -93,6 +93,7 @@
   --c-flow-ctl-bg: #12110f;
   --c-flow-ctl-fg: #f1eee6;
   --c-flow-ctl-line: #2f2c26;
+  --c-flow-ctl-hover: #27241f;
   --chart-grid: #26241f;
   --chart-axis: #8a867d;
   --chart-green: #10b981;
@@ -155,6 +156,7 @@
   --c-flow-ctl-bg: #fbf8f1;
   --c-flow-ctl-fg: #161513;
   --c-flow-ctl-line: #cfc8b8;
+  --c-flow-ctl-hover: #ebe6da;
   --chart-grid: #ddd7c9;
   --chart-axis: #5f5b52;
   --chart-green: #10b981;
@@ -223,7 +225,16 @@ details[open] > summary .nx-chev { transform: rotate(180deg); }
   --xy-controls-button-background-color: var(--c-flow-ctl-bg);
   --xy-controls-button-color: var(--c-flow-ctl-fg); 
   --xy-controls-button-border-color: var(--c-flow-ctl-line);
+  --xy-controls-button-background-color-hover: var(--c-flow-ctl-hover);
+  --xy-controls-button-color-hover: var(--c-flow-ctl-fg);
+  --xy-controls-box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
+/* Zoom controls: rounded panel, rounded end buttons, icons always visible (stroke follows the button colour). */
+.react-flow__controls { border-radius: 8px; overflow: hidden; border: 1px solid var(--c-flow-ctl-line); }
+.react-flow__controls-button { border-bottom-color: var(--c-flow-ctl-line); transition: background-color 150ms ease-out; }
+.react-flow__controls-button:last-child { border-bottom: 0; }
+.react-flow__controls-button svg { fill: currentColor; max-width: 14px; max-height: 14px; }
+@media (prefers-reduced-motion: reduce) { .react-flow__controls-button { transition: none; } }
 ::selection { background: var(--c-inverse); color: var(--c-on-inverse); }
 .react-flow__handle { opacity: 0; pointer-events: none; }
 
@@ -252,7 +263,25 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 @keyframes tl-pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); } }
 
 /* Film: a measurement drops into the tolerance band. */
-@keyframes film-drop { from { opacity: 0; transform: translate(-50%, calc(-50% - 22px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes film-drop { from { opacity: 0; transform: translateY(-22px); } to { opacity: 1; transform: translateY(0); } }
+/* Result band dots: a lane change (a new dot makes room) glides instead of jumping. */
+.nx-dot { transition: left 450ms ease-out, margin-top 450ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .nx-dot { transition: none; animation: none !important; } }
+
+/* Unified in-page range slider: muted track in both themes, thumb colour from --nx-range-color. */
+.nx-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; margin: 0; }
+.nx-range::-webkit-slider-runnable-track { height: 4px; border-radius: 9999px; background: var(--c-raised-2); }
+.nx-range::-moz-range-track { height: 4px; border-radius: 9999px; background: var(--c-raised-2); }
+.nx-range::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; margin-top: -6px; border-radius: 9999px; border: 2px solid var(--c-bg); background: var(--nx-range-color, var(--c-fg)); box-shadow: 0 0 0 1px var(--c-line-stronger); }
+.nx-range::-moz-range-thumb { height: 12px; width: 12px; border-radius: 9999px; border: 2px solid var(--c-bg); background: var(--nx-range-color, var(--c-fg)); box-shadow: 0 0 0 1px var(--c-line-stronger); }
+.nx-range:focus-visible { outline: 2px solid var(--c-line-stronger); outline-offset: 4px; border-radius: 4px; }
+
+/* Target highlight after a jump (step list, links): a short ring and tint that fade out. Reduced motion: static, removed by script. */
+@keyframes nx-flash { from { background-color: color-mix(in srgb, var(--c-tone-blue-solid) 14%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-tone-blue-solid) 55%, transparent); } to { background-color: transparent; box-shadow: 0 0 0 2px transparent; } }
+.nx-flash { border-radius: 10px; animation: nx-flash 1300ms ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .nx-flash { animation: none; background-color: color-mix(in srgb, var(--c-tone-blue-solid) 10%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-tone-blue-solid) 45%, transparent); }
+}
 
 /* KaTeX in running text: its default is larger than the surrounding font; colour follows currentColor. */
 .katex { font-size: 1.04em; }

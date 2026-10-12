@@ -51,7 +51,7 @@ export function WhatIf({ dossier, claim, verdict, fmt, fmtSpread }: {
           <div className="font-grotesk mt-3 text-4xl font-semibold tracking-[-0.04em] text-fg"><span className="font-mono text-3xl font-light">{fmt(claimed)}</span></div>
           <input id={id} type="range" min={min} max={max} step={0.1} value={u} onChange={(e) => setUnits(Number(e.target.value))}
             aria-valuetext={`claimed ${fmt(claimed)}: ${verdictWord[v]}`}
-            className="mt-5 w-full cursor-pointer accent-fg" style={{ accentColor: TONE_VAR[res.tone] }} />
+            className="nx-range mt-5 w-full cursor-pointer" style={{ ['--nx-range-color' as string]: TONE_VAR[res.tone] }} />
           <div className="mt-1 flex justify-between font-mono text-[11px] text-muted"><span>{fmt(fromUnits(mean, min, tol))}</span><span>{fmt(fromUnits(mean, max, tol))}</span></div>
           <button type="button" onClick={() => setUnits(null)} disabled={real}
             className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-4 py-2 text-[12px] font-medium text-fg transition-colors hover:bg-raised disabled:cursor-default disabled:opacity-40">
