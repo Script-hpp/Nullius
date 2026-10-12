@@ -2,35 +2,27 @@ import { formatMetric } from '../metricFormat'
 import { measuredAttempts } from '../measurements'
 import { AttemptChart } from './Gauge'
 import type { Json } from '../data'
-
-const ORDINAL = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
-
-// Which number of the quoted table row is our target? ("second number") Read from the quote itself; null when it cannot be told.
-export function targetPosition(quote: string, target: number, metric: string): number | null {
-  const nums = [...quote.replace(/(\d)\s+\.\s*(\d)/g, '$1.$2').matchAll(/\d+(?:\.\d+)?(?!\d)(?!s\b)/g)].map((m) => Number(m[0]))
-  const want = metric === 'accuracy' ? target * 100 : target
-  const i = nums.findIndex((n) => Math.abs(n - want) < (metric === 'accuracy' ? 0.051 : 0.0006))
-  return i < 0 ? null : i
-}
+import { targetSource } from '../targetSource'
 
 const H3 = 'm-0 mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted'
 
 // The sentence of the paper that holds the target number, quoted from the page Tavily read.
-export function TargetEvidence({ claim }: { claim: Json }) {
-  const ev = claim?.target_evidence
-  if (!ev) return <p className="m-0 text-sm italic text-muted">No verified target evidence found.</p>
-  const i = targetPosition(String(ev.quote ?? ''), claim.target, claim.metric)
+export function TargetEvidence({ claim, sources }: { claim: Json; sources?: Json[] }) {
+  const source = targetSource(claim, sources)
   return (
     <div className="min-w-0">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Target value</span>
         <span className="font-mono text-lg font-semibold text-fg">{formatMetric(claim.metric, claim.target)} {claim.metric?.toUpperCase()}</span>
       </div>
-      <blockquote className="m-0 rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] italic leading-relaxed text-tone-amber-fg/90">“{ev.quote}”</blockquote>
+      <p className="mb-3 mt-0 text-[13px] leading-relaxed text-fg-4">{source.extracted ? 'Target quotation extracted from the paper.' : 'Recorded target source. Automatic target verification did not complete; this does not confirm the target or its table column.'}</p>
+      {source.quote ? <blockquote className="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] leading-relaxed text-tone-amber-fg/90">“{source.quote}”</blockquote> : <p className="text-sm text-muted">No target quotation was recorded. Read the original source and the limitations of this check.</p>}
       <p className="mb-0 mt-3 text-[12px] leading-relaxed text-fg-4">
-        Row from {ev.table || 'a table'} of the paper; {i == null ? 'our target is one of its numbers' : i < ORDINAL.length ? `the ${ORDINAL[i]} number is our target` : `our target is number ${i + 1}`}.
-        {' '}<a className="text-tone-blue transition-colors hover:text-tone-blue-hover" href={ev.url} target="_blank" rel="noreferrer">Source page</a>
+        {source.table && <>Recorded location: {source.table}. </>}
+        {!source.table && source.recordedLocation && <>{source.recordedLocation}. </>}
+        {source.columnVerified ? 'The table column was checked automatically.' : 'The table column was not verified automatically. Compare the method, dataset and metric in the original paper.'}
       </p>
+      {source.url && <a className="mt-4 inline-block text-sm text-tone-blue underline underline-offset-4 hover:text-tone-blue-hover" href={source.url} target="_blank" rel="noreferrer">Open original source</a>}
     </div>
   )
 }

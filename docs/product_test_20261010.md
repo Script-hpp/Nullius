@@ -1,6 +1,6 @@
 # Human product test — pending
 
-One person tests the finished product before we decide further live-demo steps or author outreach. This is a usability observation, not a scientific performance evaluation. No result is claimed yet. The demo at https://nullius.akca.dev/ was reachable on 12 Oct 2026; the jury-review fixes need deployment before testing them on that address. A local preview is sufficient for the recorded-evidence test.
+One person tests the finished product before we decide further live-demo steps or author outreach. This is a usability observation, not a scientific performance evaluation. No human-test result is claimed yet. The jury-review fixes are deployed at https://nullius.akca.dev/ and were technically verified on 12 Oct 2026, including mobile views and a saved PDF. The user deferred the human test; the separate [agent UI/UX walkthrough](ux_walkthrough_20261012.md) records interface observations without claiming human-user evidence.
 
 ## Tasks (about ten minutes)
 

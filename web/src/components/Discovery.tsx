@@ -259,7 +259,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
             <span><span className="font-mono text-fg-3">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
             {p.githubUrl ? (
               <a href={p.githubUrl} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}>
-                <Code className={ICON_MD} />Code<ExtArrow />
+                <Code className={ICON_MD} />Authors’ repository<ExtArrow />
               </a>
             ) : <span className="text-subtle" title="The paper is rebuilt from its text alone">No public code – paper-only rebuild</span>}
             <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}>
@@ -412,6 +412,7 @@ export function Discovery() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Discover" title="Find papers worth checking"
+        compact="Choose supported datasets, then watch a recorded search or start a live one."
         what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. The text is read directly from the arXiv LaTeX source, keeping claims it can quote word for word."
         look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
 
@@ -449,7 +450,7 @@ export function Discovery() {
         </div>
 
         <p className="mb-0 mt-4 text-pretty text-[12px] leading-relaxed text-muted">
-          A live run searches the web right now and spends search and model calls, so it is limited: one run at a time, and a daily limit. Replay has no limit.
+          Search covers the selected datasets; this demo has no paper-URL input. A live run spends search and model calls, with one run at a time and a daily limit. Replay has no limit.
         </p>
         {paused && (
           <p role="status" className="mb-0 mt-3 flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-fg-3">

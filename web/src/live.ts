@@ -19,7 +19,7 @@ export async function fetchJobInfo(): Promise<JobInfo | null> {
 }
 
 // null = API not reachable (hide the live controls), otherwise the current job state; polled.
-export function useJobInfo(everyMs = 10000): { available: boolean; info: JobInfo | null; refresh: () => void } {
+export function useJobInfo(everyMs = 10000): { available: boolean; ready: boolean; info: JobInfo | null; refresh: () => void } {
   const [info, setInfo] = useState<JobInfo | null>(null)
   const [ready, setReady] = useState(false)
   const refresh = useCallback(() => { fetchJobInfo().then((i) => { setInfo(i); setReady(true) }) }, [])
@@ -28,7 +28,7 @@ export function useJobInfo(everyMs = 10000): { available: boolean; info: JobInfo
     const t = window.setInterval(refresh, everyMs)
     return () => window.clearInterval(t)
   }, [refresh, everyMs])
-  return { available: ready && info !== null, info, refresh }
+  return { available: ready && info !== null, ready, info, refresh }
 }
 
 // null = no answer (static mirror or API down): the UI then shows no notice and the start call reports what happens.

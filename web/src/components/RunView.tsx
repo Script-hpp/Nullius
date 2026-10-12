@@ -32,6 +32,10 @@ import { tavilySummary } from '../tavilysummary'
 import { GoLink, TAB_BTN, toPercent } from './ui'
 import { flashSection } from '../sectionScroll'
 import { formatSpread } from '../metricFormat'
+import { targetSource } from '../targetSource'
+import { SetupSources } from './SetupSources'
+import { runOrigin } from '../runNavigation'
+import { minutes, runTimings } from '../eta'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const INFO = 'The certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it.'
@@ -113,7 +117,11 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const community = hasCommunity(d), explanations = explanationItems(d, claim.id)
   const nExp = experimentCount(d, claim.id), nRepairs = repairCount(run.events, claim.id)
   const tav = tavilySummary(run.events)
-  const paperUrl = claim.target_evidence?.url
+  const paperUrl = targetSource(claim, d.sources).url ?? undefined
+  const showCode = () => { setFile('code'); goTab('code', { fold: 'f-plancode' }) }
+  const showMeasurements = () => goTab('code', { fold: 'f-seeds' })
+  const origin = runOrigin(ref_.id)
+  const duration = runTimings(run.events).total
 
   const onStep = (id: StepId) => {
     const flash = true
@@ -138,8 +146,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
       )}
       <div ref={topRef} className="scroll-mt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
-          <a href="#overview" className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted no-underline transition-colors hover:text-fg-2">
-            <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to runs
+          <a href={origin.hash} className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted no-underline transition-colors hover:text-fg-2">
+            <ArrowRight className="h-3.5 w-3.5 rotate-180" /> {origin.hash.startsWith('#catalog') ? 'Back to catalog' : 'Back to runs'}
           </a>
           {run.events.length > 0 && !timelapse && (
             <button type="button" onClick={() => setTimelapse(true)} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[12px] font-medium text-fg hover:bg-raised/60">
@@ -158,6 +166,12 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} onTavily={() => goTab('sources')} />
       </div>
 
+      {duration !== null && duration >= 0 && <p className="mb-4 mt-0 text-[12px] text-muted">Recorded check took {minutes(duration)}. The 30-second replay compresses this run; a new live check may take longer.</p>}
+      <nav aria-label="Inspect this check" className="mb-6 flex flex-wrap gap-3">
+        <button type="button" onClick={() => goTab('sources', { fold: 'f-target' })} className={TAB_BTN}>View sources &amp; setup</button>
+        <button type="button" onClick={showCode} className={TAB_BTN}>View generated code</button>
+        <button type="button" onClick={showMeasurements} className={TAB_BTN}>View measurements</button>
+      </nav>
       {v && <CertificateActions run={run} />}
       <RunTabs tab={tab} onTab={(t) => goTab(t)} icons={ICONS} barRef={barRef} />
 
@@ -178,8 +192,9 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <h3 className={h3}>Before you build on this result</h3>
               <p className="mb-0 mt-3 max-w-2xl text-[14px] leading-relaxed text-fg-4">Choosing a paper to build on? Start with its claim and our measurement above. Open the sources to see where the target came from, then inspect the program and repeated runs. This helps researchers decide what to investigate next. Matching the number still needs a review of the method.</p>
               <div className="mt-5 flex flex-wrap gap-4">
-                <button type="button" onClick={() => goTab('sources')} className={TAB_BTN}>Inspect sources &amp; setup</button>
-                <button type="button" onClick={() => goTab('code')} className={TAB_BTN}>Inspect code &amp; measurements</button>
+                <button type="button" onClick={() => goTab('sources', { fold: 'f-target' })} className={TAB_BTN}>View sources &amp; setup</button>
+                <button type="button" onClick={showCode} className={TAB_BTN}>View generated code</button>
+                <button type="button" onClick={showMeasurements} className={TAB_BTN}>View measurements</button>
               </div>
             </section>
             {nExp > 0 && (
@@ -216,12 +231,15 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
         {tab === 'sources' && (
           <div>
-            <TabIntro title="Sources & Tavily" text="What Tavily found. It never changes the verdict." />
+            <TabIntro title="Sources & setup" text="The recorded paper source, setup references and Tavily research behind this check. Sources do not independently verify the method." />
             {tav.total > 0 && (
               <p className="mb-8 mt-0 font-mono text-[12px] text-muted" data-testid="tavily-summary">{tav.total} Tavily {tav.total === 1 ? 'call' : 'calls'} in this run · {tav.parts.join(' · ')}</p>
             )}
             <Fold title="Target value and its quote" meta={`claimed ${fmt(claim.target)}`} id="f-target" open={open.has('f-target')} onOpenChange={setFold('f-target')}>
-              <TargetEvidence claim={claim} />
+              <TargetEvidence claim={claim} sources={d.sources} />
+            </Fold>
+            <Fold title="Setup references" meta={`${(d.setup_details ?? []).filter((item: Json) => !item.excluded).length} quoted`} id="f-setup" open={open.has('f-setup')} onOpenChange={setFold('f-setup')}>
+              <SetupSources dossier={d} claim={claim} />
             </Fold>
             {community && (
               <Fold title="What others found" meta={`${communityCount(d)} ${communityCount(d) === 1 ? 'note' : 'notes'}`} id="f-community" open={open.has('f-community')} onOpenChange={setFold('f-community')}>
@@ -243,7 +261,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
 
         {tab === 'code' && (
           <div>
-            <TabIntro title="Code & branches" text="One sandbox branch per seed, plus plan and code." />
+            <TabIntro title="Code & measurements" text="The generated experiment, its selected measurements and the full branch history." />
             <section id="sec-branches" className="scroll-mt-16" aria-label="Branch tree">
               <h3 className={h3}>Branch tree</h3>
               <BranchTree dossier={d} claimId={claim.id} events={run.events} onSelect={setSelected} selected={selected?.branch_id ?? null} />
@@ -258,7 +276,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <Fold title="Plan and code" meta="exactly as stored" id="f-plancode" open={open.has('f-plancode')} onOpenChange={setFold('f-plancode')}>
                 <div className="space-y-4">
                   <div className="flex gap-2">
-                    <button onClick={() => setFile('code')} aria-pressed={file === 'code'} className={`${toggle(file === 'code')} inline-flex items-center gap-2`}><Code className="h-3.5 w-3.5 shrink-0" />Agent code</button>
+                    <button onClick={() => setFile('code')} aria-pressed={file === 'code'} className={`${toggle(file === 'code')} inline-flex items-center gap-2`}><Code className="h-3.5 w-3.5 shrink-0" />Generated experiment</button>
                     <button onClick={() => setFile('plan')} aria-pressed={file === 'plan'} className={toggle(file === 'plan')}>Plan</button>
                   </div>
                   <pre className="m-0 h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-5 font-mono text-[12px] leading-relaxed text-fg-4">

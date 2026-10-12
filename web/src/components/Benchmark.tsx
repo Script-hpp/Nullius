@@ -158,6 +158,7 @@ export function Benchmark() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
+        compact="Known results, one new paper and false targets answer different questions. Start with the three checks below."
         what="Papers with known results: how often does Nullius agree?"
         look={latest ? 'Start with target agreement, then inspect the false-target checks and recent catalog evidence.' : 'Results appear once the evaluation has run.'} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>

@@ -63,7 +63,7 @@ export function useCatalog(): CatalogEntry[] | null {
 
 export const STATUS_TEXT: Record<CatalogEntry['status'], string> = {
   ungeprueft: 'Not run yet',
-  geprueft: 'Ran through the loop',
+  geprueft: 'Checked',
   lauf_fehlgeschlagen: 'Run failed',
   nicht_laufbar: 'Not runnable',
 }
@@ -95,4 +95,4 @@ export function fmtDelta(e: CatalogEntry): { text: string; sign: -1 | 0 | 1 } | 
   return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(d)}${share ? ' pp' : ''}`, sign: diff > 0 ? 1 : -1 }
 }
 
-export const evidenceHref = (e: CatalogEntry, tab?: 'log') => (e.run_id ? `#/run/${e.run_id}${tab ? `?tab=${tab}` : ''}` : null)
+export const evidenceHref = (e: CatalogEntry, view?: 'log' | 'replay') => (e.run_id ? `#/run/${e.run_id}${view === 'replay' ? '?play=1' : view === 'log' ? '?tab=log' : ''}` : null)

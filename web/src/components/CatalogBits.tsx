@@ -49,7 +49,7 @@ export function ClaimedMeasured({ entry }: { entry: CatalogEntry }) {
   )
 }
 
-export function EvidenceLink({ entry, tab, children }: { entry: CatalogEntry; tab?: 'log'; children: React.ReactNode }) {
+export function EvidenceLink({ entry, tab, children }: { entry: CatalogEntry; tab?: 'log' | 'replay'; children: React.ReactNode }) {
   const href = evidenceHref(entry, tab)
   if (!href) return null
   return (

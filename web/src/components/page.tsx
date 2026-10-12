@@ -6,13 +6,21 @@ import { Glossed } from './Glossed'
 // Building blocks shared by every page: the intro every page starts with, and the "Next" every page ends with.
 
 // "What you see here" (one plain sentence) and "What to look at first" (where to start). Visible text, never a tooltip.
-export function PageIntro({ kicker, title, what, look, head, children }: { kicker?: string; title: string; what: string; look: string; head?: ReactNode; children?: ReactNode }) {
+export function PageIntro({ kicker, title, what, look, compact, head, children }: { kicker?: string; title: string; what: string; look: string; compact?: string; head?: ReactNode; children?: ReactNode }) {
   return (
-    <header className="pb-10 pt-10 md:pt-14">
+    <header className="pb-6 pt-6 md:pb-10 md:pt-14">
       {kicker && <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{kicker}</div>}
       <h1 className="font-grotesk m-0 mt-3 text-4xl font-semibold leading-[1.02] text-fg sm:text-5xl">{title}</h1>
       {head}
-      <div className="mt-8 grid gap-6 border-t border-line pt-8 md:grid-cols-2 md:gap-0">
+      {compact && <div className="mt-4 md:hidden">
+        <p className="m-0 text-[14px] leading-relaxed text-fg-3"><Glossed text={compact} /></p>
+        <details className="mt-3 text-[13px] text-muted">
+          <summary className="cursor-pointer">How to use this page</summary>
+          <p className="mt-3 leading-relaxed"><Glossed text={what} /></p>
+          <p className="mt-2 leading-relaxed"><Glossed text={look} /></p>
+        </details>
+      </div>}
+      <div className={`${compact ? 'hidden md:grid' : 'grid'} mt-8 gap-6 border-t border-line pt-8 md:grid-cols-2 md:gap-0`}>
         <div className="md:pr-12">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted"><Info className="h-3.5 w-3.5" />What you see here</div>
           <p className="mb-0 mt-3 max-w-md text-[15px] leading-relaxed text-fg-3"><Glossed text={what} /></p>

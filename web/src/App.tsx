@@ -19,6 +19,8 @@ import { BookOpen, Activity } from 'lucide-react'
 import { groupRuns } from './group'
 import { allSettled } from './loaded'
 import { useCountUp } from './useCountUp'
+import { rememberRunOrigin } from './runNavigation'
+import { useCollectionPosition } from './useCollectionPosition'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -59,6 +61,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   }, [runs])
   // Cards and counters appear once, after every dossier settled; grouping by claim id would otherwise change under them.
   const ready = allSettled(runs, settled)
+  useCollectionPosition(ready)
   const urteil = (r: RunRef) => data[r.id]?.dossier?.verdicts?.[0]?.urteil
   const groups = !ready ? [] : groupRuns(runs, (r) => data[r.id]?.dossier?.claims?.[0]?.id)   // one card per paper claim, newest run on top
   const reproduced = groups.filter((g) => urteil(g.latest) === 'reproduziert')
@@ -68,6 +71,7 @@ function Home({ runs }: { runs: RunRef[] }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Runs" title="Finished checks"
+        compact="Compare claimed and measured values, then open a check for sources, code and measurements."
         what="An independent harness measures whether each target is reached. Method fidelity is not verified. In benchmark v4, none of 48 deliberately false targets was confirmed; that is a result of that evaluation, not a guarantee for new papers. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
@@ -150,15 +154,24 @@ function Home({ runs }: { runs: RunRef[] }) {
         })}
       </div>
 
-      <NextStep title={example ? 'See how one check ends' : 'Find a paper to check'}
+      {ready && <NextStep title={example ? 'See how one check ends' : 'Find a paper to check'}
         text={example ? 'Open a finished check: the verdict in one sentence, the steps the agent took, and why the number can be trusted.' : 'No checks yet. Discover papers that report results on a benchmark we can rebuild.'}
-        label={example ? 'Open an example' : 'Discover papers'} href={example ? `#/run/${example.id}` : '#discover'} />
+        label={example ? 'Open an example' : 'Discover papers'} href={example ? `#/run/${example.id}` : '#discover'} />}
     </main>
   )
 }
 
 export default function App() {
   const hash = useHash()
+  useEffect(() => {
+    const capture = (event: MouseEvent) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const anchor = event.target instanceof Element ? event.target.closest('a') : null
+      if (anchor) rememberRunOrigin(anchor.getAttribute('href') ?? '', location.hash, document.getElementById('app-scroll')?.scrollTop ?? 0)
+    }
+    document.addEventListener('click', capture)
+    return () => document.removeEventListener('click', capture)
+  }, [])
   const [runs, setRuns] = useState<RunRef[] | null>(null)
   useEffect(() => {
     const load = () => loadIndex().then(setRuns)

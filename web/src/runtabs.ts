@@ -7,8 +7,8 @@ export type HowView = 'graph' | 'log'
 export const TAB_LABEL: Record<RunTab, string> = {
   overview: 'Overview',
   how: 'How we got there',
-  sources: 'Sources & Tavily',
-  code: 'Code & branches',
+  sources: 'Sources & setup',
+  code: 'Code & measurements',
   limits: 'Limits',
 }
 

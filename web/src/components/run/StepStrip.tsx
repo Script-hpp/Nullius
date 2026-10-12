@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, CircleDashed, Loader2, MinusCircle } from 'lucide-react'
 import type { Event, Json } from '../../data'
 import { fmtValue } from './phases'
+import { measuredAttempts } from '../../measurements'
 
 // The numbered way from paper to verdict, with a status for each step. Built from the events and the dossier of a run (finished or live).
 export type StepId = 'paper' | 'claim' | 'sources' | 'plan' | 'code' | 'sandbox' | 'check' | 'verdict' | 'community'
@@ -37,6 +38,7 @@ export function buildSteps(events: Event[], dossier: Json | null, o: { running: 
   const target = num(claim?.target) ?? num(claimStart?.target)
   const communityRunning = has('tavily_call') && events.some((e) => e.type === 'tavily_call' && (num(e.role) === 3 || num(e.role) === 6)) && !has('community')
   const mean = num(verdict?.measured_mean ?? verdict?.mean)
+  const finalMeasurements = claim && verdict ? measuredAttempts(d, claim.id) : []
 
   const done: Record<StepId, boolean> = {
     paper: has('run_start') || !!d.paper_id,
@@ -56,7 +58,7 @@ export function buildSteps(events: Event[], dossier: Json | null, o: { running: 
     plan: null,
     code: null,
     sandbox: seedsTotal ? `${seedsDone} of ${seedsTotal} seeds finished` : measured.length ? `${seedsDone} seeds finished` : null,
-    check: measured.length ? `${measured.length} ${measured.length === 1 ? 'run' : 'runs'} scored` : null,
+    check: measured.length ? `${measured.length} ${measured.length === 1 ? 'attempt' : 'attempts'} scored${finalMeasurements.length ? ` · ${finalMeasurements.length} selected for the verdict` : ''}` : null,
     verdict: mean != null ? `Mean ${fmtValue(metric, mean)}` : null,
     community: d.community ? `${(d.community.findings ?? []).length} ${(d.community.findings ?? []).length === 1 ? 'note' : 'notes'}` : null,
   }

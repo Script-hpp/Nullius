@@ -4,6 +4,18 @@ import { UNITS, HELD_OUT, FIGURES, MODES, LIMITS, REPO_BLOB, SOURCES } from '../
 
 const link = (path: string) => `${REPO_BLOB}/${path}`
 
+export function BenchmarkSummary() {
+  return <div className="rounded-xl border border-line bg-surface p-5" aria-label="How to read the benchmark">
+    <h2 className="m-0 text-lg font-semibold text-fg">Three questions, three separate checks</h2>
+    <ol className="mb-0 mt-4 space-y-3 pl-5 text-[14px] leading-relaxed text-fg-3">
+      <li><strong className="text-fg">Did it agree on familiar examples?</strong> With the paper and authors’ code, {FIGURES.withCode.matched} of {FIGURES.withCode.of} reference verdicts matched. The fixes were developed using these examples, so this is a development result.</li>
+      <li><strong className="text-fg">Did it work on a new paper?</strong> {HELD_OUT.model} was kept separate from development. {HELD_OUT.matched} of {HELD_OUT.of} matched; the check missed the known target in both runs.</li>
+      <li><strong className="text-fg">Did it confirm deliberately wrong targets?</strong> None: {FIGURES.placebo.v4[0]} of {FIGURES.placebo.v4[1]} in the paper-only evaluation, and {FIGURES.placebo.cg[0]} of {FIGURES.placebo.cg[1]} in the separate authors’ code evaluation. These checks are not combined.</li>
+    </ol>
+    <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">These small evaluations do not establish a success rate for new papers. A target match checks the number; it does not verify the method.</p>
+  </div>
+}
+
 function Mark({ ok, label }: { ok: boolean; label: string }) {
   return ok
     ? <span role="img" aria-label={label} className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-tone-green-solid text-white sm:h-7 sm:w-7"><Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={3} aria-hidden /></span>
@@ -123,6 +135,7 @@ export function TwoModes() {
           Two rebuild modes. Separate evaluations.
         </p>
       </div>
+      <BenchmarkSummary />
       <Precision />
       <Headline />
       <Matrix />

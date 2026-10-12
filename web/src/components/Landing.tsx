@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { ChevronDown, Play } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronDown, Play, Menu, X } from 'lucide-react'
 import { NAV_LINKS } from './Layout'
 import { ExtLink, GoLink } from './ui'
 import { ThemeToggle } from './ThemeSwitch'
@@ -15,16 +15,22 @@ import { RecentChecks } from './RecentChecks'
 // Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
 
 function TopBar() {
-  const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const link = 'hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline md:inline'
   return (
     <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-3 px-4 sm:px-10">
       <Wordmark />
       <div className="flex items-center gap-3 sm:gap-7">
         {NAV_LINKS.map((l) => <a key={l.label} href={l.href} className={link} title={l.title}>{l.label}</a>)}
-        <ExtLink href={REPO} className="hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline-flex">GitHub</ExtLink>
+        <span className="hidden md:inline-flex"><ExtLink href={REPO} className="text-sm text-fg-4 transition-colors hover:text-fg no-underline">GitHub</ExtLink></span>
         <a href="#catalog" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
         <ThemeToggle />
+        <button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} aria-controls="landing-menu" className="cursor-pointer border-0 bg-transparent p-2 text-fg-3 md:hidden">{menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
       </div>
+      {menuOpen && <nav id="landing-menu" aria-label="Main" className="absolute inset-x-0 top-16 flex flex-col gap-1 border-y border-line bg-bg px-5 py-3 md:hidden" onClick={() => setMenuOpen(false)}>
+        {NAV_LINKS.map((l) => <a key={l.label} href={l.href} title={l.title} className="py-2 text-sm text-fg no-underline">{l.label}</a>)}
+        <ExtLink href={REPO} className="py-2 text-sm text-fg no-underline">GitHub</ExtLink>
+      </nav>}
     </header>
   )
 }

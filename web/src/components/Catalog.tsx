@@ -14,6 +14,7 @@ import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../li
 import { referenceShort } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
 import { catalogFilterFromHash, matchesCatalogFilter, type CatalogFilter } from '../catalogFilter'
+import { useCollectionPosition } from '../useCollectionPosition'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
@@ -81,9 +82,9 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
           <div className="relative z-10 flex flex-wrap items-center gap-x-4 gap-y-2">
             <button onClick={live.onRun} disabled={!!why || live.starting} title={why}
               className={`${INLINE} rounded-lg border border-line-strong px-3 py-1.5 text-[12px] font-medium leading-none text-fg hover:bg-raised transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed`}>
-              {live.starting ? <Loader2 className={`${ICON_MD} animate-spin`} /> : <Play className={ICON_MD} />}Run reproduction
+              {live.starting ? <Loader2 className={`${ICON_MD} animate-spin`} /> : <Play className={ICON_MD} />}Start new check
             </button>
-            <span className="text-[11px] text-muted">Quick check, 3 seeds, watched live</span>
+            <span className="text-[11px] text-muted">3 seeds · watched live · can take tens of minutes</span>
             {live.latestLive && <GoLink href={`#/run/${live.latestLive}`} className="text-[11px] text-fg-3 hover:text-fg-max">Latest live run</GoLink>}
             {live.error && <span className={`w-full text-[12px] ${live.errorIsNotice ? 'text-muted' : 'text-tone-red'}`}>{live.error}</span>}
           </div>
@@ -93,13 +94,14 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px] leading-none">
         <span className={`${INLINE} text-fg-4`} title={e.jury ? translateJuryReason(e.jury.reason) : undefined}>
           {e.jury?.ready && e.run_id ? <CheckCircle2 className={ICON_MD} /> : <CircleSlash className={ICON_MD} />}
-          {v && !e.run_id ? 'Evidence not published here' : e.jury ? (e.jury.ready ? 'Jury ready' : `Not jury ready: ${translateJuryReason(e.jury.reason)}`) : 'Not jury ready: not run yet'}
+          {v && !e.run_id ? 'Evidence not published here' : e.jury ? (e.jury.ready ? 'Evidence available' : `Incomplete evidence: ${translateJuryReason(e.jury.reason)}`) : 'No evidence yet'}
         </span>
         <span className="flex flex-wrap items-center gap-4">
           <EvidenceLink entry={e}>View evidence</EvidenceLink>
-          <EvidenceLink entry={e} tab="log"><PlayCircle className={ICON_MD} />Watch replay</EvidenceLink>
+          <EvidenceLink entry={e} tab="replay"><PlayCircle className={ICON_MD} />30-second replay</EvidenceLink>
+          <EvidenceLink entry={e} tab="log">Event log</EvidenceLink>
           {e.github_url && (
-            <a href={e.github_url} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}><Code className={ICON_MD} />Code<ExtArrow /></a>
+            <a href={e.github_url} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}><Code className={ICON_MD} />Authors’ repository<ExtArrow /></a>
           )}
           <a href={`https://arxiv.org/abs/${e.arxiv_id}`} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}><BookOpen className={ICON_MD} />arXiv<ExtArrow /></a>
         </span>
@@ -110,7 +112,9 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
 export function Catalog() {
   const entries = useCatalog()
-  const { available, info, refresh } = useJobInfo()
+  const { available, ready: jobReady, info, refresh } = useJobInfo()
+  // Availability changes the intro's height, so restore only after it is known.
+  useCollectionPosition(entries !== null && jobReady)
   const { status, refresh: refreshStatus } = useLiveStatus()
   const repro = statusFor(status, 'reproduction')
   const paused = isPaused(repro)
@@ -154,17 +158,18 @@ export function Catalog() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Catalog" title="Papers we have checked"
+        compact="Compare claimed and measured values. Open a check to inspect its evidence."
         what="Featured checks offer published evidence to explore. All entries also includes unsuccessful checks, setup failures and candidates that have not been run."
         look="Open a finished check, or choose All entries to inspect every outcome. A failed check does not prove the paper wrong." />
 
-      <details className="group mb-10 border-t border-line pt-6">
+      <details className="group mb-5 border-t border-line pt-4 md:mb-10 md:pt-6">
         <summary className={`nx-summary ${INLINE} cursor-pointer text-[11px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-fg-3`}>How this catalog is made · supported datasets<Chevron className="h-3.5 w-3.5" /></summary>
         <div className="mt-6 grid gap-10 md:grid-cols-2 md:gap-0">
           <div className="md:pr-12">
             <ol className="m-0 list-none space-y-3 p-0 text-[15px] leading-relaxed text-fg-4">
               <li className="flex gap-3"><span className="shrink-0 font-mono text-fg-3">01</span><span><span className="font-medium text-fg">Collect.</span> Reference papers and Tavily finds with a quotable claim.</span></li>
               <li className="flex gap-3"><span className="shrink-0 font-mono text-fg-3">02</span><span><span className="font-medium text-fg">One full run.</span> Rebuilt by the agent, measured by the harness.</span></li>
-              <li className="flex gap-3"><span className="shrink-0 font-mono text-fg-3">03</span><span><span className="font-medium text-fg">Listed.</span> Jury ready: a finished check with measurements and evidence to explore. Method fidelity is not verified.</span></li>
+              <li className="flex gap-3"><span className="shrink-0 font-mono text-fg-3">03</span><span><span className="font-medium text-fg">Listed.</span> A finished check with measurements and evidence to explore. Method fidelity is not verified.</span></li>
             </ol>
             <p className="mb-0 mt-4 text-[13px] leading-relaxed text-muted">A live check can differ from the stored result: the agent writes new code each time.</p>
           </div>
@@ -192,7 +197,7 @@ export function Catalog() {
         <span className={label}>{entries ? `${shown.length} of ${total} shown · Reproduced first` : 'Loading'}</span>
       </div>
       <p className="mb-6 mt-0 max-w-3xl text-[13px] leading-relaxed text-muted">
-        {available ? 'Live checks need no sign-in.' : 'Live checks are off here; finished runs and replays are open.'}
+        {available ? 'Live checks need no sign-in. Select an existing paper, or use Discover to find compatible papers.' : 'Live checks are off here; finished runs and replays are open.'} This demo has no paper-URL input.
       </p>
       {available && paused && (
         <p role="status" className="mb-6 mt-0 flex w-fit max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-4 py-3 text-[13px] leading-relaxed text-fg-3">

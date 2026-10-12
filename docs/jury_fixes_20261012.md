@@ -13,7 +13,7 @@ Auftrag: Befunde aus [jury_review_20261012.md](jury_review_20261012.md) notieren
 - [x] **Katalog vollstaendig erreichbar machen.** Kuratierter Einstieg bleibt `Featured checks`; daneben `All entries`, `Failed checks` und `Unchecked`. Filter haben teilbare URLs (`#catalog?view=all`, `failed`, `unchecked`). `Explore all outcomes` oeffnet alle Eintraege. Kandidaten ohne veroeffentlichte Evidenz erhalten keinen erfundenen Ergebnislink.
 - [x] **Demo-Adresse und Dokumentation synchronisieren.** Badge-Snippets verwenden `https://nullius.akca.dev`. README und Devpost-Entwurf nennen die am 12. Oktober gepruefte Demo. Neue Video-/Devpost-Veroeffentlichung bleibt offen. README und Einreichungstexte nennen den nachfolgenden Kosten-/Timeout-Fix mit seinen verbleibenden Grenzen; historische Reviews bleiben als historische Befunde bestehen. Der Tavily-Detail-Link zeigt auf den existierenden Abschnitt in `docs/evaluation_notes.md`.
 
-## Validierung
+## Lokale Validierung vor Deployment
 
 - Produktionsbuild und Lint erfolgreich. Bekannte Warnungen zu grossen Bundles, React-Fast-Refresh und bestehenden Discovery-Renderpfaden bleiben; keine Lint-Fehler.
 - **123 Frontend-Tests bestanden**, einschliesslich fuenf neuer Regressionen mit echten exportierten GLinear-/Katalogdaten, Legacy-Laeufen und Metrikformatierung.
@@ -24,8 +24,12 @@ Auftrag: Befunde aus [jury_review_20261012.md](jury_review_20261012.md) notieren
 
 ## Noch offen
 
-- [ ] **Deployment dieser Aenderungen.** Der Nutzer hat den Push der geprueften Reparaturen auf `main` zum Deployment beauftragt. Ein Push aktualisiert noch nicht automatisch die Demo; Deployment liegt laut CLAUDE.md beim Nutzer. Danach Startseite, GLinear, TSMixer, Katalogfilter und Druckexport auf dem Server pruefen.
+- [x] **Deployment dieser Aenderungen.** Commit `1458688` auf `main` gepusht, anschliessend vom Nutzer deployed. Am 12. Oktober die Live-Seite geprueft: ausgeliefertes JS bytegenau gleich dem lokalen Build; GLinear-Endmessungen, TSMixer-Einheiten, Katalogfilter und Badge-URLs korrekt. Mobile Kernwege bei 390 × 844 in beiden Themes ohne Seitenfehler/Seitenueberbreite. Druckvorschau und Druck-Listener unter Produktions-CSP geprueft; dreiseitiges A4-PDF gespeichert und Messungen, Quellen, Einschraenkungen sowie Layout geprueft. Kein frischer kostenpflichtiger Live-Lauf.
 - [ ] **Menschlichen Produkttest abschliessen.** [Bestehender Testplan](product_test_20261010.md): ohne Coaching Ergebnis erklaeren, Beleg finden, PDF speichern und naechste Entscheidung nennen. Beobachtungen statt erfundener Zeitersparnis berichten. Die technische Browserpruefung ersetzt diesen Test nicht.
 - [ ] **Video neu schneiden/rendern und veroeffentlichen.** [Brief](jury_walkthrough_and_video_next_steps.md#nächster-videoschnitt): ein durchgehender, belegter Fall mit Quelle, festem Ziel, eigenem Code, echtem Fehler und Reparatur, Sandbox und unabhaengiger Messung. Aufzeichnung kennzeichnen; Methodengrenze lesbar zeigen. Kein neues MP4 in dieser Runde erstellt.
 - [ ] **Devpost final eintragen.** Demo vorhanden; Video-Link und eigentliche Einreichung weiterhin offen. Texte, Video und fertiges Produkt vor Abgabe abgleichen.
 - [ ] **Spaetere Forschungsarbeit getrennt planen.** Allgemeine Leistung auf neuen Papers und Methodentreue bleiben ungeprueft. Keine neue Kalibrierung oder bezahlte Benchmark-Kampagne begonnen. Weitere Live-Demo-/Outreach-Schritte bleiben gemaess Nutzerentscheidung hinter dem menschlichen Produkttest.
+
+## Nachfolgende UI/UX-Reparaturen
+
+Der vom Nutzer beauftragte Erstnutzer-Durchgang und die anschliessenden Reparaturen stehen in [ux_walkthrough_20261012.md](ux_walkthrough_20261012.md#umsetzung-nach-dem-durchgang--12-oktober-2026). Quellen/Setup, direkte Code-/Messungsaktionen, Replay/Log, Katalog-Rueckweg, mobile Einleitungen, Benchmark-Einordnung und Einstiegsbeschreibung sind umgesetzt. Diese Aenderungen brauchen ein neues Deployment; der menschliche Test bleibt offen.
