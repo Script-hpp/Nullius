@@ -1,20 +1,25 @@
 import { useState, type ReactNode } from 'react'
-import { Menu, Search, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { ThemeToggle } from './ThemeSwitch'
 import { SiteFooter } from './SiteFooter'
 import { Wordmark } from './Wordmark'
+import { ExtLink } from './ui'
+import { REPO } from '../data/benchmark'
 
 const DISCOVER_TIP = 'Papers found live by Tavily'
-const REPO = 'https://github.com/Script-hpp/Nullius'
+
+// Header items are text-only; the one external item (GitHub) carries the external arrow. Shared with the start page's top bar.
+export const NAV_LINKS: { label: string; href: string; hash: string; title?: string }[] = [
+  { label: 'Catalog', href: '#catalog', hash: 'catalog' },
+  { label: 'Discover', href: '#discover', hash: 'discover', title: DISCOVER_TIP },
+  { label: 'Benchmark', href: '#benchmark', hash: 'benchmark' },
+  { label: 'Runs', href: '#overview', hash: 'overview' },
+]
 
 // App bar in the style of the landing page (wordmark, quiet links, one outlined "Try it"). The page scrolls inside <main>.
 export function Layout({ children, currentHash }: { children: ReactNode; currentHash: string }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const links: { label: string; href: string; active: boolean }[] = [
-    { label: 'Catalog', href: '#catalog', active: currentHash === 'catalog' },
-    { label: 'Discover', href: '#discover', active: currentHash === 'discover' },
-    { label: 'Benchmark', href: '#benchmark', active: currentHash === 'benchmark' },
-  ]
+  const links = NAV_LINKS.map((l) => ({ ...l, active: currentHash === l.hash }))
   const link = (active: boolean) => `text-sm no-underline transition-colors ${active ? 'text-fg underline decoration-fg-4 decoration-1 underline-offset-[6px]' : 'text-fg-4 hover:text-fg'}`
 
   return (
@@ -23,8 +28,8 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-5 px-5 md:px-8">
           <Wordmark />
           <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
-            {links.map((l) => <a key={l.label} href={l.href} className={link(l.active)} aria-current={l.active ? 'page' : undefined} title={l.label === 'Discover' ? DISCOVER_TIP : undefined}>{l.label}{l.label === 'Discover' && <Search className="ml-1.5 inline h-3 w-3 align-[-1px]" aria-hidden />}</a>)}
-            <a href={REPO} target="_blank" rel="noreferrer" className={link(false)}>GitHub</a>
+            {links.map((l) => <a key={l.label} href={l.href} className={link(l.active)} aria-current={l.active ? 'page' : undefined} title={l.title}>{l.label}</a>)}
+            <ExtLink href={REPO} className={link(false)}>GitHub</ExtLink>
           </nav>
           <div className="flex items-center gap-4">
             <a href="#catalog" className="hidden rounded-full border border-fg px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg sm:inline">Try it</a>
@@ -39,7 +44,7 @@ export function Layout({ children, currentHash }: { children: ReactNode; current
           <div className="border-t border-line-faint px-5 pb-5 pt-3 md:hidden" onClick={() => setMenuOpen(false)}>
             <nav className="flex flex-col gap-1" aria-label="Main">
               {links.map((l) => <a key={l.label} href={l.href} className={`py-2 ${link(l.active)}`}>{l.label}{l.label === 'Discover' && <span className="ml-2 text-[11px] text-muted">papers found live by Tavily</span>}</a>)}
-              <a href={REPO} target="_blank" rel="noreferrer" className={`py-2 ${link(false)}`}>GitHub</a>
+              <ExtLink href={REPO} className={`py-2 ${link(false)}`}>GitHub</ExtLink>
             </nav>
           </div>
         )}

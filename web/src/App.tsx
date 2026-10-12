@@ -10,6 +10,7 @@ import { PreliminaryChip } from './components/CatalogBits'
 import { NextStep, PageIntro } from './components/page'
 import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
+import { Contact } from './components/Contact'
 import { colorForTone, getDelta, parseDate, showValue } from './format'
 import { Badge } from './components/ui'
 import { loadIndex, loadRun, type RunData, type RunRef } from './data'
@@ -150,13 +151,13 @@ export default function App() {
     window.addEventListener(DATA_CHANGED, load)   // a live run finished: index.json has a new entry
     return () => window.removeEventListener(DATA_CHANGED, load)
   }, [])
-  // A new page opens at the top. Same path with another query (?tab=, ?play=) keeps the position; /lesson scrolls on its own.
+  // A new page opens at the top. Same path with another query (?tab=, ?play=) keeps the position; /lesson and /tavily scroll on their own.
   const path = useRef(hash.split('?')[0])
   useEffect(() => {
     const p = hash.split('?')[0]
     if (p === path.current) return
     path.current = p
-    if (p !== '/lesson') { window.scrollTo(0, 0); document.getElementById('app-scroll')?.scrollTo(0, 0) }   // the start page scrolls the window, the other pages scroll inside Layout
+    if (p !== '/lesson' && p !== '/tavily') { window.scrollTo(0, 0); document.getElementById('app-scroll')?.scrollTo(0, 0) }   // the start page scrolls the window, the other pages scroll inside Layout
   }, [hash])
   useEffect(() => { if (hash === '/jury') location.replace('#/') }, [hash])   // the old judges page: the start page now tells that story
   const m = hash.match(/^\/run\/([^?]+)(?:\?(.*))?$/)
@@ -171,7 +172,7 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
+        {hash === 'discover' ? <Discovery /> : hash === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
           <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
             <Activity className="w-8 h-8 text-subtle animate-pulse" />
             <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
