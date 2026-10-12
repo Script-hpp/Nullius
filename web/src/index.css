@@ -193,7 +193,7 @@ body {
 /* Transitions: colours only, in the base layer so Tailwind transition utilities win. Never `all`: that animated transform, layout and
    every child on its own (card hover, tooltips). Motion is opt-in through the nx-* classes below. */
 @layer base {
-  a, button { transition: color 0.2s ease-out, background-color 0.2s ease-out, border-color 0.2s ease-out, text-decoration-color 0.2s ease-out, opacity 0.2s ease-out; }
+  a, button { transition: color 0.2s ease-out, background-color 0.2s ease-out, border-color 0.2s ease-out, text-decoration-color 0.2s ease-out; }
 }
 
 /* Interaction conventions (see the primitives in components/ui.tsx):
@@ -224,12 +224,17 @@ details[open] > summary .nx-chev { transform: rotate(180deg); }
    rasterise and move as one unit, children carry no transitions of their own. */
 .nx-card-lift { transition: border-color 200ms ease-out, box-shadow 200ms ease-out, translate 200ms ease-out; will-change: translate; }
 .nx-card-lift:hover { translate: 0 -2px; }
+/* Entrance of a list item: a CSS animation runs exactly once per inserted element (no JS state, no re-trigger on re-render or layout shift).
+   fill-mode backwards: hidden during its delay, nothing held afterwards, so hover lift is free. */
+@keyframes nx-rise { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+.nx-rise { animation: nx-rise 320ms ease-out backwards; animation-delay: var(--nx-delay, 0ms); }
 @media (prefers-reduced-motion: reduce) {
   .nx-shift, .nx-arrow, .nx-ext-arrow, .nx-chev { transition: none; }
   .nx-shift:hover, .nx-go:hover .nx-arrow, .nx-shift:hover .nx-arrow, .nx-ext:hover .nx-ext-arrow { transform: none; }
   .nx-bob { animation: none; }
   .nx-card, .nx-card-lift { transition: none; }
   .nx-card-lift:hover { translate: none; }
+  .nx-rise { animation: none; }
 }
 
 /* React Flow customization */
@@ -290,11 +295,15 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 .nx-range::-moz-range-thumb { height: 12px; width: 12px; border-radius: 9999px; border: 2px solid var(--c-bg); background: var(--nx-range-color, var(--c-fg)); box-shadow: 0 0 0 1px var(--c-line-stronger); }
 .nx-range:focus-visible { outline: 2px solid var(--c-line-stronger); outline-offset: 4px; border-radius: 4px; }
 
-/* Target highlight after a jump (step list, links): a short ring and tint that fade out. Reduced motion: static, removed by script. */
+/* Target highlight after a jump (step list, links): a short ring and tint that fade out. Drawn on a ::after overlay so the target's own
+   borders (the coloured separator on top of the verdict) keep their straight shape; the overlay starts below that separator.
+   Reduced motion: static, removed by script. */
 @keyframes nx-flash { from { background-color: color-mix(in srgb, var(--c-tone-blue-solid) 14%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-tone-blue-solid) 55%, transparent); } to { background-color: transparent; box-shadow: 0 0 0 2px transparent; } }
-.nx-flash { border-radius: 10px; animation: nx-flash 1300ms ease-out forwards; }
+.nx-flash { position: relative; }
+.nx-flash::after { content: ''; position: absolute; inset: 0; border-radius: 10px; pointer-events: none; animation: nx-flash 1300ms ease-out forwards; }
+#sec-verdict.nx-flash::after { top: 2px; border-top-left-radius: 0; border-top-right-radius: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .nx-flash { animation: none; background-color: color-mix(in srgb, var(--c-tone-blue-solid) 10%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-tone-blue-solid) 45%, transparent); }
+  .nx-flash::after { animation: none; background-color: color-mix(in srgb, var(--c-tone-blue-solid) 10%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-tone-blue-solid) 45%, transparent); }
 }
 
 /* KaTeX in running text: its default is larger than the surrounding font; colour follows currentColor. */

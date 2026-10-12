@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Layout } from './components/Layout'
 import { Discovery } from './components/Discovery'
 import { Catalog } from './components/Catalog'
@@ -95,8 +94,8 @@ function Home({ runs }: { runs: RunRef[] }) {
           if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
           return (
             <div key={r.id} className="flex flex-col">
-            <motion.a href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}
-              className={`group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline ${CARD_LIFT}`}>
+            <a href={`#/run/${r.id}`} style={{ '--nx-delay': `${Math.min(i, 8) * 40}ms` } as CSSProperties}
+              className={`nx-rise group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline ${CARD_LIFT}`}>
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>
@@ -128,7 +127,7 @@ function Home({ runs }: { runs: RunRef[] }) {
                   <span>{parseDate(r.timestamp)}</span>
                 </div>
               </div>
-            </motion.a>
+            </a>
             {earlier.length > 0 && (
               <details className="group/earlier mt-2 rounded-lg border border-line/60 px-4 py-2 text-[12px] text-muted">
                 <summary className="nx-summary flex cursor-pointer items-center justify-between gap-2">
