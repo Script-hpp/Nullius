@@ -47,6 +47,8 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
             {shownBase.map(([k, v]) => <ReferenceLine key={k} y={v} stroke="var(--chart-gray)" strokeDasharray="2 4" label={{ value: k, fill: 'var(--chart-axis)', fontSize: 10, position: 'insideBottomRight' }} />)}
             
             <Tooltip cursor={{ fill: 'var(--chart-cursor)' }} contentStyle={{ background: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-line)', borderRadius: 8, color: 'var(--chart-tooltip-fg)' }}
+              itemStyle={{ color: 'var(--chart-tooltip-fg)' }} labelStyle={{ color: 'var(--chart-tooltip-fg)' }}
+              isAnimationActive={false} animationDuration={0} wrapperStyle={{ transition: 'none', outline: 'none' }}
               formatter={(v) => [f(Number(v)), 'Measured']} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={700}>
               {data.map((_: Json, i: number) => <Cell key={i} fill="var(--c-fill-mid)" fillOpacity={0.55} />)}
