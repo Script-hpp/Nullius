@@ -52,3 +52,12 @@ def _reset_rate_limits():
 
     web_guard.HITS.clear()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _isolate_live_candidates(tmp_path, monkeypatch):
+    from repro_agent import live_catalog
+
+    monkeypatch.setattr(live_catalog, "PATH", tmp_path / "live_candidates.json")
+    monkeypatch.setattr(live_catalog, "CACHE_PATH", tmp_path / "discovery_cache.json")
+    monkeypatch.setattr(live_catalog, "REPLAY_PATH", tmp_path / "discovery_replay.json")

@@ -9,7 +9,7 @@ import { NextStep, PageIntro } from './page'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { catalogLabel, translateJuryReason, translateReason } from '../labels'
-import { startReproduction, useJobInfo, useLiveStatus } from '../live'
+import { startReproduction, useJobInfo, useLiveStatus, useReproductionEligibility, type ReproductionEligibility } from '../live'
 import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
 import { referenceShort } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
@@ -18,13 +18,13 @@ import { useCollectionPosition } from '../useCollectionPosition'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
 
-type LiveControl = { available: boolean; busy: boolean; paused: boolean; starting: boolean; error: string | null; errorIsNotice: boolean; latestLive: string | null; onRun: () => void }
+type LiveControl = { available: boolean; busy: boolean; paused: boolean; starting: boolean; error: string | null; errorIsNotice: boolean; latestLive: string | null; onRun: () => void; eligibility?: ReproductionEligibility }
 
 function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveControl; samePaper: boolean }) {
   const v = e.verdict
   const stored = useHead(e.id)
   const head = stored ?? headFromSummary(e.head, e.arxiv_id)   // summaries.json first, else the head the run's dossier carried into catalog.json
-  const canRun = live.available && e.status !== 'nicht_laufbar'
+  const canRun = live.available && e.status !== 'nicht_laufbar' && live.eligibility?.runnable === true
   const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
     const href = evidenceHref(e)
   return (
@@ -70,6 +70,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
       {/* Stats and run controls move as one block, centered in the space left above the footer. */}
       <div className="flex flex-1 flex-col justify-center gap-3 py-5">
+        {live.eligibility?.runnable === false && <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Check unavailable: {translateReason(live.eligibility.reason ?? '')}</p>}
         {v && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-muted">
             <span>Seeds <span className="font-mono text-fg-3">{v.seeds}</span></span>
@@ -112,6 +113,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
 export function Catalog() {
   const entries = useCatalog()
+  const { entries: eligibility } = useReproductionEligibility()
   const { available, ready: jobReady, info, refresh } = useJobInfo()
   // Availability changes the intro's height, so restore only after it is known.
   useCollectionPosition(entries !== null && jobReady)
@@ -210,7 +212,7 @@ export function Catalog() {
         {shown.map((e) => (
           <CatalogCard key={e.id} e={e} samePaper={(entries ?? []).filter((other) => other.arxiv_id === e.arxiv_id).length > 1} live={{
             available, busy: !!info?.busy, paused, starting: starting === e.id, error: error?.id === e.id ? error.msg : null, errorIsNotice: !!error?.notice,
-            latestLive: latestLive(e.id), onRun: () => run(e.id),
+            latestLive: latestLive(e.id), onRun: () => run(e.id), eligibility: eligibility?.[e.id],
           }} />
         ))}
       </div>

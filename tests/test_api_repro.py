@@ -33,7 +33,7 @@ class FakeOrch:
         FakeOrch.instances.append(self)
 
     def run(self, paper_id, source="benchmark"):
-        assert source == "catalog"
+        assert source in ("catalog", "live_catalog")
         run_dir = self.root / "runs" / paper_id / "20261001-120000"
         run_dir.mkdir(parents=True)
         self.last_run_dir = run_dir

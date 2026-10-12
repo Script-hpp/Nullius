@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from . import catalog as cat
-from . import live_gate, site_export, web_guard, spend_guard
+from . import live_gate, site_export, web_guard, spend_guard, live_catalog
 from .discovery import DiscoveryAgent
 from .dossier import REPO_ROOT
 
@@ -26,6 +26,10 @@ from .dossier import REPO_ROOT
 @asynccontextmanager
 async def lifespan(_app):
     restore_counters()   # Tageslimits ueberleben Neustart/Redeploy (logs/live_jobs.jsonl)
+    try:
+        live_catalog.import_existing_cache()
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        logger.error("Could not restore Discovery candidates: %s", sanitize_text(str(exc), 300))
     yield
 
 
@@ -153,13 +157,29 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     job_id = str(uuid.uuid4())
     queue = asyncio.Queue()
     jobs[job_id] = queue
-    queue.put_nowait({"type": "discovery_start", "ts": time.time(), "datasets": datasets})
+    start_event = {"type": "discovery_start", "ts": time.time(), "datasets": datasets}
+    queue.put_nowait(start_event)
+    recording = [start_event]
+    recording_lock = threading.Lock()
+    recording_closed = False
 
     def emit(evt):
+        nonlocal recording_closed
         event = sanitize(evt)
         stamp = event.get("ts")
         if not isinstance(stamp, (int, float)) or not math.isfinite(stamp):
             event["ts"] = time.time()
+        with recording_lock:
+            if not recording_closed:
+                recording.append(event)
+                if event["type"] == "done":
+                    recording_closed = True
+                    try:
+                        live_catalog.save_replay(recording)
+                    except OSError:
+                        logger.error("Discovery job %s replay could not be saved", job_id)
+                        loop.call_soon_threadsafe(queue.put_nowait, {"type": "warning", "ts": time.time(),
+                            "message": "The search ended, but its replay could not be saved."})
         loop.call_soon_threadsafe(queue.put_nowait, event)
 
     # Run the discovery loop in a background thread or task.
@@ -170,6 +190,8 @@ async def start_discovery(req: DiscoverRequest, request: Request):
             # Put the event into the queue in a thread-safe manner
             if job_id not in jobs:
                 raise RuntimeError("Client disconnected, aborting discovery loop.")
+            if evt.get("type") == "candidate":
+                evt = live_catalog.save_candidate(evt)
             emit(evt)
 
         try:
@@ -192,8 +214,8 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     _budgets[job_id] = budget
     current_job.update({"kind": "discovery", "job_id": job_id, "catalog_id": None, "started_at": time.time()})
     def on_timeout():
-        queue.put_nowait({"type": "error", "ts": time.time(), "message": "Search took too long and was stopped."})
-        queue.put_nowait({"type": "done", "ts": time.time()})
+        emit({"type": "error", "ts": time.time(), "message": "Search took too long and was stopped."})
+        emit({"type": "done", "ts": time.time()})
     _arm_watchdog(job_id, DISCOVERY_TIMEOUT_S, on_timeout)
     # Start the worker thread
     task = asyncio.create_task(asyncio.to_thread(_run_budgeted, job_id, discovery_worker))
@@ -376,6 +398,31 @@ class ReproduceRequest(BaseModel):
     author_code: bool = True   # False: reiner Paper-Nachbau (Schalter, kein Standard)
 
 
+@app.get("/api/discover/candidates")
+async def saved_discovery_candidates():
+    try:
+        return sanitize(live_catalog.candidate_events())
+    except (OSError, ValueError):
+        raise HTTPException(503, detail="Saved discovery claims are unavailable.")
+
+
+@app.get("/api/discover/replay")
+async def latest_discovery_replay():
+    try:
+        return sanitize(live_catalog.latest_replay())
+    except (OSError, ValueError):
+        raise HTTPException(503, detail="Saved discovery replay is unavailable.")
+
+
+@app.get("/api/reproduce/eligibility")
+async def reproduction_eligibility():
+    try:
+        entries = cat.load_catalog(CATALOG_PATH) + live_catalog.load_entries()
+        return sanitize({entry["id"]: live_catalog.eligibility(entry) for entry in entries})
+    except (OSError, ValueError):
+        raise HTTPException(503, detail="Check eligibility is unavailable.")
+
+
 def _prune_jobs() -> None:
     now = time.time()
     for jid in [j for j, job in repro_jobs.items() if job.done and now - job.created > JOB_KEEP_SECONDS]:
@@ -390,12 +437,17 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     if not full_runs_allowed():
         req.quick = True
     entry = next((e for e in cat.load_catalog(CATALOG_PATH) if e["id"] == req.catalog_id), None)
+    dynamic = entry is None
+    if dynamic:
+        try:
+            entry = live_catalog.find_entry(req.catalog_id)
+        except (OSError, ValueError):
+            raise HTTPException(503, detail="Saved discovery claims are unavailable.")
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown catalog entry")
-    try:
-        cat.build_paper(entry)
-    except cat.NotRunnable as exc:
-        raise HTTPException(status_code=400, detail=f"Not runnable: {sanitize_text(str(exc), 300)}")
+    eligible = live_catalog.eligibility(entry)
+    if not eligible["runnable"]:
+        raise HTTPException(status_code=400, detail=f"Not runnable: {sanitize_text(eligible['reason'], 300)}")
 
     today = datetime.date.today()
     if repro_daily["date"] != today:
@@ -408,6 +460,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     job = ReproJob(id=str(uuid.uuid4()), catalog_id=entry["id"], quick=req.quick)
     repro_jobs[job.id] = job
     job.add({"ts": time.time(), "type": "queued", "catalog_id": entry["id"], "quick": req.quick,
+                 "entry": sanitize(site_export.catalog_json([entry])[0]),
                  "mode_requested": "nachbau_autorencode" if req.author_code else "nachbau"})
     loop = asyncio.get_running_loop()
     await job_semaphore.acquire()
@@ -425,12 +478,16 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             job.add({"ts": time.time(), "type": "started", "catalog_id": entry["id"]})
             orch = make_orchestrator(req.quick, req.author_code)
             orch.on_event = lambda evt: job.add(sanitize(evt))
-            outcome = cat.run_candidate(orch, entry)
+            outcome = cat.run_candidate(orch, entry, source="live_catalog") if dynamic else cat.run_candidate(orch, entry)
             budget.check()
+            if dynamic:
+                live_catalog.save_outcome(entry, outcome)
+                site_export.write_catalog(CATALOG_PATH, site_export.OUT, live_catalog.load_entries())
             if outcome.status == cat.CHECKED and outcome.dossier is not None and outcome.dossier.verdicts:
                 seeds = getattr(orch, "seeds", None) or cat.build_paper(entry)[0]["seeds"]
                 note = f"live quick check, {seeds} seeds" if req.quick else f"live run, {seeds} seeds"
-                ref = site_export.export_live_run(outcome.run_dir, CATALOG_PATH, site_export.OUT, note, seeds)
+                ref = site_export.export_live_run(outcome.run_dir, CATALOG_PATH, site_export.OUT, note, seeds,
+                                                  extra_entries=live_catalog.load_entries())
                 job.add({"ts": time.time(), "type": "finished", "run_id": ref["id"],
                          "verdict": sanitize(cat.verdict_dict(entry, outcome.dossier, outcome.run_dir)),
                          "cost_gross_usd": round(outcome.cost_gross_usd, 4)})

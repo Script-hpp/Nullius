@@ -517,7 +517,7 @@ class DiscoveryAgent:
         """Ereignis `candidate` mit allem, was die UI fuer die Karte braucht (Titel, Claim als Objekt, Code-Link)."""
         return {"type": "candidate", "arxiv_id": paper.arxiv_id, "cached": cached, "title": paper.title,
                 "dataset": paper.dataset, "claim": paper.claim, "reason": paper.reason, "found_by": paper.found_by,
-                "community_hits": len(paper.community), "protocol": paper.protocol,
+                "community_hits": len(paper.community), "community": paper.community, "protocol": paper.protocol,
                 "github_url": paper.github_url, "source_url": paper.source_url,
                 "feasibility": "ok" if paper.github_url else "no_repo", "repo_status": paper.repo_status}
 

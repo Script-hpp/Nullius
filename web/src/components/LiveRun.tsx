@@ -9,7 +9,7 @@ import { useLiveRun, lastFinishedRun, DATA_CHANGED } from '../live'
 import { translateClaim } from '../labels'
 import { getText, loadIndex, runDir, type Event, type RunRef } from '../data'
 import { etaFromRuns, minutes, type Eta } from '../eta'
-import { useCatalog } from '../catalog'
+import { useCatalog, type CatalogEntry } from '../catalog'
 import { PaperHead } from './PaperHead'
 import { useHead } from '../useHead'
 import { headFromSummary } from '../paperhead'
@@ -36,7 +36,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
   useEffect(() => { loadIndex().then(setRuns) }, [status])
 
   const queued = events.find((e) => e.type === 'queued')
-  const entry = catalog?.find((c) => c.id === queued?.catalog_id)
+  const entry = catalog?.find((c) => c.id === queued?.catalog_id) ?? (queued?.entry as CatalogEntry | undefined)
   const stored = useHead(entry?.id)
   const head = headFromSummary(events.find((e) => e.type === 'paper_summary')) ?? stored ?? headFromSummary(entry?.head, entry?.arxiv_id)   // the head the run wrote itself, as soon as its event is there
   const seedsN = Number(events.find((e) => e.type === 'run_start')?.seeds)   // the seed count of this run, from the job itself; unknown before run_start

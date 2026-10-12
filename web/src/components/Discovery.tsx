@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
+import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle, Loader2 } from 'lucide-react'
 import { ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { translateReason } from '../labels'
-import { fetchJobInfo, useLiveStatus } from '../live'
+import { fetchJobInfo, startReproduction, useLiveStatus, useReproductionEligibility, type ReproductionEligibility } from '../live'
 import { TavilyMark } from './TavilyMark'
-import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
+import { isPaused, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, parseLiveEvent, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime, savedCheckForClaim,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
@@ -17,7 +17,7 @@ import { Glossed } from './Glossed'
 import { NextStep, PageIntro } from './page'
 import { useSummary } from '../summaries'
 
-type Mode = 'idle' | 'live' | 'replay' | 'done' | 'failed'
+type Mode = 'idle' | 'live' | 'replay' | 'done' | 'failed' | 'saved'
 
 const DATASETS = ['Cora', 'CiteSeer', 'ETTh1']
 const DEFAULT_DATASETS = ['Cora', 'ETTh1']   // each ticked benchmark costs Tavily credits, so the default stays at two
@@ -120,7 +120,7 @@ const FUNNEL_TEXT = [
   'Papers whose protocol and results were read from the arXiv LaTeX source (Tavily as fallback). A run reads at most three per benchmark.',
   'A result we can quote word for word from the results table.',
   'The paper splits the data the way our task does, so the numbers are comparable.',
-  'A claim we can re-run. The catalog lists the ones that have been run.',
+  'A quoted claim selected for checking. A new experiment also needs a supported setup.',
 ]
 
 function Funnel({ funnel, running }: { funnel: DiscoveryView['funnel']; running: boolean }) {
@@ -154,7 +154,9 @@ const STATE_TEXT: Record<string, string> = {
   searching: 'Looking for code and community notes',
 }
 
-function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: CatalogEntry }) {
+type CheckControl = { eligibility?: ReproductionEligibility; disabled: boolean; notice?: string; starting: boolean; error?: string; onRun: () => void }
+
+function PaperCard({ p, active, entry, check }: { p: DPaper; active: boolean; entry?: CatalogEntry; check?: CheckControl }) {
   const t = useTween()
   const reduce = useReducedMotion()
   const c = p.claim
@@ -162,6 +164,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   const rejected = p.state === 'rejected'
   const checked = p.state === 'candidate' && entry?.status === 'geprueft' && !!entry.verdict   // ran once through the loop
   const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
+  const setupUnresolved = p.runnable === false || check?.eligibility?.runnable === false
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
       className="nx-card rounded-xl border border-line bg-surface p-5">
@@ -203,9 +206,9 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
 
       {p.state === 'candidate' && (
         <div className="mt-3">
-          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-tone-green">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Checkable claim found
+          <div className={`flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider ${setupUnresolved ? 'text-tone-amber' : 'text-tone-green'}`}>
+            {setupUnresolved ? <AlertCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+            {setupUnresolved ? 'Claim found · setup unresolved' : 'Checkable claim found'}
             <Hint text={HINTS.unverified} />
             {p.cached && (
               <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-subtle">from cache<Hint text={HINTS.cache} /></span>
@@ -256,6 +259,18 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
           </span>
         </div>
       )}
+      {p.state === 'candidate' && check && <div className="mt-4 border-t border-line/60 pt-3">
+        {check.eligibility?.runnable === false ? <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Check unavailable: {translateReason(check.eligibility.reason ?? '')}</p>
+          : <>
+            <button onClick={check.onRun} disabled={check.disabled || check.starting} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+              {check.starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}Check this claim
+            </button>
+            <p className="mb-0 mt-2 text-[11px] leading-relaxed text-muted">New experiment · 3 seeds · can take tens of minutes. Unverified setup or table columns keep the conclusion provisional.</p>
+            {check.notice && <p role="status" className="mb-0 mt-2 text-[12px] text-muted">{check.notice}</p>}
+          </>}
+        {check.error && <p role="alert" className="mb-0 mt-2 text-[12px] text-tone-amber">{check.error}</p>}
+      </div>}
+      {p.state === 'candidate' && !check && <p className="mb-0 mt-3 text-[11px] text-muted">Run live discovery to save this claim for a new experiment.</p>}
       {p.state === 'candidate' && entry && (checked || notRun) && <details className="group mt-4 border-t border-line/60 pt-3" data-testid="saved-discovery-check">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium text-fg-3">
           Saved reproduction check{entry.checked_at ? ` · ${new Date(entry.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
@@ -298,11 +313,17 @@ function Timeline({ view, runtime }: { view: DiscoveryView; runtime: number }) {
 export function Discovery() {
   const [datasets, setDatasets] = useState<string[]>(DEFAULT_DATASETS)
   const { status: liveStatus, refresh: refreshStatus } = useLiveStatus()
+  const { entries: eligibility, refresh: refreshEligibility } = useReproductionEligibility()
+  const [initialReady, setInitialReady] = useState(false)
+  const [starting, setStarting] = useState<string | null>(null)
+  const [checkError, setCheckError] = useState<{ id: string; message: string } | null>(null)
+  const interacted = useRef(false)
   const disc = statusFor(liveStatus, 'discovery')
   const paused = isPaused(disc)
   const [mode, setMode] = useState<Mode>('idle')
   const [events, setEvents] = useState<DEvent[]>([])
   const [recorded, setRecorded] = useState(false)
+  const [replaySource, setReplaySource] = useState<'server' | 'example' | null>(null)
   const [offline, setOffline] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [error, setError] = useState<string | null>(null)
@@ -325,16 +346,27 @@ export function Discovery() {
   }, [running])
   const runtime = tickedRuntime(eventRuntime, performance.now() - lastEvent.current.at, mode === 'replay' ? speed : 1, running && events.length > 0)
 
-  const reset = () => { stop.current(); setEvents([]); setError(null); setRecorded(false) }
+  const reset = () => { interacted.current = true; stop.current(); setEvents([]); setError(null); setRecorded(false); setReplaySource(null); setCheckError(null) }
 
   const startReplay = useCallback(async () => {
     reset()
     try {
-      const r = await fetch(import.meta.env.BASE_URL + 'data/discovery/replay.jsonl')
-      const text = r.ok ? await r.text() : ''
-      const all = /^\s*<!doctype html/i.test(text) ? [] : parseJsonl(text)
+      let all: DEvent[] = []
+      let source: 'server' | 'example' = 'server'
+      try {
+        const response = await fetch('/api/discover/replay', { cache: 'no-store' })
+        const saved = response.ok && response.headers.get('content-type')?.includes('json') ? await response.json() : []
+        if (Array.isArray(saved)) all = saved.map((e) => parseLiveEvent(JSON.stringify(e))).filter((e): e is DEvent => e !== null)
+      } catch { /* static mirror: use the explicitly labeled demo recording */ }
+      if (!all.length) {
+        source = 'example'
+        const r = await fetch(import.meta.env.BASE_URL + 'data/discovery/replay.jsonl')
+        const text = r.ok ? await r.text() : ''
+        all = /^\s*<!doctype html/i.test(text) ? [] : parseJsonl(text)
+      }
       if (!all.length) throw new Error('empty')
       setRecorded(true)
+      setReplaySource(source)
       setMode('replay')
       let i = 0
       let timer: number | undefined
@@ -393,6 +425,7 @@ export function Discovery() {
         setEvents((x) => [...x, e])
         setMode(failed ? 'failed' : 'done')
         refreshStatus()
+        refreshEligibility()
         return
       }
       if (e.type === 'error') { failed = true; setError(String(e.message || 'The discovery failed.')) }
@@ -408,16 +441,42 @@ export function Discovery() {
   }
 
   // No API here (static mirror) or live search paused: open on the last stored run instead of an empty page.
-  const autoTried = useRef(false)
   useEffect(() => {
-    if (autoTried.current) return
-    autoTried.current = true
-    fetchJobInfo().then((info) => { if (info === null) { setOffline(true); startReplay() } })
+    let alive = true
+    fetchJobInfo().then(async (info) => {
+      if (!alive || interacted.current) return
+      if (info === null) { setOffline(true); startReplay(); return }
+      try {
+        const response = await fetch('/api/discover/candidates', { cache: 'no-store' })
+        const saved = response.ok && response.headers.get('content-type')?.includes('json') ? await response.json() : []
+        if (alive && !interacted.current && Array.isArray(saved) && saved.length) {
+          setEvents(saved.map((e) => parseLiveEvent(JSON.stringify(e))).filter((e): e is DEvent => e !== null))
+          setMode('saved')
+        }
+      } catch { /* a fresh install has no saved claims */ }
+      finally { if (alive) setInitialReady(true) }
+    })
+    return () => { alive = false }
   }, [startReplay])
-  useEffect(() => { if (paused && mode === 'idle' && !events.length) startReplay() }, [paused, mode, events.length, startReplay])
+  useEffect(() => { if (initialReady && paused && mode === 'idle' && !events.length) startReplay() }, [initialReady, paused, mode, events.length, startReplay])
+
+  const runClaim = async (id: string) => {
+    setStarting(id); setCheckError(null)
+    try {
+      const jobId = await startReproduction(id)
+      window.location.assign(`#/live/${jobId}`)
+    } catch (err) {
+      setCheckError({ id, message: err instanceof Error ? err.message : 'Could not start the check.' })
+      refreshStatus(); refreshEligibility()
+    } finally { setStarting(null) }
+  }
+  const repro = statusFor(liveStatus, 'reproduction')
+  const checkNotice = offline ? 'Live checks are not available on this site.'
+    : running || repro?.reason === 'busy' ? 'Another run is active. Wait for it to finish.'
+    : isPaused(repro) ? `Live checks are paused (${repro?.reason === 'daily_limit' ? 'daily limit' : 'budget limit'}). ${resumeText(repro?.reason, repro?.reset_at) ?? ''}` : undefined
 
   const toggle = (d: string) => setDatasets((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
-  const status = running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? 'Finished' : 'Ready'
+  const status = mode === 'saved' ? 'Saved claims' : running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? 'Finished' : 'Ready'
   const displayedError = error ?? view.notes.find((note) => note.kind === 'error')?.message
   const papers = [...view.papers].reverse()
   const candidates = papers.filter((p) => p.state === 'candidate')
@@ -431,7 +490,7 @@ export function Discovery() {
       <PageIntro kicker="Discover" title="Find papers worth checking"
         compact="Choose supported datasets, then watch a recorded search or start a live one."
         what="Tavily finds papers with quoted claims on supported datasets. Discovery checks their sources and setup to find candidates for an experiment. Reproduction is a separate step."
-        look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
+        look="Watch a recorded search or start a live one. Choose Check this claim to run a new experiment for a saved candidate and inspect its evidence." />
 
       <div className="nx-card mb-6 rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
@@ -448,7 +507,7 @@ export function Discovery() {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={startLive} disabled={running || !datasets.length || paused || offline} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+            <button onClick={startLive} disabled={running || !datasets.length || paused || offline || disc?.reason === 'busy'} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               <Play className="w-4 h-4" />Start live run
             </button>
             <button onClick={startReplay} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
@@ -472,7 +531,7 @@ export function Discovery() {
         {paused && (
           <p role="status" className="mb-0 mt-3 flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-fg-3">
             <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <span>{pausedText(disc?.reason, 'search')} {resumeText(disc?.reason, disc?.reset_at)}</span>
+            <span>Live search is paused ({disc?.reason === 'daily_limit' ? 'daily limit' : 'budget limit'}). {resumeText(disc?.reason, disc?.reset_at)}</span>
           </p>
         )}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
@@ -482,16 +541,16 @@ export function Discovery() {
               : mode === 'failed' ? <XCircle className={`${ICON_MD} text-tone-red`} aria-hidden /> : mode === 'done' ? <CheckCircle2 className={ICON_MD} aria-hidden /> : <span className="h-2 w-2 rounded-full bg-line-stronger" aria-hidden />}
             {status}{running && mode === 'replay' && <span className="font-normal normal-case tracking-normal text-muted">· replay</span>}
           </span>
-          <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>
+          {mode !== 'saved' && <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>}
           <span>Papers <span className="font-mono text-fg-3">{view.papers.length}</span></span>
           <span>Candidates <span className="font-mono text-fg-3">{view.funnel[view.funnel.length - 1].value}</span></span>
-          {recorded && events.length > 0 && <span>Recorded run from {fmtDate(events[0].ts)}</span>}
+          {recorded && events.length > 0 && <span>{replaySource === 'server' ? 'Saved server search' : 'Demo recording'} from {fmtDate(events[0].ts)}</span>}
         </div>
 
         {recorded && (offline || paused) && (
           <p role="status" className="mb-0 mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-fg-3">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <span>{offline ? 'Live search is not available on this site.' : 'Live search is paused.'} Showing the last stored run{events.length ? `, recorded ${fmtDate(events[0].ts)}` : ''}.</span>
+            <span>{offline ? 'Live search is not available on this site.' : 'Live search is paused.'} Showing {replaySource === 'server' ? 'the latest saved server search' : 'the bundled demo recording'}{events.length ? `, recorded ${fmtDate(events[0].ts)}` : ''}.</span>
           </p>
         )}
         {displayedError && (
@@ -513,7 +572,9 @@ export function Discovery() {
         </div>
       ) : (
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <Section title="Tavily research feed" hint={recorded ? 'recorded search · no new API calls' : 'live API calls'}>
+        {mode === 'saved' ? <Section title="Saved live discovery" hint="no new API calls">
+          <p className="text-[13px] leading-relaxed text-muted">These claims were found by earlier live searches and saved on this server. Choose a compatible claim to start a new experiment. Reading this list does not start a search or a check.</p>
+        </Section> : <Section title="Tavily research feed" hint={recorded ? 'recorded search · no new API calls' : 'live API calls'}>
           <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted">
             <span>Tavily calls <span className="font-mono text-fg-3">{view.tavilyCalls}</span></span>
             <span>Model calls <span className="font-mono text-fg-3">{view.llmCalls}</span>
@@ -527,16 +588,23 @@ export function Discovery() {
             </AnimatePresence>
             {!view.feed.length && !running && <p className="text-[13px] text-subtle">No Tavily calls yet. Start a run or replay the recorded one.</p>}
           </div>
-        </Section>
+        </Section>}
 
         <div className="space-y-6">
-          <Section title="Pipeline">
+          {mode !== 'saved' && <Section title="Pipeline">
             <Funnel funnel={view.funnel} running={running} />
-          </Section>
+          </Section>}
           <Section title="Claims to check" hint={`${candidates.length} found · ${papers.length} papers seen`}>
-            <p className="mb-4 text-[12px] leading-relaxed text-muted">These claims passed the discovery filters. {recorded ? 'This recorded search' : 'Discovery'} does not execute their experiments; saved reproduction checks are available separately.</p>
+            <p className="mb-4 text-[12px] leading-relaxed text-muted">These claims passed the discovery filters. Discovery reads the claims; Check this claim starts a separate experiment. Saved reproduction checks are available below each matching claim.</p>
             <div className="space-y-3">
-              {[...candidates, ...inProgress].map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={savedCheckForClaim(p, catalog ?? [])} />)}
+              {[...candidates, ...inProgress].map((p) => {
+                const entry = savedCheckForClaim(p, catalog ?? [])
+                const id = p.catalogId ?? entry?.id
+                const eligible = id ? eligibility?.[id] ?? (p.runnable !== undefined ? { runnable: p.runnable, reason: p.runReason ?? null, warnings: [] } : undefined) : undefined
+                return <PaperCard key={p.catalogId ?? p.id} p={p} active={running && view.activeId === p.id} entry={entry}
+                  check={id && (p.catalogId || eligible) ? { eligibility: eligible, disabled: !!checkNotice || starting !== null, notice: checkNotice,
+                    starting: starting === id, error: checkError?.id === id ? checkError.message : undefined, onRun: () => runClaim(id) } : undefined} />
+              })}
               {rejected.length > 0 && <details className="mt-4 border-t border-line pt-3">
                 <summary className="cursor-pointer text-[12px] text-muted">Papers outside the discovery criteria ({rejected.length})</summary>
                 <p className="text-[12px] leading-relaxed text-muted">No compatible claim was selected from these papers. This is a search-filter result, not an experiment verdict.</p>
@@ -548,9 +616,9 @@ export function Discovery() {
               {!candidates.length && !inProgress.length && !running && <p className="text-[13px] text-subtle">No compatible claim was selected in this search. The filter details above explain why.</p>}
             </div>
           </Section>
-          <Section title="Call timeline" hint="Tavily vs. model">
+          {mode !== 'saved' && <Section title="Call timeline" hint="Tavily vs. model">
             {view.timeline.length || running ? <Timeline view={view} runtime={runtime} /> : <p className="text-[13px] text-subtle">The timeline fills during the run.</p>}
-          </Section>
+          </Section>}
         </div>
       </div>
       )}

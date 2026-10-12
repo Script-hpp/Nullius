@@ -38,6 +38,9 @@ export type DPaper = {
   foundBy?: string
   cached?: boolean
   githubUrl?: string | null
+  catalogId?: string
+  runnable?: boolean
+  runReason?: string | null
 }
 
 export type FeedCall = {
@@ -217,9 +220,16 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       candidates++
       if (e.cached) { cachedCandidates++; seen.add(e.arxiv_id) }
       const p = paper(e.arxiv_id)
+      // Keep distinct claims from one paper when loading saved live candidates.
+      if (p.state === 'candidate' && p.catalogId && p.catalogId !== e.catalog_id) {
+        papers.set(p.catalogId, { ...p })
+      }
       if (e.title) p.title = e.title
       if (e.dataset) p.dataset = e.dataset
-      if (e.claim && typeof e.claim === 'object' && !p.claim) p.claim = e.claim
+      if (e.claim && typeof e.claim === 'object') p.claim = e.claim
+      p.catalogId = typeof e.catalog_id === 'string' ? e.catalog_id : undefined
+      p.runnable = typeof e.runnable === 'boolean' ? e.runnable : undefined
+      p.runReason = typeof e.run_reason === 'string' ? e.run_reason : null
       p.cached = !!e.cached
       if ('github_url' in e) p.githubUrl = e.github_url
       p.state = 'candidate'

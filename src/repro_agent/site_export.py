@@ -122,8 +122,8 @@ def catalog_json(entries: list[dict], benchmark: dict | None = None, out_dir: Pa
     return rows
 
 
-def write_catalog(catalog_yaml: Path, out: Path) -> int:
-    data = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out), out)
+def write_catalog(catalog_yaml: Path, out: Path, extra_entries: list[dict] | None = None) -> int:
+    data = catalog_json(catalog_entries(catalog_yaml) + (extra_entries or []), read_benchmark(out), out)
     write_json_atomic(out / "catalog.json", data)
     return len(data)
 
@@ -186,14 +186,15 @@ def add_to_index(ref: dict, catalog: list[dict], out: Path) -> None:
         write_json_atomic(out / "index.json", refresh_index(index, catalog, out))
 
 
-def export_live_run(run_dir: Path, catalog_yaml: Path, out: Path, note: str, seeds: int | None) -> dict:
+def export_live_run(run_dir: Path, catalog_yaml: Path, out: Path, note: str, seeds: int | None,
+                    extra_entries: list[dict] | None = None) -> dict:
     """Live-Lauf der API: Lauf nach out kopieren, index.json-Eintrag mit note und live=true. catalog.yaml bleibt unberuehrt."""
-    catalog = catalog_entries(catalog_yaml)
+    catalog = catalog_entries(catalog_yaml) + (extra_entries or [])
     ref = export_run(run_dir, out, {e["id"]: e["title"] for e in catalog})
     from . import web_guard   # oeffentlich ausgelieferte Textdateien: keine Geheimnisse, keine Pfade mit Nutzernamen
     web_guard.redact_tree(out / ref["paper_id"] / ref["timestamp"], str(REPO_ROOT))
     ref.update({"note": note, "live": True, "seeds": seeds})
     add_to_index(ref, catalog, out)
-    if (out / "catalog.json").exists():   # the card of this paper gets its head from the exported dossier
-        write_catalog(catalog_yaml, out)
+    if extra_entries or (out / "catalog.json").exists():   # include completed live discoveries and their evidence
+        write_catalog(catalog_yaml, out, extra_entries)
     return next(r for r in read_index(out) if r["id"] == ref["id"])

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getText, loadIndex } from './data'
 import type { ReferenceBenchmark } from './referenceBench'
 import { formatMetric, formatSpread } from './metricFormat'
+import { DATA_CHANGED } from './live'
 
 export type CatalogVerdict = {
   urteil: string
@@ -57,7 +58,14 @@ export const reloadCatalog = () => { cached = null; return loadCatalog() }
 
 export function useCatalog(): CatalogEntry[] | null {
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
-  useEffect(() => { loadCatalog().then(setEntries).catch(() => setEntries([])) }, [])
+  useEffect(() => {
+    let alive = true
+    const load = () => loadCatalog().then((data) => { if (alive) setEntries(data) }).catch(() => { if (alive) setEntries([]) })
+    const refresh = () => { cached = null; load() }
+    load()
+    window.addEventListener(DATA_CHANGED, refresh)
+    return () => { alive = false; window.removeEventListener(DATA_CHANGED, refresh) }
+  }, [])
   return entries
 }
 

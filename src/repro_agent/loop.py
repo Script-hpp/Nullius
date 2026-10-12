@@ -1695,13 +1695,20 @@ class Orchestrator:
 
     # ---- Einstieg -----------------------------------------------------------
     def run(self, paper_id: str, source: str = "benchmark") -> Dossier:
-        """source: "benchmark" (benchmark/papers.yaml) oder "catalog" (benchmark/catalog.yaml, Discovery-Kandidaten)."""
+        """Load a benchmark, curated catalog entry, or persisted server-owned live claim."""
         if source == "catalog":
             paper, claims = load_catalog_claims(paper_id)
+        elif source == "live_catalog":
+            from . import live_catalog
+            from .catalog import build_paper
+            entry = live_catalog.find_entry(paper_id)
+            if entry is None:
+                raise ValueError("Saved discovery claim not found")
+            paper, claims = build_paper(entry)
         elif source == "benchmark":
             paper, claims = load_claims(paper_id)
         else:
-            raise ValueError(f"source muss benchmark oder catalog sein, nicht {source!r}")
+            raise ValueError(f"Unknown paper source: {source!r}")
         self._paper_id = paper_id   # S4: Fixture-Schluessel je Einheit (Steckbrief-Modus)
         self._warnings = list(paper.get("warnings", []))
         self.details = []   # pro Lauf neu, sonst erbt ein Paper ohne Rolle 4 die Details des vorigen

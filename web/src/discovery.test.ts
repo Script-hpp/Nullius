@@ -62,3 +62,26 @@ test('accuracy units normalize consistently and the newest matching check wins r
   assert.equal(savedCheckForClaim(paper, [older, newest]), newest)
   assert.equal(savedCheckForClaim({ ...paper, claim: undefined }, catalog), undefined)
 })
+
+test('live candidate cards retain the exact server ID, claim and eligibility reason', () => {
+  const base = { type: 'candidate', ts: 10, arxiv_id: '2412.03864', title: 'SimMLP', dataset: 'Cora' }
+  const view = deriveView([
+    { ...base, type: 'searching', claim: { text: JSON.stringify({ method: 'old method', target: 99 }) } },
+    { ...base, catalog_id: 'disc_2412_03864_claimA', runnable: false, run_reason: 'The Cora split is not established.',
+      claim: { method: 'SimMLP', metric: 'accuracy', target: 81.4 } },
+  ])
+  assert.equal(view.papers[0].catalogId, 'disc_2412_03864_claimA')
+  assert.equal(view.papers[0].runnable, false)
+  assert.equal(view.papers[0].runReason, 'The Cora split is not established.')
+  assert.equal(view.papers[0].claim?.target, 81.4)
+})
+
+test('different saved claims from the same paper retain separate start IDs and targets', () => {
+  const base = { type: 'candidate', ts: 10, arxiv_id: '2505.20716', title: 'Paper', dataset: 'ETTh1', runnable: true }
+  const view = deriveView([
+    { ...base, catalog_id: 'disc_2505_20716_A', claim: { method: 'A', metric: 'mse', target: .378 } },
+    { ...base, catalog_id: 'disc_2505_20716_B', claim: { method: 'B', metric: 'mse', target: .366 } },
+  ])
+  assert.deepEqual(view.papers.map((paper) => paper.catalogId).sort(), ['disc_2505_20716_A', 'disc_2505_20716_B'])
+  assert.deepEqual(view.papers.map((paper) => paper.claim?.target).sort(), [.366, .378])
+})

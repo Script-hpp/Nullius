@@ -53,6 +53,19 @@ export function useLiveStatus(everyMs = 30000): { status: LiveStatusInfo | null;
   return { status, refresh }
 }
 
+export type ReproductionEligibility = { runnable: boolean; reason: string | null; warnings: string[] }
+
+export function useReproductionEligibility() {
+  const [entries, setEntries] = useState<Record<string, ReproductionEligibility> | null>(null)
+  const refresh = useCallback(() => {
+    fetch('/api/reproduce/eligibility', { cache: 'no-store' }).then(async (response) => {
+      if (response.ok && response.headers.get('content-type')?.includes('json')) setEntries(await response.json())
+    }).catch(() => { /* static mirrors have no eligibility API */ })
+  }, [])
+  useEffect(() => { refresh() }, [refresh])
+  return { entries, refresh }
+}
+
 export async function startReproduction(catalogId: string, quick = true): Promise<string> {
   let r: Response
   try {
