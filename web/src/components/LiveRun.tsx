@@ -93,14 +93,15 @@ export function LiveRun({ jobId }: { jobId: string }) {
       {bad && (
         <div className="nx-card mb-6 rounded-xl border border-line bg-panel/50 p-5">
           <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 w-4 h-4 shrink-0 text-tone-red" />
+            <AlertCircle className={`mt-0.5 w-4 h-4 shrink-0 ${stopped ? 'text-tone-amber' : 'text-tone-red'}`} />
             <div className="min-w-0 text-[13px] leading-relaxed">
               <p className="font-medium text-fg">
-                {status === 'error' ? 'This run did not finish.' : status === 'lost' ? 'The connection to the live backend was lost.' : 'This live run is no longer available.'}
+                {stopped ? 'This check stopped without a paper verdict.' : status === 'error' ? 'This run did not finish.' : status === 'lost' ? 'The connection to the live backend was lost.' : 'This live run is no longer available.'}
               </p>
               {error && <p className="mt-1 break-words font-mono text-[12px] text-muted">{error}</p>}
               <p className="mt-2 text-muted">
-                The sandbox or the model endpoint can be temporarily unstable. {fallback ? 'The last finished run is available as a replay.' : 'There is no finished run for this entry yet.'}
+                {stopped ? 'The reason above explains which check could not be completed. ' : 'The sandbox or the model endpoint can be temporarily unstable. '}
+                {fallback ? 'The last finished run is available as a replay.' : 'There is no finished run for this entry yet.'}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
                 {fallback && <a href={`#/run/${fallback}?tab=log`} className="inline-flex items-center gap-1.5 text-fg hover:text-fg-max">Watch the last finished run<ArrowRight className="w-4 h-4" /></a>}

@@ -43,9 +43,9 @@ def proposed_method(method: str, abstract: str) -> bool:
                for clause in re.findall(r"\bwe\s+(?:propose|introduce|present|develop)\b[^.!?]{0,350}", _plain(abstract)))
 
 
-def select_source_claim(text: str, dataset: str, abstract: str) -> dict | None:
-    """Select a unique proposed-method MSE for horizon 96 from an aligned main table."""
-    if requires_external_weights(abstract):
+def select_source_claim(text: str, dataset: str, abstract: str, metric: str = "mse") -> dict | None:
+    """Select a unique proposed-method result for horizon 96 from an aligned main table."""
+    if metric not in ("mse", "mae") or requires_external_weights(abstract):
         return None
     found = {}
     for table in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", text, re.S):
@@ -77,14 +77,14 @@ def select_source_claim(text: str, dataset: str, abstract: str) -> dict | None:
                 for method in methods:
                     for value in set(float(n) for n in re.findall(NUMBER, row)):
                         check = check_columns(_norm(body), _norm(row.strip()), value, method,
-                                              dataset, "MSE for prediction length 96", False)
+                                              dataset, f"{metric.upper()} for prediction length 96", False)
                         if check.status != "ok" or check.horizon != 96 or not check.source_row:
                             continue
                         quote = original_source_quote(body, check.source_row)
                         if not quote:
                             continue
                         key = (_clean_name(method), value, int(length[1]))
-                        found[key] = {"method": method, "metric": "mse", "target": value,
+                        found[key] = {"method": method, "metric": metric, "target": value,
                                       "horizon": 96, "input_length": int(length[1]), "quote": quote,
                                       "extraction_basis": "verified source table"}
     return next(iter(found.values())) if len(found) == 1 else None

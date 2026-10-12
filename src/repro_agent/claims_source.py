@@ -38,7 +38,7 @@ EXTRACT_SYSTEM = (
 class PaperText:
     arxiv_id: str
     url: str
-    source_kind: str            # arxiv_html | ar5iv | pdf
+    source_kind: str            # latex | arxiv_html | ar5iv | pdf
     retrieved_at: str
     sha256: str
     arxiv_version: str | None   # Version, deren URL abgerufen wurde (None = unversioniert, z. B. ar5iv)
@@ -260,9 +260,33 @@ def _column_status(
     return _column_caveat(method, quote), "nicht pruefbar"
 
 
+def _source_table_target(paper: PaperText, method: str, dataset: str, metric: str, percent: bool) -> TargetEvidence | None:
+    """Fresh independent column proof; no second model is needed to invent a quote."""
+    kind = re.fullmatch(r"(mse|mae) for prediction length 96", metric.strip(), re.I)
+    if not kind or percent or paper.source_kind != "latex":
+        return None
+    # Local import: the shared selector uses this module's normalization.
+    from .forecast_claim import select_source_claim
+    abstract = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", paper.text, re.S)
+    selected = select_source_claim(paper.text, dataset, abstract[1] if abstract else "", kind[1].lower())
+    if not selected or _norm(selected["method"].split(" (")[0]) != _norm(method.split(" (")[0]):
+        return None
+    quote = selected["quote"]
+    value = verify_extraction({"value": selected["target"], "quote": quote}, paper.text, percent=False)
+    caveat, column = _column_status(paper.text, quote, value, method, dataset, metric, False)
+    if column != "ok":
+        return None
+    return TargetEvidence(value=value, quote=quote, table="Source results table", url=paper.url,
+                          source_kind=paper.source_kind, retrieved_at=paper.retrieved_at, sha256=paper.sha256,
+                          arxiv_version=paper.arxiv_version, caveat=caveat, column_check=column)
+
+
 def extract_target(
     llm: LLMClient, paper: PaperText, method: str, dataset: str, metric: str, percent: bool = True
 ) -> TargetEvidence:
+    source_evidence = _source_table_target(paper, method, dataset, metric, percent)
+    if source_evidence:
+        return source_evidence
     context = _windows(paper.text, dataset, prefer=method)
     if not context:
         raise ExtractionInvalid(f"'{dataset}' kommt im Quelltext nicht vor")
@@ -313,13 +337,15 @@ def extract_target_cached(
 
     Der Wert wird bei jedem Laden erneut gegen den Quelltext geprueft (Zitat + Zahl), der Cache
     ersetzt also nur den LLM-Aufruf, nicht die Pruefung. Spart Anfragen auf Free-Endpunkten.
+    Eindeutige LaTeX-Haupttabellen werden zuerst frisch geparst, auch bei vorhandenem Cache.
     mode="live": liest vorhandene Eintraege, schreibt aber nie nach `fixture_dir`.
     """
     fixture_dir = fixture_dir or FIXTURE_DIR
     raw = f"{paper.sha256}|{method}|{dataset}|{metric}" + ("" if percent else "|raw")
     key = hashlib.sha256(raw.encode()).hexdigest()[:16]
     path = fixture_dir / f"{paper.arxiv_id}_target_{key}.json"
-    if path.exists():
+    ev = _source_table_target(paper, method, dataset, metric, percent)
+    if ev is None and path.exists():
         ev = TargetEvidence(**{**json.loads(path.read_text()), "from_store": True})
         ev.caveat, ev.column_check = _column_status(   # immer neu berechnen, auch fuer alte Fixtures
             paper.text, ev.quote, ev.value, method, dataset, metric, percent
@@ -328,7 +354,8 @@ def extract_target_cached(
             {"value": ev.value * 100 if percent else ev.value, "quote": ev.quote}, paper.text, percent
         )
         return ev
-    ev = extract_target(llm, paper, method, dataset, metric, percent)
+    if ev is None:
+        ev = extract_target(llm, paper, method, dataset, metric, percent)
     if mode == "live":
         return ev
     path.parent.mkdir(parents=True, exist_ok=True)
