@@ -1,6 +1,7 @@
 import type { Json } from '../data'
 import { TONE_VAR, type Tone } from '../labels'
 import { Term } from './Glossed'
+import { LegendSwatch } from './ui'
 
 const LANE_PX = [0, -10, 10, -20, 20]   // vertical offsets of the dot lanes
 
@@ -33,14 +34,14 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
   const max = domain ? domain[1] : Math.max(...all) + pad
   const pos = (x: number) => `${((x - min) / (max - min)) * 100}%`
   // Dots that would overlap move to the next free lane above or below the axis (deterministic, by value), so every run stays visible.
-  const lanes: { x: number; lane: number }[] = []
+  const lanes: { x: number; lane: number; i: number }[] = []
   const laneEnd: number[] = LANE_PX.map(() => -Infinity)
-  for (const x of [...vals].sort((u, v) => u - v)) {
+  for (const { x, i } of vals.map((x, i) => ({ x, i })).sort((u, v) => u.x - v.x)) {
     const at = ((x - min) / (max - min)) * 100
     let lane = laneEnd.findIndex((end) => at - end >= 2.6)
     if (lane < 0) lane = laneEnd.indexOf(Math.min(...laneEnd))
     laneEnd[lane] = at
-    lanes.push({ x, lane })
+    lanes.push({ x, lane, i })
   }
   const mean = typeof verdict?.measured_mean === 'number' ? verdict.measured_mean : null
   const std = typeof verdict?.measured_std === 'number' ? verdict.measured_std : null
@@ -51,9 +52,9 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
       {vals.length > 0 || pending ? (
         <>
         {showKey && vals.length > 0 && <ul className="m-0 mb-8 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
-          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4 bg-fg-4/40" /><span>Each dot is one <Term term="seed">run with a different random start</Term>.</span></li>
-          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /><span>The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</span></li>
-          <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-4 w-0.5 shrink-0 rounded-full" style={{ background: color }} /><span>The solid line is our mean over all runs; the dashed line is the claim.</span></li>
+          <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-3 rounded-full border border-fg-4 bg-fg-4/40" /></LegendSwatch><span>Each dot is one <Term term="seed">run with a different random start</Term>.</span></li>
+          <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-6 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /></LegendSwatch><span>The band is the allowed range around the claim ({fmt(lo)} to {fmt(hi)}), the <Term term="tolerance">tolerance</Term>.</span></li>
+          <li className="flex items-start gap-3"><LegendSwatch><span className="block h-4 w-0.5 rounded-full" style={{ background: color }} /></LegendSwatch><span>The solid line is our mean over all runs; the dashed line is the claim.</span></li>
         </ul>}
         <figure className="m-0 mt-2" aria-label={`Claimed ${fmt(target)}; measured ${vals.map(fmt).join(', ')}`}>
           <div className="relative h-24 mx-2">
@@ -66,9 +67,9 @@ export function ResultBand({ dossier, claimId, tone, fmt, fmtSpread, claimed, do
             {/* axis */}
             <div className="absolute top-[3.0rem] left-0 right-0 h-px bg-line-strong" />
             {/* one dot per seed */}
-            {lanes.map(({ x, lane }, i) => (
-              <div key={i} title={`Run ${i + 1}: ${fmt(x)}`} className="absolute top-[3.0rem] w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-fg-4 bg-fg-4/40"
-                style={{ left: pos(x), marginTop: LANE_PX[lane], animation: animateDots ? 'film-drop 420ms cubic-bezier(.2,.8,.3,1)' : undefined }} />
+            {lanes.map(({ x, lane, i }) => (
+              <div key={i} title={`Run ${i + 1}: ${fmt(x)}`} className="nx-dot absolute top-[3.0rem] w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-fg-4 bg-fg-4/40"
+                style={{ left: pos(x), marginTop: LANE_PX[lane], animation: animateDots ? 'film-drop 600ms cubic-bezier(.22,.8,.3,1) both' : undefined }} />
             ))}
             {/* mean */}
             {mean !== null && (

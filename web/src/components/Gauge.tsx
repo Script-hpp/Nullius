@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Json } from '../data'
-import { toPercent } from './ui'
+import { LegendSwatch, toPercent } from './ui'
 
 export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: string }) {
   const claim = (dossier.claims ?? []).find((c: Json) => c.id === claimId)
@@ -25,9 +25,9 @@ export function AttemptChart({ dossier, claimId }: { dossier: Json; claimId: str
   return (
     <div className="flex flex-col flex-1">
       <ul className="m-0 mb-5 list-none space-y-2 p-0 text-[14px] leading-relaxed text-fg-3">
-        <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-4 shrink-0 rounded-sm bg-fill-mid opacity-60" /><span>Each bar is one run: one seed, in its own sandbox branch.</span></li>
-        <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-6 shrink-0 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /><span>The band is the claimed value ± tolerance ({f(lo)} to {f(hi)}); the dashed line is the claim, the dotted line our mean.</span></li>
-        <li className="flex items-start gap-3"><span className="mt-1.5 inline-block h-3 w-3 shrink-0 rounded-full border border-fg-4" /><span>The verdict uses the mean of all runs, so single bars may fall outside the band.{shownBase.length ? ' Gray lines are trivial baselines.' : ''}</span></li>
+        <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-4 rounded-sm bg-fill-mid opacity-60" /></LegendSwatch><span>Each bar is one run: one seed, in its own sandbox branch.</span></li>
+        <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-6 rounded-sm" style={{ background: 'var(--chart-target)', opacity: 0.3 }} /></LegendSwatch><span>The band is the claimed value ± tolerance ({f(lo)} to {f(hi)}); the dashed line is the claim, the dotted line our mean.</span></li>
+        <li className="flex items-start gap-3"><LegendSwatch><span className="block h-3 w-3 rounded-full border border-fg-4" /></LegendSwatch><span>The verdict uses the mean of all runs, so single bars may fall outside the band.{shownBase.length ? ' Gray lines are trivial baselines.' : ''}</span></li>
       </ul>
       <div style={{ width: '100%', height: 260, minHeight: 260 }} className="flex-1 mt-2">
         <ResponsiveContainer width="100%" height="100%" minHeight={260}>
