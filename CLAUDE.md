@@ -1,5 +1,7 @@
 # Paper-Reproduktions-Agent
 
+**Plan-Darstellung (2026-10-12):** Live-/Replay-Plan rendert Ueberschriften, Listen, fette Labels und Inline-Code als React-Elemente statt roher Markdown-Zeichen. Sechs-Zeilen-Vorschau und Vollansicht erhalten; Desktop/Mobil, Umbruch und Expand/Collapse im Produktionsbuild geprueft. Keine Aenderung am Experiment.
+
 **Discovery → Experiment (2026-10-12):** `docs/discovery_to_experiment_20261012.md`. Server speichert exakte Live-Claims in `logs/live_candidates.json`; Discover bietet Check this claim und stellt gespeicherte Funde nach Neuladen wieder her. Alter validierter Discovery-Cache wird einmalig ohne API-Aufrufe uebernommen. Eligibility-Pruefung vor Startknopf in Discover/Katalog, Cora ohne belegten Task bleibt gesperrt. Neueste vollstaendige Suche als `logs/discovery_replay.json`, Replay bevorzugt Server-Aufnahme; September-Fallback klar Demo. Bestehende Limits und unverifizierte Methode/Spalten bleiben. 147 Backend-, 137 Frontend-Tests; Browser Desktop/Mobil; keine bezahlten Tests. Nutzer deployt nach Push selbst.
 
 **Discovery-Praesentation (2026-10-12):** `docs/discovery_presentation_20261012.md`. Suche zeigt ausgewaehlte Claims; alte Reproduktionsurteile in datierten Details, nur bei passendem Claim. Replay-Marken recorded, Live-Marken live. Gefuehrter naechster Schritt zu einem ausdruecklich separaten positiven Katalogbeispiel. Keine Messwerte oder Replay-Daten veraendert; 135 Frontend-Tests.

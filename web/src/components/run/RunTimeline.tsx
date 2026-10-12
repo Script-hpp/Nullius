@@ -6,6 +6,7 @@ import { Hint } from '../Hint'
 import { Badge, Section } from '../ui'
 import { PreliminaryChip } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
+import { PlanText } from './PlanText'
 import { TavilyMark } from '../TavilyMark'
 import { ACTOR_LABEL, buildRunModel, fmtClock, fmtValue, planMapping, type Actor, type Expand, type Phase, type PhaseId, type Row } from './phases'
 import { TONE_TEXT, catalogLabel, isPreliminary, resultHint, translateClaim, translateWarning, PRELIMINARY } from '../../labels'
@@ -73,9 +74,7 @@ export function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (has
     const visible = all ? lines : lines.slice(0, 6)
     return (
       <div className="mt-2">
-        <ol className="space-y-1 text-[12px] leading-relaxed text-fg-3">
-          {visible.map((l, i) => <li key={i} className="break-words">{l}</li>)}
-        </ol>
+        <PlanText lines={visible} />
         {lines.length > 6 && <button onClick={() => setAll(!all)} className="mt-1.5 text-[11px] text-muted hover:text-fg-3 cursor-pointer">{all ? 'Show less' : `Show all ${lines.length} lines`}</button>}
       </div>
     )
