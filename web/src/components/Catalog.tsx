@@ -4,6 +4,7 @@ import { Badge, CARD_HOVER, Chevron, ExtArrow, GoLink, ICON_MD, INLINE } from '.
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
 import { useHead } from '../useHead'
+import { headFromSummary } from '../paperhead'
 import { NextStep, PageIntro } from './page'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
@@ -19,7 +20,8 @@ type LiveControl = { available: boolean; busy: boolean; paused: boolean; startin
 
 function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveControl; samePaper: boolean }) {
   const v = e.verdict
-  const head = useHead(e.id)
+  const stored = useHead(e.id)
+  const head = stored ?? headFromSummary(e.head, e.arxiv_id)   // summaries.json first, else the head the run's dossier carried into catalog.json
   const canRun = live.available && e.status !== 'nicht_laufbar'
   const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
     const href = evidenceHref(e)

@@ -394,6 +394,31 @@
   "jury": {
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
+  },
+  "head": {
+   "text": "The paper suggests using repeated simple calculations across time and different variables to predict future values. It uses hourly electricity readings from a transformer station over many days. Its predictions differ from actual values by about 0.36 on average, indicating good accuracy.",
+   "authors": [
+    "Si-An Chen",
+    "Chun-Liang Li",
+    "Nate Yoder",
+    "Sercan O. Arik",
+    "Tomas Pfister"
+   ],
+   "authors_source": "arXiv abstract page (2303.06053)",
+   "year": 2023,
+   "institutions": [
+    {
+     "name": "National Taiwan University",
+     "quote": "d09922007@ntu.edu.tw National Taiwan University Google Cloud AI Research"
+    },
+    {
+     "name": "Google Cloud AI Research",
+     "quote": "Google Cloud AI Research"
+    }
+   ],
+   "institutions_source": "arXiv PDF v5, read with Tavily Extract",
+   "source": "arXiv abstract (2303.06053) and the claim of the check",
+   "generated_by": "Nemotron Super (Token Factory)"
   }
  },
  {
@@ -521,6 +546,35 @@
   "jury": {
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
+  },
+  "head": {
+   "text": "The paper suggests a very simple method that looks at patterns repeating over time to predict future values using only about one thousand adjustable settings. The data consists of hourly electricity‑usage readings from a transformer, collected over many days. A reported average forecast error of 0.359 means its predictions are, on average, quite close to the actual numbers.",
+   "authors": [
+    "Shengsheng Lin",
+    "Weiwei Lin",
+    "Wentai Wu",
+    "Haojun Chen",
+    "Junjie Yang"
+   ],
+   "authors_source": "arXiv abstract page (2405.00946)",
+   "year": 2024,
+   "institutions": [
+    {
+     "name": "South China University of Technology",
+     "quote": "School of Computer Science and Engineering, South China University of Technology, Guangzhou 510006, China"
+    },
+    {
+     "name": "Peng Cheng Laboratory",
+     "quote": "Peng Cheng Laboratory, Shenzhen 518066, China"
+    },
+    {
+     "name": "Jinan University",
+     "quote": "College of Information Science and Technology, Jinan University, Guangzhou 510632, China"
+    }
+   ],
+   "institutions_source": "arXiv text v2, read with Tavily Extract",
+   "source": "arXiv abstract (2405.00946) and the claim of the check",
+   "generated_by": "Nemotron Super (Token Factory)"
   }
  },
  {
@@ -635,6 +689,69 @@
   "jury": {
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
+  },
+  "head": {
+   "text": "The paper introduces GLinear, which reportedly yields a low error value on the ETTh1 electricity transformer dataset.",
+   "authors": [
+    "Syed Tahir Hussain Rizvi",
+    "Neel Kanwal",
+    "Muddasar Naeem"
+   ],
+   "authors_source": "arXiv abstract page (2501.01087)",
+   "year": 2025,
+   "institutions": [
+    {
+     "name": "Politecnico di Torino",
+     "quote": "Ph.D. in Computer and Control Engineering from Politecnico di Torino, Italy, in 2018."
+    },
+    {
+     "name": "University of Stavanger",
+     "quote": "Postdoctoral Researcher at the Department of Electronics and Telecommunications (DET), Politecnico di Torino, and the Department of Electrical Engineering and Computer Science, University of Stavanger, Norway."
+    },
+    {
+     "name": "National University of Computer & Emerging Sciences",
+     "quote": "bachelor's degree in Electronics Engineering from the National University of Computer & Emerging Sciences in 2015"
+    },
+    {
+     "name": "FAST University",
+     "quote": "Previously, he worked as a laboratory engineer at FAST University, Karachi."
+    },
+    {
+     "name": "Quaid-i-Azam University",
+     "quote": "received his bachelor's degree in Electronics from the Quaid-i-Azam University in 2010"
+    },
+    {
+     "name": "IQRA University",
+     "quote": "Master's degree in Telecommuniation \\& Networks from IQRA University in 2015"
+    },
+    {
+     "name": "University of Naples Parthenope",
+     "quote": "He got his Ph.D. at the University of Naples Parthenope, Italy, in Information and Communication Technology and Engineering in 2021."
+    },
+    {
+     "name": "Università Giustino Fortunato",
+     "quote": "He is the coordinator of the Artificial Intelligence and Robotics (AIR) Laboratory at the Università Giustino Fortunato."
+    },
+    {
+     "name": "ICAR-CNR",
+     "quote": "Previously, he worked as a Researcher at ICAR-CNR, Naples."
+    },
+    {
+     "name": "Università degli Studi Giustino Fortunato-Telematica",
+     "quote": "is a full professor at the Università degli Studi Giustino Fortunato-Telematica."
+    },
+    {
+     "name": "Institute for High Performance Computing and Networking of the National Research Council of Italy",
+     "quote": "He has been a senior researcher at the Institute for High Performance Computing and Networking of the National Research Council of Italy."
+    },
+    {
+     "name": "University of Naples “Federico II”",
+     "quote": "has led courses of Software Engineering at the University of Naples “Federico II”."
+    }
+   ],
+   "institutions_source": "arXiv text v1, read with Tavily Extract",
+   "source": "arXiv abstract (2501.01087) and the claim of the check",
+   "generated_by": "Nemotron Super (Token Factory)"
   }
  }
 ]

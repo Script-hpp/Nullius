@@ -95,3 +95,25 @@ def test_export_without_the_claims_plan_copies_nothing_when_several_plans_exist(
     run2 = run_dir(tmp_path / "two", [{"id": "c", "origin": "paper"}], {"only_plan.md": "ONLY"})   # a single plan is taken as before
     se.export_run(run2, tmp_path / "out2", {})
     assert (tmp_path / "out2" / "p1" / "20261001-000000" / "plan.md").read_text() == "ONLY"
+
+
+def test_catalog_entries_get_head_from_exported_dossier_summary(tmp_path):
+    out = tmp_path / "data"
+    run = out / "disc_2511_08094" / "20260930-200050"
+    run.mkdir(parents=True)
+    summary = {"text": "T", "authors": ["A B"], "authors_source": "abs", "year": 2025, "institutions": [{"name": "Uni X", "quote": "Uni X"}],
+               "institutions_source": "pdf", "source": "abs", "generated_by": "m", "extra": "dropped"}
+    (run / "dossier.json").write_text(json.dumps({"summary": summary}))
+    exp.main(["--catalog-only"], out=out, catalog_yaml=make_catalog(tmp_path))
+    a, b = json.loads((out / "catalog.json").read_text())
+    assert a["head"] == {k: v for k, v in summary.items() if k != "extra"}
+    assert "head" not in b                                                       # no run, no head, nothing invented
+
+
+def test_catalog_entry_without_summary_has_no_head(tmp_path):
+    out = tmp_path / "data"
+    run = out / "disc_2511_08094" / "20260930-200050"
+    run.mkdir(parents=True)
+    (run / "dossier.json").write_text(json.dumps({"summary": {"institutions": []}}))
+    exp.main(["--catalog-only"], out=out, catalog_yaml=make_catalog(tmp_path))
+    assert all("head" not in e for e in json.loads((out / "catalog.json").read_text()))

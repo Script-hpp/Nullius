@@ -34,6 +34,8 @@ export type CatalogEntry = {
   verdict: CatalogVerdict | null
   run_id: string | null
   jury: { ready: boolean; reason: string } | null
+  // compact paper head copied from the run's dossier.summary at export time (fallback when summaries.json has no entry)
+  head?: { text?: string; authors?: string[]; authors_source?: string; year?: number | null; venue?: { name: string; quote: string }; institutions?: { name: string; quote: string }[]; institutions_source?: string; source?: string; generated_by?: string }
 }
 
 let cached: Promise<CatalogEntry[]> | null = null

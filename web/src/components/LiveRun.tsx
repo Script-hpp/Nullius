@@ -38,7 +38,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
   const queued = events.find((e) => e.type === 'queued')
   const entry = catalog?.find((c) => c.id === queued?.catalog_id)
   const stored = useHead(entry?.id)
-  const head = headFromSummary(events.find((e) => e.type === 'paper_summary')) ?? stored   // the head the run wrote itself, as soon as its event is there
+  const head = headFromSummary(events.find((e) => e.type === 'paper_summary')) ?? stored ?? headFromSummary(entry?.head, entry?.arxiv_id)   // the head the run wrote itself, as soon as its event is there
   const seedsN = Number(events.find((e) => e.type === 'run_start')?.seeds)   // the seed count of this run, from the job itself; unknown before run_start
   const kind = queued ? (queued.quick ? 'quick check' : 'full run') + (Number.isFinite(seedsN) && seedsN > 0 ? `, ${seedsN} seeds` : '') : ''
   const claimText = useMemo(() => {

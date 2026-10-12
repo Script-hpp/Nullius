@@ -74,10 +74,28 @@ def reference_benchmark(entry: dict, benchmark: dict | None) -> dict | None:
             "runs": len(verdicts), "units_matched": matched, "units": len(units)}
 
 
-def catalog_json(entries: list[dict], benchmark: dict | None = None) -> list[dict]:
-    """Nur Felder, die die UI braucht."""
+HEAD_FIELDS = ("text", "authors", "authors_source", "year", "venue", "institutions", "institutions_source", "source", "generated_by")
+
+
+def head_of(run_id: str | None, out_dir: Path | None) -> dict | None:
+    """Kompakter Papierkopf aus dossier.summary des exportierten Laufs (kein LLM-, kein Tavily-Aufruf). None, wenn nichts da ist."""
+    if not run_id or out_dir is None or "--" not in run_id:
+        return None
+    paper_id, ts = run_id.split("--", 1)
+    try:
+        summary = json.loads((Path(out_dir) / paper_id / ts / "dossier.json").read_text()).get("summary")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(summary, dict):
+        return None
+    head = {k: summary[k] for k in HEAD_FIELDS if summary.get(k)}
+    return head if head.get("text") or head.get("authors") or head.get("institutions") else None
+
+
+def catalog_json(entries: list[dict], benchmark: dict | None = None, out_dir: Path | None = None) -> list[dict]:
+    """Nur Felder, die die UI braucht. Mit out_dir: Papierkopf (head) aus dem exportierten Dossier des Laufs."""
     from .claims_source import clean_latex_quote
-    out = []
+    rows = []
     for e in entries:
         cand = e.get("candidate") or {}
         claim = cand.get("claim") or {}
@@ -85,7 +103,8 @@ def catalog_json(entries: list[dict], benchmark: dict | None = None) -> list[dic
         clean_claim = {k: claim.get(k) for k in ("method", "metric", "target", "horizon", "quote", "input_length")}
         if clean_claim.get("quote"):
             clean_claim["quote"] = clean_latex_quote(clean_claim["quote"])
-        out.append({
+        run_id = run_id_of((verdict or {}).get("run_dir"))
+        item = {
             "id": e["id"], "arxiv_id": e["arxiv_id"], "title": e["title"],
             "dataset": cand.get("dataset"), "task": claim.get("matched_task") or cand.get("dataset"),
             "claim": clean_claim,
@@ -94,13 +113,17 @@ def catalog_json(entries: list[dict], benchmark: dict | None = None) -> list[dic
             "origin": e.get("origin") or "discovery", "benchmark": reference_benchmark(e, benchmark),
             "status": e.get("status"), "reason": e.get("reason"), "checked_at": e.get("checked_at"),
             "cost_gross_usd": e.get("cost_gross_usd"),
-            "verdict": verdict, "run_id": run_id_of((verdict or {}).get("run_dir")), "jury": e.get("jury"),
-        })
-    return out
+            "verdict": verdict, "run_id": run_id, "jury": e.get("jury"),
+        }
+        head = head_of(run_id, out_dir)
+        if head:
+            item["head"] = head
+        rows.append(item)
+    return rows
 
 
 def write_catalog(catalog_yaml: Path, out: Path) -> int:
-    data = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out))
+    data = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out), out)
     write_json_atomic(out / "catalog.json", data)
     return len(data)
 
@@ -171,4 +194,6 @@ def export_live_run(run_dir: Path, catalog_yaml: Path, out: Path, note: str, see
     web_guard.redact_tree(out / ref["paper_id"] / ref["timestamp"], str(REPO_ROOT))
     ref.update({"note": note, "live": True, "seeds": seeds})
     add_to_index(ref, catalog, out)
+    if (out / "catalog.json").exists():   # the card of this paper gets its head from the exported dossier
+        write_catalog(catalog_yaml, out)
     return next(r for r in read_index(out) if r["id"] == ref["id"])
