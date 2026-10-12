@@ -12,7 +12,7 @@ import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
 import { Contact } from './components/Contact'
 import { colorForTone, getDelta, parseDate, showValue } from './format'
-import { Badge, CARD_HOVER, Chevron } from './components/ui'
+import { Badge, CARD_LIFT, Chevron } from './components/ui'
 import { loadIndex, loadRun, type RunData, type RunRef } from './data'
 import { RESULT, catalogLabel, de2en, isPreliminary, resultHint, translateClaim, type Tone } from './labels'
 import { BookOpen, Activity } from 'lucide-react'
@@ -96,7 +96,7 @@ function Home({ runs }: { runs: RunRef[] }) {
           return (
             <div key={r.id} className="flex flex-col">
             <motion.a href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}
-              className={`group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline ${CARD_HOVER}`}>
+              className={`group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline ${CARD_LIFT}`}>
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>

@@ -96,7 +96,7 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
   return (
     <Block id="certificate" label="A real certificate">
       <h2 className={lead}>Every check ends in a certificate.</h2>
-      <a href={EXAMPLE_RUN} className="nx-go group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong motion-safe:hover:-translate-y-0.5 hover:shadow-md sm:p-8">
+      <a href={EXAMPLE_RUN} className="nx-go group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline nx-card-lift sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge tone={res.tone} title={resultHint(v.urteil)}>{res.label}</Badge>
           <span className="text-[12px] text-muted">Example run</span>

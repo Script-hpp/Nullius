@@ -23,7 +23,7 @@ function Diff({ from, to, codeLoader }: { from: string; to: string; codeLoader: 
   const total = hunks.reduce((n, h) => n + h.length, 0)
   const shown = all ? hunks : hunks.reduce<Hunk[]>((acc, h) => (acc.reduce((n, x) => n + x.length, 0) < 40 ? [...acc, h] : acc), [])
   return (
-    <div className="min-w-0 rounded-lg border border-line bg-surface">
+    <div className="nx-card min-w-0 rounded-lg border border-line bg-surface">
       <div className="max-h-[26rem] overflow-auto py-2 font-mono text-[11.5px] leading-relaxed">
         {shown.map((h, i) => (
           <div key={i} className={i > 0 ? 'mt-2 border-t border-dashed border-line pt-2' : ''}>

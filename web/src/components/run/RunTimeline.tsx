@@ -325,7 +325,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
             </Section>
 
             {verdict && label_ && (
-              <div className="rounded-xl border border-line bg-panel/50 p-5">
+              <div className="nx-card rounded-xl border border-line bg-panel/50 p-5">
                 <div className={label}>Result</div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                   <Badge tone={label_.tone} title={resultHint(String(verdict.urteil))}>{label_.label}</Badge>

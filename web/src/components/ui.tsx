@@ -30,7 +30,7 @@ export function Badge({ children, tone = 'gray', title, icon }: { children: Reac
 
 export function Section({ title, hint, children, className = '', style }: { title: string; hint?: string; children: ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <section className={`p-6 bg-surface-2 border border-line/80 rounded-xl ${className}`} style={style}>
+    <section className={`nx-card p-6 bg-surface-2 border border-line/80 rounded-xl ${className}`} style={style}>
       <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-line/50 pb-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-4">{title}</h2>
         {hint && <p className="text-subtle text-[11px] uppercase tracking-wider">{hint}</p>}
@@ -57,7 +57,8 @@ export const fmt = (x: number | null | undefined, d = 4) => (x === null || x ===
 //
 //   1. Internal link (another page or section of this site): text + open arrow on the RIGHT (ArrowRight, always).
 //      Text link  -> <GoLink href>   (the arrow slides right on hover)
-//      Button-like (custom classes) -> className={SHIFT_BTN}, arrow <GoArrow/> inside (the whole button slides right)
+//      Text link at the bottom of a card -> className="nx-go", arrow <GoArrow/> inside: ONLY the arrow moves, the text never does.
+//      Filled pill button (not a text link, not inside a card) -> className={SHIFT_BTN}, arrow <GoArrow/> inside (the whole pill slides right)
 //   2. External link (another site, new tab): boxed diagonal arrow on the right -> <ExtLink href>
 //      Only the arrow moves, outward along its diagonal. Use <ExtArrow/> if you build the element yourself,
 //      with className "nx-ext" on the link.
@@ -77,8 +78,12 @@ export const ICON_MD = 'h-3.5 w-3.5 shrink-0'
 export const SHIFT_BTN = 'nx-shift'
 // In-page action (switches a tab or opens something on the same page): outlined button, no link arrow, no underline.
 export const TAB_BTN = 'inline-flex cursor-pointer items-center rounded-lg border border-line-strong bg-transparent px-4 py-2 text-[13px] font-medium text-fg no-underline transition-colors hover:bg-raised'
-// Clickable cards: border darkens, small lift and shadow (the lift is dropped under prefers-reduced-motion).
-export const CARD_HOVER = 'transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong hover:shadow-md motion-safe:hover:-translate-y-0.5'
+// Card hover (index.css). Every card gets the same hover visual (border darkens, soft shadow):
+//   CARD       -> 'nx-card': the card never moves. Default; cards hold other links or buttons that must stay put.
+//   CARD_LIFT  -> 'nx-card-lift': visual plus a 2 px lift of the whole card as ONE unit. Only for the check cards (Runs page, check cards on
+//                 the start page) and the certificate card on the start page, each of which is a single link. Children carry no transitions.
+export const CARD = 'nx-card'
+export const CARD_LIFT = 'nx-card-lift'
 export const LINK_TEXT = 'text-fg underline underline-offset-4 hover:text-fg-max'
 
 export function GoArrow({ className = ICON_MD }: { className?: string }) {

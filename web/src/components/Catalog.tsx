@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle } from 'lucide-react'
-import { Badge, CARD_HOVER, Chevron, ExtArrow, GoLink, ICON_MD, INLINE } from './ui'
+import { Badge, CARD, Chevron, ExtArrow, GoLink, ICON_MD, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
 import { useHead } from '../useHead'
@@ -28,7 +28,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
   const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
     const href = evidenceHref(e)
   return (
-    <article className={`relative flex h-full flex-col rounded-xl border border-line bg-surface p-6 ${href ? `${CARD_HOVER} focus-within:border-line-strong` : ''}`}>
+    <article className={`relative flex h-full flex-col rounded-xl border border-line bg-surface p-6 ${CARD}`}>
       <p className="m-0 mb-3 text-sm font-semibold text-fg">Dataset check: {e.task ?? e.dataset ?? 'Not specified'}</p>
       <div className="flex items-start justify-between gap-4">
         <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">

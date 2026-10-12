@@ -5,7 +5,7 @@ import { UNITS, HELD_OUT, FIGURES, MODES, LIMITS, REPO_BLOB, SOURCES } from '../
 const link = (path: string) => `${REPO_BLOB}/${path}`
 
 export function BenchmarkSummary() {
-  return <div className="rounded-xl border border-line bg-surface p-5" aria-label="How to read the benchmark">
+  return <div className="nx-card rounded-xl border border-line bg-surface p-5" aria-label="How to read the benchmark">
     <h2 className="m-0 text-lg font-semibold text-fg">Three questions, three separate checks</h2>
     <ol className="mb-0 mt-4 space-y-3 pl-5 text-[14px] leading-relaxed text-fg-3">
       <li><strong className="text-fg">Did it agree on familiar examples?</strong> With the paper and authors’ code, {FIGURES.withCode.matched} of {FIGURES.withCode.of} reference verdicts matched. The fixes were developed using these examples, so this is a development result.</li>
@@ -55,7 +55,7 @@ export function Precision() {
       <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted"><ShieldCheck className="h-4 w-4" aria-hidden />Precision first</div>
       <ul className="m-0 mt-4 grid list-none gap-4 p-0 md:grid-cols-3" aria-label="Precision in three numbers">
         {rows.map((r) => (
-          <li key={r.t} className="rounded-xl border border-line bg-surface p-5">
+          <li key={r.t} className="nx-card rounded-xl border border-line bg-surface p-5">
             <div className="font-mono text-3xl font-light tracking-tight text-fg">{r.v}</div>
             <div className="mt-2 text-[14px] font-medium leading-snug text-fg">{r.t}</div>
             <p className="mb-0 mt-2 text-[12px] leading-relaxed text-fg-4">{r.s}</p>

@@ -65,7 +65,7 @@ function Tiles({ v }: { v: BenchVersion }) {
     <div>
       <ul className="m-0 grid list-none gap-4 p-0 md:max-w-md" aria-label="Primary metric">
         {tiles.map(({ Icon, value, label, tag, small, link }) => (
-          <li key={tag} className="flex flex-col rounded-xl border border-line bg-surface p-6 shadow-sm">
+          <li key={tag} className="nx-card flex flex-col rounded-xl border border-line bg-surface p-6 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <Icon className="h-5 w-5 text-fg-4" aria-hidden />
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">{tag}</span>

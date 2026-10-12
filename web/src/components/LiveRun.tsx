@@ -89,7 +89,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
       )}
 
       {bad && (
-        <div className="mb-6 rounded-xl border border-line bg-panel/50 p-5">
+        <div className="nx-card mb-6 rounded-xl border border-line bg-panel/50 p-5">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 w-4 h-4 shrink-0 text-tone-red" />
             <div className="min-w-0 text-[13px] leading-relaxed">

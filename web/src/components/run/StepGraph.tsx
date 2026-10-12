@@ -84,7 +84,7 @@ const STATE_TEXT = { pending: 'Not started', active: 'Happening now', done: 'Don
 function Detail({ step, loader, planFull }: { step: StepNode; loader?: (hash: string) => Promise<string | null>; planFull?: string | null }) {
   const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
   return (
-    <div className="rounded-xl border border-line bg-panel/50 p-5">
+    <div className="nx-card rounded-xl border border-line bg-panel/50 p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="m-0 text-base font-semibold text-fg">{step.title}</h3>
         <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted">

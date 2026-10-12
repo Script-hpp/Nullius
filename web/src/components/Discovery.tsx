@@ -47,7 +47,7 @@ function FeedCard({ call }: { call: FeedCall }) {
   const Icon = call.endpoint === 'search' ? Search : FileText
   return (
     <motion.div layout="position" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={t}
-      className="rounded-xl border border-line bg-panel/50 hover:border-line-strong transition-colors">
+      className="nx-card rounded-xl border border-line bg-panel/50">
       <button onClick={() => setOpen(!open)} className="w-full text-left p-4 cursor-pointer">
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-3">
@@ -164,7 +164,7 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
-      className="rounded-xl border border-line bg-surface p-5">
+      className="nx-card rounded-xl border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <h3 className="text-[14px] font-semibold leading-snug text-fg">{p.title}</h3>
         <span className="font-mono text-[10px] text-muted shrink-0">{p.id}</span>
@@ -416,7 +416,7 @@ export function Discovery() {
         what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. The text is read directly from the arXiv LaTeX source, keeping claims it can quote word for word."
         look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
 
-      <div className="mb-6 rounded-xl border border-line bg-surface p-6">
+      <div className="nx-card mb-6 rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div>
             <div className={label}>Benchmarks</div>

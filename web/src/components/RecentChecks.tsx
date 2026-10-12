@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { Disclosure, GoArrow, GoLink, SHIFT_BTN } from './ui'
+import { CARD_LIFT, Disclosure, GoArrow, GoLink } from './ui'
 import { evidenceHref, useCatalog } from '../catalog'
 
 // Curated examples outside the eight benchmark units. Measurements stay in the exported catalog.
@@ -21,7 +21,7 @@ export function RecentChecks({ flush = false }: { flush?: boolean }) {
       <p className="mb-0 mt-3 text-[14px] leading-relaxed text-fg-4">How to read these results: MSE measures prediction error; lower is better. Both measurements are within 0.01 of the paper&rsquo;s target. Open a card to follow the evidence.</p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {entries.map((e) => (
-          <article key={e.id} className="rounded-xl border border-line bg-surface p-6 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong hover:shadow-md motion-safe:hover:-translate-y-0.5">
+          <article key={e.id} className={`${CARD_LIFT} rounded-xl border border-line bg-surface p-6`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-grotesk m-0 text-xl font-semibold text-fg">{e.claim.method}</h3>
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-tone-green">Target reached<Check className="h-3.5 w-3.5 shrink-0" aria-hidden /></span>
@@ -33,7 +33,7 @@ export function RecentChecks({ flush = false }: { flush?: boolean }) {
             </dl>
             <p className="mb-0 mt-3 text-[12px] text-fg-4">± {e.verdict!.measured_std?.toFixed(4) ?? '–'} over {e.verdict!.seeds} repeated runs · tolerance ±{e.verdict!.tolerance}</p>
             {e.cost_gross_usd != null && <p className="mb-0 mt-2 text-[12px] text-muted">Recorded inference cost: ${e.cost_gross_usd.toFixed(3)} incl. VAT</p>}
-            <a href={evidenceHref(e)!} className={`${SHIFT_BTN} mt-6 inline-flex items-center gap-2 text-sm text-fg underline underline-offset-4 hover:text-fg-max`}>Inspect {e.claim.method} evidence <GoArrow className="h-4 w-4 shrink-0" /></a>
+            <a href={evidenceHref(e)!} className={`nx-go mt-6 inline-flex items-center gap-2 text-sm text-fg underline underline-offset-4 hover:text-fg-max`}>Inspect {e.claim.method} evidence <GoArrow className="h-4 w-4 shrink-0" /></a>
           </article>
         ))}
       </div>

@@ -188,7 +188,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <StepList steps={steps} onStep={onStep} />
               <p className="mb-0 mt-3 text-[12px] text-muted">Click a step to open it.</p>
             </section>
-            <section aria-label="Use this check" className="rounded-xl border border-line bg-surface p-6">
+            <section aria-label="Use this check" className="nx-card rounded-xl border border-line bg-surface p-6">
               <h3 className={h3}>Before you build on this result</h3>
               <p className="mb-0 mt-3 max-w-2xl text-[14px] leading-relaxed text-fg-4">Choosing a paper to build on? Start with its claim and our measurement above. Open the sources to see where the target came from, then inspect the program and repeated runs. This helps researchers decide what to investigate next. Matching the number still needs a review of the method.</p>
               <div className="mt-5 flex flex-wrap gap-4">
