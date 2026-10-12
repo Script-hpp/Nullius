@@ -1,4 +1,5 @@
 import type { Json } from './data'
+import type { CatalogEntry } from './catalog'
 
 export type DEvent = { type: string; ts: number; seq?: number; [k: string]: Json }
 
@@ -17,6 +18,7 @@ export type DClaim = {
   metric?: string
   target?: number
   horizon?: number
+  input_length?: number | null
   quote?: string
   matched_task?: string | null
   protocol?: string
@@ -46,6 +48,30 @@ export type FeedCall = {
   hits: number
   durationMs: number
   topHits: { url: string; title: string }[]
+}
+
+// A saved experiment belongs to a particular claim, not just an arXiv paper.
+// Discovery itself reads claims; it does not produce reproduction measurements.
+export function savedCheckForClaim(paper: DPaper, entries: CatalogEntry[]): CatalogEntry | undefined {
+  const claim = paper.claim
+  if (!claim) return undefined
+  const name = (value?: string) => (value ?? '').toLowerCase().replace(/[\s_-]/g, '')
+  const metric = (value?: string) => value?.toLowerCase() === 'acc' ? 'accuracy' : value?.toLowerCase()
+  const target = (value: number | undefined, kind: string | undefined) =>
+    typeof value === 'number' && Number.isFinite(value) ? (kind === 'accuracy' && value > 1 ? value / 100 : value) : null
+  const kind = metric(claim.metric)
+  const value = target(claim.target, kind)
+  const task = name(claim.matched_task ?? paper.dataset)
+  if (!kind || value === null || !task || !name(claim.method)) return undefined
+  return entries.filter((entry) => {
+    const stored = entry.claim
+    const other = target(stored.target, metric(stored.metric))
+    return entry.arxiv_id === paper.id && name(stored.method) === name(claim.method) &&
+      name(entry.task ?? entry.dataset) === task && metric(stored.metric) === kind &&
+      other !== null && Math.abs(other - value) < 1e-8 &&
+      (kind === 'accuracy' || claim.horizon != null && stored.horizon === claim.horizon) &&
+      (claim.input_length == null || stored.input_length === claim.input_length)
+  }).sort((a, b) => (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))[0]
 }
 
 export type TimelineItem = { kind: 'tavily' | 'llm'; start: number; end: number; label: string }

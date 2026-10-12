@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, Check, CircleDashed, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
+import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
 import { ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
-import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
+import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { translateReason } from '../labels'
 import { fetchJobInfo, useLiveStatus } from '../live'
 import { TavilyMark } from './TavilyMark'
 import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
-  deriveView, domainOf, formatMetric, humanReject, parseJsonl, parseLiveEvent, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime,
+  deriveView, domainOf, formatMetric, humanReject, parseJsonl, parseLiveEvent, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime, savedCheckForClaim,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
 } from '../discovery'
 import { Glossed } from './Glossed'
@@ -32,7 +32,7 @@ const fmtSec = (s: number) => `${Math.max(0, s).toFixed(1)}s`
 const HINTS = {
   protocol: 'Protocol = how the paper split the data (and, for forecasting, input length and horizon). Numbers are only comparable when our re-run uses the same split.',
   column: "We check that the number sits in the proposed method's column of the results table, not in a baseline column.",
-  unverified: 'Nullius has only read this claim. It has not re-run the experiment yet.',
+  unverified: 'This discovery run reads and selects a claim. It does not execute an experiment. Saved reproduction checks are shown separately.',
   cache: 'Read in an earlier run; no new API calls.',
 }
 
@@ -41,7 +41,7 @@ function useTween() {
   return reduce ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' as const }
 }
 
-function FeedCard({ call }: { call: FeedCall }) {
+function FeedCard({ call, recorded }: { call: FeedCall; recorded: boolean }) {
   const [open, setOpen] = useState(false)
   const t = useTween()
   const Icon = call.endpoint === 'search' ? Search : FileText
@@ -65,7 +65,7 @@ function FeedCard({ call }: { call: FeedCall }) {
           {call.purpose === 'find_code' || call.purpose === 'community' ? <span className="text-subtle">Paper: </span> : null}
           {shorten(call.query, 110)}
         </p>
-        <p className="mt-2"><TavilyMark kind="live" title="A live Tavily API call, as recorded in the run" /></p>
+        <p className="mt-2"><TavilyMark kind={recorded ? 'recorded' : 'live'} /></p>
       </button>
       {open && call.topHits.length > 0 && (
         <ul className="border-t border-line/60 px-4 py-3 space-y-2">
@@ -201,25 +201,16 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
         </div>
       )}
 
-      {checked && entry && (
+      {p.state === 'candidate' && (
         <div className="mt-3">
-          <CatalogVerdict entry={entry} />
-        </div>
-      )}
-
-      {p.state === 'candidate' && !checked && (
-        <div className="mt-3">
-          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-fg-3">
-            <CircleDashed className="w-3.5 h-3.5" />
-            Unverified candidate
+          <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-tone-green">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Checkable claim found
             <Hint text={HINTS.unverified} />
             {p.cached && (
               <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-subtle">from cache<Hint text={HINTS.cache} /></span>
             )}
           </div>
-          {notRun && entry && (
-            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${translateReason(entry.reason)}` : ''}</p>
-          )}
         </div>
       )}
 
@@ -227,18 +218,16 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
         <div className="mt-4 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className={label}>{checked ? 'Method' : (c.method ?? 'Method')}</div>
-              {checked   // the claimed number is shown once, in CLAIMED below
-                ? <div className="mt-1 text-[13px] text-fg-3">{c.method ?? '–'}</div>
-                : <div className="mt-1 font-mono text-xl font-semibold text-fg-strong">{formatMetric(c.metric, c.target)}</div>}
+              <div className={label}>Method</div>
+              <div className="mt-1 text-[13px] text-fg-3">{c.method ?? '–'}</div>
             </div>
             <div>
               <div className={label}>Benchmark</div>
               <div className="mt-1 text-[13px] text-fg-3">{benchmarkText(p)}</div>
             </div>
           </div>
+          <p className="m-0 flex flex-wrap items-baseline gap-3"><span className={label}>Paper claim</span><span className="font-mono text-lg font-semibold text-fg">{formatMetric(c.metric, c.target)}</span></p>
           <QuoteView quote={c.quote} target={c.target} />
-          {checked && entry && <ClaimedMeasured entry={entry} />}
           {c.column_check && (
             <p className="inline-flex items-center gap-1 text-[11px] text-muted">
               {c.column_check === 'ok' ? 'Table column verified' : 'Column not verified'}<Hint text={HINTS.column} />
@@ -255,7 +244,6 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
             <span className="inline-flex items-center gap-1.5 text-[11px] text-tone-amber"><AlertCircle className="w-3.5 h-3.5" />Protocol not stated in text<Hint text={HINTS.protocol} /></span>
           )}
           <span className="flex flex-wrap items-center gap-4 text-[11px] text-muted">
-            {checked && entry && <EvidenceLink entry={entry}>View evidence</EvidenceLink>}
             <span><span className="font-mono text-fg-3">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
             {p.githubUrl ? (
               <a href={p.githubUrl} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}>
@@ -268,6 +256,15 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
           </span>
         </div>
       )}
+      {p.state === 'candidate' && entry && (checked || notRun) && <details className="group mt-4 border-t border-line/60 pt-3" data-testid="saved-discovery-check">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium text-fg-3">
+          Saved reproduction check{entry.checked_at ? ` · ${new Date(entry.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180" />
+        </summary>
+        <p className="mb-3 mt-3 text-[12px] leading-relaxed text-muted">A separate experiment saved in the catalog. This search did not run or update it. Its outcome describes our implementation; method fidelity is not verified.</p>
+        {checked ? <div className="space-y-3"><CatalogVerdict entry={entry} /><ClaimedMeasured entry={entry} /><EvidenceLink entry={entry}>Inspect saved check</EvidenceLink></div>
+          : <p className="text-[12px] text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${translateReason(entry.reason)}` : ''}</p>}
+      </details>}
     </motion.div>
   )
 }
@@ -423,12 +420,17 @@ export function Discovery() {
   const status = running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? 'Finished' : 'Ready'
   const displayedError = error ?? view.notes.find((note) => note.kind === 'error')?.message
   const papers = [...view.papers].reverse()
+  const candidates = papers.filter((p) => p.state === 'candidate')
+  const inProgress = papers.filter((p) => p.state !== 'candidate' && p.state !== 'rejected')
+  const rejected = papers.filter((p) => p.state === 'rejected')
+  const example = catalog?.filter((entry) => entry.run_id && entry.jury?.ready && entry.verdict?.urteil === 'reproduziert')
+    .sort((a, b) => (b.checked_at ?? '').localeCompare(a.checked_at ?? ''))[0]
 
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Discover" title="Find papers worth checking"
         compact="Choose supported datasets, then watch a recorded search or start a live one."
-        what="Tavily searches the web for new papers that report a result on a benchmark we can rebuild. The text is read directly from the arXiv LaTeX source, keeping claims it can quote word for word."
+        what="Tavily finds papers with quoted claims on supported datasets. Discovery checks their sources and setup to find candidates for an experiment. Reproduction is a separate step."
         look="Press Replay recorded run to watch a real search play back, Papers appear on the right as they are found, each with a short summary." />
 
       <div className="nx-card mb-6 rounded-xl border border-line bg-surface p-6">
@@ -511,7 +513,7 @@ export function Discovery() {
         </div>
       ) : (
       <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <Section title="Tavily research feed" hint={recorded ? 'recorded live calls' : 'live API calls'}>
+        <Section title="Tavily research feed" hint={recorded ? 'recorded search · no new API calls' : 'live API calls'}>
           <div className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-[12px] text-muted">
             <span>Tavily calls <span className="font-mono text-fg-3">{view.tavilyCalls}</span></span>
             <span>Model calls <span className="font-mono text-fg-3">{view.llmCalls}</span>
@@ -521,7 +523,7 @@ export function Discovery() {
           <div className="space-y-3">
             {running && <div aria-hidden className="h-[104px] rounded-xl border border-dashed border-line bg-panel/30 p-4 motion-safe:animate-pulse"><div className="h-2.5 w-24 rounded bg-raised" /><div className="mt-4 h-2.5 w-3/4 rounded bg-raised" /></div>}
             <AnimatePresence initial={false}>
-              {[...view.feed].reverse().map((c) => <FeedCard key={c.seq} call={c} />)}
+              {[...view.feed].reverse().map((c) => <FeedCard key={c.seq} call={c} recorded={recorded} />)}
             </AnimatePresence>
             {!view.feed.length && !running && <p className="text-[13px] text-subtle">No Tavily calls yet. Start a run or replay the recorded one.</p>}
           </div>
@@ -531,14 +533,19 @@ export function Discovery() {
           <Section title="Pipeline">
             <Funnel funnel={view.funnel} running={running} />
           </Section>
-          <Section title="Papers" hint={`${papers.length} seen`}>
-            <p className="mb-4 text-[12px] leading-relaxed text-muted">Candidates are claims we can re-run. Unless a result is shown, a candidate has not been re-run yet.</p>
+          <Section title="Claims to check" hint={`${candidates.length} found · ${papers.length} papers seen`}>
+            <p className="mb-4 text-[12px] leading-relaxed text-muted">These claims passed the discovery filters. {recorded ? 'This recorded search' : 'Discovery'} does not execute their experiments; saved reproduction checks are available separately.</p>
             <div className="space-y-3">
-              {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={catalog?.find((e) => e.arxiv_id === p.id)} />)}
+              {[...candidates, ...inProgress].map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={savedCheckForClaim(p, catalog ?? [])} />)}
+              {rejected.length > 0 && <details className="mt-4 border-t border-line pt-3">
+                <summary className="cursor-pointer text-[12px] text-muted">Papers outside the discovery criteria ({rejected.length})</summary>
+                <p className="text-[12px] leading-relaxed text-muted">No compatible claim was selected from these papers. This is a search-filter result, not an experiment verdict.</p>
+                <div className="mt-3 space-y-3">{rejected.map((p) => <PaperCard key={p.id} p={p} active={false} />)}</div>
+              </details>}
               {!papers.length && running && [0, 1].map((i) => (
                 <div key={i} aria-hidden className="rounded-xl border border-dashed border-line p-5 motion-safe:animate-pulse"><div className="h-3 w-2/3 rounded bg-raised" /><div className="mt-3 h-2.5 w-1/3 rounded bg-raised" /></div>
               ))}
-              {!papers.length && !running && <p className="text-[13px] text-subtle">Papers appear here as Tavily finds and reads them.</p>}
+              {!candidates.length && !inProgress.length && !running && <p className="text-[13px] text-subtle">No compatible claim was selected in this search. The filter details above explain why.</p>}
             </div>
           </Section>
           <Section title="Call timeline" hint="Tavily vs. model">
@@ -547,8 +554,9 @@ export function Discovery() {
         </div>
       </div>
       )}
-      <NextStep title="See what the checks found" text="Candidates that were run through the full loop are listed in the catalog, each with the claimed number, the measured number and its evidence."
-        label="Open the catalog" href="#catalog" />
+      <NextStep title="See the experiment stage"
+        text={example ? `${example.claim.method ?? 'This paper'} is a separate recorded catalog example whose target was reached. Inspect its sources, generated experiment and measurements. Method fidelity is not verified.` : 'Open the catalog for saved experiments, their measurements and all outcomes.'}
+        label={example ? 'Open recorded example' : 'Open the catalog'} href={example ? evidenceHref(example)! : '#catalog'} />
     </main>
   )
 }
