@@ -1,5 +1,5 @@
-import { AlertCircle, ArrowRight, Info } from 'lucide-react'
-import { Badge, toPercent } from './ui'
+import { AlertCircle, Info } from 'lucide-react'
+import { Badge, GoArrow, ICON_MD, INLINE, toPercent } from './ui'
 import { NOT_ASSESSABLE, OVERALL, PRELIMINARY, TONE_TEXT, catalogLabel, isPreliminary, resultHint, translateWarning } from '../labels'
 import { evidenceHref, fmtClaimed, fmtDelta, fmtMeasured, type CatalogEntry } from '../catalog'
 import type { Json, RunData } from '../data'
@@ -53,8 +53,8 @@ export function EvidenceLink({ entry, tab, children }: { entry: CatalogEntry; ta
   const href = evidenceHref(entry, tab)
   if (!href) return null
   return (
-    <a href={href} className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
-      {children}<ArrowRight className="w-3.5 h-3.5" />
+    <a href={href} className={`nx-go ${INLINE} text-fg-3 hover:text-fg-max`}>
+      {children}<GoArrow className={ICON_MD} />
     </a>
   )
 }

@@ -74,6 +74,8 @@ export const INLINE = 'inline-flex items-center gap-1.5'
 export const ICON_SM = 'h-3 w-3 shrink-0'
 export const ICON_MD = 'h-3.5 w-3.5 shrink-0'
 export const SHIFT_BTN = 'nx-shift'
+// Clickable cards: border darkens, small lift and shadow (the lift is dropped under prefers-reduced-motion).
+export const CARD_HOVER = 'transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong hover:shadow-md motion-safe:hover:-translate-y-0.5'
 export const LINK_TEXT = 'text-fg underline underline-offset-4 hover:text-fg-max'
 
 export function GoArrow({ className = ICON_MD }: { className?: string }) {

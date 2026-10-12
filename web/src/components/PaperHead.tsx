@@ -5,12 +5,12 @@ import type { PaperSummary } from '../summaries'
 
 type Head = PaperSummary & { arxiv_id: string }
 
-// Affiliation chip: a monogram square (initials of the name, no logo) and the name in the serif italic of the wordmark.
+// Affiliation chip: a monogram square (initials of the name, no logo) and the name in plain sans (italic was hard to read).
 function Chip({ name, small = false }: { name: string; small?: boolean }) {
   return (
     <li className="flex min-w-0 items-center gap-2.5" title={name}>
       <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-md border border-line-strong bg-raised font-mono font-medium tracking-tight text-fg-3 ${small ? 'h-5 min-w-5 px-1 text-[9px]' : 'h-7 min-w-7 px-1.5 text-[10px]'}`}>{monogram(name)}</span>
-      <span className={`font-serif-italic min-w-0 leading-tight text-fg-3 ${small ? 'text-[14px]' : 'text-[18px]'}`}>{name}</span>
+      <span className={`font-grotesk min-w-0 leading-tight text-fg-3 ${small ? 'text-[13px]' : 'text-[16px]'}`}>{name}</span>
     </li>
   )
 }
