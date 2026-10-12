@@ -12,11 +12,13 @@ import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
 import { Contact } from './components/Contact'
 import { colorForTone, getDelta, parseDate, showValue } from './format'
-import { Badge } from './components/ui'
+import { Badge, CARD_HOVER, Chevron } from './components/ui'
 import { loadIndex, loadRun, type RunData, type RunRef } from './data'
 import { RESULT, catalogLabel, de2en, isPreliminary, resultHint, translateClaim, type Tone } from './labels'
-import { BookOpen, Activity, ChevronDown } from 'lucide-react'
+import { BookOpen, Activity } from 'lucide-react'
 import { groupRuns } from './group'
+import { allSettled } from './loaded'
+import { useCountUp } from './useCountUp'
 
 const useHash = () => {
   const [h, setH] = useState(location.hash.slice(1))
@@ -29,13 +31,17 @@ const useHash = () => {
 }
 
 // Counters come from the run index and the loaded dossiers; nothing is typed in by hand.
+function Count({ value }: { value: number }) {
+  return <>{Math.round(useCountUp(value))}</>
+}
+
 function Counters({ items }: { items: { label: string; value: number; tone?: Tone }[] }) {
   return (
     <dl className="m-0 grid grid-cols-2 gap-0 border-y border-line md:grid-cols-4">
       {items.map((it, i) => (
         <div key={it.label} className={`py-6 ${i % 2 ? 'border-l border-line pl-6' : ''} ${i > 1 ? 'border-t border-line md:border-t-0' : ''} ${i > 0 ? 'md:border-l md:border-line md:pl-8' : ''}`}>
           <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{it.label}</dt>
-          <dd className={`m-0 mt-2 font-mono text-4xl font-light tracking-tight ${it.tone ? colorForTone(it.tone) : 'text-fg'}`}>{it.value}</dd>
+          <dd className={`m-0 mt-2 font-mono text-4xl font-light tracking-tight ${it.tone ? colorForTone(it.tone) : 'text-fg'}`}><Count value={it.value} /></dd>
         </div>
       ))}
     </dl>
@@ -44,9 +50,17 @@ function Counters({ items }: { items: { label: string; value: number; tone?: Ton
 
 function Home({ runs }: { runs: RunRef[] }) {
   const [data, setData] = useState<Record<string, RunData>>({})
-  useEffect(() => { runs.forEach((r) => loadRun(r).then((d) => setData((x) => ({ ...x, [r.id]: d })))) }, [runs])
+  const [settled, setSettled] = useState<ReadonlySet<string>>(new Set())
+  useEffect(() => {
+    let live = true
+    const done = (id: string) => live && setSettled((s) => new Set(s).add(id))
+    runs.forEach((r) => loadRun(r).then((d) => { if (live) setData((x) => ({ ...x, [r.id]: d })); done(r.id) }, () => done(r.id)))
+    return () => { live = false }
+  }, [runs])
+  // Cards and counters appear once, after every dossier settled; grouping by claim id would otherwise change under them.
+  const ready = allSettled(runs, settled)
   const urteil = (r: RunRef) => data[r.id]?.dossier?.verdicts?.[0]?.urteil
-  const groups = groupRuns(runs, (r) => data[r.id]?.dossier?.claims?.[0]?.id)   // one card per paper claim, newest run on top
+  const groups = !ready ? [] : groupRuns(runs, (r) => data[r.id]?.dossier?.claims?.[0]?.id)   // one card per paper claim, newest run on top
   const reproduced = groups.filter((g) => urteil(g.latest) === 'reproduziert')
   const partial = groups.filter((g) => urteil(g.latest) === 'teilweise').length
   const papers = new Set(runs.map((r) => r.paper_id)).size
@@ -57,8 +71,8 @@ function Home({ runs }: { runs: RunRef[] }) {
         what="Nullius is a high-precision checker: when it reports a target reached, an independent harness measured it, and it has never confirmed a deliberately wrong claim. It often misses, usually narrowly. Each card is one paper claim; older runs fold out below it."
         look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
       <Counters items={[
-        { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: reproduced.length, tone: 'green' },
-        { label: 'Partially', value: partial, tone: 'amber' }, { label: 'Papers', value: papers },
+        { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: ready ? reproduced.length : 0, tone: 'green' },
+        { label: 'Partially', value: ready ? partial : 0, tone: 'amber' }, { label: 'Papers', value: papers },
       ]} />
 
       <div className="mb-6 mt-14 flex items-baseline justify-between gap-4">
@@ -66,8 +80,9 @@ function Home({ runs }: { runs: RunRef[] }) {
         <span className="text-[12px] text-muted">Measured with our setup. Method fidelity not checked.</span>
       </div>
 
+      {!ready && <p role="status" className="m-0 text-[13px] text-muted">Loading checks…</p>}
       <div className="grid gap-5 md:grid-cols-2">
-        {groups.map(({ key, latest: r, earlier }, i) => {
+        {groups.map(({ latest: r, earlier }, i) => {
           const d = data[r.id]
           const v = d?.dossier?.verdicts?.[0]
           const claim = d?.dossier?.claims?.[0]
@@ -75,9 +90,9 @@ function Home({ runs }: { runs: RunRef[] }) {
           let delta = null
           if (v && claim) delta = getDelta(v.measured_mean, claim.target, claim.metric)
           return (
-            <div key={key} className="flex flex-col">
-            <motion.a href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-              className="group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline transition-colors duration-200 hover:border-line-strong">
+            <div key={r.id} className="flex flex-col">
+            <motion.a href={`#/run/${r.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}
+              className={`group flex flex-1 cursor-pointer flex-col rounded-xl border border-line bg-surface p-6 no-underline ${CARD_HOVER}`}>
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>
@@ -112,9 +127,9 @@ function Home({ runs }: { runs: RunRef[] }) {
             </motion.a>
             {earlier.length > 0 && (
               <details className="group/earlier mt-2 rounded-lg border border-line/60 px-4 py-2 text-[12px] text-muted">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+                <summary className="nx-summary flex cursor-pointer items-center justify-between gap-2">
                   <span>{earlier.length} earlier {earlier.length === 1 ? 'run' : 'runs'} of this claim</span>
-                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/earlier:rotate-180" />
+                  <Chevron className="h-3.5 w-3.5" />
                 </summary>
                 <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0">
                   {earlier.map((e) => {
