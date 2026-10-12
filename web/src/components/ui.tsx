@@ -63,7 +63,8 @@ export const fmt = (x: number | null | undefined, d = 4) => (x === null || x ===
 //      with className "nx-ext" on the link.
 //   3. Expand / collapse: <details>/<summary> with <Chevron/> (open chevron, rotates when open). No underline.
 //      Ready-made: <Disclosure summary="...">.
-//   4. Non-interactive text: no pointer cursor, no underline, no hover change. A tooltip-only info icon uses
+//   4. Switch tab / reveal in place (stays on this page): quiet secondary button, NO arrow -> className={TAB_BTN}.
+//   5. Non-interactive text: no pointer cursor, no underline, no hover change. A tooltip-only info icon uses
 //      cursor-help (see components/Hint.tsx).
 //
 // Icons next to text: wrap both in an element with INLINE (flex + items-center + gap) so they stay vertically centered.
@@ -74,6 +75,8 @@ export const INLINE = 'inline-flex items-center gap-1.5'
 export const ICON_SM = 'h-3 w-3 shrink-0'
 export const ICON_MD = 'h-3.5 w-3.5 shrink-0'
 export const SHIFT_BTN = 'nx-shift'
+// In-page action (switches a tab or opens something on the same page): outlined button, no link arrow, no underline.
+export const TAB_BTN = 'inline-flex cursor-pointer items-center rounded-lg border border-line-strong bg-transparent px-4 py-2 text-[13px] font-medium text-fg no-underline transition-colors hover:bg-raised'
 // Clickable cards: border darkens, small lift and shadow (the lift is dropped under prefers-reduced-motion).
 export const CARD_HOVER = 'transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong hover:shadow-md motion-safe:hover:-translate-y-0.5'
 export const LINK_TEXT = 'text-fg underline underline-offset-4 hover:text-fg-max'
@@ -115,4 +118,9 @@ export function Disclosure({ summary, children, className = '', summaryClassName
       {children}
     </details>
   )
+}
+
+// One fixed-width cell for a legend swatch, so the texts of all legend lines start at the same x.
+export function LegendSwatch({ children }: { children: ReactNode }) {
+  return <span className="mt-[3px] flex h-4 w-6 shrink-0 items-center justify-center" aria-hidden>{children}</span>
 }

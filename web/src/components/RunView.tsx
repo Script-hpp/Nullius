@@ -29,7 +29,8 @@ import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '
 import { OVERALL, RESULT, catalogLabel, de2en, translateClaim } from '../labels'
 import { parseTab, tabHash, type HowView, type RunTab } from '../runtabs'
 import { tavilySummary } from '../tavilysummary'
-import { toPercent } from './ui'
+import { GoLink, TAB_BTN, toPercent } from './ui'
+import { flashSection } from '../sectionScroll'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const INFO = 'The certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it.'
@@ -77,17 +78,19 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const codeLoader = useCallback((hash: string) => getText(`${runDir(ref_)}code_${hash}.py`).then((t) => t ?? (hash === finalHash ? run?.code ?? null : null)), [ref_, finalHash, run])
 
   // Bring the top of the panel into view when the reader is further down, so a new tab never opens in the middle.
-  const toPanel = (id?: string) => window.setTimeout(() => {
+  // flash: after a jump from a step, mark the target briefly (the smooth scroll needs a moment to arrive)
+  const toPanel = (id?: string, flash = false) => window.setTimeout(() => {
     const el = (id && document.getElementById(id)) || panelRef.current
     if (!el) return
     if (id || el.getBoundingClientRect().top < (barRef.current?.offsetHeight ?? 0)) el.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' })
+    if (flash) window.setTimeout(() => flashSection(el), reduceMotion() ? 0 : 350)
   }, 40)
-  const goTab = (t: RunTab, o: { how?: HowView; fold?: string; scroll?: string } = {}) => {
+  const goTab = (t: RunTab, o: { how?: HowView; fold?: string; scroll?: string; flash?: boolean } = {}) => {
     setTab(t)
     if (o.how) setHow(o.how)
     if (o.fold) setOpen((s) => new Set(s).add(o.fold!))
     try { history.replaceState(null, '', tabHash(location.hash, t)) } catch { /* the URL stays as it was */ }
-    toPanel(o.scroll ?? o.fold)
+    toPanel(o.scroll ?? o.fold, o.flash)
   }
   const setFold = (id: string) => (v: boolean) => setOpen((s) => { if (s.has(id) === v) return s; const n = new Set(s); if (v) n.add(id); else n.delete(id); return n })
 
@@ -112,13 +115,14 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const paperUrl = claim.target_evidence?.url
 
   const onStep = (id: StepId) => {
-    if (id === 'paper' || id === 'verdict') { goTab('overview'); window.setTimeout(() => topRef.current?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }), 40) }
-    else if (id === 'claim' || id === 'sources') goTab('sources', { fold: 'f-target' })
-    else if (id === 'plan') { setFile('plan'); goTab('code', { fold: 'f-plancode' }) }
-    else if (id === 'code') { setFile('code'); goTab('code', { fold: 'f-plancode' }) }
-    else if (id === 'sandbox') goTab('code', { scroll: 'sec-branches' })
-    else if (id === 'check') goTab('how', { how: 'log' })
-    else if (id === 'community') goTab('sources', { fold: 'f-community' })
+    const flash = true
+    if (id === 'paper' || id === 'verdict') { goTab('overview'); window.setTimeout(() => { topRef.current?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }); window.setTimeout(() => flashSection(document.getElementById('sec-verdict')), reduceMotion() ? 0 : 350) }, 40) }
+    else if (id === 'claim' || id === 'sources') goTab('sources', { fold: 'f-target', flash })
+    else if (id === 'plan') { setFile('plan'); goTab('code', { fold: 'f-plancode', flash }) }
+    else if (id === 'code') { setFile('code'); goTab('code', { fold: 'f-plancode', flash }) }
+    else if (id === 'sandbox') goTab('code', { scroll: 'sec-branches', flash })
+    else if (id === 'check') goTab('how', { how: 'log', scroll: 'sec-run-log', flash })
+    else if (id === 'community') goTab('sources', { fold: 'f-community', flash })
   }
 
   const h3 = 'm-0 mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted'
@@ -173,8 +177,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <h3 className={h3}>Before you build on this result</h3>
               <p className="mb-0 mt-3 max-w-2xl text-[14px] leading-relaxed text-fg-4">Choosing a paper to build on? Start with its claim and our measurement above. Open the sources to see where the target came from, then inspect the program and repeated runs. This helps researchers decide what to investigate next. Matching the number still needs a review of the method.</p>
               <div className="mt-5 flex flex-wrap gap-4">
-                <button onClick={() => goTab('sources')} className="cursor-pointer border-0 bg-transparent p-0 text-sm text-fg underline underline-offset-4">Inspect sources &amp; setup</button>
-                <button onClick={() => goTab('code')} className="cursor-pointer border-0 bg-transparent p-0 text-sm text-fg underline underline-offset-4">Inspect code &amp; measurements</button>
+                <button type="button" onClick={() => goTab('sources')} className={TAB_BTN}>Inspect sources &amp; setup</button>
+                <button type="button" onClick={() => goTab('code')} className={TAB_BTN}>Inspect code &amp; measurements</button>
               </div>
             </section>
             {nExp > 0 && (
@@ -185,9 +189,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             )}
             <WhatIf dossier={d} claim={claim} verdict={v} fmt={fmt} fmtSpread={fmtSpread} />
             {head && <Fold title="About the paper" meta="summary, authors, affiliations" id="f-about" open={open.has('f-about')} onOpenChange={setFold('f-about')}><PaperHead head={head} /></Fold>}
-            <a href="#benchmark" className="inline-flex items-center gap-2 text-[13px] font-medium text-fg-3 no-underline hover:text-fg">
-              Benchmark: how often Nullius is right<ArrowRight className="h-4 w-4" />
-            </a>
+            <GoLink href="#benchmark" className="text-[13px] font-medium text-fg-3 no-underline hover:text-fg">Benchmark: how often Nullius is right</GoLink>
           </div>
         )}
 
@@ -200,7 +202,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
             </div>
             {how === 'graph'
               ? <StepGraph events={run.events} running={false} codeLoader={codeLoader} planFull={run.plan} metricHint={claim.metric} />
-              : <ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} />}
+              : <div id="sec-run-log" className="scroll-mt-16"><ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} /></div>}
             {nRepairs > 0 && (
               <div className="mt-12">
                 <Fold title="Watch the agent fix its own code" meta={`${nRepairs} ${nRepairs === 1 ? 'step' : 'steps'}`} id="f-repairs" open={open.has('f-repairs')} onOpenChange={setFold('f-repairs')}>
@@ -255,7 +257,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <Fold title="Plan and code" meta="exactly as stored" id="f-plancode" open={open.has('f-plancode')} onOpenChange={setFold('f-plancode')}>
                 <div className="space-y-4">
                   <div className="flex gap-2">
-                    <button onClick={() => setFile('code')} aria-pressed={file === 'code'} className={toggle(file === 'code')}><Code className="mr-2 inline h-3.5 w-3.5" />Agent code</button>
+                    <button onClick={() => setFile('code')} aria-pressed={file === 'code'} className={`${toggle(file === 'code')} inline-flex items-center gap-2`}><Code className="h-3.5 w-3.5 shrink-0" />Agent code</button>
                     <button onClick={() => setFile('plan')} aria-pressed={file === 'plan'} className={toggle(file === 'plan')}>Plan</button>
                   </div>
                   <pre className="m-0 h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-5 font-mono text-[12px] leading-relaxed text-fg-4">

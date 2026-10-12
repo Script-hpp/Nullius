@@ -11,3 +11,13 @@ export function scrollToSection(id: string, doc: Doc = document, reduced: boolea
   el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
   return true
 }
+
+// After a jump, mark the target for a moment (ring and tint, see .nx-flash in index.css). The class is removed again, so a second jump
+// to the same target flashes again; under reduced motion the ring is static and disappears after the same time.
+export function flashSection(el: { classList: { add(c: string): void; remove(c: string): void }; offsetWidth?: number } | null, ms = 1400): void {
+  if (!el) return
+  el.classList.remove('nx-flash')
+  void el.offsetWidth   // restart the animation when the class is added again
+  el.classList.add('nx-flash')
+  window.setTimeout(() => el.classList.remove('nx-flash'), ms)
+}
