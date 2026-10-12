@@ -1,3 +1,3 @@
-// Contact details shown on #/contact. PLACEHOLDER name: the real name is confirmed by the project owner; change only this constant.
-export const CONTACT_NAME = 'Script-hpp'
+// Contact details shown on #/contact.
+export const CONTACT_NAME = 'Onuralp Akca'
 export const CONTACT_EMAIL = 'onuralpag2a@gmail.com'
