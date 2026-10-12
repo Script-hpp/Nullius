@@ -1,6 +1,6 @@
 import type { Event } from '../../data'
 import type { Tone } from '../../labels'
-import { VERDICT_SENTENCE } from '../../labels'
+import { VERDICT_SENTENCE } from '../../labels.ts'
 
 // Turns the flat event list of a run into phases with grouped rows. Pure: every number comes from an event, a missing value drops the line.
 
@@ -64,6 +64,9 @@ export type RunModel = {
   graphTask: boolean
   waiting: string | null       // what the loop is doing right now, for the pulsing line
   firstMeasurement: boolean
+  candidateSelectionPending: boolean
+  selectedCandidate: number | null
+  measurementSelectionUnavailable: boolean
   llmCalls: number             // live only (llm_call events)
   llmCached: number
 }
@@ -143,6 +146,29 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const seedsTotal = num(runStart?.seeds)
   const modelName = (role: 'fast' | 'code' | 'reasoning') => (models[role] ? String(models[role]).replace(/^nvidia\//i, '') : undefined)
   const discarded = new Set(events.filter((e) => (e.type === 'graph_repair' || e.type === 'fault_repair') && e.result === 'repariert').map((e) => String(e.from_hash)))
+  const selection = events.filter((e) => e.type === 'candidates').pop()
+  const selectedCandidate = num(selection?.chosen)
+  const candidateSelectionPending = !selection && events.some((e) => num(e.candidate) != null)
+  let selectedHash = selection?.chosen_hash ? String(selection.chosen_hash) : null
+  const candidateOfHash = new Map<string, number>()
+  const codeAnnouncedAt = new Map<string, number>()
+  for (const e of events) {
+    const candidate = num(e.candidate)
+    if (candidate != null && e.code_hash) candidateOfHash.set(String(e.code_hash), candidate)
+    if (e.type === 'repair_result' && candidateOfHash.has(String(e.from_hash))) {
+      candidateOfHash.set(String(e.to_hash), candidateOfHash.get(String(e.from_hash))!)
+    }
+    if (e.type === 'code_text' && !codeAnnouncedAt.has(String(e.code_hash))) codeAnnouncedAt.set(String(e.code_hash), e.ts)
+    if ((e.type === 'repo_diff' || e.type === 'fault_repair_result') && e.result === 'kept' && e.to_hash && e.to_hash !== e.from_hash) discarded.add(String(e.to_hash))
+    const adopted = ((e.type === 'repo_diff' || e.type === 'fault_repair_result') && e.result === 'adopted') ||
+      ((e.type === 'graph_repair' || e.type === 'fault_repair') && e.result === 'repariert')
+    if (adopted && e.to_hash) {
+      discarded.add(String(e.from_hash))
+      discarded.delete(String(e.to_hash))
+      if (String(e.from_hash) === selectedHash) selectedHash = String(e.to_hash)
+    }
+  }
+  const candidateLabel = (h: string) => candidateOfHash.has(h) ? `Candidate ${candidateOfHash.get(h)! + 1} · ` : ''
   const graphTask = events.some((e) => e.type === 'ablation') || metric === 'accuracy'
 
   const rows: Record<PhaseId, Row[]> = { claim: [], setup: [], plan: [], code: [], sandbox: [], seeds: [], verdict: [], community: [] }
@@ -244,7 +270,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       case 'code_written': {
         const h = String(e.code_hash)
         const v = versionOf(h)
-        push('code', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `Code version ${v} written`, expand: { kind: 'code', hash: h, version: v } })
+        push('code', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `${candidateLabel(h)}Code version ${v} written`, expand: { kind: 'code', hash: h, version: v } })
         break
       }
       case 'repair': {
@@ -252,7 +278,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         versionOf(h)
         push('sandbox', {
           actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'red',
-          title: 'The code crashed in the sandbox, Nemotron rewrites it',
+          title: `${candidateLabel(h)}Code version ${versionOf(h)} crashed; Nemotron rewrites it`,
           detail: short(lastLine(e.error), 160) || undefined,
           expand: e.error ? { kind: 'error', text: String(e.error) } : undefined,
         })
@@ -281,7 +307,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         const secs = num(e.seconds)
         const phase: PhaseId = seed === 0 ? 'sandbox' : 'seeds'
         const attempt = num(e.n) ?? 1
-        const name = `Seed ${seed}${attempt > 1 ? `, attempt ${attempt}` : ''}`
+        const name = `${candidateLabel(h)}Seed ${seed}, attempt ${attempt} · Code version ${versionOf(h)}`
         if (m == null) {
           push(phase, { actor: 'sandbox', tone: 'red', title: `${name} did not produce a valid run`, detail: short(lastLine(e.error), 160) || undefined, expand: e.error ? { kind: 'error', text: String(e.error) } : undefined })
         } else {
@@ -290,6 +316,13 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
             detail: secs != null ? `Trained in its own sandbox branch in ${fmtSeconds(secs)}. The agent only wrote predictions.` : 'The agent only wrote predictions.',
           })
         }
+        break
+      }
+      case 'candidates': {
+        const chosen = num(e.chosen)
+        if (chosen != null) push('sandbox', { actor: 'system', tone: 'gray',
+          title: `Candidate ${chosen + 1} selected for the remaining seeds`,
+          detail: 'Selection uses setup checks and validation data. Other candidates remain in the attempt history; their measurements are excluded from the seed chart.' })
         break
       }
       case 'infra_retry': {
@@ -315,6 +348,12 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       }
       case 'fault_repair': {
         const r = String(e.result)
+        if (e.runde === 'mittelwert' && e.result == null) {
+          push('sandbox', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet',
+            title: 'Baseline check failed after all seeds; a code repair is requested',
+            detail: e.reason ? String(e.reason) : 'At least one scored metric failed the baseline check. The repair outcome is not recorded in this request event.' })
+          break
+        }
         const base = Object.entries((e.baselines ?? {}) as Record<string, unknown>).filter(([, v]) => num(v) != null).map(([k, v]) => `${k} ${fmtValue(metric, num(v))}`).join(', ')
         push('sandbox', {
           actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet',
@@ -323,6 +362,12 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
             ? `The agent's code is likely wrong, not the paper. It measured ${fmtValue(metric, num(e.measured))}, trivial baselines: ${base || 'n/a'}. The fixed code is checked again.`
             : 'The rewritten code did not run, the previous code is kept.',
         })
+        break
+      }
+      case 'fault_repair_result': {
+        push('sandbox', { actor: 'system', tone: 'gray', title: e.result === 'adopted'
+          ? 'Repair accepted; all seeds run again with the new code'
+          : 'Repair not accepted; the previous measurements are kept' })
         break
       }
       case 'graph_repair': {
@@ -378,8 +423,45 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   for (const e of events) {
     if (e.type !== 'attempt') continue
     const m = num(e.measured)
-    if (m == null || discarded.has(String(e.code_hash))) continue
+    if (m == null || discarded.has(String(e.code_hash)) || candidateSelectionPending) continue
+    if (selection && (num(e.candidate) !== selectedCandidate || (num(e.seed) === 0 && selectedHash && String(e.code_hash) !== selectedHash))) continue
     bySeed.set(num(e.seed) ?? 0, { seed: num(e.seed) ?? 0, hash: String(e.code_hash), measured: m, seconds: num(e.seconds) })
+  }
+  const finalSelection = events.filter(e => e.type === 'measurements_selected').pop()
+  if (finalSelection && Array.isArray(finalSelection.attempts)) {
+    bySeed.clear()
+    for (const a of finalSelection.attempts) {
+      const measured = num(a.measured), seed = num(a.seed)
+      if (measured == null || seed == null) continue
+      const original = events.findLast(e => e.type === 'attempt' && e.seed === seed && e.code_hash === a.code_hash && num(e.measured) === measured)
+      bySeed.set(seed, { seed, hash: String(a.code_hash), measured, seconds: num(original?.seconds) })
+    }
+  }
+  // Older logs did not announce adoption of a repair after all seeds. Recover
+  // only a unique complete code group matching the recorded verdict, never
+  // pick a group by closeness to the paper target or present a mixed-code mean.
+  const finalVerdict = events.filter(e => e.type === 'verdict').pop()
+  let measurementSelectionUnavailable = false
+  if (!finalSelection && finalVerdict && bySeed.size) {
+    const mean = (xs: Attempt[]) => xs.reduce((s, a) => s + a.measured, 0) / xs.length
+    const matchesVerdict = (xs: Attempt[]) => {
+      const avg = mean(xs)
+      const std = xs.length > 1 ? Math.sqrt(xs.reduce((s, a) => s + (a.measured - avg) ** 2, 0) / (xs.length - 1)) : 0
+      return Math.abs(avg - Number(finalVerdict.mean)) <= 1e-9 && (num(finalVerdict.std) == null || Math.abs(std - Number(finalVerdict.std)) <= 1e-9)
+    }
+    if (!matchesVerdict([...bySeed.values()])) {
+      const groups = new Map<string, Map<number, Attempt>>()
+      for (const e of events) {
+        const measured = num(e.measured), seed = num(e.seed), hash = String(e.code_hash)
+        if (e.type !== 'attempt' || measured == null || seed == null || discarded.has(hash) || selection && num(e.candidate) !== selectedCandidate) continue
+        if (!groups.has(hash)) groups.set(hash, new Map())
+        groups.get(hash)!.set(seed, { seed, hash, measured, seconds: num(e.seconds) })
+      }
+      const matches = [...groups.values()].filter(g => g.size === seedsTotal && matchesVerdict([...g.values()]))
+      bySeed.clear()
+      if (matches.length === 1) for (const [seed, a] of matches[0]) bySeed.set(seed, a)
+      else measurementSelectionUnavailable = true
+    }
   }
   const attempts = [...bySeed.values()].sort((a, b) => a.seed - b.seed)
   let stats: Stats | null = null
@@ -392,8 +474,8 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   // rows for code versions found only through attempts/repairs (version >= 2) are shown inside the sandbox phase
   versions.forEach((h, idx) => {
     if (idx === 0 || rows.code.some((r) => r.expand?.kind === 'code' && r.expand.hash === h)) return
-    const firstAttempt = rows.sandbox.find((r) => r.raw[0].code_hash === h)
-    rows.sandbox.push({ id: `v${idx}`, ts: firstAttempt?.ts ?? 0, raw: [], actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `Code version ${idx + 1}`, expand: { kind: 'code', hash: h, version: idx + 1, inline: codeInline.get(h) } })
+    const firstAttempt = rows.sandbox.find((r) => r.raw[0]?.code_hash === h)
+    rows.sandbox.push({ id: `v${idx}`, ts: codeAnnouncedAt.get(h) ?? firstAttempt?.ts ?? events[0]?.ts ?? 0, raw: [], actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `${candidateLabel(h)}Code version ${idx + 1}`, expand: { kind: 'code', hash: h, version: idx + 1, inline: codeInline.get(h) } })
   })
   for (const r of rows.code) if (r.expand?.kind === 'code') r.expand.inline = codeInline.get(r.expand.hash)
   rows.sandbox.sort((a, b) => a.ts - b.ts)
@@ -453,10 +535,11 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   else if (activeId === 'sandbox') {
     const lastAb = events.filter((e) => e.type === 'ablation').pop()
     const rewriting = !!lastAb && lastAb.verdict === 'Graph nicht genutzt' && repairs < 2 && repairs + faultRepairs < 3
-    waiting = !seed0 ? 'Training seed 0 in the sandbox. This can take several minutes.'
+    waiting = candidateSelectionPending ? 'Testing code candidates in parallel on seed 0. Scores remain in the attempt history until a candidate is selected.'
+      : !seed0 ? 'Training seed 0 in the sandbox. This can take several minutes.'
       : graphTask && !hasAblation ? 'Graph check: running the same code again without graph edges.'
         : rewriting ? 'The graph check failed. Nemotron is rewriting the code.'
-          : !graphTask && seedsTotal !== 1 ? 'Checking the result against trivial baselines.'
+          : !graphTask && seedsTotal !== 1 ? 'Checking the selected implementation and preparing the remaining seeds.'
             : 'Starting the remaining seeds in parallel.'
   }
   else if (activeId === 'seeds') {
@@ -485,6 +568,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     title: (runStart?.title as string | undefined) ?? null, claimText: (claimStart?.text as string | undefined) ?? null, metric, target,
     tolerance: num(claimStart?.tolerance), seedsTotal, models, phases, attempts, stats, tavilyCalls, tavilyKind, warnings, verdict: verdictEv,
     startTs: first, endTs: last, costNet: num(end?.cost_net_usd) ?? num(cost?.total_net_usd), graphTask, waiting, firstMeasurement: attempts.length > 0,
+    candidateSelectionPending, selectedCandidate, measurementSelectionUnavailable,
     llmCalls: events.filter((e) => e.type === 'llm_call').length, llmCached: events.filter((e) => e.type === 'llm_call' && e.cached === true).length,
   }
 }

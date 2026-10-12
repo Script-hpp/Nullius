@@ -245,6 +245,11 @@ def test_fault_on_mean_over_seeds_triggers_one_repair_and_rerun(tmp_path):
     assert d.verdicts[0].measured_mean == pytest.approx(0.81) and d.verdicts[0].urteil != "Agenten-Fehler vermutet"
     assert d.fault_repairs == {"c": 1}
     assert [e["runde"] for e in types(events, "fault_repair")] == ["mittelwert"]
+    (selected,) = types(events, "measurements_selected")
+    assert [a["measured"] for a in selected["attempts"]] == pytest.approx([0.81] * 3)
+    assert {a["code_hash"] for a in selected["attempts"]} == {h(V2)}
+    (outcome,) = types(events, "fault_repair_result")
+    assert outcome["result"] == "adopted" and outcome["to_hash"] == h(V2)
 
 
 def test_repair_hints_for_forbidden_library_and_one_class():

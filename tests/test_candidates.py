@@ -92,6 +92,10 @@ def test_best_val_wins_even_if_another_has_best_test(tmp_path):
     assert sorted((a.candidate, a.chosen) for a in seed0) == [(0, False), (1, True), (2, False)]
     assert all(a.chosen for a in d.attempts if a.candidate == 1)
     assert d.verdicts[0].measured_mean == pytest.approx(0.60)                           # nur der Sieger zaehlt
+    (selected,) = [kw for t, kw in events if t == "measurements_selected"]
+    assert [a["seed"] for a in selected["attempts"]] == [0, 1, 2]
+    assert [a["measured"] for a in selected["attempts"]] == pytest.approx([0.60] * 3)
+    assert {a["code_hash"] for a in selected["attempts"]} == {rest[0].code_hash}
     assert "gewaehlt Kandidat 1" in d.verdicts[0].explanation
 
 

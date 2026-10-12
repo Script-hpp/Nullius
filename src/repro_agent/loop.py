@@ -1199,9 +1199,12 @@ class Orchestrator:
                 v0, note0, code, graph_ab, graph_notes, discarded, _ = self._seed0_quality_loop(
                     claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seeds[0])
         notes = ([] if note0 is None else [note0]) + graph_notes + cand_notes
+        selected_measurements: list[dict] = []
 
         def run_rest(code: str, v0: float) -> tuple[list[float], list[str]]:
+            nonlocal selected_measurements
             rest, got, rnotes = seeds[1:], [v0], []
+            selected_measurements = [{"seed": seeds[0], "code_hash": hashlib.sha256(code.encode()).hexdigest()[:12], "measured": v0}]
             if rest:
                 with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(rest))) as pool:
                     results = list(pool.map(
@@ -1210,6 +1213,8 @@ class Orchestrator:
                     ))
                 got += [v for v, _, _ in results if v is not None]
                 rnotes += [n for _, n, _ in results if n]
+                selected_measurements += [{"seed": sd, "code_hash": hashlib.sha256(seed_code.encode()).hexdigest()[:12], "measured": v}
+                                          for sd, (v, _, seed_code) in zip(rest, results) if v is not None]
             return got, rnotes
 
         def metrics_mean() -> dict[str, float]:
@@ -1243,7 +1248,8 @@ class Orchestrator:
             # Seed 0 lag ueber der Baseline, der Mittelwert ueber alle Seeds nicht (instabiler Code): eine Reparatur, alle Seeds neu
             from_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
             head = f"Fehler-Reparatur nach allen Seeds: Code {from_hash} im Mittel schlechter als triviale Baseline"
-            self._emit("fault_repair", claim_id=claim.id, runde="mittelwert", from_hash=from_hash, measured=verdict.measured_mean)
+            self._emit("fault_repair", claim_id=claim.id, runde="mittelwert", from_hash=from_hash, measured=verdict.measured_mean,
+                       reason=agent_fault_suspected(claim.metric, verdict.measured_mean, claim.target, dossier.baselines, all_metrics))
             try:
                 new = self.repair_code(plan, task, code, fault_message(claim.metric, verdict.measured_mean, claim.target, dossier.baselines))
                 nv, nnote, new = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, new, seeds[0], cand)
@@ -1253,12 +1259,15 @@ class Orchestrator:
             if nv is not None and not self._fault_check(claim, dossier, new_hash, seeds[0], nv):
                 discarded.add(from_hash)
                 code, v0, graph_ab = new, nv, None   # Ablation gilt fuer den alten Code: neu messen
+                self._emit("fault_repair_result", claim_id=claim.id, result="adopted", from_hash=from_hash, to_hash=new_hash)
                 measured, rnotes = run_rest(code, v0)
                 notes += [f"{head}; neuer Code {new_hash}, alle Seeds neu"] + ([nnote] if nnote else []) + rnotes
                 dossier.fault_repairs[claim.id] = dossier.fault_repairs.get(claim.id, 0) + 1
                 all_metrics = metrics_mean()
                 verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
             else:
+                self._emit("fault_repair_result", claim_id=claim.id, result="kept", from_hash=from_hash, to_hash=new_hash,
+                           reason=nnote or "Repair still failed the baseline check")
                 notes.append(f"{head}; Reparatur ohne Besserung ({nnote or 'weiter schlechter als Baseline'}), Urteil bleibt")
                 verdict.explanation += f" {notes[-1]}."
         if v0 is not None and task.ablation_cmd:
@@ -1277,6 +1286,9 @@ class Orchestrator:
                     a.chosen = a.candidate == cand and a.code_hash not in discarded
         self.__dict__.setdefault("_claim_ctx", {})[claim.id] = {"code": code, "plan": plan, "task": task, "snapshot": snapshot, "n_seeds": len(seeds)}   # fuer Einwand-Experimente
         dossier.verdicts.append(verdict)
+        # The live/replay chart must use the exact measurements behind this verdict,
+        # including an accepted repair after all seeds. Keep every attempt in history.
+        self._emit("measurements_selected", claim_id=claim.id, attempts=selected_measurements)
         self._emit("verdict", claim_id=claim.id, urteil=verdict.urteil, methode=verdict.methode,
                    gesamt=verdict.gesamtaussage, mean=verdict.measured_mean, std=verdict.measured_std,
                    explanation=verdict.explanation)

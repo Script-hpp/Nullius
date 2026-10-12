@@ -304,6 +304,9 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
         {!embedded && (
           <div className="space-y-4 lg:sticky lg:top-4">
             <Section title="Measurements" hint={m.seedsTotal ? `${m.stats?.n ?? 0} of ${m.seedsTotal} seeds` : undefined}>
+              {m.candidateSelectionPending && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">Code candidates are being tested in parallel. Their scores are shown in the attempt history. The seed chart starts after candidate selection.</p>}
+              {m.selectedCandidate != null && <p className="mb-3 text-[13px] text-fg-3">Selected candidate {m.selectedCandidate + 1}{!verdict ? ' · provisional measurements, no verdict yet' : ''}</p>}
+              {m.measurementSelectionUnavailable && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">The final seed selection cannot be reconstructed from this older event log. Open the full evidence for the recorded measurements.</p>}
               {m.firstMeasurement && m.target != null ? (
                 <>
                   <AttemptChart dossier={dossier} claimId="c" />
@@ -319,7 +322,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
                   </p>
                 </>
               ) : (
-                <p className="m-0 text-[14px] leading-relaxed text-fg-3">The first measurement appears here when seed 0 has finished. Each bar will be one seed; the band is the claimed value ± tolerance.</p>
+                !m.candidateSelectionPending && !m.measurementSelectionUnavailable && <p className="m-0 text-[14px] leading-relaxed text-fg-3">The first measurement appears here when seed 0 has finished. Each bar will be one seed; the band is the claimed value ± tolerance.</p>
               )}
             </Section>
 

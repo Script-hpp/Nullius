@@ -131,7 +131,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     if (list.length) facts.push({ label: 'Attempts', value: String(list.length) })
     if (!valid && lastTry?.error) facts.push({ label: 'Last error', value: clip(lastLine(lastTry.error), 200) })
     singles.push({
-      id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : failed ? 'no valid run' : list.length ? 'retrying…' : null,
+      id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : s === 0 && model.candidateSelectionPending ? 'testing code candidates…' : failed ? 'no valid run' : list.length ? 'retrying…' : null,
       state: st(!!valid, isNext && has('code_written') && !verdictSeen, failed), tone: valid ? 'gray' : failed ? 'red' : 'gray',
       what: s === 0
         ? 'The code trains in its own sandbox branch. It must write predictions only; it never sees the test labels. This first run catches crashes early.'
