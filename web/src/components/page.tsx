@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Eye, Info } from 'lucide-react'
+import { Eye, Info } from 'lucide-react'
+import { GoArrow, SHIFT_BTN } from './ui'
 import { Glossed } from './Glossed'
 
 // Building blocks shared by every page: the intro every page starts with, and the "Next" every page ends with.
@@ -35,8 +36,8 @@ export function NextStep({ title, text, label, href }: { title: string; text: st
         <p className="font-grotesk m-0 mt-3 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</p>
         <p className="mb-0 mt-2 text-[15px] leading-relaxed text-fg-4"><Glossed text={text} /></p>
       </div>
-      <a href={href} className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-        {label} <ArrowRight className="h-4 w-4" />
+      <a href={href} className={`${SHIFT_BTN} inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline hover:bg-inverse-hover`}>
+        {label} <GoArrow className="h-4 w-4 shrink-0" />
       </a>
     </section>
   )

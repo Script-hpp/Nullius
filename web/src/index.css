@@ -58,7 +58,7 @@
   --c-fill-hi: #c9c5ba;
   --c-fill-max: #e6e2d8;
   --c-inverse: #f1eee6;
-  --c-inverse-hover: #ffffff;
+  --c-inverse-hover: #e2ded4;   /* a touch dimmer than --c-inverse: hover must never flash white */
   --c-on-inverse: #0b0a09;
   --c-line: #26241f;
   --c-line-faint: #1d1b17;
@@ -190,6 +190,31 @@ body {
 
 /* Transitions */
 a, button, .panel { transition: all 0.2s ease-out; }
+
+/* Interaction conventions (see the primitives in components/ui.tsx):
+   .nx-shift  whole internal link or button slides right on hover
+   .nx-go     internal link: the child .nx-arrow slides right on hover
+   .nx-ext    external link: the child .nx-ext-arrow of the boxed arrow moves along its diagonal on hover
+   .nx-chev   disclosure chevron, rotates while the parent <details> is open
+   .nx-bob    slow, small up/down motion (scroll hint)
+   Movement is 150-250 ms ease-out and switched off under prefers-reduced-motion. */
+.nx-shift { transition: transform 200ms ease-out, color 200ms ease-out, background-color 200ms ease-out; }
+.nx-shift:hover { transform: translateX(4px); }
+.nx-arrow { transition: transform 200ms ease-out; }
+.nx-go:hover .nx-arrow, .nx-shift:hover .nx-arrow { transform: translateX(3px); }
+.nx-ext-arrow { transition: transform 200ms ease-out; }
+.nx-ext:hover .nx-ext-arrow { transform: translate(2px, -2px); }
+.nx-chev { transition: transform 200ms ease-out; }
+details[open] > summary .nx-chev { transform: rotate(180deg); }
+.nx-summary { list-style: none; }
+.nx-summary::-webkit-details-marker { display: none; }
+@keyframes nx-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.nx-bob { animation: nx-bob 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nx-shift, .nx-arrow, .nx-ext-arrow, .nx-chev { transition: none; }
+  .nx-shift:hover, .nx-go:hover .nx-arrow, .nx-shift:hover .nx-arrow, .nx-ext:hover .nx-ext-arrow { transform: none; }
+  .nx-bob { animation: none; }
+}
 
 /* React Flow customization */
 .react-flow__attribution { display: none; }
