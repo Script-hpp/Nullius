@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, CircleDashed, ChevronDown, ExternalLink, FileText, Play, Radio, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
-import { Section } from './ui'
+import { Activity, CheckCircle2, Check, CircleDashed, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle } from 'lucide-react'
+import { ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, useCatalog, type CatalogEntry } from '../catalog'
@@ -10,7 +10,7 @@ import { fetchJobInfo, useLiveStatus } from '../live'
 import { TavilyMark } from './TavilyMark'
 import { isPaused, pausedText, resumeText, startErrorText, statusFor } from '../livestatus'
 import {
-  deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText,
+  deriveView, domainOf, formatMetric, humanReject, parseJsonl, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
 } from '../discovery'
 import { Glossed } from './Glossed'
@@ -71,11 +71,8 @@ function FeedCard({ call }: { call: FeedCall }) {
         <ul className="border-t border-line/60 px-4 py-3 space-y-2">
           {call.topHits.map((h) => (
             <li key={h.url} className="text-[12px] leading-snug">
-              <a href={h.url} target="_blank" rel="noreferrer" className="text-fg-3 hover:text-fg-max inline-flex items-start gap-1.5">
-                <ExternalLink className="w-3 h-3 mt-0.5 shrink-0 text-muted" />
-                <span>{h.title || h.url}</span>
-              </a>
-              <div className="font-mono text-[10px] text-subtle ml-4">{domainOf(h.url)}</div>
+              <ExtLink href={h.url} className="text-fg-3 hover:text-fg-max no-underline">{h.title || h.url}</ExtLink>
+              <div className="font-mono text-[10px] text-subtle">{domainOf(h.url)}</div>
             </li>
           ))}
         </ul>
@@ -126,21 +123,24 @@ const FUNNEL_TEXT = [
   'A claim we can re-run. The catalog lists the ones that have been run.',
 ]
 
-function Funnel({ funnel }: { funnel: DiscoveryView['funnel'] }) {
+function Funnel({ funnel, running }: { funnel: DiscoveryView['funnel']; running: boolean }) {
   const max = Math.max(1, ...funnel.map((f) => f.value))
-  const t = useTween()
+  const reduce = useReducedMotion()
+  const bar = reduce ? { duration: 0 } : { duration: 0.7, ease: 'easeOut' as const }   // bars grow, they do not jump
   return (
     <div className="space-y-3">
       {funnel.map((f, i) => (
         <div key={f.label}>
           <div className="flex items-baseline justify-between text-[12px]">
             <span className="text-fg-4">{f.label}</span>
-            <span className="font-mono text-fg-2">{f.value}</span>
+            {running && f.value === 0
+              ? <span aria-label="not computed yet" className="h-3.5 w-6 rounded bg-raised motion-safe:animate-pulse" />
+              : <span className="font-mono text-fg-2">{f.value}</span>}
           </div>
           <div className="mt-0.5 text-[11px] leading-relaxed text-muted">{FUNNEL_TEXT[i]}{f.note ? ` ${f.note}.` : ''}</div>
           <div className="mt-1.5 h-1.5 rounded-sm bg-raised">
-            <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-fill-max' : 'bg-fill-lo'}`}
-              initial={false} animate={{ width: `${(f.value / max) * 100}%` }} transition={t} />
+            <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-tone-green-solid' : 'bg-fill-lo'}`}
+              initial={{ width: '0%' }} animate={{ width: `${(f.value / max) * 100}%` }} transition={bar} />
           </div>
         </div>
       ))}
@@ -258,12 +258,12 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
             {checked && entry && <EvidenceLink entry={entry}>View evidence</EvidenceLink>}
             <span><span className="font-mono text-fg-3">{p.communityHits ?? 0}</span> community {p.communityHits === 1 ? 'note' : 'notes'}</span>
             {p.githubUrl ? (
-              <a href={p.githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
-                <Code className="w-3.5 h-3.5" />Code
+              <a href={p.githubUrl} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}>
+                <Code className={ICON_MD} />Code<ExtArrow />
               </a>
             ) : <span className="text-subtle" title="The paper is rebuilt from its text alone">No public code – paper-only rebuild</span>}
-            <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-fg-3 hover:text-fg-max">
-              <BookOpen className="w-3.5 h-3.5" />arXiv
+            <a href={`https://arxiv.org/abs/${p.id}`} target="_blank" rel="noreferrer" className={`nx-ext ${INLINE} text-fg-3 hover:text-fg-max`}>
+              <BookOpen className={ICON_MD} />arXiv<ExtArrow />
             </a>
           </span>
         </div>
@@ -272,8 +272,9 @@ function PaperCard({ p, active, entry }: { p: DPaper; active: boolean; entry?: C
   )
 }
 
-function Timeline({ view }: { view: DiscoveryView }) {
-  const span = Math.max(1, view.tEnd - view.t0)
+function Timeline({ view, runtime }: { view: DiscoveryView; runtime: number }) {
+  const reduce = useReducedMotion()
+  const span = Math.max(1, runtime)
   const lanes = [['tavily', 'Tavily'], ['llm', 'Model']] as const
   return (
     <div>
@@ -283,8 +284,9 @@ function Timeline({ view }: { view: DiscoveryView }) {
             <span className="w-12 text-[10px] uppercase tracking-wider text-muted">{name}</span>
             <div className="relative h-4 flex-1 rounded-sm bg-raised">
               {view.timeline.filter((x) => x.kind === kind).map((x, i) => (
-                <div key={i} title={`${x.label}: ${(x.end - x.start).toFixed(2)}s`}
-                  className={`absolute top-0 h-full rounded-sm ${kind === 'tavily' ? 'bg-fill-hi' : 'bg-fill-lo'}`}
+                <motion.div key={i} title={`${x.label}: ${(x.end - x.start).toFixed(2)}s`}
+                  initial={reduce ? false : { opacity: 0, scaleX: 0.4 }} animate={{ opacity: 1, scaleX: 1 }} transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className={`absolute top-0 h-full origin-left rounded-sm ${kind === 'tavily' ? 'bg-fill-hi' : 'bg-fill-lo'}`}
                   style={{ left: `${((x.start - view.t0) / span) * 100}%`, width: `${Math.max(0.6, ((x.end - x.start) / span) * 100)}%` }} />
               ))}
             </div>
@@ -314,6 +316,17 @@ export function Discovery() {
   const view = useMemo(() => deriveView(events), [events])
   const catalog = useCatalog()
   const running = mode === 'live' || mode === 'replay'
+  // Real running timer: event runtime plus wall time since the last event (replay: times the speed).
+  const eventRuntime = view.tEnd - view.t0
+  const lastEvent = useRef({ n: -1, at: 0 })
+  if (lastEvent.current.n !== events.length) lastEvent.current = { n: events.length, at: performance.now() }
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!running) return
+    const id = window.setInterval(() => setTick((n) => n + 1), 100)
+    return () => window.clearInterval(id)
+  }, [running])
+  const runtime = tickedRuntime(eventRuntime, performance.now() - lastEvent.current.at, mode === 'replay' ? speed : 1, running && events.length > 0)
 
   const reset = () => { stop.current(); setEvents([]); setError(null); setRecorded(false) }
 
@@ -393,7 +406,7 @@ export function Discovery() {
   useEffect(() => { if (paused && mode === 'idle' && !events.length) startReplay() }, [paused, mode, events.length, startReplay])
 
   const toggle = (d: string) => setDatasets((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
-  const status = mode === 'live' ? 'Live' : mode === 'replay' ? 'Replay' : mode === 'done' ? 'Finished' : 'Ready'
+  const status = running ? 'Running' : mode === 'done' ? 'Finished' : 'Ready'
   const papers = [...view.papers].reverse()
 
   return (
@@ -408,8 +421,9 @@ export function Discovery() {
             <div className={label}>Benchmarks</div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               {DATASETS.map((d) => (
-                <label key={d} className="inline-flex items-center gap-2 text-sm text-fg-3 cursor-pointer">
-                  <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="accent-fg-3" />
+                <label key={d} className={`${INLINE} select-none rounded-lg border px-3 py-1.5 text-sm transition-colors ${running ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${datasets.includes(d) ? 'border-line-stronger bg-raised text-fg' : 'border-line text-fg-4 hover:border-line-strong hover:text-fg-3'} focus-within:outline focus-within:outline-1 focus-within:outline-zinc-500`}>
+                  <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="sr-only" />
+                  <Check className={`h-3.5 w-3.5 shrink-0 ${datasets.includes(d) ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
                   {d}
                 </label>
               ))}
@@ -434,7 +448,7 @@ export function Discovery() {
           </div>
         </div>
 
-        <p className="mb-0 mt-4 max-w-3xl text-[12px] leading-relaxed text-muted">
+        <p className="mb-0 mt-4 text-pretty text-[12px] leading-relaxed text-muted">
           A live run searches the web right now and spends search and model calls, so it is limited: one run at a time, and a daily limit. Replay has no limit.
         </p>
         {paused && (
@@ -444,10 +458,13 @@ export function Discovery() {
           </p>
         )}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
-          <span className={`inline-flex items-center gap-1.5 font-medium uppercase tracking-wider ${mode === 'live' ? 'text-tone-green' : 'text-fg-3'}`}>
-            <Radio className="w-3.5 h-3.5" />{status}
+          <span role="status" className={`${INLINE} font-medium uppercase tracking-wider ${running ? 'text-tone-green' : 'text-fg-3'}`}>
+            {running
+              ? <span className="relative flex h-2 w-2" aria-hidden><span className="absolute inline-flex h-full w-full rounded-full bg-tone-green-solid opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-tone-green-solid" /></span>
+              : mode === 'done' ? <CheckCircle2 className={ICON_MD} aria-hidden /> : <span className="h-2 w-2 rounded-full bg-line-stronger" aria-hidden />}
+            {status}{running && mode === 'replay' && <span className="font-normal normal-case tracking-normal text-muted">· replay</span>}
           </span>
-          <span>Runtime <span className="font-mono text-fg-3">{fmtSec(view.tEnd - view.t0)}</span></span>
+          <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>
           <span>Papers <span className="font-mono text-fg-3">{view.papers.length}</span></span>
           <span>Candidates <span className="font-mono text-fg-3">{view.funnel[view.funnel.length - 1].value}</span></span>
           {recorded && events.length > 0 && <span>Recorded run from {fmtDate(events[0].ts)}</span>}
@@ -485,26 +502,30 @@ export function Discovery() {
             <span>Model cost <span className="font-mono text-fg-3">${view.costUsd.toFixed(3)}</span></span>
           </div>
           <div className="space-y-3">
+            {running && <div aria-hidden className="h-[104px] rounded-xl border border-dashed border-line bg-panel/30 p-4 motion-safe:animate-pulse"><div className="h-2.5 w-24 rounded bg-raised" /><div className="mt-4 h-2.5 w-3/4 rounded bg-raised" /></div>}
             <AnimatePresence initial={false}>
               {[...view.feed].reverse().map((c) => <FeedCard key={c.seq} call={c} />)}
             </AnimatePresence>
-            {!view.feed.length && <p className="text-[13px] text-subtle">No Tavily calls yet. Start a run or replay the recorded one.</p>}
+            {!view.feed.length && !running && <p className="text-[13px] text-subtle">No Tavily calls yet. Start a run or replay the recorded one.</p>}
           </div>
         </Section>
 
         <div className="space-y-6">
           <Section title="Pipeline">
-            <Funnel funnel={view.funnel} />
+            <Funnel funnel={view.funnel} running={running} />
           </Section>
           <Section title="Papers" hint={`${papers.length} seen`}>
             <p className="mb-4 text-[12px] leading-relaxed text-muted">Candidates are claims we can re-run. Unless a result is shown, a candidate has not been re-run yet.</p>
             <div className="space-y-3">
               {papers.map((p) => <PaperCard key={p.id} p={p} active={running && view.activeId === p.id} entry={catalog?.find((e) => e.arxiv_id === p.id)} />)}
-              {!papers.length && <p className="text-[13px] text-subtle">Papers appear here as Tavily finds and reads them.</p>}
+              {!papers.length && running && [0, 1].map((i) => (
+                <div key={i} aria-hidden className="rounded-xl border border-dashed border-line p-5 motion-safe:animate-pulse"><div className="h-3 w-2/3 rounded bg-raised" /><div className="mt-3 h-2.5 w-1/3 rounded bg-raised" /></div>
+              ))}
+              {!papers.length && !running && <p className="text-[13px] text-subtle">Papers appear here as Tavily finds and reads them.</p>}
             </div>
           </Section>
           <Section title="Call timeline" hint="Tavily vs. model">
-            {view.timeline.length ? <Timeline view={view} /> : <p className="text-[13px] text-subtle">The timeline fills during the run.</p>}
+            {view.timeline.length || running ? <Timeline view={view} runtime={runtime} /> : <p className="text-[13px] text-subtle">The timeline fills during the run.</p>}
           </Section>
         </div>
       </div>

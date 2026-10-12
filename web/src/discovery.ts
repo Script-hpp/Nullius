@@ -323,3 +323,11 @@ export function benchmarkText(p: DPaper): string {
   if (c.matched_task && ETT_TASKS.includes(c.matched_task)) return `${c.matched_task} · horizon ${c.horizon ?? 96}`
   return TASK_TEXT[c.matched_task] ?? c.matched_task
 }
+
+// Runtime shown while a run is going: the last event's runtime plus the wall time since that event (times `rate` for a
+// sped-up replay), so the timer ticks between events. Never below the event runtime; frozen once the run is not running.
+export function tickedRuntime(eventRuntime: number, sinceEventMs: number, rate: number, running: boolean): number {
+  const base = Math.max(0, eventRuntime)
+  if (!running) return base
+  return base + Math.max(0, sinceEventMs) / 1000 * rate
+}
