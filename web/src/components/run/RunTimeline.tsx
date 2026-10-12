@@ -28,11 +28,11 @@ const TERM_HINT = {
 }
 
 function ActorChip({ row }: { row: Row }) {
-  if (row.actor === 'tavily') return <span className="inline-flex shrink-0 self-start rounded-md border border-line px-1.5 py-0.5"><TavilyMark kind={row.tavily} className="text-[10px] uppercase tracking-wider" /></span>
+  if (row.actor === 'tavily') return <span className="inline-flex w-fit shrink-0 items-center justify-center self-start rounded-md border border-line px-1.5 py-0.5"><TavilyMark kind={row.tavily} className="text-[10px] uppercase tracking-wider" /></span>
   const Icon = ACTOR_ICON[row.actor]
   return (
-    <span className="inline-flex shrink-0 flex-col gap-0.5">
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-line px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
+    <span className="inline-flex shrink-0 flex-col items-start gap-0.5 self-start">
+      <span className="inline-flex w-fit items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-line px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-fg-4">
         <Icon className="w-3 h-3" />{ACTOR_LABEL[row.actor]}
       </span>
       {row.role && <span className="px-1 font-mono text-[10px] leading-tight text-muted break-all" title={row.model}>{row.role}{row.model ? <span className="hidden sm:inline"> · {row.model}</span> : null}</span>}
@@ -107,7 +107,7 @@ function RowView({ row, t0, loader, planFull, reduce }: { row: Row; t0: number |
   const Dot = TONE_TEXT[row.tone]
   const EXPAND_LABEL: Record<Expand['kind'], string> = { plan: 'the plan', code: 'the code', setup: 'the details', quote: 'the quote', error: 'the error' }
   return (
-    <motion.li initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1 sm:grid-cols-[7rem_1fr_auto]">
+    <motion.li initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:grid-cols-[9rem_1fr_auto]">
       <ActorChip row={row} />
       <div className="min-w-0">
         <div className="flex items-start gap-2">

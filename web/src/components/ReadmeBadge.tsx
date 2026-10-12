@@ -20,7 +20,7 @@ export function ReadmeBadge({ ref_, urteil }: { ref_: RunRef; urteil?: string })
       <p className="mb-0 mt-4 max-w-3xl text-[15px] leading-relaxed text-fg-3">
         {note.text} A click on the badge leads to this certificate.
       </p>
-      <div className="mt-6 inline-block rounded-lg border border-line bg-white p-3">
+      <div className="mt-6 inline-block rounded-lg border border-line bg-surface-2 p-3">
         <img src={`${import.meta.env.BASE_URL}data/${runDir(ref_)}badge.svg`} alt="Nullius badge for this run" onError={() => setMissing(true)} className="block h-auto max-w-full" />
       </div>
       <div className="mt-5 flex items-stretch gap-2">

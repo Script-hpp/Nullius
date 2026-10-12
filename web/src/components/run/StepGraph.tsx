@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useReactFlow, type Edge, type Node, type NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { BookOpen, Box, CheckCircle2, CircleDashed, FileCode2, FileText, ListChecks, Loader2, Quote, Search, ShieldCheck, XCircle, Gavel, Lightbulb, AlertTriangle } from 'lucide-react'
+import { BookOpen, Box, Check, CheckCircle2, CircleDashed, FileCode2, FileText, ListChecks, Loader2, Quote, Search, ShieldCheck, XCircle, Gavel, Lightbulb, AlertTriangle } from 'lucide-react'
 import { TONE_TEXT_VAR, TONE_VAR } from '../../labels'
 import type { Event } from '../../data'
 import { buildRunModel } from './phases'
@@ -87,7 +87,9 @@ function Detail({ step, loader, planFull }: { step: StepNode; loader?: (hash: st
     <div className="rounded-xl border border-line bg-panel/50 p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="m-0 text-base font-semibold text-fg">{step.title}</h3>
-        <span className="text-[11px] uppercase tracking-wider text-muted">{STATE_TEXT[step.state]}</span>
+        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted">
+          {step.state === 'done' && <Check className="h-3.5 w-3.5 shrink-0 text-tone-green" aria-hidden />}{STATE_TEXT[step.state]}
+        </span>
       </div>
       <div className="mt-4 grid gap-5 md:grid-cols-2">
         <div>

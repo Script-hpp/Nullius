@@ -8,7 +8,7 @@ export function StepList({ steps, onStep }: { steps: Step[]; onStep: (id: StepId
       {steps.map((s) => (
         <li key={s.id} className="border-b border-line">
           <a href={`#step-${s.id}`} onClick={(e) => { e.preventDefault(); onStep(s.id) }} title={s.what}
-            className={`grid grid-cols-[1.75rem_1.25rem_minmax(0,1fr)] items-center gap-x-3 py-2 no-underline transition-colors hover:bg-raised/40 sm:grid-cols-[1.75rem_1.25rem_minmax(0,1fr)_auto] ${s.status === 'skipped' || s.status === 'waiting' ? 'opacity-60' : ''}`}>
+            className={`my-1 grid grid-cols-[1.75rem_1.25rem_minmax(0,1fr)] items-center gap-x-3 rounded-lg px-3 py-2 no-underline transition-colors hover:bg-raised/40 sm:grid-cols-[1.75rem_1.25rem_minmax(0,1fr)_auto] ${s.status === 'skipped' || s.status === 'waiting' ? 'opacity-60' : ''}`}>
             <span className="font-mono text-[12px] text-muted">{String(s.n).padStart(2, '0')}</span>
             <StatusMark s={s.status} />
             <span className="min-w-0 text-[14px] text-fg-2">

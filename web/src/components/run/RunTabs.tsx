@@ -23,7 +23,7 @@ export function RunTabs({ tab, onTab, icons, barRef }: { tab: RunTab; onTab: (t:
   }
   return (
     <div ref={barRef} className="sticky top-0 z-10 -mx-4 border-b border-line bg-bg px-4 md:-mx-8 md:px-8">
-      <div ref={listRef} role="tablist" aria-label="Sections of this check" className="flex gap-1 overflow-x-auto">
+      <div ref={listRef} role="tablist" aria-label="Sections of this check" className="flex gap-1 overflow-x-auto overflow-y-hidden">
         {RUN_TABS.map((t, i) => (
           <button key={t} ref={(el) => { refs.current[t] = el }} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls={`panel-${t}`} tabIndex={tab === t ? 0 : -1}
             onClick={() => onTab(t)} onKeyDown={(e) => onKey(e, i)}

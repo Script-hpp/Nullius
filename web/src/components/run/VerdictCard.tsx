@@ -1,7 +1,7 @@
-import { AlertCircle, BookOpen, Search, ShieldCheck } from 'lucide-react'
+import { BookOpen, CircleDashed, Search, ShieldCheck } from 'lucide-react'
 import { Hint } from '../Hint'
 import { ModeNote } from '../ModeNote'
-import { toPercent } from '../ui'
+import { ExtArrow, ICON_MD, INLINE, toPercent } from '../ui'
 import { tavilyChip } from '../../tavilysummary'
 import { colorForTone, getDelta } from '../../format'
 import { OVERALL, TONE_VAR, isPreliminary, resultHint, type Tone } from '../../labels'
@@ -22,7 +22,7 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
   const chip = tavilyChip(events, dossier?.sources)
   const overall = isCatalog && gesamt && !isPreliminary(gesamt) ? OVERALL[gesamt] ?? null : null
   return (
-    <section aria-label="The verdict" className="border-t-2 pb-8 pt-6 sm:pb-10 sm:pt-8" style={{ borderTopColor: TONE_VAR[res.tone] }}>
+    <section id="sec-verdict" aria-label="The verdict" className="border-t-2 pb-8 pt-6 sm:pb-10 sm:pt-8" style={{ borderTopColor: TONE_VAR[res.tone] }}>
       <div className="grid items-start gap-x-14 gap-y-8 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0">
           <h2 title={resultHint(verdict?.urteil)} className={`font-grotesk m-0 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl ${color}`}>{res.label}</h2>
@@ -48,7 +48,7 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
       <ul className="m-0 mt-8 flex list-none flex-wrap items-center gap-x-6 gap-y-2 border-t border-line p-0 pt-5 text-[12.5px] text-fg-4">
         <li><ModeNote dossier={dossier} events={events} compact /></li>
         {fidelityUnchecked && (
-          <li className="inline-flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-muted" aria-hidden />Method fidelity not checked<Hint text={FIDELITY_HINT} /></li>
+          <li className={INLINE}><CircleDashed className={`${ICON_MD} text-muted`} aria-hidden />Method fidelity not checked<Hint text={FIDELITY_HINT} /></li>
         )}
         {overall && <li>{overall}</li>}
         {chip && (
@@ -60,12 +60,12 @@ export function VerdictCard({ dossier, events, claim, verdict, res, sentence, fm
           <li><button type="button" onClick={() => onLimits('limits')} className="inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 text-[12.5px] text-fg-3 underline decoration-line-strong underline-offset-4 hover:text-fg">
             {notes} {notes === 1 ? 'note' : 'notes'} about this run</button></li>
         )}
-        <li className="max-w-full">
-          <ShieldCheck className="mr-1.5 inline h-3.5 w-3.5 align-[-2px] text-muted" aria-hidden />Scored by an independent harness.{' '}
+        <li className={`max-w-full flex-wrap ${INLINE}`}>
+          <ShieldCheck className={`${ICON_MD} text-muted`} aria-hidden />Scored by an independent harness.
           <button type="button" onClick={() => onLimits('limits')} className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] text-fg-3 underline decoration-line-strong underline-offset-4 hover:text-fg">Why trust it</button>
         </li>
         {paperUrl && (
-          <li><a className="inline-flex items-center gap-1.5 font-medium text-tone-blue no-underline hover:text-tone-blue-hover" href={paperUrl} target="_blank" rel="noreferrer"><BookOpen className="h-3.5 w-3.5" />Paper</a></li>
+          <li><a className={`nx-ext ${INLINE} font-medium text-tone-blue no-underline hover:text-tone-blue-hover`} href={paperUrl} target="_blank" rel="noreferrer"><BookOpen className={ICON_MD} />Paper<ExtArrow /></a></li>
         )}
       </ul>
     </section>

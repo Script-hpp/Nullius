@@ -24,8 +24,8 @@ export function Hint({ text }: { text: string }) {
         onFocus={(e) => { if (e.currentTarget.matches(':focus-visible')) show(true) }}
         onBlur={() => show(false)}
         onKeyDown={(e) => { if (e.key === 'Escape') show(false) }}
-        className="p-0.5 text-muted hover:text-fg-3 focus-visible:text-fg-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-zinc-500 rounded cursor-help">
-        <Info className="w-3.5 h-3.5" />
+        className="p-0.5 text-muted hover:text-fg-3 focus-visible:text-fg-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-zinc-500 rounded cursor-help inline-flex items-center">
+        <Info className="block w-3.5 h-3.5" />
       </button>
       {open && (
         <span role="tooltip" style={{ left: pos.left, width: pos.width }}
