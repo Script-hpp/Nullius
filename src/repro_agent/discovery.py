@@ -230,7 +230,7 @@ EXTRACT_QUERIES = {
     "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
     "CiteSeer": "CiteSeer node classification: data split (Planetoid public split 120 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
 }
-CACHE_VERSION = 4   # 4: LaTeX-Spaltenpruefung; alte Live-Cache-Eintraege werden erneut gelesen
+CACHE_VERSION = 5   # 5: Horizont aus belegter Tabellenzeile; falsche v4-Rejects neu lesen
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
 DISCOVERY_PROTOCOL_HINTS = {
     "ETTh1": ("Equivalent statements: 12/4/4 months; 8640/2880/2880 rows; papers often report window/sample counts instead "
@@ -947,17 +947,6 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                if ds in ETT_DATASETS:
-                    try:
-                        horizon_ok = int(claim_data.get("horizon")) == ETTH1_HORIZON
-                    except (TypeError, ValueError):
-                        horizon_ok = False
-                    if not (horizon_ok and re.search(r"\b96\b", norm_ws(quote))):
-                        reason = f"Horizont nicht {ETTH1_HORIZON}"
-                        emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
-                        _update_cache(cache_key, {"status": "rejected", "reason": reason})
-                        continue
-
                 if ds in ETT_DATASETS:   # Eingabelaenge frei bis 720; nur uebernehmen, wenn die Zahl im Text steht
                     claim_data["input_length"] = _valid_input_length(claim_data.get("input_length"), text)
 
@@ -983,6 +972,33 @@ class DiscoveryAgent:
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
                     _update_cache(cache_key, {"status": "rejected", "reason": reason})
                     continue
+                if ds in ETT_DATASETS:
+                    declared = claim_data.get("horizon")
+                    try:
+                        declared = int(declared) if not isinstance(declared, bool) else None
+                    except (TypeError, ValueError):
+                        declared = None
+                    row_verified = col.status == "ok" and col.horizon == ETTH1_HORIZON
+                    conflicting = declared is not None and declared != ETTH1_HORIZON
+                    quote_verified = declared == ETTH1_HORIZON and bool(re.search(r"\b96\b", norm_ws(quote)))
+                    if conflicting or (col.horizon is not None and col.horizon != ETTH1_HORIZON) or not (row_verified or quote_verified):
+                        # An incomplete or conflicting model extraction does not establish
+                        # that the paper has no compatible result. Never cache that claim.
+                        reason = "Prediction horizon could not be verified from the extracted claim"
+                        emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number",
+                              "extracted_horizon": declared, "source_horizon": col.horizon,
+                              "quote_contains_horizon": bool(re.search(r"\b96\b", norm_ws(quote)))})
+                        continue
+                    claim_data["horizon"] = ETTH1_HORIZON
+                    if row_verified and col.source_row:
+                        # Retain the verified full row, including dataset and horizon,
+                        # rather than a value-only fragment selected by the model.
+                        source_rows = [raw.strip()
+                                       for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S)
+                                       for raw in re.split(r"\\\\(?:\[[^\]]*\])?", table[1])
+                                       if _table_norm(raw.replace("|", " ")) == col.source_row]
+                        if source_rows:
+                            claim_data["quote"] = source_rows[0]
                 claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
 
                 claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"

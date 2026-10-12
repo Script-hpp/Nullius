@@ -841,7 +841,7 @@ def test_pre_column_fix_cache_v3_candidates_are_rechecked(monkeypatch, arxiv_xml
     result, events, _ = _run_with_cache(monkeypatch, arxiv_xml, str(cache_file))
     assert len(result) == 1 and result[0].claim['method'] != 'WrongColumn'
     assert any(e['type'] == 'extracting' for e in events)
-    assert _read_cache(str(cache_file))['2101.12345']['cache_version'] == 4
+    assert _read_cache(str(cache_file))['2101.12345']['cache_version'] == CACHE_VERSION
 
 
 def test_old_cached_candidate_without_version_is_rechecked(monkeypatch, arxiv_xml, tmp_path):
@@ -1030,17 +1030,28 @@ def test_etth1_horizon_96_accepted(monkeypatch, tmp_path):
     assert len(result) == 1 and result[0].claim["metric"] == "mse"
 
 
+def test_old_horizon_rejection_is_rechecked_after_upgrade(monkeypatch, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"2101.12345": {"cache_version": 4, "status": "rejected",
+                                                  "reason": "Horizont nicht 96"}}))
+    result, events, _ = _run_etth1(monkeypatch, tmp_path, {
+        "quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": .439, "horizon": 96})
+    assert len(result) == 1
+    assert any(e["type"] == "extracting" for e in events)
+    assert _read_cache(cache_file)["2101.12345"]["cache_version"] == CACHE_VERSION
+
+
 @pytest.mark.parametrize("claim", [
     {"quote": "Average MSE 0.512 over all horizons", "target": 0.512, "horizon": 96},        # Mittelwert, Zitat ohne 96
     {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": 336},  # falscher Horizont
     {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439},                  # Horizont fehlt
     {"quote": "GraphNet reaches MSE 0.439 at horizon 96", "target": 0.439, "horizon": "avg"},
 ])
-def test_etth1_horizon_not_96_rejected_and_cached(monkeypatch, tmp_path, claim):
+def test_etth1_unverified_horizon_is_not_a_cached_paper_rejection(monkeypatch, tmp_path, claim):
     result, events, cache_file = _run_etth1(monkeypatch, tmp_path, claim)
     assert result == []
-    assert any(e.get("stage") == "number" and e["reason"] == "Horizont nicht 96" for e in events)
-    assert _read_cache(cache_file)["2101.12345"]["status"] == "rejected"
+    assert any(e.get("stage") == "number" and "horizon could not be verified" in e["reason"] for e in events)
+    assert "2101.12345" not in _read_cache(cache_file)
 
 
 def test_etth1_input_length_kept_only_if_in_text(monkeypatch, tmp_path):
@@ -1241,6 +1252,37 @@ def _run_claim(monkeypatch, tmp_path, text, **claim):
                            cache_path=cache_file)
     events = []
     return agent.discover(["ETTh1"], on_event=events.append), events, cache_file
+
+
+@pytest.mark.parametrize("horizon", [None, 96])
+@pytest.mark.parametrize("fragment", [r"\underline{0.371} & \underline{0.399}", r"& 96 & \underline{0.371} & \underline{0.399}"])
+def test_saraf_source_row_proves_horizon_even_if_extraction_omits_it(monkeypatch, tmp_path, horizon, fragment):
+    from pathlib import Path
+    # Actual arXiv:2606.04135 Table 4, no model or network calls.
+    text = Path("tests/fixtures/saraf_main_results.tex").read_text()
+    result, events, _ = _run_claim(monkeypatch, tmp_path, text, method="SARAF", target=.371,
+                                  quote=fragment, horizon=horizon, protocol_quote="SARAF (ours)")
+    assert len(result) == 1, events
+    assert result[0].claim["horizon"] == 96
+    assert result[0].claim["column_check"] == "ok"
+    assert "ETTh1" in result[0].claim["quote"]
+    assert result[0].claim["quote"] in text
+    assert "96" in result[0].claim["quote"]
+
+
+@pytest.mark.parametrize("target,horizon,quote", [
+    (.366, None, r"\textbf{0.366} & \textbf{0.396}"),  # RAFT, wrong method
+    (.371, 336, r"\underline{0.371} & \underline{0.399}"),  # conflicts with row
+    (.404, None, r"\underline{0.404} & \underline{0.420}"),  # horizon 192
+    (.415, 96, r"\textbf{0.415} & \textbf{0.435}"),  # averaged row
+])
+def test_saraf_horizon_recovery_never_admits_other_method_horizon_or_average(monkeypatch, tmp_path, target, horizon, quote):
+    from pathlib import Path
+    text = Path("tests/fixtures/saraf_main_results.tex").read_text()
+    result, events, _ = _run_claim(monkeypatch, tmp_path, text, method="SARAF", target=target,
+                                  quote=quote, horizon=horizon, protocol_quote="SARAF (ours)")
+    assert not result
+    assert any(e["type"] == "reject" for e in events)
 
 
 def test_multiline_quote_header_far_before_row_ok(monkeypatch, tmp_path):

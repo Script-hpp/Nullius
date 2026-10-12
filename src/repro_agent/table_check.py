@@ -17,6 +17,8 @@ NUMBER = r"(?<![\d.])\d+\.\d+(?![\d.]*%)"   # Dezimalzahl, keine Prozentangabe (
 class ColumnCheck:
     status: str   # "ok" | "mismatch" | "nicht pruefbar"
     detail: str
+    horizon: int | None = None
+    source_row: str | None = None
 
 
 def _clean_name(s: str) -> str:
@@ -58,6 +60,7 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
         rows = re.split(r"\\\\(?:\[[^\]]*\])?", table[1])
         headers = metrics = None
         matches = []
+        source_rows = []
         for row in rows:
             cells = _latex_cells(row)
             if any(re.search(r"\bmodels?\b|\bmethods?\b", c) for c in cells) and wanted in [_clean_name(c.split(" (")[0]) for c in cells]:
@@ -66,6 +69,7 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
                 metrics = cells
             elif quote in row:
                 matches.append(cells)
+                source_rows.append(row.strip())
         if headers is None or metrics is None or len(headers) != len(metrics) or len(matches) != 1:
             return ColumnCheck("nicht pruefbar", "LaTeX-Kopfzeile oder zitierte Zeile nicht eindeutig")
         positions = [i for i, (name, met) in enumerate(zip(headers, metrics))
@@ -84,7 +88,11 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
         numbers = re.findall(NUMBER, cells[pos])
         if len(numbers) != 1:
             return ColumnCheck("nicht pruefbar", "Ergebniszelle enthaelt keine eindeutige Zahl")
-        return _compare(float(numbers[0]), value, percent, f"Methode {method}, {kind}, LaTeX-Spalte {pos + 1}")
+        result = _compare(float(numbers[0]), value, percent, f"Methode {method}, {kind}, LaTeX-Spalte {pos + 1}")
+        # Only the dataset-bound, fully aligned row supplies horizon evidence.
+        result.horizon = int(cells[1]) if re.fullmatch(r"\d+", cells[1]) else None
+        result.source_row = source_rows[0]
+        return result
     return None
 
 

@@ -129,7 +129,7 @@ export function humanReject(stage: string | undefined, reason: string | undefine
     [/metrik nicht messbar/i, 'The metric cannot be measured by our tasks (for example a relative improvement).'],
     [/another column/i, 'The number sits in another column of the results table, not in the proposed method column.'],
     [/not cpu-feasible/i, 'Needs pretraining, a foundation model or external data; we only re-run methods that train from scratch on CPU.'],
-    [/horizont nicht/i, 'The number is not for prediction horizon 96, which is the one we can re-run.'],
+    [/horizont nicht|prediction horizon could not be verified/i, 'The extraction could not confirm a result for prediction horizon 96. This does not establish that the paper has no compatible result.'],
   ]
   for (const [re, text] of table) if (re.test(r)) return text
   if (stage === 'protocol') return r || 'The paper uses a different evaluation protocol.'

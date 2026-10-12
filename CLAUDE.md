@@ -1,5 +1,7 @@
 # Paper-Reproduktions-Agent
 
+**Discovery-Horizont (2026-10-12):** `docs/discovery_horizon_20261012.md`. Drei generische Live-Rejects waren kein Beleg gegen Papers: fehlendes LLM-Feld/kurzes Zitat und echter falscher Horizont wurden gleich dargestellt und gecacht. Verifizierte LaTeX-Quellzeile liefert Horizont und vollstaendiges Zitat; unbestaetigte Extraktion nicht als Paper-Befund gecacht. Cache v5 liest v4 neu. Echter SARAF-Tabellenausschnitt: 0.371 akzeptiert, RAFT 0.366/falscher Horizont/Durchschnitt weiter gesperrt. Keine bezahlten Tests oder Erfolgsgarantie.
+
 **SARAF-Schutzpruefungen (2026-10-12):** `docs/saraf_guardrails_20261012.md`. Live-Lauf waehlte RAFT-Spalte 0.366 statt SARAF 0.371 und generierte Retrieval-Platzhalter. LaTeX-Spaltenparser, verbindliche Ziel-Gegenpruefung vor Experiment, begrenzte Reparatur bei belegten Retrieval-Platzhaltern, Modell-/Layer-Prioritaet im Repo-Abgleich und ausdruecklich unvollstaendige Pruefung statt falscher Sicherheit. Discovery-Cache v4 liest alte Extraktionen neu; alte Claims/Laeufe unveraendert. UI Stopped ohne Paperurteil und mit gespeichertem Grund. Keine allgemeine Methodentreue-Zertifizierung, keine neuen bezahlten Laeufe; SARAF-Erfolg bleibt ungetestet.
 
 **Plan-Darstellung (2026-10-12):** Live-/Replay-Plan rendert Ueberschriften, Listen, fette Labels und Inline-Code als React-Elemente statt roher Markdown-Zeichen. Sechs-Zeilen-Vorschau und Vollansicht erhalten; Desktop/Mobil, Umbruch und Expand/Collapse im Produktionsbuild geprueft. Keine Aenderung am Experiment.

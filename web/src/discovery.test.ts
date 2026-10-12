@@ -1,7 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { deriveView, tickedRuntime, parseLiveEvent, savedCheckForClaim, type DEvent } from './discovery.ts'
+import { deriveView, tickedRuntime, parseLiveEvent, savedCheckForClaim, humanReject, type DEvent } from './discovery.ts'
+
+test('unverified horizons in new and historic searches are extraction limits, not claims about the paper', () => {
+  for (const reason of ['Horizont nicht 96', 'Prediction horizon could not be verified from the extracted claim']) {
+    assert.match(humanReject('number', reason), /extraction could not confirm/)
+    assert.match(humanReject('number', reason), /does not establish/)
+  }
+})
 
 test('early server errors without timestamps remain visible and cannot create a NaN runtime', () => {
   const view = deriveView([{ type: 'error', message: 'Missing configuration' } as DEvent])
