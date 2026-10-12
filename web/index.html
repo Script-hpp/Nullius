@@ -14,6 +14,11 @@
         document.documentElement.setAttribute('data-theme', theme)
       })()
     </script>
+    <style>
+      /* Critical CSS: background matches the theme before the main stylesheet loads (values from --c-bg in src/index.css). */
+      html, body { margin: 0; background: #0b0a09; }
+      html[data-theme='light'], html[data-theme='light'] body { background: #f5f1e8; }
+    </style>
     <title>Paper Reproduction Evidence</title>
     <meta name="description" content="Replay of paper reproduction runs: what Tavily found, what the sandbox measured." />
   </head>

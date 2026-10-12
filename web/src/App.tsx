@@ -18,6 +18,7 @@ import { BookOpen, Activity } from 'lucide-react'
 import { groupRuns } from './group'
 import { allSettled } from './loaded'
 import { useCountUp } from './useCountUp'
+import { useDelayed } from './useDelayed'
 import { rememberRunOrigin } from './runNavigation'
 import { useCollectionPosition } from './useCollectionPosition'
 
@@ -49,7 +50,11 @@ function Counters({ items }: { items: { label: string; value: number; tone?: Ton
   )
 }
 
-function Home({ runs }: { runs: RunRef[] }) {
+const NO_RUNS: RunRef[] = []
+
+// `loaded` is null while index.json loads: the page shell renders at once and the cards area keeps its space.
+function Home({ loaded }: { loaded: RunRef[] | null }) {
+  const runs = loaded ?? NO_RUNS
   const [data, setData] = useState<Record<string, RunData>>({})
   const [settled, setSettled] = useState<ReadonlySet<string>>(new Set())
   useEffect(() => {
@@ -59,7 +64,8 @@ function Home({ runs }: { runs: RunRef[] }) {
     return () => { live = false }
   }, [runs])
   // Cards and counters appear once, after every dossier settled; grouping by claim id would otherwise change under them.
-  const ready = allSettled(runs, settled)
+  const ready = loaded !== null && allSettled(runs, settled)
+  const slow = useDelayed(!ready)   // loading text only if loading takes longer than ~400 ms
   useCollectionPosition(ready)
   const urteil = (r: RunRef) => data[r.id]?.dossier?.verdicts?.[0]?.urteil
   const groups = !ready ? [] : groupRuns(runs, (r) => data[r.id]?.dossier?.claims?.[0]?.id)   // one card per paper claim, newest run on top
@@ -83,7 +89,14 @@ function Home({ runs }: { runs: RunRef[] }) {
         <span className="text-[12px] text-muted">Measured with our setup. Method fidelity not checked.</span>
       </div>
 
-      {!ready && <p role="status" className="m-0 text-[13px] text-muted">Loading checks…</p>}
+      {!ready && (
+        <div className="relative">
+          {slow && <p role="status" className="absolute left-0 top-0 m-0 text-[13px] text-muted">Loading checks…</p>}
+          <div aria-hidden="true" className="invisible grid gap-5 md:grid-cols-2">
+            {Array.from({ length: Math.min(Math.max(loaded?.length ?? 4, 2), 6) }, (_, i) => <div key={i} className="h-60 rounded-xl border border-line" />)}
+          </div>
+        </div>
+      )}
       <div className="grid gap-5 md:grid-cols-2">
         {groups.map(({ latest: r, earlier }, i) => {
           const d = data[r.id]
@@ -160,6 +173,21 @@ function Home({ runs }: { runs: RunRef[] }) {
   )
 }
 
+// The data screen shows only if loading takes longer than ~400 ms; the space is kept so the page does not jump.
+function DelayedLoading() {
+  const slow = useDelayed(true)
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-6xl flex-col items-center justify-center gap-4 px-4 py-20 md:px-8">
+      {slow && (
+        <>
+          <Activity className="h-8 w-8 animate-pulse text-subtle" />
+          <span className="text-sm font-medium uppercase tracking-wider text-muted">Loading Evaluation Data...</span>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
   const hash = useHash()
   useEffect(() => {
@@ -191,6 +219,7 @@ export default function App() {
   const query = new URLSearchParams(m?.[2] ?? '')
   const ref = m && runs?.find((r) => r.id === decodeURIComponent(m[1]))
   const live = hash.match(/^\/live\/([^?]+)$/)
+  const isHome = !m   // every other non-special route falls through to Home
   
   if (hash === '' || hash === '/' || hash === '/jury') return <Landing />   // full-screen start page, no sidebar
   if (hash === '/tavily') return <Landing scrollTo="tavily" />   // footer link: the Tavily section of the start page
@@ -199,12 +228,7 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash.split('?')[0] === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null ? (
-          <div className="mx-auto max-w-6xl px-4 md:px-8 py-20 flex flex-col items-center justify-center gap-4">
-            <Activity className="w-8 h-8 text-subtle animate-pulse" />
-            <span className="text-muted text-sm font-medium uppercase tracking-wider">Loading Evaluation Data...</span>
-          </div>
-        ) : ref ? <RunView ref_={ref} initialTab={query.get('tab') ?? undefined} playTimelapse={query.get('play') === '1'} key={ref.id} /> : <Home runs={runs} />}
+        {hash === 'discover' ? <Discovery /> : hash.split('?')[0] === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null && !isHome ? <DelayedLoading /> : ref ? <RunView ref_={ref} initialTab={query.get('tab') ?? undefined} playTimelapse={query.get('play') === '1'} key={ref.id} /> : <Home loaded={runs} />}
       </div>
     </Layout>
   )
