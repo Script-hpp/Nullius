@@ -49,6 +49,8 @@ export function LiveRun({ jobId }: { jobId: string }) {
   const eta = useEta(runs)
   const ended = status === 'finished' || status === 'error' || status === 'lost' || status === 'unknown'
   const shownStatus = status === 'running' && !events.some((e) => e.type === 'started') ? 'connecting' : status
+  const stopped = status === 'error' && events.some((e) => e.type === 'error' && e.status === 'ungeprueft')
+  const statusLabel = stopped ? 'Stopped' : STATUS_TEXT[shownStatus]
   const bad = status === 'error' || status === 'lost' || status === 'unknown'
 
   const steps = buildSteps(events, null, { running: !ended, metric: entry?.claim.metric })
@@ -65,13 +67,13 @@ export function LiveRun({ jobId }: { jobId: string }) {
           <ArrowRight className="h-3.5 w-3.5 rotate-180" /> Back to catalog
         </a>
       </div>
-      <PageIntro kicker={`Live check${kind ? ` · ${kind}` : ''} · ${STATUS_TEXT[shownStatus]}`} title={entry?.title ?? 'Reproduction run'} head={<PaperHead head={head} />}
+      <PageIntro kicker={`Live check${kind ? ` · ${kind}` : ''} · ${statusLabel}`} title={entry?.title ?? 'Reproduction run'} head={<PaperHead head={head} />}
         what="You are watching one check as it happens. Our agent rebuilds the paper's experiment in isolated sandboxes while our harness measures the result."
         look="The nine steps below fill in as they finish. Open the running step to see what happens in it and why it matters.">
         <p className="mb-0 mt-8 flex items-center gap-3 text-[13px] text-fg-4">
-          <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider ${bad ? 'text-tone-red' : status === 'finished' ? 'text-tone-green' : 'text-fg-3'}`}>
+          <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider ${stopped ? 'text-tone-amber' : bad ? 'text-tone-red' : status === 'finished' ? 'text-tone-green' : 'text-fg-3'}`}>
             {status === 'finished' ? <CheckCircle2 className="h-3.5 w-3.5" /> : bad ? <AlertCircle className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {STATUS_TEXT[shownStatus]}
+            {statusLabel}
           </span>
           {claimText ? <span>Claim: {claimText}</span> : null}
         </p>
@@ -122,7 +124,7 @@ export function LiveRun({ jobId }: { jobId: string }) {
       {status === 'finished' && runId
         ? <NextStep title="Read the certificate" text="The check is finished. Open the certificate: the verdict in one sentence, claimed against measured, and why the number can be trusted." label="Open the certificate" href={`#/run/${runId}`} />
         : bad
-          ? <NextStep title="Try another entry" text="This run did not finish. The catalog lists the checks that did, each with its evidence." label="Back to the catalog" href="#catalog" />
+          ? <NextStep title="Try another entry" text={stopped ? 'This check stopped without a paper verdict. Review the reason above; the catalog also lists completed checks with their evidence.' : 'This run did not finish. The catalog lists the checks that did, each with its evidence.'} label="Back to the catalog" href="#catalog" />
           : <NextStep title="When it finishes" text="The certificate of this check appears here as soon as the verdict is in. Until then, the catalog lists finished checks you can read." label="Open the catalog" href="#catalog" />}
     </main>
   )

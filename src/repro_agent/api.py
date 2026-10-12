@@ -163,7 +163,7 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     recording_lock = threading.Lock()
     recording_closed = False
 
-    def emit(evt):
+    def emit(evt, worker_finished=False):
         nonlocal recording_closed
         event = sanitize(evt)
         stamp = event.get("ts")
@@ -180,7 +180,11 @@ async def start_discovery(req: DiscoverRequest, request: Request):
                         logger.error("Discovery job %s replay could not be saved", job_id)
                         loop.call_soon_threadsafe(queue.put_nowait, {"type": "warning", "ts": time.time(),
                             "message": "The search ended, but its replay could not be saved."})
-        loop.call_soon_threadsafe(queue.put_nowait, event)
+        def publish():
+            if worker_finished:
+                _release_lock(job_id)
+            queue.put_nowait(event)
+        loop.call_soon_threadsafe(publish)
 
     # Run the discovery loop in a background thread or task.
     # We use asyncio.to_thread because the DiscoveryAgent uses synchronous httpx/Tavily calls.
@@ -204,8 +208,7 @@ async def start_discovery(req: DiscoverRequest, request: Request):
         finally:
             if current_job.get("job_id") == job_id:
                 current_job.clear()
-            emit({"type": "done"})
-            loop.call_soon_threadsafe(_release_lock, job_id)
+            emit({"type": "done"}, worker_finished=True)
             loop.call_soon_threadsafe(lambda: loop.call_later(JOB_KEEP_SECONDS, jobs.pop, job_id, None))   # nie gelesene Warteschlangen wegraeumen
 
     loop = asyncio.get_running_loop()

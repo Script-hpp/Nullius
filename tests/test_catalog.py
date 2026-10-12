@@ -11,7 +11,7 @@ import yaml
 
 from repro_agent import catalog as cat
 from repro_agent import loop as loop_mod
-from repro_agent.claims_source import ExtractionInvalid, PaperText, TargetEvidence
+from repro_agent.claims_source import ExtractionInvalid, TargetVerificationBlocked, PaperText, TargetEvidence
 from repro_agent.dossier import Claim, Dossier, Verdict
 from repro_agent.events import EventLog
 from repro_agent.llm import BillingBlocked
@@ -223,7 +223,7 @@ def tavily_orch(tmp_path, monkeypatch, catalog_entries, evidence, seeds=1):
 
 def evidence(value):
     return TargetEvidence(value=value, quote="SL-GCN 82.92", table="Table 2", url="https://arxiv.org/html/2511.08094",
-                          source_kind="arxiv_html", retrieved_at="t", sha256="h" * 64, arxiv_version="v1")
+                          source_kind="arxiv_html", retrieved_at="t", sha256="h" * 64, arxiv_version="v1", column_check="ok")
 
 
 def cora_entry(**claim_over):
@@ -243,21 +243,31 @@ def test_run_from_catalog_rolle2_agrees(tmp_path, monkeypatch):
     assert (tmp_path / "runs" / e["id"]).exists()
 
 
-def test_run_from_catalog_rolle2_disagrees_keeps_discovery_value_with_warning(tmp_path, monkeypatch):
+def test_run_from_catalog_rolle2_disagreement_stops_before_experiments(tmp_path, monkeypatch):
     e = cora_entry()
     o = tavily_orch(tmp_path, monkeypatch, [e], evidence(0.8115))
-    d = o.run(e["id"], source="catalog")
-    assert d.claims[0].target == pytest.approx(0.8292) and d.claims[0].target_evidence is None
-    (w,) = [w for w in d.warnings if "weicht ab" in w]
-    assert "0.8115" in w and "0.8292" in w
-    assert "weicht ab" in render_markdown(d) and "Hinweise zur Belegbarkeit" in render_markdown(d)
+    monkeypatch.setattr(o, "run_claim", lambda *a: pytest.fail("No experiment for a mismatched target"))
+    with pytest.raises(TargetVerificationBlocked, match="discovery selected.*paper check found"):
+        o.run(e["id"], source="catalog")
+    assert cat.build_paper(e)[1][0].target == pytest.approx(0.8292)
 
 
-def test_run_from_catalog_rolle2_fails_warns_and_continues(tmp_path, monkeypatch):
+def test_run_from_catalog_rolle2_failure_stops_before_experiments(tmp_path, monkeypatch):
     e = cora_entry()
     o = tavily_orch(tmp_path, monkeypatch, [e], ExtractionInvalid("Zahl nicht im Text"))
-    d = o.run(e["id"], source="catalog")
-    assert any("nicht gegenpruefen" in w for w in d.warnings) and d.verdicts
+    monkeypatch.setattr(o, "run_claim", lambda *a: pytest.fail("No experiment for an unverified target"))
+    with pytest.raises(TargetVerificationBlocked, match="target could not be verified"):
+        o.run(e["id"], source="catalog")
+
+
+def test_catalog_stops_when_value_matches_but_column_is_unverified(tmp_path, monkeypatch):
+    e = cora_entry()
+    ev = evidence(.8292)
+    ev.column_check = "nicht pruefbar"
+    o = tavily_orch(tmp_path, monkeypatch, [e], ev)
+    monkeypatch.setattr(o, "run_claim", lambda *a: pytest.fail("No experiment for an ambiguous column"))
+    with pytest.raises(TargetVerificationBlocked, match="column could not be established"):
+        o.run(e["id"], source="catalog")
 
 
 def test_benchmark_rolle2_failure_still_aborts(tmp_path, monkeypatch):

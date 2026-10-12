@@ -89,7 +89,9 @@ export function buildStory(events: Event[], claimId: string): Card[] {
     } else if (e.type === 'repo_diff') {
       const r = str(e.result)
       const devs = Array.isArray(e.deviations) ? e.deviations.length : 0
-      const text = r === 'no_deviation' ? 'We compared the code with the files of the paper’s repository and found no deviation we could confirm.'
+      const incomplete = r === 'incomplete' || (r === 'no_deviation' && (Number(e.dropped) > 0 || Array.isArray(e.truncation) && e.truncation.length > 0))
+      const text = incomplete ? 'The repository comparison was incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked.'
+        : r === 'no_deviation' ? 'No verified differences in the reviewed implementation aspects. Method fidelity remains unchecked.'
         : r === 'adopted' ? `We compared the code with the paper’s repository. ${devs} confirmed deviation${devs === 1 ? '' : 's'} led to a rewrite, and the new version passed all checks and was adopted.`
         : r === 'kept' ? `We compared the code with the paper’s repository and tried a rewrite for ${devs} deviation${devs === 1 ? '' : 's'}. The new version was not adopted; the previous code was kept.`
         : 'The comparison with the paper’s repository could not be completed; the code was left as it was.'

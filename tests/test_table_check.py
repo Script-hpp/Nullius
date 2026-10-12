@@ -11,9 +11,40 @@ DL = json.loads((FIX / "2205.13504.json").read_text())["text"]
 GCN = json.loads((FIX / "1609.02907.json").read_text())["text"]
 ROW = "ETTh1  96 0.80% 0.375 0.397 0.374 0.394 0.375 0.399 0.376 0.419 0.449 0.459 0.865 0.713 0.664 0.612 0.878 0.740 1.295 0.713"
 
+# Table 4, arXiv:2606.04135. Preserve the spans and wrappers that hid the
+# SARAF/RAFT column error in the deployed 20261012-210402 run.
+SARAF_ROW = r"\multicolumn{1}{c|}{\multirow{5}{*}{\rotatebox{90}{ETTh1}}} & 96 & \underline{0.371} & \underline{0.399} & \textbf{0.366} & \textbf{0.396} & 0.382 & 0.407"
+SARAF_TABLE = r"""\begin{tabular}{cc|cc|cc|cc}
+\toprule
+\multicolumn{2}{c|}{Models} & \multicolumn{2}{c|}{SARAF (ours)} & \multicolumn{2}{c|}{RAFT} & \multicolumn{2}{c}{DUET} \\ \midrule
+\multicolumn{2}{c|}{Metric} & MSE & MAE & MSE & MAE & MSE & \multicolumn{1}{c}{MAE} \\ \midrule
+""" + SARAF_ROW + r"\\ \bottomrule \end{tabular}"
+
 
 def chk(text, quote, value, method, dataset, metric, percent):
     return check_columns(_norm(text), _norm(quote), value, method, dataset, metric, percent)
+
+
+def test_saraf_latex_column_rejects_raft_target_and_accepts_the_actual_target():
+    fragment = r"& 96 & \underline{0.371} & \underline{0.399} & \textbf{0.366} & \textbf{0.396} &"
+    assert chk(SARAF_TABLE, fragment, .366, 'SARAF', 'ETTh1', 'MSE for prediction length 96', False).status == 'mismatch'
+    assert chk(SARAF_TABLE, fragment, .371, 'SARAF', 'ETTh1', 'MSE for prediction length 96', False).status == 'ok'
+    assert chk(SARAF_TABLE, fragment, .366, 'RAFT', 'ETTh1', 'MSE for prediction length 96', False).status == 'ok'
+    assert chk(SARAF_TABLE, fragment, .399, 'SARAF', 'ETTh1', 'MAE for prediction length 96', False).status == 'ok'
+
+
+def test_saraf_latex_column_never_borrows_headers_or_accepts_a_different_horizon():
+    assert chk(SARAF_TABLE, SARAF_ROW, .371, 'MissingMethod', 'ETTh1', 'mse', False).status == 'nicht pruefbar'
+    assert chk(SARAF_TABLE, SARAF_ROW, .371, 'SARAF', 'ETTh2', 'mse', False).status == 'nicht pruefbar'
+    assert chk(SARAF_TABLE, SARAF_ROW, .371, 'SARAF', 'ETTh1', 'MSE for prediction length 192', False).status == 'mismatch'
+    broken = SARAF_TABLE.replace(r'\textbf{0.396}', '')
+    assert chk(broken, SARAF_ROW, .371, 'SARAF', 'ETTh1', 'mse', False).status == 'nicht pruefbar'
+
+
+def test_nested_formatting_in_latex_method_headers_preserves_column_spans():
+    formatted = SARAF_TABLE.replace('SARAF (ours)', r'\textbf{SARAF (ours)}').replace('{RAFT}', r'{\textsc{RAFT}}')
+    assert chk(formatted, SARAF_ROW, .371, 'SARAF', 'ETTh1', 'mse', False).status == 'ok'
+    assert chk(formatted, SARAF_ROW, .366, 'SARAF', 'ETTh1', 'mse', False).status == 'mismatch'
 
 
 @pytest.mark.parametrize("method,metric,value,status", [

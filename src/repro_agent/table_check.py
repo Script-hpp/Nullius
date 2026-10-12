@@ -31,6 +31,63 @@ def _compare(expected: float, value: float, percent: bool, where: str) -> Column
                                    f"das Modell waehlte {got}")
 
 
+def _latex_cells(row: str) -> list[str]:
+    """Expand multicolumn spans so the method and metric headers share column indices."""
+    cells = []
+    for cell in row.split("&"):
+        while re.search(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", cell):
+            cell = re.sub(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", r"\1", cell)
+        span = re.search(r"\\multicolumn\{(\d+)\}\{[^{}]*\}\{([^{}]*)\}", cell)
+        count = int(span[1]) if span else 1
+        text = span[2] if span else cell
+        text = re.sub(r"\\(?:toprule|midrule|bottomrule|hline)\b", "", text).strip()
+        cells.extend([text] * min(count, 100))
+    return cells
+
+
+def _check_latex_methods(text: str, quote: str, value: float, method: str, dataset: str,
+                         metric: str, percent: bool) -> ColumnCheck | None:
+    """Use the enclosing LaTeX table, including full rows when a quote is only a fragment."""
+    wanted = _clean_name(method.split(" (")[0])
+    kind = next((k for k in ("mse", "mae") if re.search(rf"\b{k}\b", metric.lower())), None)
+    if not kind:
+        return None
+    for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S):
+        if quote not in table[1]:
+            continue
+        rows = re.split(r"\\\\(?:\[[^\]]*\])?", table[1])
+        headers = metrics = None
+        matches = []
+        for row in rows:
+            cells = _latex_cells(row)
+            if any(re.search(r"\bmodels?\b|\bmethods?\b", c) for c in cells) and wanted in [_clean_name(c.split(" (")[0]) for c in cells]:
+                headers = cells
+            elif any(re.search(r"\bmetric\b", c) for c in cells):
+                metrics = cells
+            elif quote in row:
+                matches.append(cells)
+        if headers is None or metrics is None or len(headers) != len(metrics) or len(matches) != 1:
+            return ColumnCheck("nicht pruefbar", "LaTeX-Kopfzeile oder zitierte Zeile nicht eindeutig")
+        positions = [i for i, (name, met) in enumerate(zip(headers, metrics))
+                     if _clean_name(name.split(" (")[0]) == wanted and _clean_name(met) == kind]
+        if len(positions) != 1:
+            return ColumnCheck("nicht pruefbar", "LaTeX-Methode und Metrik nicht eindeutig zugeordnet")
+        cells = matches[0]
+        pos = positions[0]
+        if len(cells) != len(headers) or pos >= len(cells):
+            return ColumnCheck("nicht pruefbar", "LaTeX-Zeile passt nicht zur Kopfzeile")
+        if _clean_name(dataset) not in _clean_name(" ".join(cells[:2])):
+            return ColumnCheck("nicht pruefbar", "Datensatz in der zitierten LaTeX-Zeile nicht belegt")
+        horizon = re.search(r"prediction length\s+(\d+)", metric.lower())
+        if horizon and cells[1].strip() != horizon[1]:
+            return ColumnCheck("mismatch", "Zitierte LaTeX-Zeile hat einen anderen Vorhersagehorizont")
+        numbers = re.findall(NUMBER, cells[pos])
+        if len(numbers) != 1:
+            return ColumnCheck("nicht pruefbar", "Ergebniszelle enthaelt keine eindeutige Zahl")
+        return _compare(float(numbers[0]), value, percent, f"Methode {method}, {kind}, LaTeX-Spalte {pos + 1}")
+    return None
+
+
 def _check_methods_as_columns(
     text: str, quote: str, value: float, method: str, metric: str, percent: bool
 ) -> ColumnCheck | None:
@@ -147,6 +204,7 @@ def check_columns(
     """Prueft, ob `value` in der Zeile `norm_quote` an der Stelle steht, die die Kopfzeile fuer
     (method, dataset|metric) vorgibt."""
     for res in (
+        _check_latex_methods(norm_text, norm_quote, value, method, dataset, metric, percent),
         _check_methods_as_columns(norm_text, norm_quote, value, method, metric, percent),
         _check_datasets_as_columns(norm_text, norm_quote, value, dataset, percent),
         _check_dataset_run(norm_text, norm_quote, value, dataset, percent),

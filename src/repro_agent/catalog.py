@@ -18,7 +18,7 @@ from .dossier import REPO_ROOT, Claim
 
 CATALOG_YAML = REPO_ROOT / "benchmark" / "catalog.yaml"
 DISCOVERY_CACHE = REPO_ROOT / "logs" / "discovery_cache.json"
-ACCEPTED_CACHE_VERSIONS = (2, 3)   # Discovery schreibt 3; 2 hat kein Feld input_length (= null)
+ACCEPTED_CACHE_VERSIONS = (2, 3, 4)   # alte validierte Kandidaten bleiben importierbar; der Loop prueft ihre Ziele erneut
 
 DISCOVERY, REFERENCE = "discovery", "reference"   # Feld `origin` eines Eintrags; fehlendes Feld = discovery
 UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlgeschlagen", "nicht_laufbar"
@@ -78,7 +78,7 @@ def find_entry(entries: list[dict], paper_id: str) -> dict:
 
 # ---- Import ----------------------------------------------------------------
 def read_cache_candidates(path: Path = DISCOVERY_CACHE) -> list[tuple[dict, str]]:
-    """Ungepruefte Kandidaten aus logs/discovery_cache.json (Version 2 und 3). Rueckgabe: (Kandidat, Quelle)."""
+    """Ungepruefte Kandidaten aus akzeptierten Discovery-Cache-Versionen. Rueckgabe: (Kandidat, Quelle)."""
     data = json.loads(Path(path).read_text())
     return [(v, f"cache:{Path(path).name}") for v in data.values()
             if isinstance(v, dict) and v.get("status") == "ungeprueft"
@@ -189,7 +189,7 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
         "dataset": task, "seeds": entry.get("seeds") or TASK_SEEDS[task], "source": "catalog",
         "warnings": warnings, "input_length": input_length, "discovery_quote": quote,
         "community": list(cand.get("community") or []),   # Discovery-Treffer (url, title, snippet): der Community-Check liest sie statt neu zu suchen
-        "claims": [{"id": claim_id, "keep_target": True,   # bei Abweichung Rolle 2 gegen Discovery bleibt der Discovery-Wert
+        "claims": [{"id": claim_id, "keep_target": True, "require_verified_target": True,
                     "extract": {"method": method, "dataset": entry["candidate"]["dataset"], "metric": extract_metric,
                                 "percent": metric == "accuracy"}}],
     }
@@ -302,6 +302,8 @@ def run_candidate(orch, entry: dict, source: str = "catalog") -> CandidateOutcom
     """Ein Kandidat durch den Loop (gemeinsam fuer scripts/curate_catalog.py und die API). Schreibt nichts in catalog.yaml."""
     from .costs import BudgetExceeded
     from .llm import BillingBlocked
+    from .claims_source import TargetVerificationBlocked
+    from .method_guard import MethodImplementationBlocked
 
     try:
         build_paper(entry)
@@ -309,6 +311,9 @@ def run_candidate(orch, entry: dict, source: str = "catalog") -> CandidateOutcom
         return CandidateOutcome(NOT_RUNNABLE, reason=str(exc))
     try:
         dossier = orch.run(entry["id"], source=source)
+    except (TargetVerificationBlocked, MethodImplementationBlocked) as exc:
+        return CandidateOutcome(UNCHECKED, reason=str(exc)[:300], run_dir=getattr(orch, "last_run_dir", None),
+                                cost_gross_usd=getattr(orch, "spent_gross_usd", 0.0))
     except (BillingBlocked, BudgetExceeded) as exc:   # Infrastruktur, kein Befund ueber das Paper: bleibt wiederholbar
         return CandidateOutcome(UNCHECKED, reason=f"Abbruch: {type(exc).__name__}: {exc}"[:300], abort=True)
     except Exception as exc:   # Absturz, Kostenlimit pro Lauf, Sandbox

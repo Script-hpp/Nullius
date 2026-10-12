@@ -294,3 +294,20 @@ def test_invalid_job_budget_blocks_without_holding_slot(env, monkeypatch, value)
     assert start(env).status_code == 503
     assert FakeOrch.instances == []
     assert not api.job_semaphore.locked()
+
+
+@pytest.mark.parametrize('blocked', ['target', 'method'])
+def test_unverified_target_or_missing_method_is_not_exported_as_a_paper_result(env, monkeypatch, blocked):
+    from repro_agent.claims_source import TargetVerificationBlocked
+    from repro_agent.method_guard import MethodImplementationBlocked
+
+    error = TargetVerificationBlocked if blocked == 'target' else MethodImplementationBlocked
+    def run(self, paper_id, source='catalog'):
+        raise error('Claim verification stopped' if blocked == 'target' else 'Incomplete method: paper is not assessable')
+
+    monkeypatch.setattr(FakeOrch, 'run', run)
+    events = read_stream(env, start(env).json()['job_id'])
+    assert events[-1]['type'] == 'error' and events[-1]['status'] == cat.UNCHECKED
+    assert not any(event['type'] == 'finished' for event in events)
+    assert not (env.tmp / 'data' / 'index.json').exists()
+    assert not api.job_semaphore.locked()

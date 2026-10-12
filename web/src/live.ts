@@ -120,7 +120,7 @@ export function useLiveRun(jobId: string): LiveState {
           closed = true; es?.close(); window.dispatchEvent(new Event(DATA_CHANGED))
         } else if (e.type === 'error') {
           setStatus('error'); setError(String(e.message ?? 'The run failed.'))
-          closed = true; es?.close()
+          closed = true; es?.close(); window.dispatchEvent(new Event(DATA_CHANGED))
         } else setStatus('running')
       }
       es.onerror = () => {

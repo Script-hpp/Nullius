@@ -163,7 +163,7 @@ function PaperCard({ p, active, entry, check }: { p: DPaper; active: boolean; en
   const summary = useSummary(p.id)
   const rejected = p.state === 'rejected'
   const checked = p.state === 'candidate' && entry?.status === 'geprueft' && !!entry.verdict   // ran once through the loop
-  const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen')
+  const notRun = p.state === 'candidate' && (entry?.status === 'nicht_laufbar' || entry?.status === 'lauf_fehlgeschlagen' || entry?.status === 'ungeprueft' && !!entry.reason)
   const setupUnresolved = p.runnable === false || check?.eligibility?.runnable === false
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: rejected ? 0.55 : 1, y: 0 }} transition={t}
@@ -273,10 +273,12 @@ function PaperCard({ p, active, entry, check }: { p: DPaper; active: boolean; en
       {p.state === 'candidate' && !check && <p className="mb-0 mt-3 text-[11px] text-muted">Run live discovery to save this claim for a new experiment.</p>}
       {p.state === 'candidate' && entry && (checked || notRun) && <details className="group mt-4 border-t border-line/60 pt-3" data-testid="saved-discovery-check">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium text-fg-3">
-          Saved reproduction check{entry.checked_at ? ` · ${new Date(entry.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+          {entry.status === 'ungeprueft' ? 'Last check stopped' : 'Saved reproduction check'}{entry.checked_at ? ` · ${new Date(entry.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
           <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180" />
         </summary>
-        <p className="mb-3 mt-3 text-[12px] leading-relaxed text-muted">A separate experiment saved in the catalog. This search did not run or update it. Its outcome describes our implementation; method fidelity is not verified.</p>
+        <p className="mb-3 mt-3 text-[12px] leading-relaxed text-muted">{entry.status === 'ungeprueft'
+          ? 'This attempt stopped without a paper verdict. The reason below describes what must be resolved before the claim can be assessed.'
+          : 'A separate experiment saved in the catalog. This search did not run or update it. Its outcome describes our implementation; method fidelity is not verified.'}</p>
         {checked ? <div className="space-y-3"><CatalogVerdict entry={entry} /><ClaimedMeasured entry={entry} /><EvidenceLink entry={entry}>Inspect saved check</EvidenceLink></div>
           : <p className="text-[12px] text-muted">{STATUS_TEXT[entry.status]}{entry.reason ? `: ${translateReason(entry.reason)}` : ''}</p>}
       </details>}

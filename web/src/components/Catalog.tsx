@@ -43,7 +43,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
         <span>{STATUS_TEXT[e.status]}</span>
       </div>
       {e.origin !== 'reference' && e.checked_at && (
-        <p className="m-0 mt-3 text-[12px] text-muted">Checked · {new Date(e.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+        <p className="m-0 mt-3 text-[12px] text-muted">{e.status === 'ungeprueft' ? 'Last attempt' : 'Checked'} · {new Date(e.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
       )}
       {e.origin === 'reference' && (
         <div className="mt-3 space-y-1">
@@ -70,6 +70,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
       {/* Stats and run controls move as one block, centered in the space left above the footer. */}
       <div className="flex flex-1 flex-col justify-center gap-3 py-5">
+        {e.status === 'ungeprueft' && e.reason && <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Last check stopped: {translateReason(e.reason)}</p>}
         {live.eligibility?.runnable === false && <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Check unavailable: {translateReason(live.eligibility.reason ?? '')}</p>}
         {v && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-muted">

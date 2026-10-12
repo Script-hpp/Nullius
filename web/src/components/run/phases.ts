@@ -258,7 +258,22 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         })
         break
       }
+      case 'target_blocked': {
+        push('claim', { actor: 'system', tone: 'amber', title: 'Claim verification stopped',
+          detail: String(e.reason ?? 'The target could not be verified. No experiment was started.') })
+        break
+      }
+      case 'repo_diff': {
+        if (e.result === 'incomplete' || e.result === 'no_deviation' && (Number(e.dropped) > 0 || Array.isArray(e.truncation) && e.truncation.length > 0)) push('code', { actor: 'system', tone: 'amber', title: 'Repository comparison incomplete',
+          detail: 'Files were truncated or findings could not be verified. Method fidelity remains unchecked.' })
+        break
+      }
       case 'attempt': {
+        if (e.method_incomplete) {
+          push('code', { actor: 'system', tone: 'amber', title: 'Incomplete method: code rejected before sandbox execution',
+            expand: e.error ? { kind: 'error', text: String(e.error) } : undefined })
+          break
+        }
         const seed = num(e.seed) ?? 0
         const h = String(e.code_hash ?? '')
         if (h) versionOf(h)

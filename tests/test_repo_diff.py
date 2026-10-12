@@ -24,6 +24,21 @@ def test_truncate_is_deterministic_and_reports_cuts():
     assert truncate_files(files, 100) == (files, [])
 
 
+def test_architecture_and_dependency_files_are_prioritized_with_same_size_limit():
+    files = {"run.py": "x" * 100, "models/SARAF.py": "m" * 20, "layers/Retrieval.py": "r" * 20}
+    shown, cuts = truncate_files(files, 45)
+    assert list(shown) == ["models/SARAF.py", "layers/Retrieval.py", "run.py"]
+    assert shown['run.py'] == 'x' * 5 and sum(map(len, shown.values())) == 45
+
+
+def test_incomplete_comparison_is_never_reported_as_no_deviation(tmp_path):
+    o, calls, asks, events, claim, d, sb = make({C0: .7}, [], repo={"model.py": 'x' * 60001}, ask_content='[]')
+    run(o, claim, d, tmp_path)
+    assert d.repo_diff['c']['result'] == 'incomplete'
+    assert d.repo_diff['c']['method_fidelity'] == 'not_checked'
+    assert 'comparison incomplete' in d.verdicts[0].explanation
+
+
 def test_verify_drops_unverified_quotes():
     bad_file = {**DEV, "file": "nope.py"}
     bad_repo = {**DEV, "repo_quote": "dropout = 0.9"}

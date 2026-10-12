@@ -64,6 +64,10 @@ class ExtractionInvalid(RuntimeError):
     pass
 
 
+class TargetVerificationBlocked(ExtractionInvalid):
+    """The selected catalog claim could not be verified; no experiment is permitted."""
+
+
 def _source_urls(arxiv_id: str, version: str | None) -> list[tuple[str, str]]:
     """Versionierte URLs (z. B. .../pdf/1609.02907v4), damit Text und Version belegt zusammenpassen.
     ar5iv kennt keine Versionen -> dort bleibt die Version unbelegt (steht so im Beleg)."""

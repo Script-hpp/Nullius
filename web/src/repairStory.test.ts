@@ -8,6 +8,18 @@ const events = JSON.parse(readFileSync(new URL('./fixtures/nlinear_story_events.
 const story = buildStory(events, 'nlinear_etth1_96_mse')
 const repairs = story.filter((c): c is Extract<Card, { kind: 'repair' }> => c.kind === 'repair')
 
+test('incomplete repository reviews are explicit, including historical no_deviation events with cuts', () => {
+  for (const event of [
+    { type: 'repo_diff', ts: 1, claim_id: 'c', result: 'incomplete' },
+    { type: 'repo_diff', ts: 1, claim_id: 'c', result: 'no_deviation', truncation: [{ file: 'layers/Retrieval.py', kept_chars: 0 }] },
+    { type: 'repo_diff', ts: 1, claim_id: 'c', result: 'no_deviation', dropped: 1 },
+  ]) {
+    const card = buildStory([event], 'c').find((c) => c.kind === 'repo_diff')!
+    assert.match(card.text, /comparison was incomplete/)
+    assert.match(card.text, /Method fidelity remains unchecked/)
+  }
+})
+
 test('cards: one per repair event, plus the candidate choice and the repo comparison', () => {
   assert.equal(repairs.filter((r) => r.source === 'error').length, 5)
   assert.equal(repairs.filter((r) => r.source === 'fault').length, 3)

@@ -28,7 +28,7 @@ import yaml
 
 from .catalog import discovery_details, load_catalog_claims
 from . import community, objection_experiments
-from .claims_source import ExtractionInvalid, PaperText, extract_target_cached, fetch_paper_text
+from .claims_source import ExtractionInvalid, TargetVerificationBlocked, PaperText, extract_target_cached, fetch_paper_text
 from .config import load_settings
 from .costs import BudgetExceeded
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
@@ -56,6 +56,7 @@ from .setup_details import (
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 from . import spec_check
+from .method_guard import MethodImplementationBlocked, placeholder_issues
 from .spec import (
     Spec, as_dict as spec_as_dict, build_spec, config_note, format_code_grounded, format_spec, model_files, model_name_of)
 
@@ -65,7 +66,9 @@ MAX_GRAPH_REPAIRS = 2   # Reparaturrunden pro Claim, wenn die Ablation "Graph ni
 FIDELITY_NOTE = (
     "\n\nImplement the core mechanism described in the plan. Do not replace the method by a simpler stand-in "
     "(for example a plain linear model, an MLP or a standard GCN for a different architecture). If the full model is too large "
-    "for 5 minutes on CPU, implement a smaller version of the SAME mechanism and say so in a comment. Start the script with a "
+    "for 5 minutes on CPU, preserve every core mechanism and optimize batching or caching. Never replace retrieval, attention "
+    "or message passing with constants, zeros, pass, or a stub. If it cannot fit, report that limitation rather than inventing "
+    "a substitute. Start the script with a "
     "comment block in the form '# Plan step -> implemented in: function or class name', one line per plan step."
 )
 PLAN_RETRY_NOTE = (
@@ -919,9 +922,18 @@ class Orchestrator:
             if not spec:
                 continue
             keep = claim_spec.get("keep_target", False)   # Katalog: Discovery-Wert bleibt, Rolle 2 ist Gegenprobe
+            strict = claim_spec.get("require_verified_target", False)
+            def blocked(reason):
+                self._emit("target_blocked", claim_id=claim.id, reason=reason)
+                raise TargetVerificationBlocked(reason)
             if self.paper_text is None:   # ein Abruf je Lauf, nicht je Claim
                 calls_before = self._tavily_calls
-                self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode)
+                try:
+                    self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode)
+                except ExtractionInvalid as exc:
+                    if strict:
+                        blocked(f"Claim verification stopped: paper source unavailable ({exc}). No experiment was started.")
+                    raise
                 live = self._tavily_calls > calls_before
                 self._record_source("paper", self.paper_text.url, self.paper_text.text, live,
                                     self.paper_text.retrieved_at, self.paper_text.sha256)
@@ -934,6 +946,8 @@ class Orchestrator:
                     percent=spec.get("percent", True), mode=self.tavily_mode,
                 )
             except ExtractionInvalid as exc:
+                if strict:
+                    blocked(f"Claim verification stopped: the target could not be verified ({exc}). No experiment was started.")
                 if not keep:
                     raise
                 self._warn(f"Rolle 2 konnte den Zielwert im Paper nicht gegenpruefen ({exc}); "
@@ -943,9 +957,15 @@ class Orchestrator:
             self._emit("target_check", claim_id=claim.id, verified_value=ev.value, configured_value=claim.target,
                        agrees=agrees, url=ev.url, from_store=ev.from_store)   # Gegenprobe: belegter Wert gegen papers.yaml
             if keep and not agrees:
+                if strict:
+                    blocked(f"Claim verification stopped: discovery selected {claim.target}, but the paper check found {ev.value}. "
+                            "Resolve the table column before starting an experiment.")
                 self._warn(f"Zielwert weicht ab: Rolle 2 liest {ev.value} ({ev.table or 'Tabelle'}, Zitat: \"{ev.quote}\"), "
                            f"die Discovery {claim.target}. Es gilt der Wert der Discovery; Rolle 2 belegt ihn nicht.")
                 continue
+            if strict and ev.column_check != "ok":
+                blocked("Claim verification stopped: the method, dataset and metric column could not be established. "
+                        "No experiment was started.")
             claim.target = ev.value
             claim.source = f"{ev.table or 'Tabelle'}, arXiv {ev.arxiv_version or '?'} ({ev.source_kind})"
             claim.evidence_urls = [ev.url]
@@ -1213,6 +1233,9 @@ class Orchestrator:
             measured, rnotes = run_rest(code, v0)
             notes += rnotes
         all_metrics = metrics_mean()
+        if v0 is None and getattr(self, "graph_repair", False) and placeholder_issues(code, getattr(self, "_repo_files", {})):
+            raise MethodImplementationBlocked("Incomplete method: the generated retrieval component is a placeholder after repair attempts. "
+                                              "The paper is not assessable; no experiment measurement or paper verdict was produced.")
         verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
         if (getattr(self, "graph_repair", False) and verdict.urteil == "Agenten-Fehler vermutet" and v0 is not None
                 and dossier.fault_repairs.get(claim.id, 0) < MAX_FAULT_REPAIRS
@@ -1380,7 +1403,7 @@ class Orchestrator:
         discarded = (discarded | loser_hashes) - {h(code)}
         parts = ", ".join(f"{r['i']}: " + (f"{r['val']['metric']} {r['val']['value']:.4f}" if r["val"] else "no val value") for r in results)
         note = (f"Code-Kandidaten: {k}, gewaehlt Kandidat {win['i']} (Code {h(win['code'])}) nach Validierungs-Metrik "
-                f"({parts})" + ("" if reason == "val" else "; Rueckfall ohne Val-Wert"))
+                f"({parts})" + ("" if reason == "val" or reason.endswith(" + val") else "; Rueckfall ohne Val-Wert"))
         return v0, note0, code, ab, notes, discarded, win["i"], [note]
 
     def _repo_diff_round(
@@ -1405,11 +1428,15 @@ class Orchestrator:
             self._emit("repo_diff", claim_id=claim.id, result="error", reason=str(exc)[:300], from_hash=h(code))
             dossier.repo_diff[claim.id] = {"result": "error", "reason": str(exc)[:300], "from_hash": h(code)}
             return v0, code, graph_ab, ["Repo-Abgleich fehlgeschlagen (LLM-Antwort unbrauchbar), alter Code bleibt"], discarded
-        info = {"deviations": as_dicts(devs), "dropped": len(dropped), "truncation": cuts, "from_hash": h(code)}
+        info = {"deviations": as_dicts(devs), "dropped": len(dropped), "truncation": cuts, "from_hash": h(code),
+                "method_fidelity": "not_checked", "scope": "selected implementation aspects"}
         if not devs:
-            self._emit("repo_diff", claim_id=claim.id, result="no_deviation", **info)
-            dossier.repo_diff[claim.id] = {**info, "result": "no_deviation"}
-            return v0, code, graph_ab, ["Repo-Abgleich: keine geprueften Abweichungen"], discarded
+            result = "incomplete" if cuts or dropped else "no_deviation"
+            self._emit("repo_diff", claim_id=claim.id, result=result, **info)
+            dossier.repo_diff[claim.id] = {**info, "result": result}
+            note = ("Repo comparison incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked."
+                    if result == "incomplete" else "Repo comparison: no verified differences in the reviewed aspects. Method fidelity remains unchecked.")
+            return v0, code, graph_ab, [note], discarded
 
         def finish(result: str, reason: str, **extra):
             self._emit("repo_diff", claim_id=claim.id, result=result, reason=reason, **info, **extra)
@@ -1605,7 +1632,13 @@ class Orchestrator:
             t0 = time.time()
             product = getattr(self, "graph_repair", False)
             extra_kw = {"with_val": True} if product and seed == 0 and getattr(task, "val_eval_cmd", "") else {}   # Val nur Seed 0, nur Produktpfad
-            branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0, **extra_kw)
+            issues = placeholder_issues(code, getattr(self, "_repo_files", {})) if product else []
+            if issues:
+                self._emit("method_check", claim_id=claim.id, code_hash=code_hash, result="incomplete", issues=issues)
+                branch, res = "not-started", {"status": "ungueltig", "static": True, "method_incomplete": True,
+                                              "detail": "Incomplete method: " + " ".join(issues)}
+            else:
+                branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0, **extra_kw)
             status, value = res["status"], res.get("measured")
             summary = None
             if status == "ok":
@@ -1631,6 +1664,7 @@ class Orchestrator:
                        code_hash=code_hash, status=status, measured=value, seconds=round(time.time() - t0, 1),
                        error=(summary or "")[-400:] or None, stdout_tail=res.get("stdout_tail"),
                        diagnostics=res.get("diagnostics"),
+                       **({"method_incomplete": True} if issues else {}),
                        **({"candidate": candidate} if candidate is not None else {}),
                        **({"val": res["val"]} if res.get("val") else {}))
             if res.get("baselines"):

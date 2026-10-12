@@ -74,7 +74,7 @@ def candidate_events() -> list[dict]:
 
 
 def import_existing_cache() -> None:
-    """One-time import of server-validated cache v2/v3, without search or model calls.
+    """One-time import of accepted cache versions, without search or model calls.
 
     This lets already deployed Discovery results remain usable after the upgrade.
     Never modifies the old cache, benchmark files, or an existing live catalog.

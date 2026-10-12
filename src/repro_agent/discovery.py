@@ -230,7 +230,7 @@ EXTRACT_QUERIES = {
     "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
     "CiteSeer": "CiteSeer node classification: data split (Planetoid public split 120 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
 }
-CACHE_VERSION = 3   # 3: Feld claim.input_length, Hauptergebnis statt Variante; 2: dreistufiges Protokoll (Katalog-Import liest 2 und 3)
+CACHE_VERSION = 4   # 4: LaTeX-Spaltenpruefung; alte Live-Cache-Eintraege werden erneut gelesen
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
 DISCOVERY_PROTOCOL_HINTS = {
     "ETTh1": ("Equivalent statements: 12/4/4 months; 8640/2880/2880 rows; papers often report window/sample counts instead "
@@ -422,7 +422,8 @@ class DiscoveryAgent:
             f"{protocols}\n\n"
             "The claim must be the ABSOLUTE test metric of the method PROPOSED in the paper, "
             "never a baseline and never a relative improvement (no 'reduction percent'). "
-            "Choose the best or the highlighted result of the main configuration of the proposed method; "
+            "Choose the main configuration result in the proposed method's own column. Bold or underlined values may belong "
+            "to a competing baseline; formatting must never override the method-column identity. "
             "prioritize the main results table. Do NOT extract claims from ablation studies, hyperparameter tuning tables, or heatmaps, "
             "never an ablation and never a restricted variant (for example 'frozen', 'w/o ...', 'without ...', 'linear probe'). "
             "FEASIBILITY RULE: We only test methods that can be trained from scratch on CPU in <10 minutes. "

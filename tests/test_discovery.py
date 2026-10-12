@@ -1,7 +1,7 @@
 import pytest
 import json
 import os
-from repro_agent.discovery import DiscoveryAgent, CandidatePaper
+from repro_agent.discovery import DiscoveryAgent, CandidatePaper, CACHE_VERSION
 from repro_agent.tavily_tools import TavilyTools
 from repro_agent.config import Settings
 
@@ -171,11 +171,11 @@ def test_cache_hit(monkeypatch, tmp_path):
                 "title": "Cached Paper",
                 "arxiv_id": "1234.5678",
                 "dataset": "Cora",
-                "claim": "80% acc",
+                "claim": {"method": "GraphNet", "metric": "accuracy", "target": 80},
                 "reason": "Cached",
                 "github_url": "https://github.com/foo/bar",
                 "status": "ungeprueft",
-                "cache_version": 3,
+                "cache_version": CACHE_VERSION,
                 "alternatives": []
             }
         }, f)
@@ -830,7 +830,18 @@ def test_old_cache_entries_without_version_are_rechecked(monkeypatch, arxiv_xml,
     assert len(result) == 1                       # alter Reject ignoriert, Paper neu geprueft
     assert any(e.get("type") == "extracting" for e in events)
     entry = _read_cache(str(cache_file))["2101.12345"]
-    assert entry["cache_version"] == 3 and entry["status"] == "ungeprueft"
+    assert entry["cache_version"] == CACHE_VERSION and entry["status"] == "ungeprueft"
+
+
+def test_pre_column_fix_cache_v3_candidates_are_rechecked(monkeypatch, arxiv_xml, tmp_path):
+    cache_file = tmp_path / 'v3.json'
+    cache_file.write_text(json.dumps({'2101.12345': {'status': 'ungeprueft', 'cache_version': 3,
+        'title': 'Old extraction', 'arxiv_id': '2101.12345', 'dataset': 'Cora',
+        'claim': {'method': 'WrongColumn', 'target': 100}, 'reason': 'old result'}}))
+    result, events, _ = _run_with_cache(monkeypatch, arxiv_xml, str(cache_file))
+    assert len(result) == 1 and result[0].claim['method'] != 'WrongColumn'
+    assert any(e['type'] == 'extracting' for e in events)
+    assert _read_cache(str(cache_file))['2101.12345']['cache_version'] == 4
 
 
 def test_old_cached_candidate_without_version_is_rechecked(monkeypatch, arxiv_xml, tmp_path):
@@ -1155,7 +1166,7 @@ def test_cache_hit_emits_candidate_event(monkeypatch, tmp_path):
     cache_file = tmp_path / "c.json"
     cache_file.write_text(json.dumps({"1234.5678": {
         "title": "Cached Paper", "arxiv_id": "1234.5678", "dataset": "Cora", "claim": {"method": "M", "target": 80.0},
-        "reason": "Cached", "github_url": None, "status": "ungeprueft", "cache_version": 3, "protocol": "passt",
+        "reason": "Cached", "github_url": None, "status": "ungeprueft", "cache_version": CACHE_VERSION, "protocol": "passt",
         "community": [{"url": "u"}]}}))
     monkeypatch.setattr("httpx.get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no network")))
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(), cache_path=str(cache_file))

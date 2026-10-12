@@ -15,6 +15,7 @@ from .setup_details import _parse_list, quote_in_text
 
 MAX_REPO_CHARS = 60_000
 ASPECTS = (
+    "core algorithm and architecture (retrieval, attention, message passing; missing components or constant-output placeholders)",
     "dropout (which tensors, which rate)", "feature and adjacency normalisation", "weight initialisation",
     "regularisation (which parameters get weight decay, how it is scaled)",
     "stopping criterion (patience, maximum epochs, which weights are restored for testing)",
@@ -37,7 +38,8 @@ def truncate_files(files: dict[str, str], limit: int = MAX_REPO_CHARS) -> tuple[
     shown: dict[str, str] = {}
     cuts: list[dict] = []
     left = limit
-    for path, text in files.items():
+    ordered = sorted(files.items(), key=lambda item: 0 if item[0].startswith(("models/", "layers/")) else 1)
+    for path, text in ordered:
         if left <= 0:
             cuts.append({"file": path, "kept_chars": 0, "of_chars": len(text)})
         elif len(text) <= left:
