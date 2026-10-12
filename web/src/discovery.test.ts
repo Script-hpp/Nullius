@@ -10,6 +10,10 @@ test('unverified horizons in new and historic searches are extraction limits, no
   }
 })
 
+test('a cited baseline is explained as a claim selection problem', () => {
+  assert.match(humanReject('quote', 'Selected method is cited prior work, not a method proposed in this paper'), /earlier model cited/)
+})
+
 test('early server errors without timestamps remain visible and cannot create a NaN runtime', () => {
   const view = deriveView([{ type: 'error', message: 'Missing configuration' } as DEvent])
   assert.deepEqual(view.notes, [{ kind: 'error', message: 'Missing configuration' }])

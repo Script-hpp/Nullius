@@ -1,0 +1,57 @@
+\begin{table}[H]
+\caption{
+Performance of recent multivariate forecasting models for prediction horizon $H \in \{96, 192, 336, 720\}$ and input length $L = 96$. 
+\textbf{\textcolor{red}{Red}} and \textcolor{blue}{blue} denote best and second-best results.
+}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{cccccccccccccccccc}
+\toprule
+\multicolumn{2}{c}{\textbf{Models}} & 
+\multicolumn{2}{c}{Times2D} & 
+\multicolumn{2}{c}{LiNo} & 
+\multicolumn{2}{c}{iTransformer} & 
+\multicolumn{2}{c}{RLinear} &  
+\multicolumn{2}{c}{MICN} & 
+\multicolumn{2}{c}{TimeMixer} & 
+\multicolumn{2}{c}{SOFTS} & 
+\multicolumn{2}{c}{PDF} \\
+\multicolumn{2}{c}{} & 
+\multicolumn{2}{c}{(2025)} & 
+\multicolumn{2}{c}{(2025)} & 
+\multicolumn{2}{c}{(2024)} & 
+\multicolumn{2}{c}{(2024)} & 
+\multicolumn{2}{c}{(2024)} & 
+\multicolumn{2}{c}{(2024)} & 
+\multicolumn{2}{c}{(2024)} & 
+\multicolumn{2}{c}{(2024)} \\
+\textbf{Data} & H & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE \\
+\cmidrule(lr){1-1}  % Under "Data"
+\cmidrule(lr){2-2}  % Under "H"
+\cmidrule(lr){3-4}
+\cmidrule(lr){5-6}
+\cmidrule(lr){7-8}
+\cmidrule(lr){9-10}
+\cmidrule(lr){11-12}
+\cmidrule(lr){13-14}
+\cmidrule(lr){15-16}
+\cmidrule(lr){17-18}
+
+\multirow{4}{*}{\rotatebox{90}{ETTh1}} 
+& 96  & \textbf{\textcolor{red}{0.378}} & \textbf{\textcolor{red}{0.394}} & \textcolor{blue}{0.379} & \textcolor{blue}{0.395} & 0.386 & 0.405 & 0.395 & 0.419 & 0.404 & 0.428 & 0.375 & 0.400 & 0.381 & 0.399 & 0.387 & 0.405 \\
+& 192 & 0.431 & \textcolor{blue}{0.422} & \textbf{\textcolor{red}{0.423}} & 0.423 & 0.441 & 0.436 & \textcolor{blue}{0.424} & 0.445 & 0.471 & 0.471 & 0.429 & \textbf{\textcolor{red}{0.421}} & 0.435 & 0.431 & 0.439 & 0.438 \\
+& 336 & 0.463 & \textbf{\textcolor{red}{0.436}} & \textcolor{blue}{0.455} & \textcolor{blue}{0.438} & 0.487 & 0.458 & \textbf{\textcolor{red}{0.446}} & 0.466 & 0.571 & 0.538 & 0.484 & 0.458 & 0.480 & 0.452 & 0.494 & 0.464 \\
+& 720 & \textcolor{blue}{0.473} & 0.464 & \textbf{\textcolor{red}{0.459}} & \textcolor{blue}{0.456} & 0.503 & 0.491 & 0.470 & 0.488 & 0.651 & 0.622 & 0.498 & 0.482 & 0.499 & \textbf{\textcolor{red}{0.448}} & 0.491 & 0.484 \\
+\midrule
+
+\multirow{4}{*}{\rotatebox{90}{ETTm1}} 
+& 96  & \textcolor{blue}{0.324} & 0.363 & 0.322 & \textcolor{blue}{0.361} & 0.334 & 0.368 & 0.329 & 0.367 & \textbf{\textcolor{red}{0.320}} & 0.374 & \textbf{\textcolor{red}{0.320}} & \textbf{\textcolor{red}{0.357}} & 0.325 & 0.361 & 0.335 & 0.367 \\
+& 192 & 0.370 & 0.386 & \textcolor{blue}{0.365} & \textcolor{blue}{0.383} & 0.377 & 0.391 & 0.367 & 0.385 & 0.378 & 0.414 & \textbf{\textcolor{red}{0.361}} & \textbf{\textcolor{red}{0.381}} & 0.375 & 0.389 & 0.377 & 0.393 \\
+& 336 & 0.402 & \textcolor{blue}{0.406} & 0.401 & 0.408 & 0.426 & 0.420 & \textcolor{blue}{0.399} & 0.410 & 0.428 & 0.452 & \textbf{\textcolor{red}{0.390}} & \textbf{\textcolor{red}{0.404}} & 0.405 & 0.412 & 0.408 & 0.415 \\
+& 720 & 0.459 & \textbf{\textcolor{red}{0.439}} & 0.469 & 0.447 & 0.491 & 0.459 & \textcolor{blue}{0.454} & 0.483 & 0.482 & \textbf{\textcolor{red}{0.441}} & \textcolor{blue}{0.454} & \textbf{\textcolor{red}{0.441}} & 0.466 & 0.447 & 0.457 & 0.448 \\
+
+\bottomrule
+\end{tabular}
+}
+\label{Table1}
+\end{table}

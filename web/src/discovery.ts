@@ -116,6 +116,7 @@ export function humanReject(stage: string | undefined, reason: string | undefine
   const r = reason ?? ''
   const table: [RegExp, string][] = [
     [/pre-filter/i, 'The abstract does not mention the benchmark together with a result.'],
+    [/benchmark not found in readable source/i, 'The readable paper source does not mention this benchmark.'],
     [/no results found/i, 'No papers were found for this benchmark.'],
     [/volltext nicht lesbar/i, 'Full text could not be read.'],
     [/llm_truncated/i, 'Model answer was cut off (not counted against the paper).'],
@@ -124,6 +125,7 @@ export function humanReject(stage: string | undefined, reason: string | undefine
     [/no quote provided/i, 'The model gave no supporting quote.'],
     [/quote not found/i, 'The quoted sentence does not appear in the paper text.'],
     [/method missing/i, 'The method behind the number is not named in the quote or the table header.'],
+    [/cited prior work/i, 'The selected method is an earlier model cited by this paper. Discovery needs a result for this paper’s own proposed method.'],
     [/target missing/i, 'The reported number could not be parsed.'],
     [/target value not found/i, 'The number is not contained in the quote.'],
     [/metrik nicht messbar/i, 'The metric cannot be measured by our tasks (for example a relative improvement).'],
@@ -244,6 +246,8 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       if (e.arxiv_id) {
         seen.add(e.arxiv_id)
         const p = paper(e.arxiv_id)
+        if (e.title) p.title = e.title
+        if (e.dataset) p.dataset = e.dataset
         p.state = 'rejected'
         p.stage = stage
         p.reason = e.reason
@@ -267,7 +271,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
   const funnel = [
     { label: 'Found by Tavily', value: found },
     { label: 'Examined (limit 3 per benchmark)', value: examined,
-      note: rejects.prefilter ? `${rejects.prefilter} more dropped by the abstract prefilter` : undefined },
+      note: rejects.prefilter ? `${rejects.prefilter} dropped by the benchmark filter` : undefined },
     { label: 'Claim with quote', value: withClaim },
     { label: 'Protocol confirmed', value: confirmed, note: unclear ? `${unclear} kept as candidate, protocol not stated` : undefined },
     { label: 'Candidate', value: candidates },

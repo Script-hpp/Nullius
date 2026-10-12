@@ -1276,13 +1276,16 @@ def test_saraf_source_row_proves_horizon_even_if_extraction_omits_it(monkeypatch
     (.404, None, r"\underline{0.404} & \underline{0.420}"),  # horizon 192
     (.415, 96, r"\textbf{0.415} & \textbf{0.435}"),  # averaged row
 ])
-def test_saraf_horizon_recovery_never_admits_other_method_horizon_or_average(monkeypatch, tmp_path, target, horizon, quote):
+def test_saraf_main_table_selection_replaces_bad_fresh_extractions_with_verified_claim(monkeypatch, tmp_path, target, horizon, quote):
     from pathlib import Path
     text = Path("tests/fixtures/saraf_main_results.tex").read_text()
     result, events, _ = _run_claim(monkeypatch, tmp_path, text, method="SARAF", target=target,
                                   quote=quote, horizon=horizon, protocol_quote="SARAF (ours)")
-    assert not result
-    assert any(e["type"] == "reject" for e in events)
+    assert len(result) == 1
+    assert result[0].claim["target"] == .371
+    assert result[0].claim["horizon"] == 96
+    assert result[0].claim["extraction_basis"] == "verified source table"
+    assert any(e["type"] == "source_claim" and e["model_target"] == target for e in events)
 
 
 def test_multiline_quote_header_far_before_row_ok(monkeypatch, tmp_path):

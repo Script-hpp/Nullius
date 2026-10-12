@@ -1,0 +1,56 @@
+\begin{table*}[ht!]
+\label{tab:table1}
+\centering
+\caption{Multivariate forecasting performance comparison across the datasets and models (lower MSE/MAE is better). The input sequence length for all experiments is 336 time steps, and a range of prediction lengths \{12, 24, 48, 96, 192, 336, 720\} is used. The top-performing results are marked in \textbf{bold}. The second-best results are \underline{underlined}.}
+\resizebox{1.01\textwidth}{!}{
+\begin{tabular}{ |p{1.7cm}||p{0.15cm}|p{1.05cm}|p{1.05cm}|p{1.05cm}||p{1.05cm}|p{1.05cm}|p{1.05cm}|p{1.1cm}||p{1.05cm}|p{1.15cm}|p{1.05cm}| }
+ \hline
+\multicolumn{2}{|c|}{} & \multicolumn{10}{|c|}{\textbf{\shortstack{Lookup Window - Learning Rate 0.001\\ (Input Sequence Length) = 336}}} \\
+ \hline
+\multicolumn{2}{|c|}{\textbf{Methods}} & \multicolumn{2}{|c|}{\textbf{Autoformer}} & \multicolumn{2}{|c|}{\textbf{NLinear}} & \multicolumn{2}{|c|}{\textbf{DLinear}} &\multicolumn{2}{|c|}{\textbf{RLinear}} &\multicolumn{2}{|c|}{\textbf{GLinear }}   \\
+ \hline
+ \multicolumn{2}{|c|}{\shortstack{Dataset/Output Hori.\\ (Prediction Length)}} & MSE & MAE & MSE & MAE & MSE & MAE &  MSE & MAE & MSE & MAE  \\
+ \hline
+  \multirow{7}{*}{Electricity} & 12 &  0.1638 &	0.2872 & 0.1000	&0.2006	&0.0997	&0.2009	& \underline{0.0967}	&0.1973	& \textbf{0.0883}	&0.1860  \\
+
+ & 24 & 0.1711&	0.2917&	0.1103&	0.2092&	0.1099&	0.2089&	\underline{0.1060}&	0.2049&	\textbf{0.0988}&	0.1952  \\
+& 48&	0.1827&	0.2990&	0.1255&	0.2232&	0.1249&	0.2231& \underline{0.1201}&	0.2180&	\textbf{0.1144}&	0.2101\\
+&96&	0.1960&	0.3106&	0.1409&	0.2366&	0.1401&	0.2374&	\underline{0.1358}&	0.2317&	\textbf{0.1313}&	0.2258\\
+&192&	0.2064&	0.3182&	0.1551&	0.2488&	0.1538&	0.2505&	\underline{0.1518}	&0.2455	& \textbf{0.1494}&	0.2423\\
+&336&	0.2177&	0.3290&	0.1717&	0.2654&	0.1693&	0.2678&	\underline{0.1688}&	0.2621&	\textbf{0.1651}&	0.2582\\
+&720&	0.2477&	0.3528&	0.2104&	0.2977&	\underline{0.2042}&	0.3005&	0.2071&	0.2940&	\textbf{0.2027}&	0.2906\\
+
+ \hline
+ \multirow{7}{*}{ETTh1} & 12&	0.3991&	0.4422&	0.3069&	0.3564&	0.2976&	0.3494&	\underline{0.2862}&	0.3412&	\textbf{0.2848}&	0.3448\\
+&24&	0.4759&	0.4733&	0.3474&	0.3842&	0.3194&	0.3627&	\textbf{0.3090}&	0.3559&	\underline{0.3142}&	0.3654\\
+&48	&0.5046&	0.4831&	0.3553&	0.3845&	0.3477&	0.3803&	\textbf{0.3454}&	0.3766&	\underline{0.3537}&	0.3869\\
+&96	&0.5392&	0.4979&	\underline{0.3731}&	0.3941&	\textbf{0.3705}&	0.3919&	0.3901&	0.4054&	0.3820&	0.4025\\
+&192&	0.4907&	0.4906&	\underline{0.4089}	&0.4157&	\textbf{0.4044}&	0.4128&	0.4223&	0.4279&	0.4202&	0.4269\\
+&336&	0.4805&	0.4886&	\textbf{0.4324}	&0.4307&	0.4553&	0.4582&	\underline{0.4417}&	0.4383&	0.4915&	0.4715\\
+&720&	0.6303&	0.5930	& \textbf{0.4369}&	0.4527&	0.4975&	0.5087&	\underline{0.4634}&	0.4686&	0.5923	&0.5372\\
+ \hline
+ \multirow{7}{*}{Traffic} & 12&	0.5624&	0.3830&	0.3623&	0.2662&	\underline{0.3610}&	0.2644&	0.3762	&0.2744&	\textbf{0.3222}&	0.2385\\
+&24&	0.5801	&0.3786	&0.3719	&0.2682&	\underline{0.3709}&	0.2672&	0.3834&	0.2775&	\textbf{0.3369}&	0.2471\\
+& 48	&0.6060	&0.3796	&0.3945&	0.2769&	\underline{0.3932}	&0.2760&	0.4041	&0.2864&	\textbf{0.3630} &	0.2607\\
+&96&	0.6426&	0.3998&	0.4113&	0.2820&	\underline{0.4104}&	0.2829&	0.4194&	0.2921&	\textbf{0.3875}&	0.2718\\
+&192&	0.6425&	0.3967&	0.4245&	0.2872&	\underline{0.4229}&	0.2881&	0.4323&	0.2965&	\textbf{0.4056}&	0.2802\\
+&336&	0.6675&	0.4088	&0.4375&	0.2943&	\underline{0.4362}&	0.2961&	0.4451&	0.3027&	\textbf{0.4200}&	0.2871\\
+&720&	0.6570	&0.4030&	\underline{0.4657}&	0.3109&	0.4660&	0.3152&	0.4733&	0.3191&	\textbf{0.4488}&	0.3038
+  \\
+ \hline
+ \multirow{7}{*}{Weather} & 12 & 	0.2010	 & 0.2933 & 	0.0784 & 	0.1127 & 	0.0783 & 	0.1158 & 	\textbf{0.0706} & 	0.0974 & 	\underline{0.0716} & 	0.0940\\
+ & 24 & 	0.2095	 & 0.3033 & 	0.1056	 & 0.1453 & 	0.1040	 & 0.1519 & 	\textbf{0.0905} & 	0.1247 & 	\underline{0.0909} & 	0.1247\\
+ & 48 & 	0.2397 & 	0.3202 & 	0.1357 & 	0.1824 & 	0.1367	 & 0.1937 & \textbf{0.1138}	 & 0.1566	 & \underline{0.1163} & 	0.1602\\
+ & 96 & 	0.3004 & 	0.3776	 & 0.1761 & 	0.2264	 & 0.1756 & 0.2386 & 	\textbf{0.1450}	 & 0.1936	 & \underline{0.1457}	 & 0.1966\\
+ & 192 & 	0.3916	 & 0.4382 & 	0.2164 & 	0.2595	 & 0.2160 & 	0.2739 & 	\textbf{0.1878} & 	0.2339 & 	\underline{0.1883} & 	0.2385\\
+ & 336 & 	0.3830 & 	0.4171 & 	0.2664 & 	0.2966 & 	0.2652	 & 0.3192	 & \textbf{0.2404}	 & 0.2743	 & \underline{0.2407}	 & 0.2764\\
+ & 720 & 	0.5420	 & 0.5032	 & 0.3339	 & 0.3437 & 	0.3275 & 	0.3667 & 	\textbf{0.3159}	 & 0.3271 & 	\underline{0.3200}	 & 0.3334\\
+ \hline
+ \multicolumn{2}{|c|}{\textbf{Top 1 Performing }} & \multicolumn{2}{|c|}{0} & \multicolumn{2}{|c|}{2} & \multicolumn{2}{|c|}{2} &\multicolumn{2}{|c|}{9} &\multicolumn{2}{|c|}{\textbf{15}}   \\
+ \hline
+ \multicolumn{2}{|c|}{\textbf{Top 2 Performing }} & \multicolumn{2}{|c|}{0} & \multicolumn{2}{|c|}{5} & \multicolumn{2}{|c|}{10} &\multicolumn{2}{|c|}{17} &\multicolumn{2}{|c|}{\textbf{23}}   \\
+ \hline
+
+\end{tabular}}
+\label{tab2}
+\end{table*}

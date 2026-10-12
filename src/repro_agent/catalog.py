@@ -18,7 +18,7 @@ from .dossier import REPO_ROOT, Claim
 
 CATALOG_YAML = REPO_ROOT / "benchmark" / "catalog.yaml"
 DISCOVERY_CACHE = REPO_ROOT / "logs" / "discovery_cache.json"
-ACCEPTED_CACHE_VERSIONS = (2, 3, 4, 5)   # alte validierte Kandidaten bleiben importierbar; der Loop prueft ihre Ziele erneut
+ACCEPTED_CACHE_VERSIONS = (2, 3, 4, 5, 6)   # alte validierte Kandidaten bleiben importierbar; der Loop prueft ihre Ziele erneut
 
 DISCOVERY, REFERENCE = "discovery", "reference"   # Feld `origin` eines Eintrags; fehlendes Feld = discovery
 UNCHECKED, CHECKED, FAILED, NOT_RUNNABLE = "ungeprueft", "geprueft", "lauf_fehlgeschlagen", "nicht_laufbar"

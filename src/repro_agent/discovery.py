@@ -13,6 +13,7 @@ from .llm import BillingBlocked, LLMClient
 from .claims_source import _norm as _table_norm
 from .repo_source import find_repo_links, parse_github_url, repo_evidence, repo_status
 from .table_check import check_columns
+from .forecast_claim import original_source_quote, proposed_method, requires_external_weights, select_source_claim
 from .tavily_tools import TavilyTools
 
 MIN_FULLTEXT_CHARS = 800    # gezielter Extract liefert ca. 4000 Zeichen; darunter nur Reste (Live-Lauf 1: SVG-Namen)
@@ -196,7 +197,7 @@ class CandidatePaper:
         }
 
 
-# Tavily-Suche pro Datensatz: hoechstens 2 Queries, je eine pro Task, mit den Begriffen unseres Protokolls.
+# Tavily-Suche pro Datensatz: begrenzte Queries mit den Begriffen unseres Protokolls.
 DISCOVERY_QUERIES = {
     "Cora": [
         "semi-supervised node classification Cora Planetoid new baseline GNN 2024 2025 official code",
@@ -230,7 +231,7 @@ EXTRACT_QUERIES = {
     "ETTh1": "ETTh1 forecasting: input length (look-back window), prediction horizons 96/192/336/720, data split 12/4/4 months, test MSE and MAE",
     "CiteSeer": "CiteSeer node classification: data split (Planetoid public split 120 training nodes, 500 validation, 1000 test), evaluation protocol, test accuracy",
 }
-CACHE_VERSION = 5   # 5: Horizont aus belegter Tabellenzeile; falsche v4-Rejects neu lesen
+CACHE_VERSION = 6   # 6: eindeutige Haupttabellen zuerst; alte Extraktions-Rejects neu lesen
 # Aequivalente Angaben, damit ein Paper mit anderer Schreibweise desselben Protokolls nicht als abweichend gilt.
 DISCOVERY_PROTOCOL_HINTS = {
     "ETTh1": ("Equivalent statements: 12/4/4 months; 8640/2880/2880 rows; papers often report window/sample counts instead "
@@ -393,8 +394,10 @@ class DiscoveryAgent:
 
     @staticmethod
     def _prefer_code(papers: list[dict]) -> list[dict]:
-        """Papers, deren Abstract oder Tavily-Ausschnitt oeffentlichen Code nennt, zuerst (stabil, ohne Aufruf)."""
-        return sorted(papers, key=lambda p: not CODE_HINT_RE.search((p.get("abstract") or "") + " " + (p.get("snippet") or "")))
+        """Explicit external-weight dependencies last; public code first, stable and free."""
+        return sorted(papers, key=lambda p: (
+            requires_external_weights(p.get("abstract") or ""),
+            not CODE_HINT_RE.search((p.get("abstract") or "") + " " + (p.get("snippet") or ""))))
 
     def _search_arxiv(self, dataset: str, max_results: int = 10) -> list[dict]:
         """Ersatzweg ohne Tavily-Treffer: neueste arXiv-Papers, die den Datensatz nennen."""
@@ -816,10 +819,20 @@ class DiscoveryAgent:
                 import re
                 # Seeded: the user chose the paper, the abstract keyword filter (a search-noise filter) is skipped;
                 # claim, quote, number, protocol and repo checks below still apply.
-                if not seeded and (ds.lower() not in abstract):
+                # Dataset-scoped Tavily results may name the dataset only in the
+                # source table (SARAF's actual abstract names no ETTh1). Confirm
+                # those bounded results against full text, not only the abstract.
+                if not seeded and p.get("found_by") != "tavily" and (ds.lower() not in abstract):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"})
                     reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": "Regex pre-filter failed", "stage": "prefilter"}.get("reason", "")
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
+                    continue
+
+                if requires_external_weights(p["abstract"]):
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": INFEASIBLE_REASON,
+                          "title": p["title"], "dataset": ds, "stage": "feasibility",
+                          "detail": "Abstract explicitly requires pretrained external models."})
+                    _update_cache(cache_key, {"status": "rejected", "reason": INFEASIBLE_REASON})
                     continue
                     
                 html_url = f"https://arxiv.org/html/{cache_key}"
@@ -849,12 +862,18 @@ class DiscoveryAgent:
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Volltext nicht lesbar", "stage": "extract", "text_length": len(text)})
                     continue
 
+                if not seeded and ds.lower() not in text.lower():
+                    emit({"type": "reject", "arxiv_id": cache_key,
+                          "reason": "Benchmark not found in readable source", "stage": "prefilter"})
+                    continue
+
                 full_text = text   # Code-Links stehen oft in Fussnoten, die die Abschnittswahl weglaesst
+                source_claim = select_source_claim(full_text, ds, p["abstract"]) if ds in ETT_DATASETS else None
                 import re
                 tables = re.findall(r"\\begin\{table\*?\}(.*?)\\end\{table\*?\}", full_text, re.DOTALL)
                 relevant_tables = []
                 for t in tables:
-                    if ds.lower() in t.lower():
+                    if ds.lower() in t.lower() and (not source_claim or source_claim["quote"] in t):
                         relevant_tables.append(f"\\begin{{table}}{t}\\end{{table}}")
                 table_str = "\n\n".join(relevant_tables)
                 text = _select_sections("Abstract: " + p["abstract"] + "\n\n" + text, p["abstract"])
@@ -863,9 +882,9 @@ class DiscoveryAgent:
 
                 claim = self._extract_claim(text, ds, emit_func=emit)
                 claim_data = claim or {}
-                # Leeres Ergebnis ({} oder unlesbar) schwankt zwischen Laeufen: genau ein zweiter Versuch mit anderer
-                # Temperatur (gleiche Temperatur kaeme aus dem Cache). Hoechstens eine Wiederholung pro Paper.
-                if not claim_data or claim_data.get("llm_unreadable"):
+                # At most one retry for unreadable/empty output. A verified source
+                # claim already supplies the number; empty output needs no retry.
+                if (not claim_data and not source_claim) or claim_data.get("llm_unreadable"):
                     claim_data = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
 
                 # LLM-Probleme sind kein Befund ueber das Paper: nicht cachen.
@@ -881,6 +900,16 @@ class DiscoveryAgent:
                           "detail": str(claim_data["infeasible"])[:200]})
                     _update_cache(cache_key, {"status": "rejected", "reason": INFEASIBLE_REASON})
                     continue
+
+                if source_claim:
+                    # Select a fresh claim from primary evidence, independent of an
+                    # averaged row/baseline number picked by the model. Keep the
+                    # model's semantic protocol/feasibility assessment and all guards.
+                    emit({"type": "source_claim", "arxiv_id": cache_key, "method": source_claim["method"],
+                          "target": source_claim["target"], "horizon": source_claim["horizon"],
+                          "basis": source_claim["extraction_basis"],
+                          "model_target": claim_data.get("target"), "model_method": claim_data.get("method")})
+                    claim_data = {**claim_data, **source_claim}
 
                 if not claim_data:
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "No numerical claim found", "stage": "extract"})
@@ -951,8 +980,15 @@ class DiscoveryAgent:
                     claim_data["input_length"] = _valid_input_length(claim_data.get("input_length"), text)
 
                 method = claim_data.get("method")
-                if not _method_supported(method, quote, text, _number_line(quote, target_val)):
+                if not isinstance(method, str) or not method.strip():
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
+                    continue
+                if (ds in ETT_DATASETS and not proposed_method(method, p["abstract"])
+                        and re.search(rf"\b{re.escape(method)}\s*\\cite\w*\{{", full_text, re.I)
+                        and not source_claim):
+                    emit({"type": "reject", "arxiv_id": cache_key,
+                          "reason": "Selected method is cited prior work, not a method proposed in this paper",
+                          "stage": "quote"})
                     continue
 
                 metric = _normalize_metric(claim_data.get("metric"))
@@ -967,6 +1003,10 @@ class DiscoveryAgent:
                 row = _number_line(quote, target_val) or quote
                 col = check_columns(_table_norm(text.replace("|", " ")), _table_norm(row.replace("|", " ")), target_val,
                                     method, ds, metric, metric == "accuracy")
+                table_method_verified = ds in ETT_DATASETS and col.status == "ok" and col.source_row is not None
+                if not table_method_verified and not _method_supported(method, quote, text, row):
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
+                    continue
                 if col.status == "mismatch":
                     reason = f"Number belongs to another column: {col.detail}"
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "number"})
@@ -993,12 +1033,9 @@ class DiscoveryAgent:
                     if row_verified and col.source_row:
                         # Retain the verified full row, including dataset and horizon,
                         # rather than a value-only fragment selected by the model.
-                        source_rows = [raw.strip()
-                                       for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S)
-                                       for raw in re.split(r"\\\\(?:\[[^\]]*\])?", table[1])
-                                       if _table_norm(raw.replace("|", " ")) == col.source_row]
-                        if source_rows:
-                            claim_data["quote"] = source_rows[0]
+                        source_quote = original_source_quote(text, col.source_row)
+                        if source_quote:
+                            claim_data["quote"] = source_quote
                 claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
 
                 claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"

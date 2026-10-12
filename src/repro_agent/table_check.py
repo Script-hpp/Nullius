@@ -21,6 +21,31 @@ class ColumnCheck:
     source_row: str | None = None
 
 
+def latex_rows(text: str) -> list[str]:
+    """Split only top-level row breaks; shortstack and other braced cells may contain \\\\."""
+    rows, start, depth, i = [], 0, 0, 0
+    while i < len(text):
+        if text[i] == "\\":
+            if text[i:i + 2] == "\\\\" and depth == 0:
+                rows.append(text[start:i])
+                i += 2
+                end = re.match(r"\[[^\]]*\]", text[i:])
+                if end:
+                    i += end.end()
+                start = i
+                continue
+            if text[i:i + 2] in (r"\{", r"\}", "\\\\"):
+                i += 2
+                continue
+        elif text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth = max(0, depth - 1)
+        i += 1
+    rows.append(text[start:])
+    return [row for row in rows if row.strip()]
+
+
 def _clean_name(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
@@ -39,9 +64,11 @@ def _latex_cells(row: str) -> list[str]:
     for cell in row.split("&"):
         while re.search(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", cell):
             cell = re.sub(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", r"\1", cell)
-        span = re.search(r"\\multicolumn\{(\d+)\}\{[^{}]*\}\{([^{}]*)\}", cell)
+        span = re.search(r"\\multicolumn\{(\d+)\}\{[^{}]*\}\{", cell)
         count = int(span[1]) if span else 1
-        text = span[2] if span else cell
+        text = cell[span.end():].strip() if span else cell
+        if span and text.endswith("}"):
+            text = text[:-1]
         text = re.sub(r"\\(?:toprule|midrule|bottomrule|hline)\b", "", text).strip()
         cells.extend([text] * min(count, 100))
     return cells
@@ -54,22 +81,42 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
     kind = next((k for k in ("mse", "mae") if re.search(rf"\b{k}\b", metric.lower())), None)
     if not kind:
         return None
+    quoted_rows = latex_rows(quote)
+    if not quoted_rows:
+        return None
     for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S):
         if quote not in table[1]:
             continue
-        rows = re.split(r"\\\\(?:\[[^\]]*\])?", table[1])
+        rows = latex_rows(table[1])
+        anchor = quoted_rows[-1].strip()
         headers = metrics = None
         matches = []
         source_rows = []
+        datasets = []
+        active_dataset, remaining, group = None, 0, []
         for row in rows:
             cells = _latex_cells(row)
             if any(re.search(r"\bmodels?\b|\bmethods?\b", c) for c in cells) and wanted in [_clean_name(c.split(" (")[0]) for c in cells]:
                 headers = cells
-            elif any(re.search(r"\bmetric\b", c) for c in cells):
+            elif sum(_clean_name(c) in ("mse", "mae") for c in cells) >= 2:
                 metrics = cells
-            elif quote in row:
-                matches.append(cells)
-                source_rows.append(row.strip())
+            else:
+                if len(cells) >= 2 and re.fullmatch(r"\d+|avg", cells[1].strip()):
+                    label = re.search(r"\b(etth[12]|ettm[12])\b", cells[0], re.I)
+                    span = re.search(r"\\multirow\{(\d+)\}", cells[0])
+                    if label:
+                        active_dataset = label[1].lower()
+                        remaining = min(int(span[1]), 100) if span else 1
+                        group = []
+                    elif _clean_name(cells[0]):
+                        active_dataset, remaining, group = None, 0, []
+                    if remaining > 0:
+                        group.append(row)
+                    if anchor in row:
+                        matches.append(cells)
+                        datasets.append(active_dataset if remaining > 0 else None)
+                        source_rows.append("\\\\".join(group).strip() if remaining > 0 else row.strip())
+                    remaining = max(0, remaining - 1)
         if headers is None or metrics is None or len(headers) != len(metrics) or len(matches) != 1:
             return ColumnCheck("nicht pruefbar", "LaTeX-Kopfzeile oder zitierte Zeile nicht eindeutig")
         positions = [i for i, (name, met) in enumerate(zip(headers, metrics))
@@ -80,7 +127,7 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
         pos = positions[0]
         if len(cells) != len(headers) or pos >= len(cells):
             return ColumnCheck("nicht pruefbar", "LaTeX-Zeile passt nicht zur Kopfzeile")
-        if _clean_name(dataset) not in _clean_name(" ".join(cells[:2])):
+        if _clean_name(dataset) != datasets[0]:
             return ColumnCheck("nicht pruefbar", "Datensatz in der zitierten LaTeX-Zeile nicht belegt")
         horizon = re.search(r"prediction length\s+(\d+)", metric.lower())
         if horizon and cells[1].strip() != horizon[1]:

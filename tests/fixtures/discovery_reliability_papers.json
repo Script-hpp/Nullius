@@ -1,0 +1,38 @@
+[
+  {
+    "arxiv_id": "2606.04135",
+    "title": "Stationarity-Aware Retrieval-Augmented Time Series Forecasting",
+    "abstract": "Time series forecasting relies on historical patterns, but real-world series often exhibit non-stationarity and regime shifts that challenge fully parametric forecasters. Inspired by Retrieval-Augmented Generation (RAG), recent work augments forecasters by retrieving relevant historical segments and using them as external evidence at inference time. However, due to the intrinsic non-stationarity of real-world time series, a highly similar past segment does not necessarily imply a similar future, rendering similarity-only retrieval brittle and prone to redundancy. We propose \\textbf{S}tationarity-\\textbf{A}ware \\textbf{R}etrieval-\\textbf{A}ugmented Time Series \\textbf{F}orecasting (SARAF), a framework that adaptively balances relevance and diversity in retrieval. SARAF first forms a candidate pool via temporal similarity with time-aligned enhancement, then applies a diversity-aware selection strategy to cover heterogeneous historical regimes, with the diversification strength automatically modulated by dataset-level stationarity. Moreover, SARAF uses stationarity-aware aggregation to fuse the retrieved futures. Extensive experiments on eight real-world datasets show that SARAF achieves competitive forecasting performance and improves average accuracy and robustness over strong baselines, with particularly clear benefits under challenging non-stationary settings. Code: \\url{https://github.com/ShiqiaoZhou/SARAF}.",
+    "authors": [],
+    "source_url": "https://arxiv.org/html/2606.04135",
+    "found_by": "tavily",
+    "snippet": ""
+  },
+  {
+    "arxiv_id": "2502.04395",
+    "title": "Time-VLM: Exploring Multimodal Vision-Language Models for Augmented Time Series Forecasting",
+    "abstract": "Recent advancements in time series forecasting have explored augmenting models with text or vision modalities to improve accuracy. While text provides contextual understanding, it often lacks fine-grained temporal details. Conversely, vision captures intricate temporal patterns but lacks semantic context, limiting the complementary potential of these modalities. To address this, we propose \\method, a novel multimodal framework that leverages pre-trained Vision-Language Models (VLMs) to bridge temporal, visual, and textual modalities for enhanced forecasting. Our framework comprises three key components: (1) a Retrieval-Augmented Learner, which extracts enriched temporal features through memory bank interactions; (2) a Vision-Augmented Learner, which encodes time series as informative images; and (3) a Text-Augmented Learner, which generates contextual textual descriptions. These components collaborate with frozen pre-trained VLMs to produce multimodal embeddings, which are then fused with temporal features for final prediction. Extensive experiments demonstrate that \\method achieves superior performance, particularly in few-shot and zero-shot scenarios, thereby establishing a new direction for multimodal time series forecasting. Code is available at \\url{https://github.com/CityMind-Lab/ICML25-TimeVLM}.",
+    "authors": [],
+    "source_url": "https://arxiv.org/html/2502.04395",
+    "found_by": "tavily",
+    "snippet": ""
+  },
+  {
+    "arxiv_id": "2505.20716",
+    "title": "Are Data Embeddings effective in time series forecasting?",
+    "abstract": "Time series forecasting plays a crucial role in many real-world applications, and numerous complex forecasting models have been proposed in recent years. Despite their architectural innovations, most state-of-the-art models report only marginal improvements\u2014typically just a few thousandths in standard error metrics. These models often incorporate complex data embedding layers to transform raw inputs into higher-dimensional representations to enhance accuracy. But are data embedding techniques actually effective in time series forecasting? Through extensive ablation studies across fifteen state-of-the-art models and four benchmark datasets, we find that removing data embedding layers from many state-of-the-art models does not degrade forecasting performance\u2014in many cases, it improves both accuracy and computational efficiency. The gains from removing embedding layers often exceed the performance differences typically reported between competing state-of-the-art models. Code is available at \\url{https://github.com/neuripsdataembedidng/DataEmbedding}.",
+    "authors": [],
+    "source_url": "https://arxiv.org/html/2505.20716",
+    "found_by": "tavily",
+    "snippet": ""
+  },
+  {
+    "arxiv_id": "2501.01087",
+    "title": "Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction",
+    "abstract": "Time Series Forecasting (TSF) is an important application across many fields. There is a debate about whether Transformers, despite being good at understanding long sequences, struggle with preserving temporal relationships in time series data. Recent research suggests that simpler linear models might outperform or at least provide competitive performance compared to complex Transformer-based models for TSF tasks. In this paper, we propose a novel data-efficient architecture, \\textit{Gaussian-activated Linear model (GLinear)}, for multivariate TSF that exploits periodic patterns to provide better accuracy. It achieves higher prediction accuracy while requiring less historical data than other state-of-the-art linear predictors. Four different datasets (ETTh1, Electricity, Traffic, and Weather) are used to evaluate the performance of the proposed predictor. A performance comparison with state-of-the-art linear architectures (such as NLinear, DLinear, and RLinear) and transformer-based time series predictors (Autoformer) shows that the GLinear, despite being data efficient, outperforms the existing architectures in most cases of multivariate TSF while being competitive in others. We hope that the proposed GLinear model opens new fronts of research and development of simpler and more sophisticated architectures for data and computationally efficient time-series analysis. The source code is publicly available on \\href{https://github.com/t-rizvi/GLinear/}{GitHub}.",
+    "authors": [],
+    "source_url": "https://arxiv.org/html/2501.01087",
+    "found_by": "tavily",
+    "snippet": ""
+  }
+]
