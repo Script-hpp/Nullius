@@ -5,7 +5,8 @@ import { evidenceHref, useCatalog } from '../catalog'
 // Curated examples outside the eight benchmark units. Measurements stay in the exported catalog.
 const examples = ['disc_2303_06053', 'disc_2405_00946']
 
-export function RecentChecks() {
+// flush: left-aligned in the page column (benchmark page); default: centered narrow column (start page).
+export function RecentChecks({ flush = false }: { flush?: boolean }) {
   const catalog = useCatalog()
   const entries = examples.flatMap((id) => {
     const entry = catalog?.find((e) => e.id === id)
@@ -13,7 +14,7 @@ export function RecentChecks() {
   })
   if (entries.length !== examples.length) return null
   return (
-    <section id="recent-checks" aria-label="Beyond the eight benchmark units" className="mx-auto max-w-4xl scroll-mt-8 px-6 py-16">
+    <section id="recent-checks" aria-label="Beyond the eight benchmark units" className={`scroll-mt-8 ${flush ? 'max-w-4xl py-12' : 'mx-auto max-w-4xl px-6 py-16'}`}>
       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Beyond the eight benchmark units</p>
       <h2 className="font-grotesk mb-0 mt-4 text-3xl font-semibold leading-snug tracking-[-0.03em] text-fg">Two more papers. Two targets reached.</h2>
       <p className="mb-0 mt-4 max-w-2xl text-[16px] leading-relaxed text-fg-4">Both papers forecast future sensor readings. Nullius wrote its own program, ran it, and checked how close its predictions came to the real readings.</p>

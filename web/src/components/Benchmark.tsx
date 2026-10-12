@@ -1,5 +1,5 @@
 import { CheckCircle2, MinusCircle, Target } from 'lucide-react'
-import { Badge } from './ui'
+import { Badge, Chevron, ExtLink, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { TwoModes } from './TwoModes'
 import { RecentChecks } from './RecentChecks'
@@ -73,7 +73,7 @@ function Tiles({ v }: { v: BenchVersion }) {
             <div className="mt-6 font-mono text-5xl font-light tracking-tight text-fg">{value}</div>
             <div className="mt-2 text-[15px] font-medium leading-snug text-fg">{label}</div>
             <p className="mb-0 mt-4 text-[13px] leading-relaxed text-fg-4">{small}</p>
-            {link && <a href={link.href} target="_blank" rel="noreferrer" className="mt-3 text-[13px] text-fg-3 underline underline-offset-4 hover:text-fg">{link.text}</a>}
+            {link && <div className="mt-3"><ExtLink href={link.href} className="text-[13px] text-fg-3 underline underline-offset-4 hover:text-fg">{link.text}</ExtLink></div>}
           </li>
         ))}
       </ul>
@@ -85,14 +85,14 @@ function Tiles({ v }: { v: BenchVersion }) {
   )
 }
 
-function VersionBlock({ v }: { v: BenchVersion }) {
+function VersionBlock({ v, noEnd = false }: { v: BenchVersion; noEnd?: boolean }) {
   const s = v.summary
   return (
     <div>
       <p className="font-grotesk m-0 max-w-4xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl">
         With Tavily, {s.agree_B} of {s.n_units} paper-claim units matched the reference verdict; without Tavily, {s.agree_A}. Method fidelity was not checked.
       </p>
-      <dl className="m-0 mt-10 grid gap-0 border-y border-line md:grid-cols-4">
+      <dl className={`m-0 mt-10 grid gap-0 border-line md:grid-cols-4 ${noEnd ? 'border-t' : 'border-y'}`}>
         {[
           { k: 'With Tavily', val: `${s.agree_B} of ${s.n_units}`, sub: 'units matched the reference' },
           { k: 'Without Tavily', val: `${s.agree_A} of ${s.n_units}`, sub: 'units matched the reference' },
@@ -164,26 +164,26 @@ export function Benchmark() {
         : latest ? (
           <>
             <TwoModes />
-            <RecentChecks />
+            <RecentChecks flush />
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
               <Tiles v={latest} />
-              <details className="group mt-12 border-t border-line pt-6">
-                <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Table per paper and claim</summary>
+              <details className="group mt-10 border-t border-line pt-5">
+                <summary className={`nx-summary ${INLINE} cursor-pointer text-[11px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-fg-3`}>Table per paper and claim<Chevron className="h-3.5 w-3.5" /></summary>
                 <div className="mt-8"><VersionBlock v={latest} /></div>
               </details>
             </section>
             {older.length > 0 && (
-              <section className="mt-16 border-t border-line pt-10" aria-label="Earlier evaluations">
+              <section className="mt-12 border-t border-line pt-8" aria-label="Earlier evaluations">
                 <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Earlier evaluations</h2>
-                <div className="mt-4 divide-y divide-line border-y border-line">
+                <div className="mt-4 divide-y divide-line border-b border-line">
                   {older.map((v) => (
                     <details key={v.id} className="group py-5">
-                      <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-3 text-fg">
+                      <summary className="nx-summary flex cursor-pointer flex-wrap items-baseline justify-between gap-3 text-fg">
                         <span className="font-grotesk text-xl font-semibold tracking-[-0.03em]">{v.id} <span className="font-sans text-[13px] font-normal text-muted">{v.date}</span></span>
-                        <span className="text-[13px] text-fg-4">With Tavily {v.summary.agree_B} of {v.summary.n_units} · without {v.summary.agree_A} · open for details</span>
+                        <span className={`${INLINE} text-[13px] text-fg-4`}>With Tavily {v.summary.agree_B} of {v.summary.n_units} · without {v.summary.agree_A} · open for details<Chevron className="h-4 w-4" /></span>
                       </summary>
-                      <div className="mt-8"><VersionBlock v={v} /></div>
+                      <div className="mt-8"><VersionBlock v={v} noEnd /></div>
                     </details>
                   ))}
                 </div>

@@ -1,4 +1,5 @@
-import { Check, Minus, ShieldCheck, BookOpen, ChevronDown, ExternalLink } from 'lucide-react'
+import { Check, Minus, ShieldCheck, BookOpen } from 'lucide-react'
+import { Chevron, ExtLink } from './ui'
 import { UNITS, HELD_OUT, FIGURES, MODES, LIMITS, REPO_BLOB, SOURCES } from '../data/benchmark'
 
 const link = (path: string) => `${REPO_BLOB}/${path}`
@@ -23,7 +24,7 @@ export function Headline() {
           <div className="mt-4 font-mono text-5xl font-light tracking-tight text-fg">{big}</div>
           <div className="mt-2 text-[15px] font-medium leading-snug text-fg">units matched the reference verdict</div>
           <p className="mb-0 mt-3 text-[13px] leading-relaxed text-fg-4">{note}</p>
-          <a href={link(m.source)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-fg-3 underline underline-offset-4 hover:text-fg">Source: {m.source.split('/').pop()} <ExternalLink className="h-3 w-3" aria-hidden /></a>
+          <ExtLink href={link(m.source)} className="mt-3 text-[12px] text-fg-3 underline underline-offset-4 hover:text-fg">Source: {m.source.split('/').pop()}</ExtLink>
         </div>
       ))}
     </div>
@@ -97,9 +98,9 @@ export function Matrix({ short = false }: { short?: boolean }) {
 function Limits() {
   return (
     <details className="group rounded-xl border border-line bg-surface">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 text-[14px] font-medium text-fg">
+      <summary className="nx-summary flex cursor-pointer items-center justify-between gap-3 px-5 py-4 text-[14px] font-medium text-fg">
         Read with care: what this does not show
-        <ChevronDown className="h-4 w-4 text-fg-4 transition-transform group-open:rotate-180" aria-hidden />
+        <Chevron className="h-4 w-4 text-fg-4" />
       </summary>
       <ul className="m-0 grid list-none gap-5 border-t border-line p-5 md:grid-cols-2">
         {LIMITS.map((l) => (
@@ -128,7 +129,7 @@ export function TwoModes() {
       <Limits />
       <p className="m-0 flex max-w-3xl items-start gap-3 text-[14px] leading-relaxed text-fg-3">
         <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-fg-4" aria-hidden />
-        <span>Cleverness left {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}; the authors&rsquo; code moved it. <a href={link(SOURCES.readme)} target="_blank" rel="noreferrer" className="whitespace-nowrap text-fg underline underline-offset-4">The lesson</a></span>
+        <span>Cleverness left {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}; the authors&rsquo; code moved it. <ExtLink href={link(SOURCES.readme)} className="whitespace-nowrap text-fg underline underline-offset-4 hover:text-fg-max">The lesson</ExtLink></span>
       </p>
     </section>
   )
