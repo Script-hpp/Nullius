@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { ChevronDown, Play } from 'lucide-react'
+import { NAV_LINKS } from './Layout'
+import { ExtLink, GoLink } from './ui'
 import { ThemeToggle } from './ThemeSwitch'
 import { Wordmark } from './Wordmark'
 import { SiteFooter } from './SiteFooter'
@@ -18,10 +20,8 @@ function TopBar() {
     <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between gap-3 px-4 sm:px-10">
       <Wordmark />
       <div className="flex items-center gap-3 sm:gap-7">
-        <a href="#catalog" className={link}>Catalog</a>
-        <a href="#discover" className={link} title="Papers found live by Tavily">Discover</a>
-        <a href="#benchmark" className={link}>Benchmark</a>
-        <a href={REPO} target="_blank" rel="noreferrer" className={link}>GitHub</a>
+        {NAV_LINKS.map((l) => <a key={l.label} href={l.href} className={link} title={l.title}>{l.label}</a>)}
+        <ExtLink href={REPO} className="hidden text-sm text-fg-4 transition-colors hover:text-fg no-underline sm:inline-flex">GitHub</ExtLink>
         <a href="#catalog" className="shrink-0 whitespace-nowrap rounded-full border border-fg px-3 py-1.5 sm:px-4 text-[11px] font-medium uppercase tracking-[0.2em] text-fg no-underline transition-colors hover:bg-fg hover:text-bg">Try it</a>
         <ThemeToggle />
       </div>
@@ -44,16 +44,16 @@ function Hero() {
         </p>
       </div>
       <div className="mt-10 flex flex-col items-center gap-3">
-        <a href={TIMELAPSE_RUN} className="inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-          <Play className="h-4 w-4" aria-hidden />Watch a check in 30 seconds
+        <a href={TIMELAPSE_RUN} className="group inline-flex items-center gap-2 rounded-full bg-inverse px-7 py-3 text-sm font-medium text-on-inverse no-underline transition-[padding] duration-200 ease-out hover:px-8 motion-reduce:transition-none">
+          <Play className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" aria-hidden />Watch a check in 30 seconds
         </a>
         <span className="text-[12px] text-muted">Recorded run · real code, sources and measurements · no sign-in</span>
-        <a href="#catalog" className="mt-1 text-sm text-fg-4 underline underline-offset-4 hover:text-fg">Explore checked papers</a>
+        <GoLink href="#catalog" className="mt-1 text-sm text-fg-4 underline underline-offset-4 hover:text-fg">Explore checked papers</GoLink>
       </div>
       <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14">
         <button type="button" onClick={() => document.getElementById('claim')?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })}
           aria-label="Scroll down" className="cursor-pointer border-0 bg-transparent p-1 text-muted hover:text-fg-3">
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="nx-bob h-5 w-5" />
         </button>
         <BuiltWith />
       </div>

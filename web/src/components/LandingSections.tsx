@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ArrowRight, Bug, ChevronDown, ExternalLink, FileText, Quote, Search, Users } from 'lucide-react'
+import { Bug, FileText, Quote, Search, Users } from 'lucide-react'
 import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES } from '../data/benchmark'
 import { FEATURED_RUN_ID } from '../featured'
 import { loadIndex, loadRun, type RunData } from '../data'
@@ -8,7 +8,8 @@ import { RESULT, de2en, resultHint, translateClaim } from '../labels'
 import { useLiveStatus } from '../live'
 import { statusFor } from '../livestatus'
 import { Matrix } from './TwoModes'
-import { Badge } from './ui'
+import { Badge, Chevron, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
+import { Hint } from './Hint'
 
 // The sections of the start page after the hero. They read as one story while scrolling: problem, how it works,
 // one real certificate, Tavily, proof and lesson, limits, try it. One thought per section, at most one link.
@@ -17,8 +18,6 @@ import { Badge } from './ui'
 export const EXAMPLE_RUN = `#/run/${FEATURED_RUN_ID}`
 export const TIMELAPSE_RUN = `#/run/${FEATURED_RUN_ID}?play=1`
 
-const ext = { target: '_blank', rel: 'noreferrer' } as const
-const link = 'inline-flex items-center gap-1.5 text-fg underline underline-offset-4 hover:text-fg-max'
 const lead = 'font-grotesk m-0 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl'
 const body = 'm-0 max-w-2xl text-[16px] leading-relaxed text-fg-4'
 
@@ -95,7 +94,7 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
   return (
     <Block id="certificate" label="A real certificate">
       <h2 className={lead}>Every check ends in a certificate.</h2>
-      <a href={EXAMPLE_RUN} className="group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline transition-colors hover:border-line-strong sm:p-8">
+      <a href={EXAMPLE_RUN} className="nx-go group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-line-strong motion-safe:hover:-translate-y-0.5 hover:shadow-md sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Badge tone={res.tone} title={resultHint(v.urteil)}>{res.label}</Badge>
           <span className="text-[12px] text-muted">Example run</span>
@@ -114,7 +113,7 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
         </dl>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[13px] text-fg-4">
           <span>Method fidelity not checked.</span>
-          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open <ArrowRight className="h-3.5 w-3.5" aria-hidden /></span>
+          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open <GoArrow /></span>
         </div>
       </a>
     </Block>
@@ -130,16 +129,16 @@ export function Proof() {
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         <div>
           <div className={num}>{placebo.v4[0]} of {placebo.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">wrong claims reported as reproduced (v4; also {placebo.v2[0]} of {placebo.v2[1]} in v2 and v3)</p>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">wrong claims reported as reproduced <Hint text={`Benchmark v4. The same check found ${placebo.v2[0]} of ${placebo.v2[1]} in v2 and in v3.`} /></p>
         </div>
         <div>
           <div className={num}>{reproducedAgree.v4[0]} of {reproducedAgree.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">&lsquo;reproduced&rsquo; verdicts agree with the reference (post hoc)</p>
+          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">reproduced verdicts agree with the reference (post hoc)</p>
         </div>
       </div>
       <div className="mt-10"><Matrix short /></div>
       <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
-        Method fidelity not checked. <a href="#benchmark" className={link}>Full benchmark</a>
+        Method fidelity not checked. <GoLink href="#benchmark">Full benchmark</GoLink>
       </p>
     </Block>
   )
@@ -153,7 +152,7 @@ export function Lesson() {
         With the authors&rsquo; code, read as text and never run: {FIGURES.withCode.matched} of {FIGURES.withCode.of}. Held-out: {HELD_OUT.matched} of {HELD_OUT.of}. An observation, not a proof.
       </p>
       <p className="mb-0 mt-4 text-[14px]">
-        <a href={`${REPO_BLOB}/${SOURCES.readme}`} {...ext} className={link}>The full lesson <ExternalLink className="h-3 w-3" aria-hidden /></a>
+        <ExtLink href={`${REPO_BLOB}/${SOURCES.readme}`}>The full lesson</ExtLink>
       </p>
     </Block>
   )
@@ -185,10 +184,7 @@ export function TavilySection() {
         <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
         <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Finding, experiment, measurement. Live DLinear run.</figcaption>
       </figure>
-      <details className="group mt-8 max-w-2xl">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-[14px] text-fg-3 hover:text-fg">
-          Details and limits <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
-        </summary>
+      <Disclosure summary="Details and limits" className="mt-8 max-w-2xl">
         <ul className="m-0 mt-4 grid list-none gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
           <li>A normal run calls Tavily live. The benchmark uses stored copies of Tavily results, because the key is scarce.</li>
           <li>Tavily&rsquo;s effect on the benchmark is small (2 vs 1 of 8 units). Its role is discovery, traceable sources and findings that become measurements.</li>
@@ -196,10 +192,10 @@ export function TavilySection() {
           <li>The last-batch note for ETTh1 (<span className="font-mono">drop_last</span>) is not a Tavily find. It is a fixed list from our own research; the search did not return it.</li>
           <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
         </ul>
-      </details>
+      </Disclosure>
       <p className="mb-0 mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px]">
-        <a href="#discover" className={link}>Find new papers with Tavily <ArrowRight className="h-3 w-3" aria-hidden /></a>
-        <a href={README_TAVILY} {...ext} className={link}>How Nullius uses Tavily <ExternalLink className="h-3 w-3" aria-hidden /></a>
+        <GoLink href="#discover">Find new papers with Tavily</GoLink>
+        <ExtLink href={README_TAVILY}>How Nullius uses Tavily</ExtLink>
       </p>
     </Block>
   )
@@ -209,10 +205,10 @@ export function Limits() {
   const items = [...LIMITS, SCOPE_LIMIT]
   return (
     <Block id="limits" label="Limits">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+      <details>
+        <summary className="nx-summary flex cursor-pointer items-center justify-between gap-4">
           <h2 className={lead}>What this does not show</h2>
-          <ChevronDown className="h-5 w-5 shrink-0 text-fg-4 transition-transform group-open:rotate-180" aria-hidden />
+          <Chevron className="h-5 w-5 text-fg-4" />
         </summary>
         <ul className="m-0 mt-8 grid list-none gap-x-10 gap-y-6 p-0 md:grid-cols-2">
           {items.map((l) => (
@@ -234,11 +230,11 @@ export function TryIt() {
   return (
     <Block id="try" label="Try it">
       <h2 className={lead}>Check a claim yourself.</h2>
-            <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
-        <a href="#catalog" className="inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-          Open the catalog <ArrowRight className="h-4 w-4" aria-hidden />
+      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-4">
+        <a href="#catalog" className="nx-go inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
+          Open the catalog <GoArrow className="h-4 w-4 shrink-0" />
         </a>
-        {discovery?.live && <span className="text-[14px] text-fg-4">or <a href="#discover" className={link}>let Tavily find new papers</a></span>}
+        {discovery?.live && <><span className="text-[14px] text-fg-4">or</span><GoLink href="#discover" className="text-[14px] text-fg underline underline-offset-4 hover:text-fg-max">let Tavily find new papers</GoLink></>}
       </div>
     </Block>
   )

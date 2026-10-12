@@ -35,7 +35,7 @@ export function Precision() {
   const rows = [
     { v: `${p.v4[0]} of ${p.v4[1]}`, t: 'wrong claims reported as reproduced (v4)', s: `also ${p.v2[0]} of ${p.v2[1]} in v2 and v3 · pre-registered` },
     { v: `${p.cg[0]} of ${p.cg[1]}`, t: "wrong claims confirmed, authors'-code run", s: '8 rejected, 1 failed in setup' },
-    { v: `${FIGURES.reproducedAgree.v4[0]} of ${FIGURES.reproducedAgree.v4[1]}`, t: "'reproduced' verdicts agree with the reference", s: 'v4, post hoc, small sample' },
+    { v: `${FIGURES.reproducedAgree.v4[0]} of ${FIGURES.reproducedAgree.v4[1]}`, t: 'reproduced verdicts agree with the reference', s: 'v4, post hoc, small sample' },
   ]
   return (
     <div>
