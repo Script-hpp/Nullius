@@ -43,6 +43,7 @@ def _fixture_copy(tmp_path_factory, monkeypatch):
     copy = tmp_path_factory.mktemp("fixtures") / "fixtures"
     shutil.copytree(REAL_FIXTURES, copy)
     monkeypatch.setattr("repro_agent.claims_source.FIXTURE_DIR", copy)
+    monkeypatch.setattr("repro_agent.claims_source.SOURCE_CACHE_DIR", copy.parent / "paper_sources")
     monkeypatch.setattr("repro_agent.repo_source.FIXTURE_DIR", copy / "repos")
 
 

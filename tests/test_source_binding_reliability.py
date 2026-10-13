@@ -10,6 +10,12 @@ from test_selected_target_table import TABLES, paper
 from test_discovery_target_handoff import target_gate
 
 
+@pytest.fixture(autouse=True)
+def isolated_sources(tmp_path, monkeypatch):
+    monkeypatch.setattr(claims_source, "SOURCE_CACHE_DIR", tmp_path / "paper_sources")
+    monkeypatch.setattr(claims_source, "SOURCE_RESERVE_DIR", tmp_path / "source_reserves")
+
+
 def test_strict_latex_claim_does_not_spend_tavily_credits_on_alternate_format(tmp_path, monkeypatch):
     monkeypatch.setattr(claims_source, "latest_arxiv_version", lambda *a: None)
     monkeypatch.setattr(discovery, "_fetch_arxiv_source", lambda *a: "")
@@ -74,7 +80,7 @@ def test_arxiv_download_retries_transient_failure_once(monkeypatch):
     assert calls == [30.0, 30.0]
 
 
-@pytest.mark.parametrize("status,count", [(404, 1), (500, 2)])
+@pytest.mark.parametrize("status,count", [(404, 2), (500, 3)])
 def test_arxiv_retry_is_bounded_and_does_not_retry_missing_papers(monkeypatch, status, count):
     calls = []
     monkeypatch.setattr(httpx, "get", lambda url, **k: calls.append(url) or

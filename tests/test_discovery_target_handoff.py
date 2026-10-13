@@ -33,7 +33,7 @@ def target_gate(monkeypatch, tmp_path, fresh):
     o.paper_text, o.tavily_mode, o._tavily_calls, o._run_dir = None, "live", 0, tmp_path
     o.llm = NoModel()
     events, fetches = [], []
-    o._emit = lambda kind, **data: events.append({"type": kind, **data})
+    o._emit = lambda event_type, **data: events.append({"type": event_type, **data})
     o._record_source = lambda *args: None
 
     def fetch(paper_id, *args, **kwargs):

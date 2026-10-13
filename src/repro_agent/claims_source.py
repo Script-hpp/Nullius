@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import gzip
+import logging
 import re
 import unicodedata
 from collections.abc import Callable
@@ -25,6 +27,8 @@ from .table_check import check_columns, latex_tabulars
 from .tavily_tools import TavilyTools
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "fixtures"
+SOURCE_CACHE_DIR = Path(__file__).resolve().parents[2] / "logs" / "paper_sources"
+SOURCE_RESERVE_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "source_reserves"
 ARXIV_HTML_MIN_ID = "2312"  # arXiv-HTML gibt es erst fuer Einreichungen ab ca. Ende 2023
 
 EXTRACT_SYSTEM = (
@@ -43,6 +47,9 @@ class PaperText:
     sha256: str
     arxiv_version: str | None   # Version, deren URL abgerufen wurde (None = unversioniert, z. B. ar5iv)
     text: str
+    from_cache: bool = False
+    current_version_unknown: bool = False
+    download_error: str | None = None
 
 
 @dataclass
@@ -93,22 +100,77 @@ def latest_arxiv_version(arxiv_id: str) -> str | None:
         return None
 
 
+def _cached_latex_source(arxiv_id: str, version: str | None, expected_sha256: str | None = None) -> PaperText | None:
+    """Only a readable, hash-checked source for this paper and known requested version."""
+    name = f"{arxiv_id}{version or '_latest'}.json"
+    paths = [SOURCE_CACHE_DIR / name, SOURCE_RESERVE_DIR / (name + ".gz")]
+    if version is None:
+        # Version lookup can fail. A stored explicit version is allowed, but its
+        # identity/age is disclosed, never represented as the newest version.
+        versioned = list(SOURCE_CACHE_DIR.glob(f"{arxiv_id}v*.json")) + list(SOURCE_RESERVE_DIR.glob(f"{arxiv_id}v*.json.gz"))
+        versioned = [p for p in versioned if re.search(r"v(\d+)\.json(?:\.gz)?$", p.name)]
+        paths += sorted(versioned, key=lambda p: int(re.search(r"v(\d+)\.json", p.name)[1]), reverse=True)
+    for path in paths:
+        try:
+            if path.suffix == ".gz":
+                with gzip.open(path, "rt") as stream:
+                    raw = stream.read(4_000_001)
+            else:
+                if path.stat().st_size > 4_000_000:
+                    continue
+                raw = path.read_text()
+            if len(raw) > 4_000_000:
+                continue
+            paper = PaperText(**json.loads(raw))
+            named_version = re.fullmatch(re.escape(arxiv_id) + r"(v\d+|_latest)\.json(?:\.gz)?", path.name)
+            if (paper.arxiv_id != arxiv_id or paper.source_kind != "latex" or not isinstance(paper.text, str) or len(paper.text) <= 2000 or
+                    named_version is None or paper.arxiv_version != (None if named_version[1] == "_latest" else named_version[1]) or
+                    (paper.arxiv_version is not None and
+                     (not isinstance(paper.arxiv_version, str) or not re.fullmatch(r"v[1-9]\d*", paper.arxiv_version))) or
+                    (version is not None and paper.arxiv_version != version) or
+                    (expected_sha256 is not None and paper.sha256 != expected_sha256) or
+                    hashlib.sha256(paper.text.encode()).hexdigest() != paper.sha256):
+                continue
+            paper.from_cache = True
+            paper.current_version_unknown = version is None
+            return paper
+        except (OSError, ValueError, TypeError):
+            continue
+    return None
+
+
+def _save_latex_source(paper: PaperText) -> None:
+    """A separate persistent cache; live mode never overwrites benchmark fixtures."""
+    from .site_export import write_json_atomic
+    try:
+        name = f"{paper.arxiv_id}{paper.arxiv_version or '_latest'}.json"
+        write_json_atomic(SOURCE_CACHE_DIR / name, asdict(paper))
+    except OSError:
+        logging.getLogger(__name__).warning("Could not persist public source for %s", paper.arxiv_id)
+
+
 def fetch_paper_text(
     arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path | None = None, mode: str = "fixture",
-    require_latex: bool = False,
+    require_latex: bool = False, source_version: str | None = None, expected_sha256: str | None = None,
 ) -> PaperText:
     """mode="fixture": Fixture zuerst, `get_tavily` nur bei Fixture-Miss (spart Credits); bei Miss wird die Fixture angelegt.
-    mode="live": immer Tavily-Aufruf (Standard des Orchestrators); schreibt nie nach `fixture_dir`
+    mode="live": frischer offizieller LaTeX-Abruf zuerst, bei Ausfall gepruefter Quellen-Cache;
+    Tavily nur als erlaubter Format-Fallback. Schreibt nie nach `fixture_dir`
     (das Ergebnis steht im Lauf: paper_text.json, Dossier.sources)."""
     fixture_dir = fixture_dir or FIXTURE_DIR
+    if source_version is not None and (not isinstance(source_version, str) or not re.fullmatch(r"v[1-9]\d*", source_version)):
+        raise ExtractionInvalid("Requested source version is invalid")
     fixture = fixture_dir / f"{arxiv_id}.json"
     if mode == "fixture" and fixture.exists():
         paper = PaperText(**json.loads(fixture.read_text()))
-        if require_latex and paper.source_kind != "latex":
-            raise ExtractionInvalid("Selected LaTeX claim requires its original source format; cached source has another format")
-        return paper
+        if ((source_version is None or paper.arxiv_version == source_version) and
+                (expected_sha256 is None or (paper.sha256 == expected_sha256 and
+                                            hashlib.sha256(paper.text.encode()).hexdigest() == paper.sha256))):
+            if require_latex and paper.source_kind != "latex":
+                raise ExtractionInvalid("Selected LaTeX claim requires its original source format; cached source has another format")
+            return paper
 
-    version = latest_arxiv_version(arxiv_id)
+    version = source_version or latest_arxiv_version(arxiv_id)
     
     # Neu: Zuerst versuchen wir, den echten LaTeX-Quellcode von arXiv zu holen.
     from .discovery import _fetch_arxiv_source
@@ -116,18 +178,25 @@ def fetch_paper_text(
     latex_text = _fetch_arxiv_source(source_id)
     if latex_text and len(latex_text) > 2000:
         paper = PaperText(
-            arxiv_id=arxiv_id, url=f"https://export.arxiv.org/e-print/{source_id}", source_kind="latex",
+            arxiv_id=arxiv_id, url=getattr(latex_text, "url", None) or f"https://export.arxiv.org/e-print/{source_id}", source_kind="latex",
             retrieved_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
             sha256=hashlib.sha256(latex_text.encode()).hexdigest(),
             arxiv_version=version, text=latex_text,
         )
+        _save_latex_source(paper)
         if mode != "live":
             fixture_dir.mkdir(parents=True, exist_ok=True)
             fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
         return paper
 
+    cached = _cached_latex_source(arxiv_id, version, expected_sha256)
+    if cached is not None:
+        cached.download_error = getattr(latex_text, "error", None)
+        return cached
+
     if require_latex:
-        raise ExtractionInvalid("Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started")
+        reason = getattr(latex_text, "error", None) or "No readable LaTeX returned"
+        raise ExtractionInvalid(f"Selected LaTeX claim source is temporarily unavailable ({reason}). No alternate-format extraction was started")
 
     # Fallback: Tavily (liest oft unsauber, mischt Tabellenspalten)
     tavily = get_tavily()

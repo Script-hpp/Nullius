@@ -472,11 +472,13 @@ class Orchestrator:
         self._emit("tavily_call", role=role, endpoint=endpoint, target=target, n_results=n_results)
 
     def _record_source(self, kind: str, url: str, text: str, live: bool, retrieved_at: str | None = None,
-                       sha256: str | None = None) -> None:
+                       sha256: str | None = None, from_cache: bool = False) -> None:
         """Web-Quelle im Dossier und im Ereignisprotokoll festhalten: live oder aus Fixture, Zeitstempel, Hash."""
         rec = {"kind": kind, "url": url, "mode": "live" if live else "fixture", "n_chars": len(text),
                "retrieved_at": retrieved_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
                "sha256": sha256 or hashlib.sha256(text.encode()).hexdigest()}
+        if from_cache:
+            rec["from_cache"] = True
         self._sources.append(rec)
         self._emit("source", **rec)
 
@@ -1120,14 +1122,23 @@ class Orchestrator:
                 calls_before = self._tavily_calls
                 try:
                     self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode,
-                                                       require_latex=selected_latex)
+                                                       require_latex=selected_latex,
+                                                       source_version=paper.get("discovery_source", {}).get("arxiv_version"),
+                                                       expected_sha256=paper.get("discovery_source", {}).get("sha256"))
                 except ExtractionInvalid as exc:
                     if strict:
+                        self._emit("source_unavailable", arxiv_id=arxiv_id, reason=str(exc))
                         blocked(f"Claim verification stopped: paper source unavailable ({exc}). No experiment was started.")
                     raise
                 live = self._tavily_calls > calls_before
+                if self.paper_text.from_cache:
+                    unknown = " Current arXiv version could not be determined." if self.paper_text.current_version_unknown else ""
+                    failure = f" Last download failure: {self.paper_text.download_error}." if self.paper_text.download_error else ""
+                    self._warn(f"arXiv source download unavailable. Using saved LaTeX source "
+                               f"{arxiv_id}{self.paper_text.arxiv_version or ' (version unknown)'}, "
+                               f"retrieved {self.paper_text.retrieved_at}. The target is checked against this saved source.{unknown}{failure}")
                 self._record_source("paper", self.paper_text.url, self.paper_text.text, live,
-                                    self.paper_text.retrieved_at, self.paper_text.sha256)
+                                    self.paper_text.retrieved_at, self.paper_text.sha256, self.paper_text.from_cache)
                 if self._run_dir is not None:   # gelesener Text mit Zeitstempel und Hash im Lauf, auch wenn sich die Seite aendert
                     (self._run_dir / "paper_text.json").write_text(json.dumps(dataclasses.asdict(self.paper_text), ensure_ascii=False))
             text = self.paper_text
