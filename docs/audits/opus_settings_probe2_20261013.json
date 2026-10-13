@@ -1,0 +1,85 @@
+{
+ "function_body_mutation": {
+  "batch_size": null,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "set_defaults": {
+  "batch_size": 64,
+  "learning_rate": 0.0005,
+  "seq_len": 360
+ },
+ "setattr_from_config_loop": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "dict_update": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "vars_update": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "other_name_opt": {
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "known_args_load_config": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "class_self_args_store": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "namespace_copy_alias": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "horizon_loop_fixed_seq": "BLOCKED: Author launch prediction horizon is unresolved or incompatible; no experiment was started",
+ "dataset_loop": "BLOCKED: Author launch dataset is unresolved or incompatible; no experiment was started",
+ "explicit_unread_flags": [
+  [
+   "batch_size",
+   "32"
+  ],
+  [
+   "lr",
+   "0.001"
+  ],
+  [
+   "pred_len",
+   "96"
+  ],
+  [
+   "seq_len",
+   "336"
+  ]
+ ],
+ "mutation_in_imported_module": [
+  [
+   "batch_size",
+   "64"
+  ],
+  [
+   "lr",
+   "0.001"
+  ],
+  [
+   "pred_len",
+   "96"
+  ],
+  [
+   "seq_len",
+   "336"
+  ]
+ ]
+}

@@ -55,3 +55,50 @@ Modellkern gelesen wird (FITS: `train_mode`, `cut_freq` bleiben; `e`, `f` fallen
   statt den ganzen Lauf zu stoppen.
 - **Graph und andere Paper:** Laufzeit-Settings nur fuer `forecast`; `active_paper_text` wirkt auf alle LaTeX-Papers
   (Kommentare sind kein Beleg mehr), gewollt.
+
+## Nachtrag: Schlussreview der B1/B2-Nacharbeit
+
+Stand **2026-10-13, 17:51 UTC**, `ceo` `f9ad1cb` plus Diff `8a4ea8f1…` (Quellen danach unveraendert, nur Tests).
+Scratch-Kopie, keine Calls/Downloads. 178 fokussierte Spec-/Repo-/Setting-Tests passed (inkl. `test_code_grounded`).
+Proben: `docs/audits/opus_settings_probe2_20261013.{py,json}`, `opus_real_script_probe_20261013.{py,json}`.
+
+**B2 behoben.** `--e 1 --label_len 48` ohne Lesestelle werden nicht mehr Pflicht; FITS behaelt `train_mode`/`cut_freq`.
+
+**B1 im Kern behoben:** Mutation in `def main()`, `setattr`-Schleife, `__dict__`/`vars`-Update,
+`parse_known_args` + Neuzuweisung -> UNKNOWN; `set_defaults` und `opt`-Namespace korrekt.
+
+### Neuer Blocker A: Horizont- und Datensatzschleifen stoppen jeden Lauf
+
+Die neue Identitaetspruefung stoppt mit `SourceContextBlocked`, wenn ein passender Aufruf `--pred_len $pred_len`
+oder `--data $data` aus einer Schleife traegt; `call_matches` laesst solche Aufrufe aber zu. Die **echten**
+offiziellen Startskripte aus frueheren lokalen Laeufen haben genau diese Form:
+
+| Skript (aus `assistant/runs/…/dossier.json`) | Ergebnis |
+| --- | --- |
+| `scripts/SparseTSF/linear/etth1.sh` (`seq_len=720`, `for pred_len in 96 192 336 720`) | BLOCKED: prediction horizon unresolved |
+| `scripts/SegRNN/etth1.sh` (gleiches Muster) | BLOCKED: prediction horizon unresolved |
+
+Damit wuerden SparseTSF und SegRNN (frueher reproduziert bzw. gemessen) ohne Experiment enden. Fix: Schleifen
+ueber Identitaetsvariablen (Horizont, Datensatz, Modell) aufloesen; enthaelt die Liste den Zielwert, gilt fuer diese
+Instanz genau dieser Wert, sonst passt der Aufruf nicht. Andere Schleifen (z. B. `seq_len`-Gitter) bleiben unbekannt.
+Regressionstest mit beiden echten Skripten.
+
+Folgerisiko fuer SegRNN: Das Repo hat zusaetzlich `scripts/SegRNN/Lookback_96/etth1.sh` (seq 96). Nach dem
+Aufloesen trifft der Discovery-Wert 720 auf einen Laufzeitwert 96 und loest den Konfliktstopp aus. Wenn ein
+Discovery-Wert fuer `seq_len` belegt ist, sollte er Aufrufe auswaehlen (wie der Horizont), nicht mit allen
+anderen Skripten kollidieren; Stopp nur, wenn kein Aufruf passt.
+
+### Blocker B (kleiner, gleiche Klasse wie B1): drei Mutationspfade erzwingen weiter den CLI-Wert
+
+| Muster | Ergebnis (CLI 64, wirklich 256) |
+| --- | --- |
+| `self.args.batch_size = 256` in einer Klasse derselben Datei | 64 |
+| `hp = args; hp.batch_size = 256` | 64 |
+| `self.args.batch_size *= 4` im importierten `exp/exp_main.py` | 64 |
+
+Fix: Stores auf `*.args.<dest>` und auf Aliase des Namespace invalidieren und gelesene Repo-Dateien (Importe des
+Startskripts) nach solchen Stores durchsuchen. Unter der neuen Pflicht zur vollen Spec-Erfuellung wird ein solcher
+falscher Wert dem Agenten aufgezwungen.
+
+Fail-closed bei mehr als vier Datensatzskripten und Gleichrang-Konflikten ohne Paperurteil: als bewusste
+Entscheidung akzeptiert; Blocker A zeigt aber, dass „unbekannt -> Stopp“ nur fuer wirklich unbestimmte Werte gelten darf.
