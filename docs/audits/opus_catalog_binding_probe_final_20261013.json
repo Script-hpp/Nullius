@@ -1,0 +1,186 @@
+[
+ {
+  "id": "disc_1609_02907",
+  "arxiv_id": "1609.02907",
+  "status": "geprueft",
+  "target": 0.815,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": false,
+  "source": "latex 98e757e824f2 (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_1609_02907_citeseer",
+  "arxiv_id": "1609.02907",
+  "status": "geprueft",
+  "target": 0.703,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": false,
+  "source": "latex 98e757e824f2 (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_1811_05868",
+  "arxiv_id": "1811.05868",
+  "status": "geprueft",
+  "target": 0.815,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": false,
+  "source": "pdf 47ac4b09ea8c (codex)",
+  "quote_in_source": true,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2601_18837",
+  "arxiv_id": "2601.18837",
+  "status": "geprueft",
+  "target": 0.369,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": true,
+  "source": "latex a1711469e383 (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2601_21866",
+  "arxiv_id": "2601.21866",
+  "status": "geprueft",
+  "target": 0.35,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": true,
+  "source": "latex 10d795617da8 (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2609_30894",
+  "arxiv_id": "2609.30894",
+  "status": "ungeprueft",
+  "build": "NotRunnable: This claim evaluates a frozen model pretrained on the web graph. Training from scratch on Cora cannot check this claim."
+ },
+ {
+  "id": "disc_2511_08094",
+  "arxiv_id": "2511.08094",
+  "status": "geprueft",
+  "target": 0.8292,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": false,
+  "source": "latex 807a39ebb5bd (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2412_03864",
+  "arxiv_id": "2412.03864",
+  "status": "ungeprueft",
+  "build": "NotRunnable: Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)"
+ },
+ {
+  "id": "disc_2603_13702",
+  "arxiv_id": "2603.13702",
+  "status": "ungeprueft",
+  "build": "NotRunnable: This result is for TSMixer + xCPD with input length 512. The stored claim omits the backbone and specifies 96; resolve the complete method and setup before checking it."
+ },
+ {
+  "id": "disc_2303_06053",
+  "arxiv_id": "2303.06053",
+  "status": "geprueft",
+  "target": 0.361,
+  "input_length": 512,
+  "input_length_quote": true,
+  "warn_length": false,
+  "source": "latex b596ade3ee95 (codex)",
+  "quote_in_source": false,
+  "binder": "fallback (None)",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2202_06491",
+  "arxiv_id": "2202.06491",
+  "status": "ungeprueft",
+  "build": "NotRunnable: Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)"
+ },
+ {
+  "id": "disc_2305_10721",
+  "arxiv_id": "2305.10721",
+  "status": "ungeprueft",
+  "target": 0.366,
+  "input_length": 336,
+  "input_length_quote": false,
+  "warn_length": true,
+  "source": "unreadable"
+ },
+ {
+  "id": "disc_2410_05697",
+  "arxiv_id": "2410.05697",
+  "status": "ungeprueft",
+  "target": 0.7237,
+  "input_length": null,
+  "input_length_quote": false,
+  "warn_length": false,
+  "source": "unreadable"
+ },
+ {
+  "id": "disc_2405_00946",
+  "arxiv_id": "2405.00946",
+  "status": "geprueft",
+  "target": 0.359,
+  "input_length": 720,
+  "input_length_quote": true,
+  "warn_length": false,
+  "source": "latex aad67febefb9 (codex)",
+  "quote_in_source": true,
+  "binder": "verified 0.359 main_reslut",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2307_03756",
+  "arxiv_id": "2307.03756",
+  "status": "ungeprueft",
+  "target": 0.372,
+  "input_length": 360,
+  "input_length_quote": true,
+  "warn_length": false,
+  "source": "latex 9022b12b628f (codex)",
+  "quote_in_source": true,
+  "binder": "verified 0.372 tab:FITSett",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2308_11200",
+  "arxiv_id": "2308.11200",
+  "status": "geprueft",
+  "target": 0.341,
+  "input_length": 720,
+  "input_length_quote": true,
+  "warn_length": false,
+  "source": "latex 9429a529dc04 (codex)",
+  "quote_in_source": true,
+  "binder": "verified 0.341 main_result",
+  "deterministic": null
+ },
+ {
+  "id": "disc_2501_01087",
+  "arxiv_id": "2501.01087",
+  "status": "geprueft",
+  "target": 0.382,
+  "input_length": 336,
+  "input_length_quote": true,
+  "warn_length": false,
+  "source": "unreadable"
+ }
+]

@@ -1,0 +1,9 @@
+{
+ "copy_in_wraptable_is_ignored": "blocked: Selected quote identifies multiple source locations; a longer source quote is required",
+ "copy_in_nested_tabular_table": "blocked: Selected quote identifies multiple source locations; a longer source quote is required",
+ "std_in_cell": "verified 0.372 tab:FITSett",
+ "caption_after_tabular": "verified 0.372 tab:FITSett",
+ "caption_mse_and_mae": "blocked: Selected result table: Tabellenmetrik nicht eindeutig belegt",
+ "number_only_quote": "verified 0.372 tab:FITSett",
+ "drift_main_row_changed": "None (LLM fallback)"
+}

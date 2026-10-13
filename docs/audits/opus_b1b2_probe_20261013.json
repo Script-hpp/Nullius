@@ -1,0 +1,9 @@
+{
+ "unchanged": "resolved 0.372 tab:FITSett",
+ "main_row_changed_appendix_kept": "blocked: Claim verification stopped: the target could not be verified (Selected LaTeX source quote is missing or unverifiable; the source may have changed since discovery). No experiment was started.",
+ "main_table_removed_appendix_kept": "blocked: Claim verification stopped: the target could not be verified (Selected LaTeX source quote is missing or unverifiable; the source may have changed since discovery). No experiment was started.",
+ "latex_unavailable": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "versioned_eprint_id": [
+  "2307.03756v3"
+ ]
+}
