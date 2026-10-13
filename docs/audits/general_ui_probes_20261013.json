@@ -1,0 +1,37 @@
+{
+  "confirmed_probes": 3,
+  "results": [
+    {
+      "probe": "stopped_candidate_status",
+      "confirmed": true,
+      "observed": {
+        "running": false,
+        "candidateSelectionPending": true,
+        "stats": null
+      }
+    },
+    {
+      "probe": "multi_claim_event_mix",
+      "confirmed": true,
+      "observed": {
+        "claimText": "Graph accuracy",
+        "metric": "accuracy",
+        "target": 0.83,
+        "chartMean": 0.4,
+        "verdictMean": 0.4
+      }
+    },
+    {
+      "probe": "existing_saved_placebo_verdict_mix",
+      "confirmed": true,
+      "observed": {
+        "run": "kipf_gcn_2017--20261002-110746",
+        "paperTarget": 0.815,
+        "paperVerdict": "reproduziert",
+        "renderedTarget": 0.815,
+        "renderedVerdict": "nicht reproduziert",
+        "renderedVerdictClaim": "gcn_cora_acc_placebo"
+      }
+    }
+  ]
+}

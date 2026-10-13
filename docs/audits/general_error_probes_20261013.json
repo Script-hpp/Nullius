@@ -1,0 +1,346 @@
+{
+  "base_commit": "e945e01c2e02ddf60635bf44b31698f859bb9cf9",
+  "network_disabled": true,
+  "product_files_unchanged": true,
+  "confirmed_probes": 25,
+  "results": [
+    {
+      "probe": "future_window_leak",
+      "confirmed": true,
+      "observed": {
+        "toy_recovered_fraction": 0.9324324324324325,
+        "max_abs_error": 1.0462253419163403e-07,
+        "etth1_recoverable_fraction": 0.9825852782764811,
+        "independence_probe_in_standard_run": false
+      }
+    },
+    {
+      "probe": "data_version_drift",
+      "confirmed": true,
+      "observed": {
+        "same_shape": [
+          37,
+          4,
+          2
+        ],
+        "target_mse_between_versions": 14.464722467305315,
+        "public_keys": [
+          "train",
+          "val",
+          "test_inputs"
+        ]
+      }
+    },
+    {
+      "probe": "training_vs_inference_batch",
+      "confirmed": true,
+      "observed": {
+        "enforced_batch": 32,
+        "training_default": 8,
+        "source_quote": "We compare inference speed with batch size 32."
+      }
+    },
+    {
+      "probe": "unrelated_default_stripping",
+      "confirmed": true,
+      "observed": {
+        "wrong_default_removed": true,
+        "dropped": [
+          "time_aware_weight"
+        ],
+        "wanted_command_has_override": false
+      }
+    },
+    {
+      "probe": "multi_command_values",
+      "confirmed": true,
+      "observed": {
+        "wanted_lr": 0.01,
+        "lr_in_raw_items": false
+      }
+    },
+    {
+      "probe": "unrelated_keyword_conflicts",
+      "confirmed": true,
+      "observed": {
+        "false_conflicts": [
+          {
+            "key": "batch_size",
+            "literal": 1024,
+            "line": 3
+          },
+          {
+            "key": "dropout",
+            "literal": 2,
+            "line": 4
+          }
+        ]
+      }
+    },
+    {
+      "probe": "silent_config_overwrites",
+      "confirmed": true,
+      "observed": {
+        "cases": [
+          {
+            "case": "cfg=CONFIG\ncfg['lr']=1.0",
+            "actual_lr": 1.0,
+            "reported_score": [
+              1,
+              1
+            ]
+          },
+          {
+            "case": "CONFIG={'lr':1.0}",
+            "actual_lr": 1.0,
+            "reported_score": [
+              1,
+              1
+            ]
+          },
+          {
+            "case": "if True:\n    CONFIG['lr']=1.0",
+            "actual_lr": 1.0,
+            "reported_score": [
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "probe": "paper_number_collision",
+      "confirmed": true,
+      "observed": {
+        "chosen_batch": 32,
+        "corroborating_number_may_be_unrelated_horizon": 32,
+        "tie_removed": true
+      }
+    },
+    {
+      "probe": "validation_control_failures",
+      "confirmed": true,
+      "observed": {
+        "cases": [
+          {
+            "failure": "mask_command",
+            "verdict": "Validierungslabels nicht genutzt",
+            "val_full": 0.95,
+            "val_masked": 0.95,
+            "static": "training",
+            "static_hits": [
+              "Zeile 11: backward() auf einem Wert, der aus Validierungslabels/-indizes stammt"
+            ],
+            "excluded": false,
+            "detail": null
+          },
+          {
+            "failure": "masked_training",
+            "verdict": "nicht messbar",
+            "val_full": 0.95,
+            "val_masked": null,
+            "static": "training",
+            "static_hits": [
+              "Zeile 11: backward() auf einem Wert, der aus Validierungslabels/-indizes stammt"
+            ],
+            "excluded": false,
+            "detail": "masked candidate crashed\n(exit code 1)"
+          }
+        ]
+      }
+    },
+    {
+      "probe": "failed_ablation",
+      "confirmed": true,
+      "observed": {
+        "accuracy_full": 0.815,
+        "accuracy_ablated": 0.81,
+        "verdict": "Graph nicht genutzt",
+        "detail": null
+      }
+    },
+    {
+      "probe": "duplicate_classification_ids",
+      "confirmed": true,
+      "observed": {
+        "rows": 3,
+        "unique_ids": 2,
+        "accepted": {
+          "0": "0",
+          "1": "1"
+        },
+        "discarded_prediction": "0,9"
+      }
+    },
+    {
+      "probe": "placeholder_blind_spots",
+      "confirmed": true,
+      "observed": {
+        "constant_output_variants_not_detected": 2
+      }
+    },
+    {
+      "probe": "checkpoint_blind_spots",
+      "confirmed": true,
+      "observed": {
+        "shallow_checkpoint_variants_not_detected": 3,
+        "variants": [
+          "keyword restore",
+          "optimizer name trainer",
+          "attribute checkpoint"
+        ]
+      }
+    },
+    {
+      "probe": "protocol_dependency_omission",
+      "confirmed": true,
+      "observed": {
+        "transitive_training_helper_missing": true,
+        "known_missing_first_helper_does_not_block": true,
+        "included": [
+          "repo:models/Toy.py@abc",
+          "repo:exp/train.py@abc",
+          "repo:utils/schedule.py@abc"
+        ]
+      }
+    },
+    {
+      "probe": "requested_repo_ref_lost",
+      "confirmed": true,
+      "observed": {
+        "requested_v1": [
+          "https://github.com/example/project",
+          "model"
+        ],
+        "requested_main": [
+          "https://github.com/example/project",
+          "model"
+        ],
+        "ref_distinction_lost": true
+      }
+    },
+    {
+      "probe": "comments_rejected_as_operations",
+      "confirmed": true,
+      "observed": {
+        "harmless_code_rejections": [
+          [
+            "URL im Code: '://' in Zeile 1"
+          ],
+          [
+            "Download-Funktion: 'fetch_neighbors_from_memory' in Zeile 1"
+          ]
+        ]
+      }
+    },
+    {
+      "probe": "unchecked_forecast_validation",
+      "confirmed": true,
+      "observed": {
+        "winning_candidate": 0,
+        "reported_val_mse": 0.0,
+        "forecast_label_use_check": false
+      }
+    },
+    {
+      "probe": "stale_spec_score",
+      "confirmed": true,
+      "observed": {
+        "selected_candidate": 0,
+        "actual_final_spec_score": [
+          0,
+          1
+        ],
+        "selection_notes": [
+          "Code-Kandidaten: 2, gewaehlt Kandidat 0 (Code 192b908ba0eb) nach Validierungs-Metrik (0: mse 0.1000, 1: mse 0.3000)"
+        ]
+      }
+    },
+    {
+      "probe": "budget_aborts_before_valid_candidate_trial",
+      "confirmed": true,
+      "observed": {
+        "call_order": [
+          "write",
+          "write"
+        ],
+        "first_candidate_already_generated": true,
+        "first_candidate_tried": false
+      }
+    },
+    {
+      "probe": "copied_graph_validation_labels_are_selected",
+      "confirmed": true,
+      "observed": {
+        "selected_copied_labels": true,
+        "control": {
+          "code_hash": "32278a7d714b",
+          "verdict": "Validierungslabels genutzt",
+          "val_full": 0.95,
+          "val_masked": 0.25,
+          "static": "selection",
+          "static_hits": [],
+          "excluded": false,
+          "detail": null
+        },
+        "chosen_candidate": 0
+      }
+    },
+    {
+      "probe": "single_candidate_skips_label_check",
+      "confirmed": true,
+      "observed": {
+        "label_check_called": false,
+        "static_training_hit": true,
+        "verdict_produced": true,
+        "api_default_candidates": 3
+      }
+    },
+    {
+      "probe": "aborted_live_job_link_is_volatile",
+      "confirmed": true,
+      "observed": {
+        "job_link_after_prune": 404,
+        "registry_persistent": false,
+        "local_event_files_may_still_exist": true
+      }
+    },
+    {
+      "probe": "inactive_model_setting_enforced",
+      "confirmed": true,
+      "observed": {
+        "reference_model_uses_dropout": false,
+        "dropout_enforced": true,
+        "faithful_model_gets_failure": [
+          "dropout"
+        ]
+      }
+    },
+    {
+      "probe": "extraction_calls_missing_from_event_count",
+      "confirmed": true,
+      "observed": {
+        "direct_setup_calls": 2,
+        "live_llm_events": 0
+      }
+    },
+    {
+      "probe": "unclaimed_metric_can_override_matched_claim",
+      "confirmed": true,
+      "observed": {
+        "target_mse": 0.37,
+        "measured_mse": 0.37,
+        "measured_mae": 0.6,
+        "baseline": {
+          "repeat": {
+            "mse": 0.5,
+            "mae": 0.5
+          }
+        },
+        "verdict": "Agenten-Fehler vermutet",
+        "diagnostic_reason": "MAE 0.6000 ist schlechter als die triviale Baseline 'repeat' (0.5000), der Paperwert 0.37 (MSE) schlaegt sie"
+      }
+    }
+  ]
+}
