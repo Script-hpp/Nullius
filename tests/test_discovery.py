@@ -923,7 +923,7 @@ def test_code_link_in_paper_text_beats_search_and_keeps_subfolder(monkeypatch, a
     text = "Abstract ... The implementation is available at: https://github.com/big-lab/collection/tree/master/ tsm . 1 Introduction"
     url, reason, _ = _repo_agent(monkeypatch, arxiv_xml, tmp_path, ["https://github.com/someone/sample-reimpl"], "",
                                  paper_text=text, method="TSM", readmes={"big-lab/collection/master/tsm/README.md": "TSM, see arXiv 2101.12345"})
-    assert url == "https://github.com/big-lab/collection/tree/HEAD/tsm" and "linked in the paper text" in reason
+    assert url == "https://github.com/big-lab/collection/tree/master/tsm" and "linked in the paper text" in reason   # E16: Ref des Paperlinks bleibt
     assert _repo_agent.searched == []   # offizieller Treffer aus dem Paper: keine Suche noetig
 
 
