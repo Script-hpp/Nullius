@@ -1,5 +1,6 @@
 """Live FITS setup drift: source -> spec -> effective CONFIG, no provider calls."""
 import gzip
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -87,8 +88,12 @@ def test_forecast_reader_corrects_wrong_task_choice_and_loads_dataset_launch_scr
     class Sandbox:
         def base_snapshot(self,*a,**k):return 'snapshot'
         def branch(self,*a):return 'branch'
-        def run(self,*a):return SimpleNamespace(stdout='\n'.join(files))
-        def get_file(self,b,path):return b'abc' if path.endswith('.head_commit') else files[path.removeprefix('/repo/')].encode()
+        def run(self,*a):
+            data=('\0'.join(files)+'\0').encode()
+            return SimpleNamespace(stdout=f'{len(data)}\n{data.count(0)}\n{hashlib.sha256(data).hexdigest()}\n',exit_code=0)
+        def get_file(self,b,path):
+            if path == '/tmp/.nullius_repo_listing': return ('\0'.join(files)+'\0').encode()
+            return b'abc' if path.endswith('.head_commit') else files[path.removeprefix('/repo/')].encode()
     monkeypatch.setattr(repo_source,'select_files',lambda *_:['AD/Toy.py','AD/main.py','scripts/Toy/etth1.sh'])
     dump=repo_source.read_repo(Sandbox(),None,'https://github.com/example/toy','Toy erreicht MSE 0.4','ETTh1',
                               fixture_dir=tmp_path,unit_key='unit',model='Toy',mode='live')

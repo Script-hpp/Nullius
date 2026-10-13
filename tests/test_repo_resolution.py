@@ -3,6 +3,7 @@
 Attrappen und gespeicherte Auszuege, kein Netz, kein LLM."""
 
 from types import SimpleNamespace
+import hashlib
 
 import pytest
 
@@ -172,10 +173,14 @@ class SubSandbox:
 
     def run(self, branch, cmd, timeout_s):
         self.cmds.append(cmd)
-        return SimpleNamespace(stdout="100644 blob abc 120\ttsmixer/train.py\n100644 blob def 9000000\ttsmixer/data/big.npy\n100644 blob ghi 50\ttsmixer/README.md",
+        self.listing=('\0'.join(['100644 blob abc 120\ttsmixer/train.py',
+                                '100644 blob def 9000000\ttsmixer/data/big.npy',
+                                '100644 blob ghi 50\ttsmixer/README.md'])+'\0').encode()
+        return SimpleNamespace(stdout=f'{len(self.listing)}\n{self.listing.count(0)}\n{hashlib.sha256(self.listing).hexdigest()}\n',
                                stderr="", exit_code=0)
 
     def get_file(self, branch, path):
+        if path == '/tmp/.nullius_repo_listing': return self.listing
         if path.endswith(".head_commit"):
             return b"abcdef1234567\n"
         return b"x = 1\n"
@@ -192,7 +197,7 @@ def test_subfolder_clone_is_sparse_and_listing_is_limited(tmp_path):
     clone = " ".join(sb.setup)
     assert "--sparse" in clone and "--filter=blob:none" in clone and "sparse-checkout set tsmixer" in clone
     assert "https://github.com/google-research/google-research " in clone + " " and "/tree/" not in clone   # Wurzel-URL, nicht die Baum-URL
-    assert "git ls-tree -r -l HEAD -- tsmixer" in sb.cmds[0]
+    assert "git ls-tree -r -l -z HEAD -- tsmixer" in sb.cmds[0]
     assert sorted(dump.files) == ["tsmixer/README.md", "tsmixer/train.py"] and dump.subdir == "tsmixer" and dump.n_tracked == 2   # big.npy (9 MB) fehlt
 
 

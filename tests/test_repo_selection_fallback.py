@@ -2,6 +2,7 @@
 und der Lauf fiel still auf "Nachbau aus Paper" zurueck. Offline mit dem gespeicherten Repo-Ausschnitt von tkipf/gcn (recall cg v1), kein Netz, kein LLM."""
 
 import json
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -31,9 +32,11 @@ class FakeSandbox:
         return "b"
 
     def run(self, branch, cmd, timeout_s):
-        return SimpleNamespace(stdout="\n".join(LISTING), stderr="", exit_code=0)
+        data=('\0'.join(LISTING)+'\0').encode()
+        return SimpleNamespace(stdout=f'{len(data)}\n{data.count(0)}\n{hashlib.sha256(data).hexdigest()}\n', stderr="", exit_code=0)
 
     def get_file(self, branch, path):
+        if path == '/tmp/.nullius_repo_listing': return ('\0'.join(LISTING)+'\0').encode()
         rel = path.removeprefix("/repo/")
         if rel == ".head_commit":
             return b"39a4089fe72ad9f055ed6fdb9746abdcfebc4d81\n"

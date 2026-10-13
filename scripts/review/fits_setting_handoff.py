@@ -7,6 +7,7 @@ This proves the handoff, not autonomous code generation or method fidelity.
 import argparse
 from dataclasses import asdict
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -29,8 +30,12 @@ def source_settings(repository):
         # Read the pinned local checkout; never clone or execute author scripts.
         def base_snapshot(self, *args, **kwargs): return 'cached-repository'
         def branch(self, *args): return 'cached-branch'
-        def run(self, *args): return SimpleNamespace(stdout='\n'.join(listing))
+        def run(self, *args):
+            data = ('\0'.join(listing) + '\0').encode()
+            return SimpleNamespace(stdout=f'{len(data)}\n{data.count(0)}\n{hashlib.sha256(data).hexdigest()}\n', exit_code=0, timed_out=False)
         def get_file(self, branch, path):
+            if path == '/tmp/.nullius_repo_listing':
+                return ('\0'.join(listing) + '\0').encode()
             if path.endswith('.head_commit'):
                 return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repository)
             return (repository / path.removeprefix('/repo/')).read_bytes()

@@ -1294,7 +1294,7 @@ class Orchestrator:
                                        "No experiment was started.")
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
-        info = {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
+        info = {"url": url, "commit": dump.commit, "files": sorted(dump.files), "n_tracked": dump.n_tracked}
         if dump.subdir:   # Unterordner eines Sammel-Repos: Issues, Sterne usw. gehoeren zur Wurzel
             info["subdir"], info["root"] = dump.subdir, clone_plan(url)[0]
         if status:
