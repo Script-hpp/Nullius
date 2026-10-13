@@ -10,6 +10,11 @@ from repro_agent.repo_source import fetch_readme
 TEXT = "x" * 3000
 
 
+@pytest.fixture(autouse=True)
+def no_arxiv_network(monkeypatch):
+    monkeypatch.setattr("repro_agent.discovery._fetch_arxiv_source", lambda *a: "")
+
+
 class FakeTavily:
     def __init__(self):
         self.calls = 0

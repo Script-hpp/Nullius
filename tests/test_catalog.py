@@ -105,9 +105,10 @@ def test_unsupported_metric_and_dataset_not_runnable():
 
 
 def test_input_length_passed_as_detail_with_discovery_quote():
-    p, _ = cat.build_paper(entry(etth1(input_length=336)))
-    (d,) = cat.discovery_details(p)
-    assert (d.topic, d.value, d.source) == ("input length", "336", "discovery") and d.quote == p["discovery_quote"]
+    quote = "MoHETS uses input sequence length 336. ETTh1 96 0.350."
+    p, _ = cat.build_paper(entry(etth1(input_length=336, quote=quote)))
+    (d,) = cat.discovery_details(p, quote)
+    assert (d.topic, d.value, d.source) == ("input length", "336", "discovery") and d.quote == p["input_length_quote"]
     assert not any("Eingabelaenge im Paper nicht belegt" in w for w in p["warnings"])
     p2, _ = cat.build_paper(entry(etth1()))
     assert cat.discovery_details(p2) == [] and any("Eingabelaenge" in w for w in p2["warnings"])
@@ -279,13 +280,50 @@ def test_benchmark_rolle2_failure_still_aborts(tmp_path, monkeypatch):
 
 
 def test_input_length_reaches_the_plan(tmp_path, monkeypatch):
-    e = entry(etth1(input_length=336))
+    quote = "MoHETS uses input sequence length 336. ETTh1 96 0.350."
+    e = entry(etth1(input_length=336, quote=quote))
     o = tavily_orch(tmp_path, monkeypatch, [e], evidence(0.35))
+    monkeypatch.setattr(loop_mod, "fetch_paper_text", lambda *a, **k:
+                        PaperText("2601.21866", "u", "arxiv_html", "t", "h", "v1", quote))
     monkeypatch.setattr(loop_mod, "TASKS", {"ETTh1": lambda: SimpleNamespace(ablation_cmd=None, image="i", setup_cmds=[], selection_contract=False, selection_info=lambda: None)})
     monkeypatch.setattr(o, "run_claim", lambda *a, **k: None, raising=False)
     d = o.run(e["id"], source="catalog")
     assert [(x["topic"], x["value"], x["source"]) for x in d.setup_details] == [("input length", "336", "discovery")]
     assert any("Protokoll im Paper nicht belegt" in w for w in d.warnings)
+
+
+@pytest.mark.parametrize("quote", ["ETTh1 96 192 336 720 0.350", "Look-back window 360. ETTh1 0.350",
+                                 "Prediction length 720; MSE 0.350"])
+def test_catalog_input_length_hint_is_not_passed_as_a_verified_setup_fact(quote):
+    p, _ = cat.build_paper(entry(etth1(input_length=720, quote=quote)))
+    assert cat.discovery_details(p, quote) == []
+    assert any("Eingabelaenge im Paper nicht belegt" in w for w in p["warnings"])
+
+
+def test_setup_length_quote_must_still_occur_in_the_fresh_source():
+    quote = "Input length is 360."
+    p, _ = cat.build_paper(entry(etth1(input_length=360, input_length_quote=quote)))
+    assert cat.discovery_details(p, "Input length is 720.") == []
+    assert cat.discovery_details(p) == []
+    assert cat.discovery_details(p, quote)[0].value == "360"
+
+
+@pytest.mark.parametrize("quote,length,source", [
+    ("Input Sequence Length for all experiments is 336", 336, "Input Sequence Length for all experiments is 336"),
+    ("We set the input length L=512 as suggested in Nie et al.", 512, r"We set the input length $L = 512$ as suggested in~\citet{YN23}"),
+    ("input length of 720", 720, "input length of 720"),
+    ("look-back of 720", 720, "look-back of 720"),
+])
+def test_setup_length_can_be_proved_by_protocol_or_formatted_source(quote, length, source):
+    p, _ = cat.build_paper(entry(etth1(input_length=length, protocol_quote=quote)))
+    assert cat.discovery_details(p, source)[0].value == str(length)
+
+
+@pytest.mark.parametrize("paper_id", ["disc_2609_30894", "disc_2603_13702"])
+def test_audited_unsupported_catalog_claims_are_not_startable(paper_id):
+    e = cat.find_entry(cat.load_catalog(), paper_id)
+    with pytest.raises(cat.NotRunnable, match="frozen|backbone"):
+        cat.build_paper(e)
 
 
 def test_run_rejects_unknown_source(tmp_path, monkeypatch):

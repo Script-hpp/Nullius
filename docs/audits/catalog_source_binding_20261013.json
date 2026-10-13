@@ -1,0 +1,269 @@
+{
+  "date": "2026-10-13",
+  "scope": {
+    "catalog": 17,
+    "production_public_live_candidates": 5,
+    "unique_papers": 19,
+    "readable_sources": 19
+  },
+  "provider_calls": 0,
+  "tavily_calls": 0,
+  "nebius_jobs": 0,
+  "summary": {
+    "independent extraction required": 9,
+    "not runnable": 6,
+    "verified": 6,
+    "blocked": 1
+  },
+  "entries": [
+    {
+      "id": "disc_1609_02907",
+      "arxiv_id": "1609.02907",
+      "scope": "benchmark/papers.yaml:kipf_gcn_2017",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.815,
+      "source_sha256": "98e757e824f22c2798eef53f6c92f0f25637a75e9a35c8d44fbf98a315d1a704",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_1609_02907_citeseer",
+      "arxiv_id": "1609.02907",
+      "scope": "manual (Kipf Table 2, Citeseer column; same paper as disc_1609_02907)",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.703,
+      "source_sha256": "98e757e824f22c2798eef53f6c92f0f25637a75e9a35c8d44fbf98a315d1a704",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_1811_05868",
+      "arxiv_id": "1811.05868",
+      "scope": "benchmark/papers.yaml:shchur_pitfalls_2018",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.815,
+      "source_sha256": "47ac4b09ea8c34bffb930daf857e27d1f69515c7752fbe497b414b475aa97056",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2601_18837",
+      "arxiv_id": "2601.18837",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.369,
+      "source_sha256": "a1711469e383067ffa4214a9a7d543818f58cc73f9b3719567427153a1e210c6",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2601_21866",
+      "arxiv_id": "2601.21866",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.35,
+      "source_sha256": "10d795617da890dc90a07e49ef6711b398299b5e593403cfb64fa8ee74080c76",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2609_30894",
+      "arxiv_id": "2609.30894",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": false,
+      "input_length": null,
+      "target": 0.5817,
+      "source_sha256": "06f89b77f4ee3e7959af9cee58e83a16d7377c2b42da5df548f0c26adddabfc2",
+      "reason": "This claim evaluates a frozen model pretrained on the web graph. Training from scratch on Cora cannot check this claim."
+    },
+    {
+      "id": "disc_2511_08094",
+      "arxiv_id": "2511.08094",
+      "scope": "events:replay.jsonl",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.8292,
+      "source_sha256": "807a39ebb5bd1c5bda5e9eeafb283b4d8a96cb2c1a4f33975df68d7b98c37de6",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2412_03864",
+      "arxiv_id": "2412.03864",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": false,
+      "reason": "Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)",
+      "source_sha256": "824314af49290a6434b2f61acb37f6d6e9ada7055b1974a04e3d46d5f90594ab"
+    },
+    {
+      "id": "disc_2603_13702",
+      "arxiv_id": "2603.13702",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": false,
+      "input_length": 96,
+      "target": 0.357,
+      "source_sha256": "ecdc751e185b9cf5131a0fcd7a9412d7b95fce1084dbe69a35b2900467b40dbb",
+      "reason": "This result is for TSMixer + xCPD with input length 512. The stored claim omits the backbone and specifies 96; resolve the complete method and setup before checking it."
+    },
+    {
+      "id": "disc_2303_06053",
+      "arxiv_id": "2303.06053",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 512,
+      "target": 0.361,
+      "source_sha256": "b596ade3ee957f67cc7431cdf85428c2a2792e17cc3668f8937692d4f9a31084",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2202_06491",
+      "arxiv_id": "2202.06491",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": false,
+      "reason": "Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)",
+      "source_sha256": "ee6b430a0d40ba601888464ce0f1a1505c07fde0386377d7feefcd14e10303b1"
+    },
+    {
+      "id": "disc_2305_10721",
+      "arxiv_id": "2305.10721",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 336,
+      "target": 0.366,
+      "source_sha256": "2d5dfd2e7f493dca8c1e1d4d62441eb9183ca6dd4b6d98bb3df6b9fb360b6bcf",
+      "binding": "verified",
+      "table": "tab:2",
+      "quote": "\\midrule\n    \\multirow{4}{*}{\\rotatebox{90}{ETTh1}}\n     & 96 & \\textbf{0.366} & \\textbf{0.391} & 0.390 & 0.410 & 0.381 & 0.405 & 0.398 & 0.418 & \\underline{0.375} & \\underline{0.399}"
+    },
+    {
+      "id": "disc_2410_05697",
+      "arxiv_id": "2410.05697",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": null,
+      "target": 0.7237,
+      "source_sha256": "d59a0be8eed44b379fd826eb7a1ad8f6bc66f3366b9d80c2ad50c8e916149fdd",
+      "binding": "independent extraction required"
+    },
+    {
+      "id": "disc_2405_00946",
+      "arxiv_id": "2405.00946",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 720,
+      "target": 0.359,
+      "source_sha256": "aad67febefb9e6433eaa5e94aa81a3016efb041ca5b8b46d80e7c51e5ee88b0b",
+      "binding": "verified",
+      "table": "main_reslut",
+      "quote": "\\midrule\n\\multirow{2}{*}{SparseTSF (ours)} & \\textbf{0.359} & \\textbf{0.397} & \\textbf{0.404} & \\textbf{0.417} & \\textbf{0.267} & \\textbf{0.314} & \\textbf{0.312} & \\textbf{0.370} & \\textbf{0.138} & \\textbf{0.146} & \\textbf{0.164} & \\textbf{0.203} & \\textbf{0.382} & \\textbf{0.388} & \\textbf{0.402} & \\textbf{0.445}"
+    },
+    {
+      "id": "disc_2307_03756",
+      "arxiv_id": "2307.03756",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 360,
+      "target": 0.372,
+      "source_sha256": "9022b12b628fc1807f0ef11bfd7d1266f25b8575c1418afeb7bb90c251a00d64",
+      "binding": "verified",
+      "table": "tab:FITSett",
+      "quote": "FITS & \\textbf{0.372} & \\textbf{0.404} & \\textbf{0.427} & \\textbf{0.424} & \\textbf{0.271} & \\textbf{0.331} & \\textbf{0.354} & \\textbf{0.377} & 0.303 & 0.337 & {\\underline{0.366}} & \\textbf{0.415} & \\textbf{0.162} & \\textbf{0.216} & \\textbf{0.268} & \\textbf{0.348}"
+    },
+    {
+      "id": "disc_2308_11200",
+      "arxiv_id": "2308.11200",
+      "scope": "cache:discovery_cache.json",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 720,
+      "target": 0.341,
+      "source_sha256": "9429a529dc0408b57502eef118307e6a32561ab830aabb15d3a1756935c7f32f",
+      "binding": "verified",
+      "table": "main_result",
+      "quote": "\\midrule\n\\multicolumn{1}{c|}{\\multirow{4}{*}{\\rotatebox{90}{ETTh1}}} & \\multicolumn{1}{c|}{96}  & \\textbf{0.341}  & \\textbf{0.376}  & 1.128  & 0.81   & 1.126 & 0.831 & \\underline{0.37} & 0.4  & 0.376 & 0.415   & 0.941 & 0.769   & 0.375 & \\underline{0.398} & 0.375   & 0.399   & 0.421 & 0.431 & 0.384   & 0.402"
+    },
+    {
+      "id": "disc_2501_01087",
+      "arxiv_id": "2501.01087",
+      "scope": "manual shortlist 2026-10-10, frozen before run",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 336,
+      "target": 0.382,
+      "source_sha256": "6f0fef74c9934e2feafd9baa6aacf228fe7521745d9e4502e6eaa50939713253",
+      "binding": "independent extraction required",
+      "independent_target": 0.382,
+      "agrees": true
+    },
+    {
+      "id": "disc_2412_03864_6d1266d3c1fc0515",
+      "arxiv_id": "2412.03864",
+      "scope": "production public candidates",
+      "source_readable": true,
+      "runnable": false,
+      "reason": "Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)",
+      "source_sha256": "824314af49290a6434b2f61acb37f6d6e9ada7055b1974a04e3d46d5f90594ab"
+    },
+    {
+      "id": "disc_2505_18697_9fc3524b6dba6dac",
+      "arxiv_id": "2505.18697",
+      "scope": "production public candidates",
+      "source_readable": true,
+      "runnable": false,
+      "reason": "Cora ohne matched_task: Protokoll nicht belegt, zwei Tasks moeglich (Planetoid, Shchur-LCC)",
+      "source_sha256": "6f78b60363d88c62707287d9ba828df085a2f7c254edb8e7789900b8ba895a87"
+    },
+    {
+      "id": "disc_2606_04135_e3e2931687c224d2",
+      "arxiv_id": "2606.04135",
+      "scope": "production public candidates",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 720,
+      "target": 0.366,
+      "source_sha256": "04afd512c2e955c14a720f45993de266bca62d6193e94b121ca896e09377e8cc",
+      "binding": "blocked",
+      "reason": "Selected result table: Laut Kopfzeile muesste an Stelle Methode SARAF, mse, LaTeX-Spalte 3 die Zahl 0.371 stehen, das Modell waehlte 0.366"
+    },
+    {
+      "id": "disc_2505_20716_4c969279f29c2066",
+      "arxiv_id": "2505.20716",
+      "scope": "production public candidates",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 96,
+      "target": 0.378,
+      "source_sha256": "875707de1afc54f654987cd1abb5825c1808d7d137d3e8072f7591d54cc0acd0",
+      "binding": "verified",
+      "table": "Table1",
+      "quote": "\\cmidrule(lr){1-1}  % Under \"Data\"\n\\cmidrule(lr){2-2}  % Under \"H\"\n\\cmidrule(lr){3-4}\n\\cmidrule(lr){5-6}\n\\cmidrule(lr){7-8}\n\\cmidrule(lr){9-10}\n\\cmidrule(lr){11-12}\n\\cmidrule(lr){13-14}\n\\cmidrule(lr){15-16}\n\\cmidrule(lr){17-18}\n\n\\multirow{4}{*}{\\rotatebox{90}{ETTh1}} \n& 96  & \\textbf{\\textcolor{red}{0.378}} & \\textbf{\\textcolor{red}{0.394}} & \\textcolor{blue}{0.379} & \\textcolor{blue}{0.395} & 0.386 & 0.405 & 0.395 & 0.419 & 0.404 & 0.428 & 0.375 & 0.400 & 0.381 & 0.399 & 0.387 & 0.405"
+    },
+    {
+      "id": "disc_2606_04135_f7b4e6db785fdb63",
+      "arxiv_id": "2606.04135",
+      "scope": "production public candidates",
+      "source_readable": true,
+      "runnable": true,
+      "input_length": 720,
+      "target": 0.371,
+      "source_sha256": "04afd512c2e955c14a720f45993de266bca62d6193e94b121ca896e09377e8cc",
+      "binding": "verified",
+      "table": "main_result",
+      "quote": "\\midrule\n\\multicolumn{1}{c|}{\\multirow{5}{*}{\\rotatebox{90}{ETTh1}}} & 96 & \\underline{0.371} & \\underline{0.399} & \\textbf{0.366} & \\textbf{0.396} & 0.382 & 0.407 & 0.408 & 0.429 & 0.396 & 0.418 & 0.539 & 0.513 & 0.418 & 0.444 & 0.858 & 0.667 & 0.553 & 0.536 & 0.533 & 0.522"
+    }
+  ]
+}

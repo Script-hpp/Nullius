@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -309,12 +310,22 @@ def _fetch_arxiv_source(arxiv_id: str) -> str:
     import gzip
     import re
     url = f"https://export.arxiv.org/e-print/{arxiv_id}"
-    try:
-        response = httpx.get(url, headers={'User-Agent': 'Mozilla/5.0'}, follow_redirects=True, timeout=10.0)
-        response.raise_for_status()
-        data = response.content
-    except Exception:
-        return ""
+    for attempt in range(2):
+        try:
+            response = httpx.get(url, headers={'User-Agent': 'Mozilla/5.0'}, follow_redirects=True, timeout=30.0)
+            response.raise_for_status()
+            data = response.content
+            break
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code < 500 and exc.response.status_code != 429:
+                return ""
+            if attempt:
+                return ""
+        except (httpx.TransportError, OSError):
+            if attempt:
+                return ""
+        except Exception:
+            return ""
     
     latex_files = []
     try:
@@ -864,7 +875,9 @@ class DiscoveryAgent:
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
                 extracts_count += 1
                 text = _fetch_arxiv_source(cache_key)
+                source_kind = "latex"
                 if len(text) < MIN_FULLTEXT_CHARS:
+                    source_kind = "arxiv_html"
                     try:
                         for _attempt in range(2):
                             html_data = self._tavily("curate_extract", 2, "extract", html_url, html_url,
@@ -1021,8 +1034,9 @@ class DiscoveryAgent:
 
                 # Spaltenzuordnung: steht die Zahl in der Spalte der Methode? (deterministisch, table_check.py)
                 row = _number_line(quote, target_val) or quote
+                column_metric = f"{metric.upper()} for prediction length {ETTH1_HORIZON}" if ds in ETT_DATASETS else metric
                 col = check_columns(_table_norm(text.replace("|", " ")), _table_norm(row.replace("|", " ")), target_val,
-                                    method, ds, metric, metric == "accuracy")
+                                    method, ds, column_metric, metric == "accuracy")
                 table_method_verified = ds in ETT_DATASETS and col.status == "ok" and col.source_row is not None
                 if not table_method_verified and not _method_supported(method, quote, text, row):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
@@ -1057,6 +1071,14 @@ class DiscoveryAgent:
                         if source_quote:
                             claim_data["quote"] = source_quote
                 claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
+                labels = [re.findall(r"\\label\{([^}]+)\}", match.group()) for match in
+                          re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", full_text, re.S)
+                          if _table_norm(claim_data["quote"]) in _table_norm(match.group())]
+                claim_data["source_evidence"] = {
+                    "source_kind": source_kind, "sha256": hashlib.sha256(full_text.encode()).hexdigest(),
+                    "url": f"https://export.arxiv.org/e-print/{cache_key}" if source_kind == "latex" else html_url,
+                    "table": labels[0][0] if len(labels) == 1 and len(labels[0]) == 1 else None,
+                }
 
                 claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"
                                                    else "Protokoll nicht belegt")

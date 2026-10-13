@@ -1,0 +1,25 @@
+% Source: https://export.arxiv.org/e-print/2405.00946 (CC BY 4.0).
+\begin{table*}[!htb]
+\centering
+\caption{MSE results of multivariate long-term time series forecasting comparing SparseTSF with other mainstream models. The top two results are highlighted in \textbf{bold}. The reported results of SparseTSF are \textit{averaged} over 5 runs with \textit{standard deviation} included. 'Imp.' denotes the improvement compared to the best-performing baseline models.}
+\label{main_reslut}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{@{}c|cccc|cccc|cccc|cccc@{}}
+\toprule
+Dataset & \multicolumn{4}{c|}{ETTh1} & \multicolumn{4}{c|}{ETTh2} & \multicolumn{4}{c|}{Electricity} & \multicolumn{4}{c}{Traffic} \\ \midrule
+Horizon & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 \\ \midrule
+Informer~\citeyearpar{informer} & 0.865 & 1.008 & 1.107 & 1.181 & 3.755 & 5.602 & 4.721 & 3.647 & 0.274 & 0.296 & 0.300 & 0.373 & 0.719 & 0.696 & 0.777 & 0.864 \\
+Autoformer~\citeyearpar{autoformer} & 0.449 & 0.500 & 0.521 & 0.514 & 0.358 & 0.456 & 0.482 & 0.515 & 0.201 & 0.222 & 0.231 & 0.254 & 0.613 & 0.616 & 0.622 & 0.660 \\
+Pyraformer~\citeyearpar{pyraformer} & 0.664 & 0.790 & 0.891 & 0.963 & 0.645 & 0.788 & 0.907 & 0.963 & 0.386 & 0.386 & 0.378 & 0.376 & 2.085 & 0.867 & 0.869 & 0.881 \\
+FEDformer~\citeyearpar{fedformer} & 0.376 & 0.420 & 0.459 & 0.506 & 0.346 & 0.429 & 0.496 & 0.463 & 0.193 & 0.201 & 0.214 & 0.246 & 0.587 & 0.604 & 0.621 & 0.626 \\
+FiLM~\citeyearpar{film} & 0.371 & 0.414 & 0.442 & 0.465 & 0.284 & 0.357 & 0.377 & 0.439 & 0.154 & 0.164 & 0.188 & 0.236 & 0.416 & 0.408 & 0.425 & 0.520 \\
+TimesNet~\citeyearpar{timesnet} & 0.384 & 0.436 & 0.491 & 0.521 & 0.340 & 0.402 & 0.452 & 0.462 & 0.168 & 0.184 & 0.198 & 0.220 & 0.593 & 0.617 & 0.629 & 0.640 \\
+PatchTST~\citeyearpar{patchtst} & \textbf{0.370} & 0.413 & \textbf{0.422} & 0.447 & \textbf{0.274} & 0.341 & \textbf{0.329} & 0.379 & \textbf{0.129} & \textbf{0.147} & \textbf{0.163} & \textbf{0.197} & \textbf{0.360} & \textbf{0.379} & \textbf{0.392} & \textbf{0.432} \\
+DLinear~\citeyearpar{dlinear} & 0.374 & \textbf{0.405} & 0.429 & 0.440 & 0.338 & 0.381 & 0.400 & 0.436 & 0.140 & 0.153 & 0.169 & \textbf{0.203} & 0.410 & 0.423 & 0.435 & 0.464 \\
+FITS~\citeyearpar{fits} & 0.375 & 0.408 & 0.429 & \textbf{0.427} & \textbf{0.274} & \textbf{0.333} & 0.340 & \textbf{0.374} & \textbf{0.138} & 0.152 & 0.166 & 0.205 & 0.401 & 0.407 & 0.420 & 0.456 \\ \midrule
+\multirow{2}{*}{SparseTSF (ours)} & \textbf{0.359} & \textbf{0.397} & \textbf{0.404} & \textbf{0.417} & \textbf{0.267} & \textbf{0.314} & \textbf{0.312} & \textbf{0.370} & \textbf{0.138} & \textbf{0.146} & \textbf{0.164} & \textbf{0.203} & \textbf{0.382} & \textbf{0.388} & \textbf{0.402} & \textbf{0.445} \\
+ & $\pm$0.006 & $\pm$0.002 & $\pm$0.001 & $\pm$0.001 & $\pm$0.005 & $\pm$0.003 & $\pm$0.004 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.001 & $\pm$0.002 \\ \midrule
+Imp. & +0.011 & +0.008 & +0.018 & +0.010 & +0.007 & +0.019 & +0.017 & +0.004 & -0.009 & +0.001 & -0.001 & -0.006 & -0.022 & -0.009 & -0.010 & -0.013 \\ \bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table*}

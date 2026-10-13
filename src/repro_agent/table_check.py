@@ -21,6 +21,19 @@ class ColumnCheck:
     source_row: str | None = None
 
 
+def latex_tabulars(text: str) -> list[str]:
+    """Outermost tabular bodies; nested header mini-tables do not truncate results."""
+    bodies, stack = [], []
+    for token in re.finditer(r"\\begin\{tabular\}(?:\[[^\]]*\])?|\\end\{tabular\}", text):
+        if token.group().startswith(r"\begin"):
+            stack.append(token.end())
+        elif stack:
+            start = stack.pop()
+            if not stack:
+                bodies.append(text[start:token.start()])
+    return bodies
+
+
 def latex_rows(text: str) -> list[str]:
     """Split only top-level row breaks; shortstack and other braced cells may contain \\\\."""
     rows, start, depth, i = [], 0, 0, 0
@@ -58,10 +71,23 @@ def _compare(expected: float, value: float, percent: bool, where: str) -> Column
                                    f"das Modell waehlte {got}")
 
 
+def _result_number(cell: str) -> float | None:
+    """One scalar, optionally followed by explicitly marked standard deviation."""
+    numbers = re.findall(NUMBER, cell)
+    if len(numbers) == 1:
+        return float(numbers[0])
+    plain = re.sub(r"[${}\s]", "", cell)
+    mean_std = re.fullmatch(r"(\d+\.\d+)(?:\\pm|±|\+/-)(\d+\.\d+)", plain)
+    return float(mean_std[1]) if mean_std else None
+
+
 def _latex_cells(row: str) -> list[str]:
     """Expand multicolumn spans so the method and metric headers share column indices."""
     cells = []
     for cell in row.split("&"):
+        # A method name may be laid out on two lines inside a header cell.
+        cell = re.sub(r"\\begin\{tabular\}(?:\[[^\]]*\])?\{(?:[^{}]|\{[^{}]*\})*\}(.*?)\\end\{tabular\}",
+                      lambda m: m[1].replace("\\\\", " "), cell, flags=re.S)
         while re.search(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", cell):
             cell = re.sub(r"\\(?:textbf|textit|textsc|underline|mathrm)\{([^{}]*)\}", r"\1", cell)
         span = re.search(r"\\multicolumn\{(\d+)\}\{[^{}]*\}\{", cell)
@@ -84,10 +110,10 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
     quoted_rows = latex_rows(quote)
     if not quoted_rows:
         return None
-    for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S):
-        if quote not in table[1]:
+    for table in latex_tabulars(text):
+        if quote not in table:
             continue
-        rows = latex_rows(table[1])
+        rows = latex_rows(table)
         anchor = quoted_rows[-1].strip()
         headers = metrics = None
         matches = []
@@ -132,14 +158,86 @@ def _check_latex_methods(text: str, quote: str, value: float, method: str, datas
         horizon = re.search(r"prediction length\s+(\d+)", metric.lower())
         if horizon and cells[1].strip() != horizon[1]:
             return ColumnCheck("mismatch", "Zitierte LaTeX-Zeile hat einen anderen Vorhersagehorizont")
-        numbers = re.findall(NUMBER, cells[pos])
-        if len(numbers) != 1:
+        number = _result_number(cells[pos])
+        if number is None:
             return ColumnCheck("nicht pruefbar", "Ergebniszelle enthaelt keine eindeutige Zahl")
-        result = _compare(float(numbers[0]), value, percent, f"Methode {method}, {kind}, LaTeX-Spalte {pos + 1}")
+        result = _compare(number, value, percent, f"Methode {method}, {kind}, LaTeX-Spalte {pos + 1}")
         # Only the dataset-bound, fully aligned row supplies horizon evidence.
         result.horizon = int(cells[1]) if re.fullmatch(r"\d+", cells[1]) else None
         result.source_row = source_rows[0]
         return result
+    return None
+
+
+def latex_table_caption(text: str) -> str | None:
+    """Read one caption with balanced braces, including nested formatting/newlines."""
+    starts = list(re.finditer(r"\\caption(?:\[[^\]]*\])?\{", text))
+    if len(starts) != 1:
+        return None
+    start, depth = starts[0].end(), 1
+    for i in range(start, len(text)):
+        if text[i] in "{}" and (i == 0 or text[i - 1] != "\\"):
+            depth += 1 if text[i] == "{" else -1
+            if depth == 0:
+                return text[start:i]
+    return None
+
+
+def _check_latex_datasets_horizons(text: str, quote: str, value: float, method: str,
+                                  dataset: str, metric: str, percent: bool) -> ColumnCheck | None:
+    """Methods in rows; repeated dataset/horizon headers in columns (e.g. FITS)."""
+    horizon = re.search(r"prediction length\s+(\d+)", metric.lower())
+    kind = re.search(r"\b(mse|mae)\b", metric.lower())
+    if percent or not horizon or not kind:
+        return None
+    wanted = _clean_name(method.split(" (")[0])
+    for table in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", text, re.S):
+        for tab in latex_tabulars(table.group()):
+            if quote not in tab:
+                continue
+            rows = [(row.strip(), _latex_cells(row)) for row in latex_rows(tab)]
+            datasets = [cells for _, cells in rows if re.search(r"\bdatasets?\b", cells[0])]
+            horizons = [cells for _, cells in rows if _clean_name(cells[0]) in ("horizon", "horizons")]
+            if not datasets or not horizons:
+                continue
+            if len(datasets) != 1 or len(horizons) != 1:
+                return ColumnCheck("nicht pruefbar", "Datensatz-/Horizontkopfzeile nicht eindeutig")
+            # Metric must belong to this table, not to a nearby results table.
+            caption = latex_table_caption(table.group())
+            metrics = set(re.findall(r"\b(mse|mae)\b", caption or ""))
+            metric_rows = [cells for _, cells in rows if _clean_name(cells[0]) in ("metric", "metrics")]
+            metric_cells = metric_rows[0] if len(metric_rows) == 1 else None
+            if metrics != {kind[1]} and not metric_cells:
+                return ColumnCheck("nicht pruefbar", "Tabellenmetrik nicht eindeutig belegt")
+            if metrics and kind[1] not in metrics:
+                return ColumnCheck("nicht pruefbar", "Caption und angeforderte Metrik widersprechen sich")
+            def method_name(cell):
+                span = re.fullmatch(r"\\multirow\{[-+]?\d+\}\{[^{}]*\}\{([^{}]*)\}", cell.strip())
+                name = span[1] if span else cell
+                return _clean_name(name.split(" (")[0])
+            selected = [(row, cells) for row, cells in rows
+                        if method_name(cells[0]) == wanted and quote in row]
+            if len(selected) != 1:
+                return ColumnCheck("nicht pruefbar", "Zitat gehoert nicht eindeutig zur gewaehlten Methode")
+            row, cells = selected[0]
+            ds, hs = datasets[0], horizons[0]
+            if len(ds) != len(hs) or len(cells) != len(ds):
+                return ColumnCheck("nicht pruefbar", "Ergebniszeile passt nicht zu Datensatz-/Horizontkopfzeilen")
+            if metric_cells is not None and len(metric_cells) != len(ds):
+                return ColumnCheck("nicht pruefbar", "Metrikkopfzeile passt nicht zu Datensatz-/Horizontkopfzeilen")
+            positions = [i for i in range(1, len(ds))
+                         if _clean_name(ds[i]) == _clean_name(dataset) and hs[i].strip() == horizon[1]
+                         and (metric_cells is None or _clean_name(metric_cells[i]) == kind[1])]
+            if len(positions) != 1:
+                return ColumnCheck("nicht pruefbar", "Datensatz und Horizont nicht eindeutig zugeordnet")
+            pos = positions[0]
+            number = _result_number(cells[pos])
+            if number is None:
+                return ColumnCheck("nicht pruefbar", "Ergebniszelle enthaelt keine eindeutige Zahl")
+            result = _compare(number, value, False,
+                              f"{method}, {dataset}, Horizont {horizon[1]}, {kind[1]}, LaTeX-Spalte {pos + 1}")
+            result.horizon, result.source_row = int(horizon[1]), row
+            return result
     return None
 
 
@@ -259,6 +357,7 @@ def check_columns(
     """Prueft, ob `value` in der Zeile `norm_quote` an der Stelle steht, die die Kopfzeile fuer
     (method, dataset|metric) vorgibt."""
     for res in (
+        _check_latex_datasets_horizons(norm_text, norm_quote, value, method, dataset, metric, percent),
         _check_latex_methods(norm_text, norm_quote, value, method, dataset, metric, percent),
         _check_methods_as_columns(norm_text, norm_quote, value, method, metric, percent),
         _check_datasets_as_columns(norm_text, norm_quote, value, dataset, percent),

@@ -34,7 +34,7 @@ import yaml
 
 from .catalog import discovery_details, load_catalog_claims
 from . import community, objection_experiments
-from .claims_source import ExtractionInvalid, TargetVerificationBlocked, PaperText, extract_target_cached, fetch_paper_text
+from .claims_source import ExtractionInvalid, TargetVerificationBlocked, PaperText, extract_target_cached, fetch_paper_text, verify_selected_target, _source_table_target
 from .config import load_settings
 from .costs import BudgetExceeded
 from .dossier import REPO_ROOT, Attempt, Claim, Dossier, Verdict
@@ -1110,13 +1110,17 @@ class Orchestrator:
                 continue
             keep = claim_spec.get("keep_target", False)   # Katalog: Discovery-Wert bleibt, Rolle 2 ist Gegenprobe
             strict = claim_spec.get("require_verified_target", False)
+            selected_latex = bool(keep and strict and claim.metric in ("mse", "mae") and
+                                  (paper.get("discovery_source", {}).get("source_kind") == "latex" or
+                                   re.search(r"\\[A-Za-z]+|\s&\s", paper.get("discovery_quote", ""))))
             def blocked(reason):
                 self._emit("target_blocked", claim_id=claim.id, reason=reason)
                 raise TargetVerificationBlocked(reason)
             if self.paper_text is None:   # ein Abruf je Lauf, nicht je Claim
                 calls_before = self._tavily_calls
                 try:
-                    self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode)
+                    self.paper_text = fetch_paper_text(arxiv_id, get_tavily, mode=self.tavily_mode,
+                                                       require_latex=selected_latex)
                 except ExtractionInvalid as exc:
                     if strict:
                         blocked(f"Claim verification stopped: paper source unavailable ({exc}). No experiment was started.")
@@ -1128,10 +1132,23 @@ class Orchestrator:
                     (self._run_dir / "paper_text.json").write_text(json.dumps(dataclasses.asdict(self.paper_text), ensure_ascii=False))
             text = self.paper_text
             try:
-                ev = extract_target_cached(
-                    self.llm, text, spec["method"], spec["dataset"], spec["metric"],
-                    percent=spec.get("percent", True), mode=self.tavily_mode,
-                )
+                ev = verify_selected_target(
+                    text, spec["method"], spec["dataset"], spec["metric"], claim.target,
+                    paper.get("discovery_quote", ""), spec.get("percent", True),
+                ) if keep and strict else None
+                if ev is None and selected_latex:
+                    # Legacy synthesized quotes can still use a unique, independently
+                    # parsed source result. Never hand a missing LaTeX anchor to a model.
+                    ev = _source_table_target(text, spec["method"], spec["dataset"], spec["metric"],
+                                              spec.get("percent", True))
+                    if ev is None:
+                        raise ExtractionInvalid("Selected LaTeX source quote is missing or unverifiable; "
+                                                "the source may have changed since discovery")
+                if ev is None:
+                    ev = extract_target_cached(
+                        self.llm, text, spec["method"], spec["dataset"], spec["metric"],
+                        percent=spec.get("percent", True), mode=self.tavily_mode,
+                    )
             except ExtractionInvalid as exc:
                 if strict:
                     blocked(f"Claim verification stopped: the target could not be verified ({exc}). No experiment was started.")
@@ -2078,7 +2095,7 @@ class Orchestrator:
             self.resolve_targets(paper, claims)
         paper_head = self._paper_summary_round(paper, claims)   # nach Rolle 2; nur Bericht
         repo_info = None
-        extra_details = discovery_details(paper)   # Katalog: Eingabelaenge, Quelle Discovery-Zitat
+        extra_details = discovery_details(paper, self.paper_text.text if self.paper_text is not None else None)
         if self.use_setup_details and self.paper_text is not None:
             self._paper_title = paper.get("title")
             docs, repo_info = self._gather_docs(claims[0].text, paper["dataset"])

@@ -290,6 +290,7 @@ candidates:
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: Cora
+    reproduction_blocked: 'This claim evaluates a frozen model pretrained on the web graph. Training from scratch on Cora cannot check this claim.'
     claim:
       method: Acacia, frozen
       quote: '| Acacia, frozen | 58.17± 1.35 | 39.50± 1.22 | 19.87± 0.74 | 66.00± 0.72 |'
@@ -406,6 +407,7 @@ candidates:
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: ETTh1
+    reproduction_blocked: 'This result is for TSMixer + xCPD with input length 512. The stored claim omits the backbone and specifies 96; resolve the complete method and setup before checking it.'
     claim:
       method: xCPD
       quote: '| Model | | TSMixer | | + xCPD | | DLinear | | + xCPD | | PatchTST | | + xCPD | | TimesNet | | + xCPD | |
@@ -644,6 +646,7 @@ candidates:
       target: 0.359
       horizon: 96
       input_length: 720
+      input_length_quote: input length of 720
       protocol: passt
       matched_task: ETTh1
       protocol_quote: The dataset splitting follows the procedures of FITS and Autoformer, where the ETT datasets are divided
@@ -687,7 +690,8 @@ candidates:
       metric: mse
       target: 0.372
       horizon: 96
-      input_length: 720
+      input_length: 360
+      input_length_quote: look-back window of 360
       protocol: passt
       matched_task: ETTh1
       protocol_quote: We follow the same experimental setup as previous works, splitting the ETT datasets into 6:2:2.
@@ -714,6 +718,7 @@ candidates:
       target: 0.341
       horizon: 96
       input_length: 720
+      input_length_quote: look-back of 720
       protocol: passt
       matched_task: ETTh1
       protocol_quote: Following previous research \cite{Autoformer, dlinear, patchtst}, the ETT datasets are split into proportions

@@ -21,7 +21,7 @@ from pathlib import Path
 import httpx
 
 from .llm import LLMClient
-from .table_check import check_columns
+from .table_check import check_columns, latex_tabulars
 from .tavily_tools import TavilyTools
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "benchmark" / "fixtures"
@@ -94,7 +94,8 @@ def latest_arxiv_version(arxiv_id: str) -> str | None:
 
 
 def fetch_paper_text(
-    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path | None = None, mode: str = "fixture"
+    arxiv_id: str, get_tavily: Callable[[], TavilyTools], fixture_dir: Path | None = None, mode: str = "fixture",
+    require_latex: bool = False,
 ) -> PaperText:
     """mode="fixture": Fixture zuerst, `get_tavily` nur bei Fixture-Miss (spart Credits); bei Miss wird die Fixture angelegt.
     mode="live": immer Tavily-Aufruf (Standard des Orchestrators); schreibt nie nach `fixture_dir`
@@ -102,17 +103,20 @@ def fetch_paper_text(
     fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / f"{arxiv_id}.json"
     if mode == "fixture" and fixture.exists():
-        return PaperText(**json.loads(fixture.read_text()))
-    tavily = get_tavily()
+        paper = PaperText(**json.loads(fixture.read_text()))
+        if require_latex and paper.source_kind != "latex":
+            raise ExtractionInvalid("Selected LaTeX claim requires its original source format; cached source has another format")
+        return paper
 
     version = latest_arxiv_version(arxiv_id)
     
     # Neu: Zuerst versuchen wir, den echten LaTeX-Quellcode von arXiv zu holen.
     from .discovery import _fetch_arxiv_source
-    latex_text = _fetch_arxiv_source(arxiv_id)
+    source_id = arxiv_id + (version or "")
+    latex_text = _fetch_arxiv_source(source_id)
     if latex_text and len(latex_text) > 2000:
         paper = PaperText(
-            arxiv_id=arxiv_id, url=f"https://export.arxiv.org/e-print/{arxiv_id}", source_kind="latex",
+            arxiv_id=arxiv_id, url=f"https://export.arxiv.org/e-print/{source_id}", source_kind="latex",
             retrieved_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
             sha256=hashlib.sha256(latex_text.encode()).hexdigest(),
             arxiv_version=version, text=latex_text,
@@ -122,7 +126,11 @@ def fetch_paper_text(
             fixture.write_text(json.dumps(asdict(paper), ensure_ascii=False, indent=1))
         return paper
 
+    if require_latex:
+        raise ExtractionInvalid("Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started")
+
     # Fallback: Tavily (liest oft unsauber, mischt Tabellenspalten)
+    tavily = get_tavily()
     for kind, url in _source_urls(arxiv_id, version):
         result = tavily.read_claims(url)
         for item in result.get("results", []):
@@ -258,6 +266,43 @@ def _column_status(
     if res.status == "ok":
         return None, "ok"
     return _column_caveat(method, quote), "nicht pruefbar"
+
+
+def verify_selected_target(paper: PaperText, method: str, dataset: str, metric: str,
+                           value: float, quote: str, percent: bool) -> TargetEvidence | None:
+    """Bind an existing claim to its verbatim source table, never search by desired value.
+
+    Missing/legacy synthesized quotes retain the independent extraction path. A real
+    table anchor must prove every identity field; ambiguity or mismatch fails closed.
+    """
+    if (paper.source_kind != "latex" or not quote or percent or
+            not re.fullmatch(r"(?:mse|mae) for prediction length \d+", metric.strip(), re.I)):
+        return None
+    normalized = _norm(quote)
+    if _norm(paper.text).count(normalized) > 1:
+        raise ExtractionInvalid("Selected quote identifies multiple source locations; a longer source quote is required")
+    tables = [m.group() for m in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", paper.text, re.S)
+              if any(normalized in _norm(tab) for tab in latex_tabulars(m.group()))]
+    if not tables:
+        return None
+    if len(tables) != 1:
+        raise ExtractionInvalid("Selected quote identifies multiple results tables; a longer source quote is required")
+    body = tables[0]
+    result = check_columns(_norm(body), normalized, value, method, dataset, metric, percent)
+    horizon = int(re.search(r"prediction length (\d+)", metric, re.I)[1])
+    if result.status != "ok" or result.horizon != horizon or not result.source_row:
+        raise ExtractionInvalid(f"Selected result table: {result.detail}")
+    # Recover the entire original row/group, including dataset context for multirows.
+    from .forecast_claim import original_source_quote
+    source_quote = original_source_quote(body, result.source_row) if result.source_row else quote
+    if not source_quote:
+        raise ExtractionInvalid("Selected result table: verbatim source row unavailable")
+    verified = verify_extraction({"value": value * 100 if percent else value,
+                                  "quote": source_quote}, paper.text, percent)
+    labels = re.findall(r"\\label\{([^}]+)\}", body)
+    return TargetEvidence(verified, source_quote, labels[0] if len(labels) == 1 else "Selected source results table",
+                          paper.url, paper.source_kind, paper.retrieved_at, paper.sha256,
+                          paper.arxiv_version, column_check="ok")
 
 
 def _source_table_target(paper: PaperText, method: str, dataset: str, metric: str, percent: bool) -> TargetEvidence | None:

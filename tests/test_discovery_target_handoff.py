@@ -71,7 +71,7 @@ def test_wrong_old_claim_and_changed_fresh_source_still_stop_before_experiment(m
     paper, claims = catalog.build_paper(catalog.entry_from_candidate(agent._candidate_event(candidate, False), "test"))
     fresh = source(candidate.arxiv_id, SOURCES[candidate.arxiv_id].replace("0.371", "0.372") if changed else None)
     o, events, _ = target_gate(monkeypatch, tmp_path, fresh)
-    with pytest.raises(TargetVerificationBlocked, match="discovery selected"):
+    with pytest.raises(TargetVerificationBlocked, match="discovery selected|Selected result table"):
         o.resolve_targets(paper, claims)
     assert claims[0].target == configured
     assert any(e["type"] == "target_blocked" for e in events)
