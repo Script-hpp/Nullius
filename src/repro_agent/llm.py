@@ -88,6 +88,7 @@ class LLMClient:
         self._cost_lock = threading.Lock()
         self._blocked: str | None = None     # gesetzt = alle weiteren Aufrufe scheitern sofort
         self._warned_budget = False
+        self.on_call = None
         self._budget = spend_guard.current_budget.get()
         self._owns_budget = self._budget is None
         if self._budget is None and self.settings.budget_total_usd > 0 and self.settings.llm.provider == "tokenfactory":
@@ -144,6 +145,7 @@ class LLMClient:
             cached = self._cache[cache_key]
             response = LLMResponse(**{**cached, "cached": True})
             self._log_cost(response)
+            self._notify_call(role, response)
             return response
 
         self._check_budget()
@@ -152,7 +154,13 @@ class LLMClient:
         if self.settings.llm_cache and response.finish_reason != "length":   # abgeschnittene Antworten nie cachen
             self._append_cache(cache_key, response)
 
+        self._notify_call(role, response)
         return response
+
+    def _notify_call(self, role: Role, response: LLMResponse) -> None:
+        callback = getattr(self, "on_call", None)
+        if callback is not None:
+            callback(role, response)
 
     def _book(self, response: LLMResponse) -> None:
         with self._cost_lock:

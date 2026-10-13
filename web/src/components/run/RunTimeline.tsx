@@ -276,7 +276,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
           <span>Runtime <span className="font-mono text-fg-3">{elapsed == null ? '–' : fmtClock(elapsed)}</span></span>
           {m.costNet != null && <span>Model cost (net) <span className="font-mono text-fg-3">${m.costNet.toFixed(3)}</span></span>}
           <span className="inline-flex items-center gap-2"><TavilyMark kind={m.tavilyKind ?? undefined} /><span className="font-mono text-fg-3">{m.tavilyCalls} {m.tavilyCalls === 1 ? 'call' : 'calls'}</span></span>
-          {m.llmCalls > 0 && <span>Nemotron calls <span className="font-mono text-fg-3">{m.llmCalls}</span>{m.llmCached > 0 ? <span className="text-tone-amber"> ({m.llmCached} cached)</span> : <span> live</span>}</span>}
+          {m.llmCalls > 0 && <span>Nemotron responses <span className="font-mono text-fg-3">{m.llmCalls}</span>{m.llmCached > 0 ? <span className="text-tone-amber"> ({m.llmCached} cached)</span> : <span> live</span>}</span>}
           {m.seedsTotal != null && <span>Seeds <span className="font-mono text-fg-3">{m.stats?.n ?? 0} of {m.seedsTotal}</span><Hint text={TERM_HINT.seed} /></span>}
         </div>
       )}
@@ -304,9 +304,11 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
         {!embedded && (
           <div className="space-y-4 lg:sticky lg:top-4">
             <Section title="Measurements" hint={m.seedsTotal ? `${m.stats?.n ?? 0} of ${m.seedsTotal} seeds` : undefined}>
-              {m.candidateSelectionPending && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">Code candidates are being tested in parallel. Their scores are shown in the attempt history. The seed chart starts after candidate selection.</p>}
+              {m.candidateSelectionPending && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">Code candidates are being checked on seed 0. Their scores are shown in the attempt history. The seed chart starts after candidate selection.</p>}
               {m.selectedCandidate != null && <p className="mb-3 text-[13px] text-fg-3">Selected candidate {m.selectedCandidate + 1}{!verdict ? ' · provisional measurements, no verdict yet' : ''}</p>}
-              {m.measurementSelectionUnavailable && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">The final seed selection cannot be reconstructed from this older event log. Open the full evidence for the recorded measurements.</p>}
+              {m.measurementSelectionUnavailable && <p className="mb-3 text-[13px] leading-relaxed text-fg-3">{m.candidateSelectionStopped
+                ? 'This check stopped before a candidate was selected. Scores in the attempt history are not final measurements.'
+                : 'The final seed selection cannot be reconstructed from this older event log. Open the full evidence for the recorded measurements.'}</p>}
               {m.firstMeasurement && m.target != null ? (
                 <>
                   <AttemptChart dossier={dossier} claimId="c" />

@@ -98,7 +98,7 @@ def read_event_candidates(path: Path) -> list[tuple[dict, str]]:
 
 
 def entry_from_candidate(c: dict, source: str) -> dict:
-    keep = ("dataset", "claim", "github_url", "repo_status", "feasibility", "source_url", "protocol", "found_by", "reason", "community")
+    keep = ("dataset", "claim", "github_url", "repo_status", "feasibility", "source_url", "protocol", "found_by", "reason", "community", "reproduction_blocked")
     return {
         "id": catalog_id(c["arxiv_id"]), "arxiv_id": c["arxiv_id"], "title": c["title"],
         "status": UNCHECKED, "imported_from": source,
@@ -146,9 +146,28 @@ def _fmt(x: float) -> str:
     return f"{x:g}"
 
 
+def _input_length_quote(claim: dict) -> str:
+    """An input-length field alone, or 720 in a horizon header, is not setup evidence."""
+    length = claim.get("input_length")
+    if isinstance(length, bool) or not isinstance(length, int) or not 1 <= length <= 720:
+        return ""
+    from .claims_source import clean_latex_quote
+    expression = (r"\b(?:input(?: sequence)? length|look[- ]?back(?: window)?(?: length)?|seq_len)"
+                  rf"\s*(?:for all experiments\s*)?(?:of|is|=|:)?\s*(?:L\s*=\s*)?{length}\b")
+    for field in ("input_length_quote", "quote", "protocol_quote"):
+        quote = str(claim.get(field) or "")
+        # Keep the exact length declaration, not a synthesized table row or unrelated numbers.
+        match = re.search(expression, clean_latex_quote(quote), re.I)
+        if match:
+            return match.group()
+    return ""
+
+
 def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
     """Loop-Eingabe aus einem Katalogeintrag. Wirft NotRunnable mit Grund, wenn kein Lauf moeglich ist."""
     cand = entry["candidate"]
+    if cand.get("reproduction_blocked"):
+        raise NotRunnable(str(cand["reproduction_blocked"]))
     claim = cand["claim"]
     task = _task_of(cand)
     metric = claim.get("metric")
@@ -178,7 +197,8 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
         warnings.append(f"Info: Das Paper nennt Streuung +-{std.group(1)} (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); "
                         f"die Toleranz +-{TOLERANCE} bleibt fest.")
     input_length = claim.get("input_length") if task in ETT_TASKS else None
-    if task in ETT_TASKS and not input_length:
+    input_length_quote = _input_length_quote(claim) if task in ETT_TASKS else ""
+    if task in ETT_TASKS and not input_length_quote:
         warnings.append("Eingabelaenge im Paper nicht belegt, der Agent waehlt sie frei (bis 720).")
 
     claim_id = f"{entry['id']}_{metric}"
@@ -188,6 +208,8 @@ def build_paper(entry: dict) -> tuple[dict, list[Claim]]:
         "id": entry["id"], "title": entry["title"], "arxiv_url": f"https://arxiv.org/abs/{entry['arxiv_id']}",
         "dataset": task, "seeds": entry.get("seeds") or TASK_SEEDS[task], "source": "catalog",
         "warnings": warnings, "input_length": input_length, "discovery_quote": quote,
+        "input_length_quote": input_length_quote,
+        "discovery_source": claim.get("source_evidence") or {},
         "community": list(cand.get("community") or []),   # Discovery-Treffer (url, title, snippet): der Community-Check liest sie statt neu zu suchen
         "claims": [{"id": claim_id, "keep_target": True, "require_verified_target": True,
                     "extract": {"method": method, "dataset": entry["candidate"]["dataset"], "metric": extract_metric,
@@ -203,13 +225,16 @@ def load_catalog_claims(paper_id: str, path: Path = CATALOG_YAML) -> tuple[dict,
     return build_paper(find_entry(load_catalog(path), paper_id))
 
 
-def discovery_details(paper: dict):
+def discovery_details(paper: dict, source_text: str | None = None):
     """Setup-Detail Eingabelaenge, Quelle = Discovery-Zitat. Leer fuer Benchmark-Papers."""
     from .setup_details import SetupDetail
 
-    if not paper.get("input_length"):
+    from .claims_source import _norm, clean_latex_quote
+    quote = paper.get("input_length_quote", "")
+    normalize = lambda text: re.sub(r"\s*([=:])\s*", r"\1", _norm(clean_latex_quote(text)))
+    if not paper.get("input_length") or not quote or not source_text or normalize(quote) not in normalize(source_text):
         return []
-    return [SetupDetail(topic="input length", value=str(paper["input_length"]), quote=paper.get("discovery_quote", ""),
+    return [SetupDetail(topic="input length", value=str(paper["input_length"]), quote=quote,
                         source="discovery")]
 
 

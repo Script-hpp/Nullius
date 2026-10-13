@@ -39,7 +39,7 @@ def _orch(results):
 def test_ablation_check_uses_ablate_flag_and_classifies():
     o, calls = _orch([{"status": "ok", "measured": 0.52}])
     ab = o.ablation_check("snap", "code", 0, cora_task(), "accuracy", 0.80)
-    assert calls == [{"ablate": True}] and ab["verdict"] == "Graph genutzt" and ab["accuracy_ablated"] == 0.52
+    assert calls == [{"ablate": True, "eval_snapshot": "snap"}] and ab["verdict"] == "Graph genutzt" and ab["accuracy_ablated"] == 0.52
     o, _ = _orch([{"status": "ok", "measured": 0.79}])
     assert o.ablation_check("s", "c", 0, cora_task(), "accuracy", 0.80)["verdict"] == "Graph nicht genutzt"
 

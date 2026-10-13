@@ -10,6 +10,13 @@ from repro_agent.repo_source import fetch_readme
 TEXT = "x" * 3000
 
 
+@pytest.fixture(autouse=True)
+def no_arxiv_network(monkeypatch, tmp_path):
+    monkeypatch.setattr("repro_agent.discovery._fetch_arxiv_source", lambda *a: "")
+    monkeypatch.setattr("repro_agent.claims_source.SOURCE_CACHE_DIR", tmp_path / "paper_sources")
+    monkeypatch.setattr("repro_agent.claims_source.SOURCE_RESERVE_DIR", tmp_path / "source_reserves")
+
+
 class FakeTavily:
     def __init__(self):
         self.calls = 0

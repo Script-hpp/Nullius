@@ -123,7 +123,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     const list = seedAttempts.get(s) ?? []
     const valid = validBySeed.get(s)
     const lastTry = list[list.length - 1]
-    const failed = !valid && !!lastTry && num(lastTry.measured) == null && !running
+    const failed = !valid && !running && (model.candidateSelectionStopped || !!lastTry && num(lastTry.measured) == null)
     const isNext = s === 0 ? !seed0Done : seed0Done
     const facts: Fact[] = []
     if (valid) facts.push({ label: 'Harness score', value: fmtValue(metric, valid.measured) })
@@ -131,7 +131,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     if (list.length) facts.push({ label: 'Attempts', value: String(list.length) })
     if (!valid && lastTry?.error) facts.push({ label: 'Last error', value: clip(lastLine(lastTry.error), 200) })
     singles.push({
-      id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : s === 0 && model.candidateSelectionPending ? 'testing code candidates…' : failed ? 'no valid run' : list.length ? 'retrying…' : null,
+      id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : s === 0 && model.candidateSelectionPending ? 'testing code candidates…' : model.candidateSelectionStopped ? 'check stopped before selection' : failed ? 'no valid run' : list.length ? 'retrying…' : null,
       state: st(!!valid, isNext && has('code_written') && !verdictSeen, failed), tone: valid ? 'gray' : failed ? 'red' : 'gray',
       what: s === 0
         ? 'The code trains in its own sandbox branch and writes predictions. The harness loads the target file separately. This first run catches crashes early.'

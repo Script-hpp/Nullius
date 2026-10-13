@@ -13,7 +13,7 @@ def test_secondary_metrics_and_chosen_flags_ignore_old_measurements_even_when_co
     calls=[]
     def attempt(snapshot,code,seed,task,metric,**kw):
         first=not calls;calls.append(seed)
-        mse,mae=(0.7,5.0) if first else (0.4+0.01*seed,0.5)
+        mse,mae=(1.2,5.0) if first else (0.4+0.01*seed,0.5)
         return 'b'+str(len(calls)),{'status':'ok','measured':mse,'metrics':{'mse':mse,'mae':mae},
                                    'baselines':{'zero':{'mse':1.0,'mae':1.0}}}
     o._attempt=attempt

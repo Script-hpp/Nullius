@@ -1,0 +1,44 @@
+% Source: https://export.arxiv.org/e-print/2307.03756 (arXiv v3, CC BY 4.0).
+% Two verbatim result-table excerpts; full-line LaTeX comments omitted as in the paper reader.
+\begin{table*}[ht]
+\centering
+\caption{Long-term forecasting results on ETT datasets in MSE. The best result is highlighted in \textbf{bold}. }
+\scalebox{0.65}{
+\begin{tabular}{c|cccc|cccc|cccc|cccc}
+\toprule
+Dataset  & \multicolumn{4}{c|}{ETTh1} & \multicolumn{4}{c|}{ETTh2}  & \multicolumn{4}{c|}{ETTm1} & \multicolumn{4}{c}{ETTm2} \\ \hline
+Horizon & \multicolumn{1}{c}{96} & \multicolumn{1}{c}{192} & \multicolumn{1}{c}{336} & \multicolumn{1}{c|}{720} & \multicolumn{1}{c}{96} & \multicolumn{1}{c}{192} & \multicolumn{1}{c}{336} & \multicolumn{1}{c|}{720} & \multicolumn{1}{c}{96} & \multicolumn{1}{c}{192} & \multicolumn{1}{c}{336} & \multicolumn{1}{c}{720} & \multicolumn{1}{c}{96} & \multicolumn{1}{c}{192} & \multicolumn{1}{c}{336} & \multicolumn{1}{c}{720} \\ \midrule
+Autoformer & 0.449 & 0.500 & 0.521 & 0.514 & 0.358 & 0.456  & 0.482 & 0.515 & 0.505 & 0.553 & 0.621 & 0.671 & 0.255 & 0.281 & 0.339 & 0.433\\
+Informer & 0.865 & 1.008 & 1.107 & 1.181 & 3.755 & 5.602 & 4.721 & 3.647 & 0.672 & 0.795 & 1.212 & 1.166 & 0.365 & 0.533 & 1.363 & 3.379 \\
+FEDFormer & 0.376 & 0.420 & 0.459 & 0.506 & 0.346 & 0.429 & 0.496 & 0.463 & 0.379 & 0.426 & 0.445 & 0.543 & 0.203 & 0.269 & 0.325 & 0.421 \\
+Pyraformer & 0.664 & 0.790 & 0.891 & 0.963 & 0.645 & 0.788 & 0.907 & 0.963 & 0.543 & 0.557 & 0.754 & 0.908 & 0.435 & 0.730 & 1.201 & 3.625\\
+FiLM & 0.371 & 0.414 & 0.442 & 0.465 & 0.284 & 0.357 & 0.377 & 0.439 & 0.302 & 0.338 & 0.373 & 0.420 & 0.165 & 0.222 & 0.277 & 0.371 \\
+FITS     & \textbf{0.368} & \textbf{0.404}  & \textbf{0.405}   & \textbf{0.425} & \textbf{0.255} & \textbf{0.307} & \textbf{0.306}  & \textbf{0.368} & \textbf{0.305}   & \textbf{0.339}    & \textbf{0.366} & \textbf{0.414}  & \textbf{0.164} & \textbf{0.217} & \textbf{0.269} & \textbf{0.347} \\ \bottomrule
+\end{tabular}}
+
+\label{tab:app_ett}
+\end{table*}
+
+\begin{table*}[ht]
+\centering
+
+\caption{Long-term forecasting results on ETT dataset in MSE. The best result is highlighted in \textbf{bold}, and the second best is highlighted with \underline{underline}. IMP is the improvement between FITS and the second best/ best result, where a larger value indicates a better improvement. Most of the STD are under 5e-4 and shown as 0.000 in this table. }
+\makebox[\textwidth][c]
+{
+\scalebox{0.65}{
+\begin{tabular}{@{}c|cccc|cccc|cccc|cccc@{}}
+\toprule
+Dataset & \multicolumn{4}{c|}{ETTh1} & \multicolumn{4}{c|}{ETTh2} & \multicolumn{4}{c|}{ETTm1} & \multicolumn{4}{c}{ETTm2} \\ \midrule
+Horizon & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 & 96 & 192 & 336 & 720 \\ \midrule
+PatchTST & 0.385 & {\underline{0.413}} & {\underline{0.440}} & {\underline{0.456}} & {\underline{0.274}} & {\underline{0.338}} & {\underline{0.367}} & {\underline{0.391}} & \textbf{0.292} & \textbf{0.330} & \textbf{0.365} & {\underline{0.419}} & {\underline{0.163}} & {\underline{0.219}} & {\underline{0.276}} & {\underline{0.368}} \\
+Dlinear & 0.384 & 0.443 & 0.446 & 0.504 & 0.282 & 0.350 & 0.414 & 0.588 & {\underline{0.301}} & {\underline{0.335}} & 0.371 & 0.426 & 0.171 & 0.237 & 0.294 & 0.426 \\
+FedFormer & {\underline{0.375}} & 0.427 & 0.459 & 0.484 & 0.340 & 0.433 & 0.508 & 0.480 & 0.362 & 0.393 & 0.442 & 0.483 & 0.189 & 0.256 & 0.326 & 0.437 \\
+TimesNet & 0.384 & 0.436 & 0.491 & 0.521 & 0.340 & 0.402 & 0.452 & 0.462 & 0.338 & 0.374 & 0.410 & 0.478 & 0.187 & 0.249 & 0.321 & 0.408 \\
+FITS & \textbf{0.372} & \textbf{0.404} & \textbf{0.427} & \textbf{0.424} & \textbf{0.271} & \textbf{0.331} & \textbf{0.354} & \textbf{0.377} & 0.303 & 0.337 & {\underline{0.366}} & \textbf{0.415} & \textbf{0.162} & \textbf{0.216} & \textbf{0.268} & \textbf{0.348} \\ \midrule
+STD & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+IMP & 0.003 & 0.009 & 0.013 & 0.032 & 0.003 & 0.007 & 0.013 & 0.014 & -0.011 & -0.007 & -0.001 & 0.004 & 0.001 & 0.003 & 0.008 & 0.020 \\ \bottomrule
+\end{tabular}
+}}
+
+\label{tab:FITSett}
+\end{table*}

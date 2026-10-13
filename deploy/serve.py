@@ -54,6 +54,8 @@ def mount_static() -> None:
     if not DIST.is_dir():
         raise RuntimeError(f"{DIST} fehlt: zuerst `npm run build` in web/ (im Container erledigt das Dockerfile)")
     seed_export_dir()
+    from repro_agent import site_export
+    site_export.refresh_catalog_metadata(site_export.CATALOG_YAML, EXPORT_DIR)
     app.state.page_csp = page_csp()
     app.mount("/data", StaticFiles(directory=EXPORT_DIR), name="data")
     app.mount("/", StaticFiles(directory=DIST, html=True), name="web")

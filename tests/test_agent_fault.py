@@ -15,13 +15,13 @@ def flag(m, target=0.375):
 def test_real_pairs():
     assert flag(A1)
     assert flag(SMOKE)
-    assert flag(B2)                # nur ueber den MAE
+    assert flag(B2) is None        # a different metric is diagnostic, not the claim
     assert flag(A6) is None
 
 
-def test_b2_is_missed_when_only_claim_metric_is_checked():
+def test_secondary_metric_does_not_override_claim_metric():
     assert agent_fault_suspected("mse", B2["mse"], 0.375, ETT) is None
-    assert "MAE" in flag(B2)
+    assert flag(B2) is None
 
 
 def test_repeat_only_baseline_would_miss_smoke_mse_but_all_baselines_catch():

@@ -30,6 +30,35 @@ def load() -> dict:
         return {k: d[k] for k in d.files}
 
 
+def forecast_data(length: int, stride: int = 1) -> dict:
+    """Named forecasting inputs and real targets, avoiding invented tuple contracts.
+
+    Candidate fitting uses training rows only. Visible validation rows are for
+    checkpoint selection; held-out selection targets never enter this process.
+    """
+    if not isinstance(length, int) or not 1 <= length <= 720 or not isinstance(stride, int) or stride < 1:
+        raise ValueError('history length must be 1..720 and stride a positive integer')
+    d = load()
+    train, val = d['train'], d['val']
+    horizon = CONFIG.get('steps', 96)
+    def windows(series, starts):
+        x = np.stack([series[s-length:s] for s in starts])
+        y = np.stack([series[s:s+horizon] for s in starts])
+        return x, y
+    starts = np.arange(length, len(train)-horizon+1, stride)
+    val_starts = len(train) + np.arange(0, len(val)-horizon+1, CONFIG.get('val_stride', 24))
+    if not len(starts) or not len(val_starts):
+        raise ValueError('Not enough train/visible-validation rows for this history and horizon')
+    tx, ty = windows(train, starts)
+    vx, vy = windows(np.concatenate([train, val]), val_starts)
+    result = {'train_inputs': tx, 'train_targets': ty, 'val_inputs': vx, 'val_targets': vy}
+    if 'train_calendar' in d and 'val_calendar' in d:
+        calendar = np.concatenate([d['train_calendar'], d['val_calendar']])
+        result.update(train_calendar=np.stack([calendar[s-length:s] for s in starts]),
+                      val_calendar=np.stack([calendar[s-length:s] for s in val_starts]))
+    return result
+
+
 def _write(path: str, ids: list[str], values, fmt: str = "") -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(path, "w") as f:
@@ -74,7 +103,7 @@ def write_predictions(test_pred, val_pred=None) -> None:
     if CONFIG["kind"] == "nodes":
         d = load()
         n = int(d["features"].shape[0])
-        test_ids, val_ids = np.sort(d["test_idx"]), np.sort(d["val_idx"])
+        test_ids, val_ids = np.sort(d["test_idx"]), np.sort(d.get("selection_idx", d["val_idx"]))
         if SMOKE:
             test_ids, val_ids = test_ids[:CONFIG["smoke_n"]], val_ids[:CONFIG["smoke_n"]]
         pt = _node_values(test_pred, "test_pred", n)

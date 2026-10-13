@@ -8,13 +8,13 @@ from __future__ import annotations
 import re
 
 from .claims_source import _norm
-from .table_check import NUMBER, _clean_name, _latex_cells, check_columns, latex_rows
+from .table_check import NUMBER, _clean_name, _latex_cells, check_columns, latex_rows, latex_tabulars
 
 
 def original_source_quote(text: str, normalized_quote: str) -> str | None:
     """Recover original case/spacing of a verified row or multirow dataset group."""
-    for table in re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", text, re.S):
-        rows = latex_rows(table[1])
+    for table in latex_tabulars(text):
+        rows = latex_rows(table)
         for start in range(len(rows)):
             for end in range(start + 1, min(start + 100, len(rows)) + 1):
                 quote = "\\\\".join(rows[start:end]).strip()
@@ -32,9 +32,13 @@ def _plain(text: str) -> str:
 
 def requires_external_weights(abstract: str) -> bool:
     # Explicit dependence, not a discussion of baselines or training from scratch.
-    return bool(re.search(
+    text = _plain(abstract)
+    external_graph = re.search(
+        r"\bwe\s+(?:introduce|propose|present)\s+[\w-]+,\s+(?:a|an)\s+graph foundation model,\s+"
+        r"trained on (?:the )?(?:common crawl )?web graph", text)
+    return bool(external_graph or re.search(
         r"(?:leverag\w*|rely|relies|relying|utiliz\w*|using|uses)\s+(?:on\s+)?"
-        r"(?:frozen\s+)?pre[- ]trained\s+(?:vision|language|foundation|large)", _plain(abstract)))
+        r"(?:frozen\s+)?pre[- ]trained\s+(?:vision|language|foundation|large)", text))
 
 
 def proposed_method(method: str, abstract: str) -> bool:
@@ -59,9 +63,9 @@ def select_source_claim(text: str, dataset: str, abstract: str, metric: str = "m
                            r"(?:for all experiments\s*)?(?:of|is|=)?\s*(\d+)", metadata)
         if not length or not 1 <= int(length[1]) <= 720:
             continue
-        tabulars = list(re.finditer(r"\\begin\{tabular\}(.*?)\\end\{tabular\}", body, re.S))
+        tabulars = latex_tabulars(body)
         for tab in tabulars:
-            rows = latex_rows(tab[1])
+            rows = latex_rows(tab)
             methods = set()
             for row in rows:
                 cells = _latex_cells(row)

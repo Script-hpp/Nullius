@@ -36,6 +36,7 @@ import { targetSource } from '../targetSource'
 import { SetupSources } from './SetupSources'
 import { runOrigin } from '../runNavigation'
 import { minutes, runTimings } from '../eta'
+import { eventsForClaim } from '../film'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const INFO = 'The certificate of one check. The paper claimed a number; our agent rebuilt the experiment and an independent program measured it.'
@@ -217,8 +218,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
               <button onClick={() => setHow('log')} aria-pressed={how === 'log'} className={toggle(how === 'log')}>Execution log</button>
             </div>
             {how === 'graph'
-              ? <StepGraph events={run.events} running={false} codeLoader={codeLoader} planFull={run.plan} metricHint={claim.metric} />
-              : <div id="sec-run-log" className="scroll-mt-16"><ReplayPlayer events={run.events} codeLoader={codeLoader} planFull={run.plan} /></div>}
+              ? <StepGraph events={eventsForClaim(run.events, claim.id)} running={false} codeLoader={codeLoader} planFull={run.plan} metricHint={claim.metric} />
+              : <div id="sec-run-log" className="scroll-mt-16"><ReplayPlayer events={eventsForClaim(run.events, claim.id)} codeLoader={codeLoader} planFull={run.plan} /></div>}
             {nRepairs > 0 && (
               <div className="mt-12">
                 <Fold title="Watch the agent fix its own code" meta={`${nRepairs} ${nRepairs === 1 ? 'step' : 'steps'}`} id="f-repairs" open={open.has('f-repairs')} onOpenChange={setFold('f-repairs')}>

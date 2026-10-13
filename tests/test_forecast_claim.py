@@ -49,6 +49,10 @@ def test_baselines_are_not_proposed_methods_and_external_dependencies_are_explic
     assert not proposed_method("Times2D", "We study the data embeddings of Times2D.")
     assert requires_external_weights("Time-VLM leverages pre-trained Vision-Language Models.")
     assert not requires_external_weights("We train from scratch and compare against pre-trained language models.")
+    assert requires_external_weights("We introduce Acacia, a graph foundation model, trained on the web graph. "
+                                     "Acacia does not rely on pretrained LLMs.")
+    assert not requires_external_weights("We propose LocalGNN on Cora and compare against Acacia, a graph foundation "
+                                         "model trained on the web graph.")
 
 
 def test_multirow_dataset_context_expires_and_never_leaks_to_another_dataset():

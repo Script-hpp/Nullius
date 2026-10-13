@@ -1,0 +1,39 @@
+{
+  "status": "stopped",
+  "error": "Smoke run (SMOKE=1) crashed:\nting time bonus...\n[Time-Aware] time_bonus stats: min=0.0349, max=1.0000, mean=0.3328\n[Time-Aware] Applied! sim_before: mean=-0.0032, sim_after: mean=0.1648, diff=0.171225\n\n[Time-Aware] weight=0.5000\n[Time-Aware] Computing time bonus...\n[Time-Aware] time_bonus stats: min=0.0349, max=1.0000, mean=0.3328\n[Time-Aware] Applied! sim_before: mean=-0.0029, sim_after: mean=0.1649, diff=0.170195\n\n[Time-Aware] weight=0.5000\n[Time-Aware] Computing time bonus...\n[Time-Aware] time_bonus stats: min=0.0349, max=1.0000, mean=0.3328\n[Time-Aware] Applied! sim_before: mean=-0.0061, sim_after: mean=0.1634, diff=0.171831\n\n[Time-Aware] weight=0.5000\n[Time-Aware] Computing time bonus...\n[Time-Aware] time_bonus stats: min=0.0349, max=1.0000, mean=0.3328\n[Time-Aware] Applied! sim_before: mean=-0.0049, sim_after: mean=0.1639, diff=0.172134\n\n[Time-Aware] weight=0.5000\n[Time-Aware] Computing time bonus...\n[Time-Aware] time_bonus stats: min=0.0349, max=1.0000, mean=0.3328\n[Time-Aware] Applied! sim_before: mean=-0.0049, sim_after: mean=0.1639, diff=0.172134\nTraceback (most recent call last):\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 85, in main\n    raise ValueError('Prediction changed for a previously seen history; inference must be deterministic and must not update the model')\nValueError: Prediction changed for a previously seen history; inference must be deterministic and must not update the model\n(exit code 1)",
+  "seconds": 4.21,
+  "contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+      "year",
+      "month",
+      "day",
+      "weekday",
+      "hour"
+    ]
+  },
+  "seed": 0,
+  "training": "one batch of eight; smoke only",
+  "test_windows": 8,
+  "validation_windows": 8,
+  "paper_score": null,
+  "network": "none",
+  "unused_import_stubs": [
+    "pandas",
+    "tqdm"
+  ],
+  "source_hashes": {
+    "models/SARAF.py": "24e3487053d3a33920da58052b7a266183f86352770cc1e4ed456f27eeb3dc83",
+    "layers/Retrieval.py": "fb664a004743d9bf7279be93b86c791e513fa41b1f2edf970e2397c432818348"
+  },
+  "adapter_sha256": "2a2bcb6055557d523e1faf5b8528476175719742ad011aa342bf32ccae52b4e6",
+  "dataset_sha256": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+}

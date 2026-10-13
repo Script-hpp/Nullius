@@ -65,6 +65,7 @@ export type RunModel = {
   waiting: string | null       // what the loop is doing right now, for the pulsing line
   firstMeasurement: boolean
   candidateSelectionPending: boolean
+  candidateSelectionStopped: boolean
   selectedCandidate: number | null
   measurementSelectionUnavailable: boolean
   llmCalls: number             // live only (llm_call events)
@@ -137,7 +138,9 @@ export function median(xs: number[]): number | null {
   return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
 }
 
-export function buildRunModel(events: Event[], opts: { running: boolean; metricHint?: string | null }): RunModel {
+export function buildRunModel(events: Event[], opts: { running: boolean; metricHint?: string | null; claimId?: string }): RunModel {
+  const claimId = opts.claimId ?? events.find(e => e.type === 'claim_start' && e.claim_id != null)?.claim_id
+  if (claimId != null) events = events.filter(e => e.claim_id == null || e.claim_id === claimId)
   const runStart = events.find((e) => e.type === 'run_start')
   const claimStart = events.find((e) => e.type === 'claim_start')
   const models = (runStart?.models ?? {}) as RunModel['models']
@@ -148,7 +151,8 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const discarded = new Set<string>()
   const selection = events.filter((e) => e.type === 'candidates').pop()
   const selectedCandidate = num(selection?.chosen)
-  const candidateSelectionPending = !selection && events.some((e) => num(e.candidate) != null)
+  const selectionUnresolved = !selection && events.some((e) => num(e.candidate) != null)
+  const candidateSelectionPending = opts.running && selectionUnresolved
   let selectedHash: string | null = null
   const candidateOfHash = new Map<string, Set<number>>()
   const assignCandidate = (hash: string, candidate: number) => {
@@ -441,7 +445,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   for (const e of events) {
     if (e.type !== 'attempt') continue
     const m = num(e.measured)
-    if (m == null || discarded.has(String(e.code_hash)) || candidateSelectionPending) continue
+    if (m == null || discarded.has(String(e.code_hash)) || selectionUnresolved) continue
     if (selection && (num(e.candidate) !== selectedCandidate || (num(e.seed) === 0 && selectedHash && String(e.code_hash) !== selectedHash))) continue
     bySeed.set(num(e.seed) ?? 0, { seed: num(e.seed) ?? 0, hash: String(e.code_hash), measured: m, seconds: num(e.seconds) })
   }
@@ -459,7 +463,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   // only a unique complete code group matching the recorded verdict, never
   // pick a group by closeness to the paper target or present a mixed-code mean.
   const finalVerdict = events.filter(e => e.type === 'verdict').pop()
-  let measurementSelectionUnavailable = false
+  let measurementSelectionUnavailable = !opts.running && selectionUnresolved
   if (!finalSelection && finalVerdict && bySeed.size) {
     const mean = (xs: Attempt[]) => xs.reduce((s, a) => s + a.measured, 0) / xs.length
     const matchesVerdict = (xs: Attempt[]) => {
@@ -553,7 +557,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   else if (activeId === 'sandbox') {
     const lastAb = events.filter((e) => e.type === 'ablation').pop()
     const rewriting = !!lastAb && lastAb.verdict === 'Graph nicht genutzt' && repairs < 2 && repairs + faultRepairs < 3
-    waiting = candidateSelectionPending ? 'Testing code candidates in parallel on seed 0. Scores remain in the attempt history until a candidate is selected.'
+    waiting = candidateSelectionPending ? 'Checking code candidates on seed 0. Scores remain in the attempt history until a candidate is selected.'
       : !seed0 ? 'Training seed 0 in the sandbox. This can take several minutes.'
       : graphTask && !hasAblation ? 'Graph check: running the same code again without graph edges.'
         : rewriting ? 'The graph check failed. Nemotron is rewriting the code.'
@@ -565,6 +569,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     waiting = left === 0 ? 'All seeds finished. The harness is computing the verdict.' : `${left != null ? `${left} seed${left === 1 ? '' : 's'} still training` : 'Seeds are training'} in parallel sandbox branches${medSeconds ? `, about ${fmtSeconds(medSeconds)} each` : ''}.`
   } else if (activeId === 'verdict') waiting = 'The harness is computing the verdict.'
   else if (activeId === 'community') waiting = 'The verdict is final. Tavily is checking public discussion of the paper; this never changes the verdict.'
+  if (!opts.running) waiting = null
 
   const phases: Phase[] = order.map((id) => {
     const t = PHASE_TEXT[id]
@@ -586,7 +591,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
     title: (runStart?.title as string | undefined) ?? null, claimText: (claimStart?.text as string | undefined) ?? null, metric, target,
     tolerance: num(claimStart?.tolerance), seedsTotal, models, phases, attempts, stats, tavilyCalls, tavilyKind, warnings, verdict: verdictEv,
     startTs: first, endTs: last, costNet: num(end?.cost_net_usd) ?? num(cost?.total_net_usd), graphTask, waiting, firstMeasurement: attempts.length > 0,
-    candidateSelectionPending, selectedCandidate, measurementSelectionUnavailable,
+    candidateSelectionPending, candidateSelectionStopped: !opts.running && selectionUnresolved, selectedCandidate, measurementSelectionUnavailable,
     llmCalls: events.filter((e) => e.type === 'llm_call').length, llmCached: events.filter((e) => e.type === 'llm_call' && e.cached === true).length,
   }
 }

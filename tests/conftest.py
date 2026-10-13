@@ -43,6 +43,7 @@ def _fixture_copy(tmp_path_factory, monkeypatch):
     copy = tmp_path_factory.mktemp("fixtures") / "fixtures"
     shutil.copytree(REAL_FIXTURES, copy)
     monkeypatch.setattr("repro_agent.claims_source.FIXTURE_DIR", copy)
+    monkeypatch.setattr("repro_agent.claims_source.SOURCE_CACHE_DIR", copy.parent / "paper_sources")
     monkeypatch.setattr("repro_agent.repo_source.FIXTURE_DIR", copy / "repos")
 
 
@@ -61,3 +62,4 @@ def _isolate_live_candidates(tmp_path, monkeypatch):
     monkeypatch.setattr(live_catalog, "PATH", tmp_path / "live_candidates.json")
     monkeypatch.setattr(live_catalog, "CACHE_PATH", tmp_path / "discovery_cache.json")
     monkeypatch.setattr(live_catalog, "REPLAY_PATH", tmp_path / "discovery_replay.json")
+    monkeypatch.setattr('repro_agent.api.REPRO_ARCHIVE_DIR', tmp_path / 'reproduction_jobs')

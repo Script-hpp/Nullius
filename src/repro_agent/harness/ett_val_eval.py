@@ -1,4 +1,4 @@
-"""Val-Eval-Logik fuer ETT (nur Auswahl unter Kandidaten, kein Urteil). Laeuft im Branch NACH dem Agenten-Lauf, frisch aus dem Repo.
+"""Val-Eval-Logik fuer ETT (nur Auswahl unter Kandidaten, kein Urteil). Laeuft nach dem Agenten in einem unabhaengigen Branch.
 
 Aufruf ueber die duennen Skripte `<name>_val_eval.py`. Val-Fenster w (Schrittweite je Datensatz) prognostiziert die Zeilen
 [TRAIN_END + stride*w, + 96) im Val-Bereich. Zielwerte holt der Harness selbst neu. Ausgabe: eine JSON-Zeile.
@@ -6,6 +6,7 @@ Aufruf ueber die duennen Skripte `<name>_val_eval.py`. Val-Fenster w (Schrittwei
 
 import csv
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -54,6 +55,20 @@ def main(name: str) -> None:
         csv_path = ett_data.download(name, Path(tmp))
         truth = ett_data.val_targets(name, csv_path, PRED_LEN)
         baselines = ett_data.val_baselines(name, csv_path, PRED_LEN)
+        if os.environ.get('NULLIUS_SELECTION_HOLDOUT') == '1':
+            from selection_contract import visible_val_rows
+            train_end, val_end, _ = ett_data.borders(name)
+            cutoff = visible_val_rows(val_end-train_end)
+            offsets = ett_data.val_stride(name) * np.arange(n_win)
+            keep = offsets >= cutoff
+            if not keep.any():
+                return fail('No held-out validation windows')
+            z = ett_data.load_standardized(name, csv_path)
+            repeat = z[train_end+offsets[keep]-1][:, None, :]
+            baselines = {'repeat': {'mse': float(((repeat-truth[keep])**2).mean())},
+                         'zero': {'mse': float((truth[keep]**2).mean())}}
     value = metrics.mse(pred.reshape(-1).tolist(), truth.reshape(-1).tolist())
+    if os.environ.get('NULLIUS_SELECTION_HOLDOUT') == '1':
+        value = float(((pred[keep] - truth[keep]) ** 2).mean())
     print(json.dumps({"status": "ok", "metric": "mse", "value": value,
                       "baselines": {key: b['mse'] for key, b in baselines.items()}}))

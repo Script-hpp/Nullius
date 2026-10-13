@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -302,25 +303,25 @@ def _parse_abs_page(arxiv_id: str, html: str) -> dict:
 
 
 
-def _fetch_arxiv_source(arxiv_id: str) -> str:
-    import httpx
+class ArxivSourceText(str):
+    """Text with the official URL that actually supplied the source archive."""
+    def __new__(cls, text, url=None, error=None):
+        obj = super().__new__(cls, text)
+        obj.url = url
+        obj.error = error
+        return obj
+
+
+def _decode_arxiv_source(data: bytes) -> str:
     import tarfile
     import io
     import gzip
     import re
-    url = f"https://export.arxiv.org/e-print/{arxiv_id}"
-    try:
-        response = httpx.get(url, headers={'User-Agent': 'Mozilla/5.0'}, follow_redirects=True, timeout=10.0)
-        response.raise_for_status()
-        data = response.content
-    except Exception:
-        return ""
-    
     latex_files = []
     try:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
             for member in tar.getmembers():
-                if member.name.endswith(".tex"):
+                if member.isfile() and member.name.endswith(".tex"):
                     f = tar.extractfile(member)
                     if f:
                         latex_files.append(f.read().decode('utf-8', errors='ignore'))
@@ -332,12 +333,46 @@ def _fetch_arxiv_source(arxiv_id: str) -> str:
             latex_files.append(data.decode('utf-8', errors='ignore'))
             
     tex = "\n".join(latex_files)
-    if tex:
+    if tex.lstrip().lower().startswith(("<!doctype html", "<html", "<?xml")):
+        return ""
+    if tex and re.search(r"\\(?:documentclass|begin|section|subsection|input|usepackage|newcommand|def)\b", tex):
         tex = re.sub(r'(?m)^%.*$', '', tex)
         tex = re.sub(r'\\section\*?\{([^}]+)\}', r'# \1', tex)
         tex = re.sub(r'\\subsection\*?\{([^}]+)\}', r'## \1', tex)
         tex = re.sub(r'\\subsubsection\*?\{([^}]+)\}', r'### \1', tex)
-    return tex
+        return tex
+    return ""
+
+
+def _fetch_arxiv_source(arxiv_id: str) -> str:
+    import logging
+    urls = [f"https://export.arxiv.org/e-print/{arxiv_id}", f"https://arxiv.org/src/{arxiv_id}"]
+    last_error = None
+    for index, url in enumerate(urls):
+        # One retry on the export host, then one independent official source endpoint.
+        for attempt in range(2 if index == 0 else 1):
+            try:
+                response = httpx.get(url, headers={'User-Agent': 'Mozilla/5.0'}, follow_redirects=True, timeout=30.0)
+                response.raise_for_status()
+                text = _decode_arxiv_source(response.content)
+                if text:
+                    return ArxivSourceText(text, str(response.url))
+                last_error = f"No readable LaTeX at {url}"
+                logging.getLogger(__name__).warning("arXiv source %s did not contain readable LaTeX", url)
+                break
+            except httpx.HTTPStatusError as exc:
+                last_error = f"HTTP {exc.response.status_code} at {url}"
+                logging.getLogger(__name__).warning("arXiv source %s returned HTTP %s", url, exc.response.status_code)
+                if exc.response.status_code < 500 and exc.response.status_code != 429:
+                    break
+            except (httpx.TransportError, OSError) as exc:
+                last_error = f"{type(exc).__name__} at {url}"
+                logging.getLogger(__name__).warning("arXiv source %s failed (%s)", url, type(exc).__name__)
+            except Exception as exc:
+                last_error = f"{type(exc).__name__} at {url}"
+                logging.getLogger(__name__).warning("arXiv source %s could not be read (%s)", url, type(exc).__name__)
+                break
+    return ArxivSourceText("", urls[-1], last_error)
 
 class DiscoveryAgent:
     def __init__(self, llm: LLMClient | None = None, tavily: TavilyTools | None = None, cache_path=None):
@@ -864,7 +899,10 @@ class DiscoveryAgent:
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
                 extracts_count += 1
                 text = _fetch_arxiv_source(cache_key)
+                source_url = getattr(text, "url", None) or f"https://export.arxiv.org/e-print/{cache_key}"
+                source_kind = "latex"
                 if len(text) < MIN_FULLTEXT_CHARS:
+                    source_kind = "arxiv_html"
                     try:
                         for _attempt in range(2):
                             html_data = self._tavily("curate_extract", 2, "extract", html_url, html_url,
@@ -1021,8 +1059,9 @@ class DiscoveryAgent:
 
                 # Spaltenzuordnung: steht die Zahl in der Spalte der Methode? (deterministisch, table_check.py)
                 row = _number_line(quote, target_val) or quote
+                column_metric = f"{metric.upper()} for prediction length {ETTH1_HORIZON}" if ds in ETT_DATASETS else metric
                 col = check_columns(_table_norm(text.replace("|", " ")), _table_norm(row.replace("|", " ")), target_val,
-                                    method, ds, metric, metric == "accuracy")
+                                    method, ds, column_metric, metric == "accuracy")
                 table_method_verified = ds in ETT_DATASETS and col.status == "ok" and col.source_row is not None
                 if not table_method_verified and not _method_supported(method, quote, text, row):
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": "Method missing or not in quote", "stage": "quote"})
@@ -1057,6 +1096,14 @@ class DiscoveryAgent:
                         if source_quote:
                             claim_data["quote"] = source_quote
                 claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
+                labels = [re.findall(r"\\label\{([^}]+)\}", match.group()) for match in
+                          re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", full_text, re.S)
+                          if _table_norm(claim_data["quote"]) in _table_norm(match.group())]
+                claim_data["source_evidence"] = {
+                    "source_kind": source_kind, "sha256": hashlib.sha256(full_text.encode()).hexdigest(),
+                    "url": source_url if source_kind == "latex" else html_url,
+                    "table": labels[0][0] if len(labels) == 1 and len(labels[0]) == 1 else None,
+                }
 
                 claim_data["protocol_evidence"] = ("Protokoll: Zitat im Text belegt" if protocol == "passt"
                                                    else "Protokoll nicht belegt")

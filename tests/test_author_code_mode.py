@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_product_kwargs_default_is_author_code_and_switch_turns_it_off():
     on, off = product_kwargs(), product_kwargs(author_code=False)
     assert on["code_grounded"] is True and on["io_helper"] is True and on["graph_repair"] and on["setup_v2"]
-    assert "code_grounded" not in off and "io_helper" not in off and off == {"graph_repair": True, "setup_v2": True, "repo_verify": True}   # = Produktkonfiguration von v4
+    assert "code_grounded" not in off and "io_helper" not in off and off == {"graph_repair": True, "setup_v2": True, "repo_verify": True, "independent_selection": True}
     assert AUTHOR_CODE_KWARGS == {"code_grounded": True, "io_helper": True}
 
 
@@ -65,6 +65,25 @@ def test_cli_default_author_code_and_flag(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["loop", "kipf_gcn_2017", "--no-author-code"])
     loop_mod.main()
     assert "code_grounded" not in got and "graph_repair" not in got   # exakt die bisherige CLI-Konfiguration
+
+
+@pytest.mark.parametrize('fails', [False, True])
+def test_cli_closes_owned_sandbox_resources_even_when_the_run_fails(monkeypatch, fails):
+    closed = []
+    class Fake:
+        def __init__(self, **kw): pass
+        def run(self, *args, **kw):
+            if fails:
+                raise RuntimeError('run stopped')
+        def close(self): closed.append(True)
+    monkeypatch.setattr(loop_mod, 'Orchestrator', Fake)
+    monkeypatch.setattr(sys, 'argv', ['loop', 'kipf_gcn_2017'])
+    if fails:
+        with pytest.raises(RuntimeError, match='run stopped'):
+            loop_mod.main()
+    else:
+        loop_mod.main()
+    assert closed == [True]
 
 
 def test_catalog_reproduction_script_default_and_flag(monkeypatch):

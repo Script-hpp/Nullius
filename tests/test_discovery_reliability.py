@@ -36,6 +36,7 @@ class Search:
 
 
 def agent_for(monkeypatch, tmp_path, model, papers):
+    monkeypatch.setenv("TAVILY_MODE", "live")
     agent = discovery.DiscoveryAgent(llm=model, tavily=Search(), cache_path=str(tmp_path / "cache.json"))
     monkeypatch.setattr(agent, "_find_papers_tavily", lambda dataset: papers)
     monkeypatch.setattr(discovery, "_fetch_arxiv_source", lambda paper: SOURCES[paper])

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import gzip
 import logging
 import math
 import os
@@ -306,6 +307,39 @@ class ReproJob:
 
 
 repro_jobs: Dict[str, ReproJob] = {}
+REPRO_ARCHIVE_DIR = REPO_ROOT / 'logs' / 'reproduction_jobs'
+
+
+def _archive_job(job: ReproJob) -> None:
+    """Keep sanitized terminal evidence available after memory pruning/restarts."""
+    try:
+        with job.lock:
+            payload = {'id': job.id, 'catalog_id': job.catalog_id, 'quick': job.quick,
+                       'created': job.created, 'done': True, 'events': sanitize(job.events)}
+        REPRO_ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+        path = REPRO_ARCHIVE_DIR / f'{job.id}.json.gz'
+        temp = path.with_suffix('.tmp-' + uuid.uuid4().hex)
+        try:
+            temp.write_bytes(gzip.compress(json.dumps(payload, allow_nan=False).encode()))
+            temp.replace(path)
+        finally:
+            temp.unlink(missing_ok=True)
+    except (OSError, ValueError, TypeError):
+        logger.error('Could not archive completed reproduction job %s', job.id)
+
+
+def _load_archived_job(job_id: str) -> ReproJob | None:
+    try:
+        if str(uuid.UUID(job_id)) != job_id:
+            return None
+        path = REPRO_ARCHIVE_DIR / f'{job_id}.json.gz'
+        payload = json.loads(gzip.decompress(path.read_bytes()))
+        if payload.get('id') != job_id or payload.get('done') is not True or not isinstance(payload.get('events'), list):
+            return None
+        return ReproJob(job_id, payload['catalog_id'], payload['quick'], created=payload['created'],
+                        events=payload['events'], done=True)
+    except (OSError, ValueError, KeyError, TypeError, EOFError):
+        return None
 
 
 def make_orchestrator(quick: bool, author_code: bool = True):
@@ -474,9 +508,11 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
     def on_timeout():
         job.add({"ts": time.time(), "type": "error", "message": "The check took too long and was stopped.", "status": "timeout"})
         job.done = True
+        _archive_job(job)
     _arm_watchdog(job.id, JOB_TIMEOUT_S, on_timeout)
 
     def worker():
+        orch = None
         try:
             job.add({"ts": time.time(), "type": "started", "catalog_id": entry["id"]})
             orch = make_orchestrator(req.quick, req.author_code)
@@ -502,6 +538,12 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
                 job.add({"ts": time.time(), "type": "error", "message": sanitize_text(f"{type(exc).__name__}: {exc}", 300)})
         finally:
             job.done = True
+            _archive_job(job)
+            if orch is not None and hasattr(orch, 'close'):
+                try:
+                    orch.close()
+                except Exception:
+                    logger.error('Could not close resources for reproduction job %s', job.id)
             if current_job.get("job_id") == job.id:
                 current_job.clear()
             loop.call_soon_threadsafe(_release_lock, job.id)
@@ -515,7 +557,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
 @app.get("/api/reproduce/{job_id}/stream")
 async def stream_reproduction(job_id: str, request: Request, start: int = Query(0, alias="from")):
     """SSE ab Index `start` (oder Last-Event-ID + 1). Alle Events bleiben im Speicher, ein Reconnect liefert sie erneut."""
-    job = repro_jobs.get(job_id)
+    job = repro_jobs.get(job_id) or _load_archived_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     last = request.headers.get("last-event-id")

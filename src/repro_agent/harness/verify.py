@@ -33,7 +33,14 @@ def load_predictions(predictions_csv: str) -> dict[str, str]:
             raise ValueError(
                 f"predictions.csv muss Spalten id,prediction haben, gefunden: {reader.fieldnames}"
             )
-        return {row["id"]: row["prediction"] for row in reader}
+        predictions = {}
+        for row in reader:
+            if None in row or row.get("id") is None or row.get("prediction") is None:
+                raise ValueError("Malformed prediction row")
+            if row["id"] in predictions:
+                raise ValueError(f"Duplicate prediction id: {row['id']}")
+            predictions[row["id"]] = row["prediction"]
+        return predictions
 
 
 def check_plausibility(predictions: dict[str, str], expected_ids: set[str]) -> str | None:
@@ -90,7 +97,9 @@ def agent_fault_suspected(
     name, ref = best
     if not _worse(metric, ref, target):
         return None   # Paperwert schlaegt die Baseline nicht: kein Schutz
-    checks = {metric: measured, **{m: v for m, v in (all_metrics or {}).items() if m != metric}}
+    # An unclaimed metric can have a legitimate objective tradeoff. Keep it in
+    # the measurement evidence, but do not use it to override the claim verdict.
+    checks = {metric: measured}
     for m, value in checks.items():
         b = _best_baseline(m, baselines)
         if b and _worse(m, value, b[1]):

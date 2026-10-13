@@ -19,7 +19,7 @@ def test_etth1_baselines_match_paper_repeat(orch):
     task = etth1_task()
     snap = orch.sandbox.base_snapshot(task.image, task.setup_cmds, label="devtest-baselines-ett")
     code = (ROOT / "tests" / "reference" / "dlinear_reference.py").read_text()
-    res = orch._run_and_eval(orch.sandbox.branch(snap), code, 0, task, "mse")
+    res = orch._run_and_eval(orch.sandbox.branch(snap), code, 0, task, "mse", eval_snapshot=snap)
     assert res["status"] == "ok"
     rep, zero = res["baselines"]["repeat"], res["baselines"]["zero"]
     assert rep["mse"] == pytest.approx(1.2944, abs=5e-4) and rep["mae"] == pytest.approx(0.7132, abs=5e-4)
@@ -31,7 +31,7 @@ def test_cora_baselines_and_faithful_gcn(orch):
     task = cora_task()
     snap = orch.sandbox.base_snapshot(task.image, task.setup_cmds, label="devtest-baselines-cora")
     code = next((ROOT / "runs" / "kipf_gcn_2017" / "20260928-211537").glob("gcn_cora_acc_*.py")).read_text()
-    res = orch._run_and_eval(orch.sandbox.branch(snap), code, 0, task, "accuracy")
+    res = orch._run_and_eval(orch.sandbox.branch(snap), code, 0, task, "accuracy", eval_snapshot=snap)
     assert res["status"] == "ok"
     majority = res["baselines"]["majority"]["accuracy"]
     no_graph = res["baselines"]["no_graph"]["accuracy"]

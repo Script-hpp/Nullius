@@ -128,6 +128,23 @@ def write_catalog(catalog_yaml: Path, out: Path, extra_entries: list[dict] | Non
     return len(data)
 
 
+def refresh_catalog_metadata(catalog_yaml: Path, out: Path) -> None:
+    """Redeploy corrected definitions without erasing persistent run outcomes."""
+    path = out / "catalog.json"
+    stored = json.loads(path.read_text()) if path.exists() else []
+    by_id = {entry["id"]: entry for entry in stored}
+    definitions = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out), out)
+    metadata = ("arxiv_id", "title", "dataset", "task", "claim", "protocol", "column_check",
+                "github_url", "source_url", "origin", "benchmark")
+    for entry in definitions:
+        if entry["id"] in by_id:
+            by_id[entry["id"]].update({key: entry[key] for key in metadata})
+        else:
+            stored.append(entry)
+            by_id[entry["id"]] = entry
+    write_json_atomic(path, stored)
+
+
 def refresh_index(index: list[dict], catalog: list[dict], out: Path) -> list[dict]:
     """disc_*-Laeufe: Titel aus catalog.yaml, catalog_id und Gesamtaussage (aus dem exportierten Dossier berechnet)."""
     titles = {e["id"]: e["title"] for e in catalog}
