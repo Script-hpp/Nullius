@@ -15,7 +15,7 @@
  ],
  "main_sets_features_S": "BLOCKED: Author launch feature/channel identity is unresolved; no experiment was started",
  "main_sets_enc_in_1": "BLOCKED: Author launch feature/channel identity is unresolved; no experiment was started",
- "module_level_features_S": [],
+ "module_level_features_S": "BLOCKED: Author launch feature/channel identity is incompatible; no experiment was started",
  "module_level_enc_in_from_data": "BLOCKED: Author launch feature/channel identity is unresolved; no experiment was started",
  "cli_feature_abbrev_S": [],
  "cli_features_MS": [],

@@ -176,3 +176,19 @@ ueberspringt `runtime_items` ihn nur (`continue`). Die alten Rohregeln sehen im 
 seine Werte trotzdem: lr 0.01, batch 64, seq 336 mit `origin=raw`, `enforce=True`. Fix: in diesem Zweig sichtbar
 stoppen oder den Aufruf auch fuer `raw_items`/`drop_run_script_defaults` ausschliessen; Regressionstest mit
 Modulebene-`S` und Default-`S`.
+
+## Nachtrag 5: Schlusskontrolle Feature-Identitaet
+
+Stand **2026-10-13, 18:26 UTC**, `ceo` `59b098a` plus Diff; einzige Quellaenderung seit Nachtrag 4: `continue` ->
+`SourceContextBlocked('… feature/channel identity is incompatible …')` vor dem Roh-Rueckfall. Keine Suite, keine Calls.
+
+| Fall | Ergebnis |
+| --- | --- |
+| Modulebene `args.features = 'S'` | Stopp „incompatible“, keine Rohwerte mehr |
+| argparse-Default `features='S'` ohne CLI-Flag | Stopp „incompatible“ |
+| Modulebene `args.enc_in = 1` | Stopp „incompatible“ |
+| argparse-Default `enc_in=1` ohne CLI-Flag | Stopp „incompatible“ |
+| statisches CLI `--feature S` | kein Match, keine Werte (auch nicht roh) |
+| bekannte M/7 | unveraendert: lr 0.01, batch 64, seq 336, enc_in 7 (`runtime`) |
+
+Cross-Paper-Gate und echte SparseTSF/SegRNN-Skripte byte-gleich zum vorigen Stand. **Restblocker behoben, kein weiterer.**

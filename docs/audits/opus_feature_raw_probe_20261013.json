@@ -1,22 +1,9 @@
 {
- "module_level_features_S": {
-  "lr": [
-   "0.01",
-   true,
-   "raw"
-  ],
-  "batch_size": [
-   "64",
-   true,
-   "raw"
-  ],
-  "seq_len": [
-   "336",
-   true,
-   "raw"
-  ]
- },
+ "module_level_features_S": "BLOCKED: Author launch feature/channel identity is incompatible; no experiment was started",
  "cli_feature_S": {},
+ "default_S_no_cli_flag": "BLOCKED: Author launch feature/channel identity is incompatible; no experiment was started",
+ "module_level_enc_in_1": "BLOCKED: Author launch feature/channel identity is incompatible; no experiment was started",
+ "default_enc_in_1_no_cli_flag": "BLOCKED: Author launch feature/channel identity is incompatible; no experiment was started",
  "known_M": {
   "lr": [
    "0.01",

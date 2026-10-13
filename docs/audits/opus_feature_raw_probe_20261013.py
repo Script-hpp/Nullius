@@ -13,6 +13,9 @@ CALL = 'python run.py --model FITS --data ETTh1 --seq_len 336 --pred_len 96 --ba
 out = {}
 for name, entry, call in [('module_level_features_S', HEAD + "args.features = 'S'\n", CALL),
                           ('cli_feature_S', HEAD, CALL.replace('\n', ' --feature S\n')),
+                          ('default_S_no_cli_flag', HEAD.replace("default='M'", "default='S'"), CALL),
+                          ('module_level_enc_in_1', HEAD + "args.enc_in = 1\n", CALL),
+                          ('default_enc_in_1_no_cli_flag', HEAD.replace("'--enc_in', type=int, default=7", "'--enc_in', type=int, default=1"), CALL),
                           ('known_M', HEAD, CALL)]:
     docs = [Doc('paper', 'p'), Doc('repo:models/FITS.py@x', MODEL), Doc('repo:run.py@x', entry), Doc('repo:scripts/FITS/etth1.sh@x', call)]
     try:
