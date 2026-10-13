@@ -128,3 +128,31 @@ Codex' Ergebnis „SARAF 0.366 blockiert, 0.371 verifiziert“ passt zum bekannt
 2. B1: Fehlendes LaTeX-Zitat bei strikten Katalogclaims stoppt statt LLM-Rueckfall; Discovery-Hash/Version/Label speichern.
 3. B6: `protocol_quote` und Satzluecken in `_input_length_quote`; Vergleich auf bereinigtem LaTeX.
 4. B2/B3/B5 nach Bedarf.
+
+## Nachtrag: Schlusspruefung der Nacharbeit B1/B2/B3/B5/B6
+
+Stand **2026-10-13, 15:56 UTC** (ceo-Diff `25ebf5d2…`; um 15:58 kam nur eine engere `requires_external_weights`-Regel
+fuer Acacia dazu). Scratch-Kopie, keine neuen Downloads, keine Calls, `ceo` unveraendert.
+
+**Kein Blocker.** 311 Tests passed (Quellenbindung, Katalog, Metadaten-Refresh, Discovery, Tavily-Modus, API);
+`git diff --check` sauber.
+
+| Punkt | Pruefung | Ergebnis |
+| --- | --- | --- |
+| B1 | `resolve_targets` mit FITS-Quelle: Hauptzeile geaendert bzw. Haupttabelle entfernt, Anhang 0.368 bleibt; Modellaufruf wirft | beide Faelle Stopp „source may have changed since discovery“, **kein** LLM-Aufruf; unveraendert -> `tab:FITSett` |
+| B2 | `fetch_paper_text(require_latex=True)` bei leerem E-Print; Tavily-Getter wirft | Stopp ohne Tavily; Abruf nutzt versionierte ID `2307.03756v3` |
+| B3 | Zweite Zeilenkopie in `wraptable` und in Tabelle mit verschachtelter Kopfzelle | beide Stopp „multiple source locations“ |
+| B5 | `$\pm$` in Ergebniszelle | jetzt verifiziert 0.372; Caption „MSE and MAE“ ohne Metrikzeile stoppt weiter (richtig) |
+| B6 | alle 17 Eintraege durch `build_paper` | GLinear 336, TSMixer 512, SparseTSF 720, FITS **360**, SegRNN 720 mit belegter Laengenangabe; xCPD und Acacia `NotRunnable` mit Grund |
+| Refresh | `refresh_catalog_metadata` | alle Metadatenschluessel stehen in `catalog_json`, kein KeyError beim Start; API prueft `eligibility` vor Tageszaehler und Start |
+
+Restgrenzen (keine Blocker):
+- Katalogzitate in Markdown-/PDF-Form (HaKAN, MoHETS, TSMixer, Kipf, Shchur, SL-GCN) gelten nicht als LaTeX-Claims
+  und laufen weiter ueber die generische Extraktion; Abweichungen stoppen dort wie bisher.
+- Die Laengenbindung prueft, dass die kurze Angabe („look-back window of 360“) in der frischen Quelle vorkommt,
+  nicht dass sie zur gebundenen Tabelle gehoert. Bei kuratierten Werten ausreichend.
+- Die neue Acacia-Regel in `requires_external_weights` ist sehr eng formuliert; die generische Sperre traegt
+  `reproduction_blocked`.
+
+Belege: `docs/audits/opus_b1b2_probe_20261013.{py,json}`, `opus_binder_edge_probe_final_20261013.json`,
+`opus_catalog_binding_probe_final_20261013.json`.
