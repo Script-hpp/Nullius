@@ -70,3 +70,34 @@ Hinweise:
 Ursache unabhaengig bestaetigt. Mit vollem Listing ist die Dateiwahl korrekt; Zeichenbudget und Modellkosten bleiben im Rahmen.
 Fuer den Fix-Diff pruefe ich: `-z`, fail-closed bei Kappung oder Abweichung, Unterordner-Pfad und die Regression mit echter Liste.
 Nicht Teil dieses Fixes, aber derselbe Fehler: Bei Training-stderr ueber 64 KiB geht auf Nebius die primaere Ausnahme verloren.
+
+## Nachtrag 1: Delta-Pruefung `verified_listing` und Helper-Vertrag
+
+Basis: `ceo` `75852b8` plus Arbeitsbaum (8 Dateien, +77/-15, `src` gegen Scratch byte-gleich). Keine Calls, keine Downloads, `ceo` unveraendert.
+Probe `docs/audits/opus_repo_listing_delta_probe_20261013.py`, Ausgabe `…out.json`. Der Fake fuehrt die **echten Shell-Befehle**
+gegen einen lokalen Git-Baum aus und kappt **jedes** `run`-stdout bei 65535 Bytes.
+
+**Kein Blocker.**
+
+| Fall | Ergebnis |
+| --- | --- |
+| FITS-Wurzel, echter Klon `d040bb0` | 1410 Eintraege, 83540 Bytes, keine Teilzeile `lo`; zuerst `models/FITS.py`, `scripts/FITS/etth1_best.sh`, `run_longExp_F.py`; kein `AD/` gelesen |
+| Unterordner `logs` (163833 Bytes per `ls-tree -l -z`) | 1340 von 1340, also auch die Groessensumme vollstaendig (vorher fail-open) |
+| Namen mit Leerzeichen, Umlaut, `"`, Zeilenumbruch, Tab | alle exakt; das alte `git ls-files` lieferte vier davon in Anfuehrungszeichen und mit Escapes |
+| Liste ueber 1 MB (5200 tiefe Pfade) | Stopp vor dem Transfer, keine Modellauswahl |
+| Fokussierte Tests (Transport, Helper, Repo, Setting-Handoff, Spec-Guards, `io_helper`, Auswahlvertrag) | 164 passed, 3 skipped (Docker) |
+
+Weitere Pruefungen:
+- `SourceContextBlocked` aus `read_repo` wird nicht als `SandboxSetupError` gefangen. Es gibt also keinen stillen Rueckfall
+  auf „Nachbau aus Paper“.
+- Der Helper-Vertrag passt zur echten API `forecast_data(length: int, stride: int = 1) -> dict`, Alias `nio` steht im Vertrag.
+  Das Beispiel laeuft im Test gegen den echten Helper, mit und ohne Kalender.
+
+Nicht blockierend:
+1. Die Meldung fuer eine Liste ueber 1 MB lautet gleich wie bei Beschaedigung („could not be verified“). Besser die Groesse
+   nennen, damit ein grosses Repo nicht wie ein Transportfehler aussieht.
+2. Nicht-UTF-8-Pfadbytes fuehren zu `UnicodeDecodeError`, also zum Stopp. Das ist fail-closed und selten.
+3. `forecast_data` lehnt `np.int64(360)` ab (`isinstance(..., int)` ist `False`). Die Meldung ist klar, kostet aber einen
+   Reparaturversuch, wenn die Laenge aus numpy kommt. Vorschlag: `numbers.Integral`, aber nicht `bool`.
+4. Weiter offen aus Abschnitt 3, nicht Teil dieses Deltas: Training-stderr ueber 64 KiB auf Nebius (Ausnahme und
+   `WorkerFailure` gehen verloren); das Modell sieht in `select_files` nur `listing[:600]`.
