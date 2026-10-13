@@ -852,6 +852,10 @@ class Orchestrator:
 
     def _admit_final_code(self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, code: str, seed: int) -> dict:
         code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+        if getattr(self, 'independent_selection', False):
+            score = self._current_spec_score(code)
+            if score is not None and score[0] != score[1]:
+                raise MethodImplementationBlocked('Selected code did not satisfy the mandatory experiment settings. No paper verdict was produced.')
         val = self.__dict__.get('_val', {}).get((code_hash, seed))
         check = self._selection_check(snapshot, code, seed, task, claim.metric, val)
         self._emit('val_label_check', claim_id=claim.id, code_hash=code_hash, stage='final_admission', **check)
@@ -888,8 +892,9 @@ class Orchestrator:
         spec = self._active_spec()
         if spec is not None and not getattr(self, 'allow_test_feedback', False):
             _, config = spec_check.config_check(code, spec)
-            if config['overrides'] or config['conflicts']:
+            if config['overrides'] or config['conflicts'] or (getattr(self, 'independent_selection', False) and config['unused']):
                 keys = sorted({item['key'] for item in config['overrides'] + config['conflicts']})
+                keys = sorted(set(keys) | (set(config['unused']) if getattr(self, 'independent_selection', False) else set()))
                 violations.append('Configuration contradicts the reproduction spec: ' + ', '.join(keys) +
                                   '. Restore the reference values before training; later module-level writes must not undo them.')
         if violations:
@@ -1243,7 +1248,8 @@ class Orchestrator:
 
     def _gather_docs(self, claim_text: str, dataset: str) -> tuple[list[Doc], dict | None]:
         """Paper-Text + (falls im Paper verlinkt) README (Tavily) und Repo-Dateien (Sandbox-Klon)."""
-        docs = [Doc("paper", self.paper_text.text)]
+        from .experiment_settings import active_paper_text
+        docs = [Doc("paper", active_paper_text(self.paper_text.text))]
         if self.paper_only:
             return docs, None
         get_tavily = self._tavily_getter()
@@ -1665,6 +1671,10 @@ class Orchestrator:
                     raise MethodImplementationBlocked('Candidate validation did not complete. No candidate was selected using test measurements; no paper verdict was produced.')
             
             if self._active_spec() is not None:
+                if getattr(self, 'independent_selection', False):
+                    eligible = [r for r in eligible if r.get('spec_score') is not None and r['spec_score'][0] == r['spec_score'][1]]
+                    if not eligible:
+                        raise MethodImplementationBlocked('No independently validated candidate satisfied the mandatory experiment settings. No paper verdict was produced.')
                 max_score = max((r.get("spec_score", (0, 0))[0] for r in eligible), default=0)
                 spec_eligible = [r for r in eligible if r.get("spec_score", (0, 0))[0] == max_score]
                 pick, reason = select_candidate([r["val"] for r in spec_eligible])

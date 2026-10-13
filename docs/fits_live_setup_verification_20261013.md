@@ -78,7 +78,11 @@ Trainingscode vergleicht dieses gesamte Ergebnis mit 96 Zielschritten.
 Auch Inferenz liefert im urspruenglichen Kandidaten das gesamte Ergebnis.
 Erst der spaetere Code `b1d7c4d038db` schneidet in Training und Inferenz
 die letzten 96 Schritte aus und wird anschliessend gemessen. Die ersten
-beiden Reparaturversuche sehen im Protokoll nur den Broker-Traceback.
+beiden Reparaturereignisse zeigen nur den Broker-Traceback. Praezisierung
+durch Opus: Bei kurzen Worker-Tracebacks kann die primaere Ausnahme noch
+im 1500-Zeichen-Reparaturprompt stehen; sicher verdeckt sind die kurze
+400-Zeichen-Ereignisausgabe und die letzte Ausnahme fuer die Fehlersuche.
+Ein langer Worker-Traceback verliert auch im Reparaturfenster seinen Kontext.
 
 ## Einordnung und naechste Reparatur
 

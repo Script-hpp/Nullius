@@ -1,0 +1,64 @@
+{
+  "historical_code_hash": "947d5088ab2c",
+  "overrides": [
+    {
+      "key": "lr",
+      "old": 0.001,
+      "new": 0.0005
+    },
+    {
+      "key": "epochs",
+      "old": 10,
+      "new": 50
+    },
+    {
+      "key": "batch_size",
+      "old": 32,
+      "new": 128
+    },
+    {
+      "key": "patience",
+      "old": 3,
+      "new": 20
+    },
+    {
+      "key": "seq_len",
+      "old": 90,
+      "new": 360
+    },
+    {
+      "key": "cut_freq",
+      "old": null,
+      "new": 106
+    },
+    {
+      "key": "enc_in",
+      "old": null,
+      "new": 7
+    },
+    {
+      "key": "pred_len",
+      "old": null,
+      "new": 96
+    },
+    {
+      "key": "train_mode",
+      "old": null,
+      "new": 1
+    }
+  ],
+  "unused": [
+    "cut_freq",
+    "enc_in",
+    "pred_len",
+    "train_mode"
+  ],
+  "conflicts": [],
+  "product_gate_result": {
+    "status": "ungueltig",
+    "detail": "Statische Pruefung: Configuration contradicts the reproduction spec: batch_size, cut_freq, enc_in, epochs, lr, patience, pred_len, seq_len, train_mode. Restore the reference values before training; later module-level writes must not undo them.",
+    "static": true
+  },
+  "sandbox_operations": 0,
+  "provider_calls": 0
+}

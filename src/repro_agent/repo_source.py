@@ -323,7 +323,47 @@ def model_file_in_listing(listing: list[str], model: str) -> str | None:
     """Datei, die nach dem Claim-Modell heisst (models/NLinear.py, gnnbench/models/gat.py), kuerzester Pfad zuerst."""
     m = model.lower()
     hits = [p for p in listing if p.endswith(".py") and p.rsplit("/", 1)[-1][:-3].lower() == m]
-    return min(hits, key=len) if hits else None
+    return min(hits, key=lambda p: (not re.search(r'(^|/)models?/', p, re.I), len(p))) if hits else None
+
+
+def forecast_selection(listing, chosen, model, dataset, read_file):
+    """Ensure the dataset launch preset and canonical model survive a bad file choice.
+
+    A named final/best preset only displaces grid-search scripts when the README
+    explicitly designates it. No result metric is used to choose a file.
+    """
+    from .experiment_settings import shell_calls, entrypoint
+    canonical = model_file_in_listing(listing, model)
+    if not canonical:
+        return chosen
+    ds = re.sub(r'[^a-z0-9]', '', dataset.lower())
+    scripts = [p for p in listing if p.endswith('.sh') and ds in re.sub(r'[^a-z0-9]', '', p.rsplit('/',1)[-1].lower())
+               and model.lower() in {seg.lower() for seg in p.split('/')}]
+    readmes = [p for p in listing if p.rsplit('/',1)[-1].lower() in ('readme.md', 'readme.rst', 'readme.txt')]
+    final = []
+    for path in readmes[:2]:
+        try: readme = read_file(path)
+        except OSError: continue
+        if re.search(r'_best[^.\n]*(?:optimal|final|reported|results)|(?:optimal|final|reported)[^.\n]*_best', readme, re.I):
+            final = [p for p in scripts if re.search(r'_best\.sh$', p, re.I)]
+            break
+    selected_scripts = final or scripts
+    if len(selected_scripts) > 4:
+        from .source_context import SourceContextBlocked
+        raise SourceContextBlocked('Author launch preset is ambiguous; too many dataset scripts to read safely')
+    # Exclude a different task variant when a canonical forecast model exists.
+    other_task = re.compile(r'(^|/)(AD|anomaly_detection|anomaly|classification|imputation)/', re.I)
+    filtered = [p for p in chosen if not (re.search(r'(^|/)models?/', canonical, re.I) and other_task.search(p))
+                and not (final and p in scripts and p not in final)]
+    starts = []
+    for path in selected_scripts:
+        try: text = read_file(path)
+        except OSError: continue
+        for _, call, _ in shell_calls(text):
+            script = entrypoint(call)
+            if script in listing and script not in starts:
+                starts.append(script)
+    return list(dict.fromkeys([canonical] + selected_scripts + starts + filtered))
 
 
 def model_config_in_listing(listing: list[str], model: str) -> list[str]:
@@ -547,6 +587,10 @@ def read_repo(
             if mf and mf not in chosen:
                 chosen = [mf] + chosen
             chosen = chosen + [c for c in model_config_in_listing(listing, model) if c not in chosen]
+            from .setup_details import family_for
+            if family_for(dataset) == 'forecast':
+                chosen = forecast_selection(listing, chosen, model, dataset,
+                                            lambda p: sandbox.get_file(branch, f'/repo/{p}').decode(errors='replace'))
         read(chosen)
         if model:   # Modellklasse fehlt in der Auswahl (z. B. nur train.py gewaehlt): Dateien namens models.py/<Modell>.py nachladen
             from .setup_details import Doc
@@ -557,7 +601,13 @@ def read_repo(
         for _ in range(IMPORT_LEVELS):   # E15: Ketten von Trainingshelfern, begrenzt durch das Zeichenbudget
             budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
             nxt = []
+            mf = model_file_in_listing(listing, model) if model else None
+            core_imports = imported_files({mf: files[mf]}, listing, relative=True) if mf in files else []
             for p in imported_files(files, listing, relative=True):
+                # Experiment registries import every baseline; these are not
+                # dependencies of the claimed model. Keep its direct imports.
+                if mf and '/' in mf and p.rsplit('/',1)[0] == mf.rsplit('/',1)[0] and p not in core_imports:
+                    continue
                 if budget <= 0:
                     break
                 nxt.append(p)
