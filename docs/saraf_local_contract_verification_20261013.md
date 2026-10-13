@@ -86,3 +86,60 @@ Frontendquellen bleiben gegenueber dem zuvor geprueften Stand unveraendert (153 
 Historische Benchmark-/Katalogwerte bleiben unveraendert. Nebius-UID-/Capability-Preflight und ein neuer
 autonomer SARAF-Lauf mit vollstaendigem Training sind weiterhin offen. Der Smoke-Test bestaetigt keine
 allgemeine Methodentreue und keine Erfolgsquote der KI-Codegenerierung.
+
+## Nachfolgend freigegebener lokaler Volltest
+
+Der Nutzer bat danach ausdruecklich um Ausfuehrung des Volltests. Aufruf:
+`uv run python scripts/review/saraf_contract_full.py`, **Seeds 0/1/2 vorher festgelegt**.
+Produktstand `db5e571`. Der von Hand geschriebene Adapter um denselben unveraenderten SARAF-/Retrieval-
+Kern trainiert jetzt zehn Epochen mit den belegten Einstellungen: History 720, Horizont 96, sieben
+Kanaele, Batch 8, Adam lr 0.001, originaler type1-Schedule, n_period 1, topm 20 und Zeitgewicht 0.5.
+Keine Dropout-Schicht hinzugefuegt. Bester unabhaengiger Checkpoint ausschliesslich aus sichtbarer Val.
+Die Inferenz laeuft chronologisch mit dem beschriebenen Retrieval-Cache. Die normale Code- und
+Checkpointpruefung bleibt aktiv; nichts wurde anhand von Testwerten repariert oder nachjustiert.
+
+**Drei komplette Runs, alle innerhalb der vorherigen Toleranz von +/-0.01:**
+
+| Seed | Test-MSE | Test-MAE | Bester Val-Checkpoint | Gesamtlaufzeit |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 0.3711257752 | 0.3979054375 | Epoche 4 | 92.55 s |
+| 1 | 0.3685850588 | 0.3960209257 | Epoche 6 | 110.45 s |
+| 2 | 0.3690020300 | 0.3956394735 | Epoche 8 | 110.92 s |
+
+Mittel **MSE 0.3695709547**, Stichproben-Std **0.0013625588**. Paper-Ziel **0.371**.
+Alle drei Runs trainierten auf 7825 Fenstern und fuehrten alle zehn Epochen aus.
+Die vollstaendigen 2785 Testfenster wurden vom normalen Harness in einem frischen, vom Trainings-
+Branch unabhaengigen Container bewertet. Nur sein Dateidownload wurde auf die vorhandene, mit
+SHA-256 verifizierte CSV umgeleitet; Metrik-/Zielberechnung und Pruefung der Vorhersagen bleiben original.
+Der Trainingsbranch erhielt keine Rohdatei fuer die Bewertung. Repeat-MSE **1.2943705948**, Zero-MSE
+**1.1099284101** entsprechen den vorher belegten Dataset-Baselines.
+
+Belege: [Driver](../scripts/review/saraf_contract_full.py),
+[ausgefuehrter Adapter](audits/saraf_contract_full_20261013.adapter.py),
+[drei Runs einschliesslich Epochenprotokollen](audits/saraf_contract_full_20261013.json).
+Autorendateien/Dataset und Adapter haben aufgezeichnete SHA-256-Hashes.
+
+**Was damit bewiesen ist:** Der neue lokale Daten-/Inferenz-/Harness-Pfad kann mit dem Autorenkern
+den Paper-Zielwert erreichen. Die hohe alte MSE ist kein notwendiges Ergebnis des Tasks oder des
+Harness. Das spricht fuer die zuvor belegten Implementierungs-/Eingabefehler als entscheidende Ursachen;
+es isoliert nicht den Beitrag jedes einzelnen Fixes.
+
+**Protokollunterschiede bleiben:** Nullius verwendet 93 sichtbare, taeglich gesampelte Val-Fenster fuer
+Checkpoints und 21 verborgene Auswahlfenster; Autorenvalidierung ist dicht und umfasst die volle Val.
+Seeds 0/1/2 entsprechen Nullius, das Autorenskript nennt 2021/0/42. Online-Retrieval nach dem Training
+veraendert die Reihenfolge der Zufallsziehungen gegenueber kompletter Testvorberechnung vor dem Training.
+Der Erfolg ist deshalb eine numerische lokale Referenz unter dem neuen Nullius-Vertrag, keine bitweise
+Wiederholung der Autorenlaeufe. Der KI-generierte Nachbau und Nebius wurden hier weiterhin nicht ausgefuehrt.
+
+Eine vorherige Volltest-Runde stoppte alle drei Seeds **vor einer Testmessung**: NumPy interpretierte
+einen einelementigen Torch-Index als Skalar und entfernte die Batch-Achse im lokalen Adapter. Der Adapter
+normalisiert Indizes nun ausdruecklich zu einem eindimensionalen Array. Diese Formkorrektur aendert keine
+Hyperparameter und ist mit vier Batch-Regressionsfaellen abgesichert; der fuenfte Test prueft Syntax und
+die bestehenden Produktguards. [Unveraenderte Fehlerartefakte](audits/saraf_contract_full_batch_failure_20261013.json)
+und [damaliger Adapter](audits/saraf_contract_full_batch_failure_20261013.adapter.py) bleiben erhalten.
+Vor dem Start wurde zudem ein unnoetiger dynamischer Import im Diagnoseadapter durch die normale
+Codepruefung abgelehnt und entfernt; der Produktguard wurde nicht abgeschwaecht.
+
+Abnahme des Drivers: **5 passed** (`uv run pytest -q tests/test_saraf_local_reference.py`); Produktquellen
+gegenueber der oben mit 1462 Backend-Tests geprueften Kalenderkorrektur unveraendert. Kein Deployment,
+kein neuer Katalog-/Benchmarkeintrag und kein automatisches Paperurteil im Produkt erzeugt.
