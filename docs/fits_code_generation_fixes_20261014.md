@@ -48,7 +48,7 @@ Seeds 0/1/2: 0.70405 / 0.70345 / 0.70321, Mittel **0.70357 +/- 0.00043**. Der Li
 
 Damit ist belegt: Harness und Vertrag messen richtig, der Agentencode von ee039f0f setzte FITS
 funktional wie der Autorenkern um, und die gesamte Abweichung kommt aus dem falschen Setting
-(vor allem `cut_freq` 3: bei 90 Schritten liegt die Tagesperiode bei Frequenzindex 3.75 und wird
+(welcher Einzelwert dominiert, ist nicht ablatiert; plausibel ist `cut_freq` 3: bei 90 Schritten liegt die Tagesperiode bei Frequenzindex 3.75 und wird
 abgeschnitten). Das stuetzt die Setting-Fixes aus `be1a643`/`30c67b0`; es ist kein Nachweis eines
 autonomen Erfolgs. Skript `scripts/review/fits_live_setting_probe.py`, Beleg
 `docs/audits/fits_live_setting_probe_20261014.json`. Keine Provideraufrufe.
