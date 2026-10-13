@@ -54,6 +54,8 @@ def render_markdown(dossier: Dossier) -> str:
         if info.get('inference'):
             lines += [f"Forecast input contract {info['inference']}: histories exposed chronologically after fitting, "
                       f"{info['deterministic_rechecks']} repeated-history spot checks. Method fidelity remains unchecked.", '']
+            if info.get('calendar_features'):
+                lines += ['Past calendar features: ' + ', '.join(info['calendar_features']) + '. No future measured values exposed.', '']
     if dossier.warnings:
         lines.append("## Hinweise zur Belegbarkeit")
         lines.extend(f"- {w}" for w in dossier.warnings)

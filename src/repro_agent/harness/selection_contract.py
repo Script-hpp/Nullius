@@ -31,4 +31,14 @@ def forecast_public(arrays: dict) -> dict:
     result = {k: v.copy() for k, v in arrays.items()}
     result['val'] = result['val'][:visible_val_rows(len(result['val']))]
     result['test_inputs'] = result['test_inputs'][:0]
+    calendar_keys = {'train_calendar', 'val_calendar', 'test_calendar'}
+    if calendar_keys.intersection(result):
+        if not calendar_keys.issubset(result):
+            raise ValueError('Incomplete forecasting calendar metadata')
+        if (len(result['train_calendar']) != len(arrays['train']) or
+                len(result['val_calendar']) != len(arrays['val']) or
+                len(result['test_calendar']) != len(arrays['test_inputs'])):
+            raise ValueError('Calendar metadata must align with forecasting observations')
+        result['val_calendar'] = result['val_calendar'][:len(result['val'])]
+        result['test_calendar'] = result['test_calendar'][:0]
     return result

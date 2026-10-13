@@ -3,11 +3,21 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import inspect
 import json
 import os
 import sys
 
 import numpy as np
+
+
+def _accepts_calendar(predict):
+    # Wrapper **kwargs (e.g. nn.Module.__call__) do not prove that the actual
+    # forward function accepts calendar. Opt in through the named parameter.
+    try:
+        return 'calendar' in inspect.signature(predict).parameters
+    except (TypeError, ValueError):
+        return False
 
 
 def main():
@@ -24,10 +34,17 @@ def main():
         predict = factory(nio.load(), int(os.environ['SEED']), nio.SMOKE)
         if not callable(predict):
             raise ValueError('train_forecaster must return a callable predictor')
+        accepts_calendar = _accepts_calendar(predict)
     for line in sys.stdin:
-        history = np.asarray(json.loads(line), dtype=np.float32)
+        payload = json.loads(line)
+        history = np.asarray(payload['history'] if isinstance(payload, dict) else payload, dtype=np.float32)
+        calendar = np.asarray(payload['calendar'], dtype=np.int64) if isinstance(payload, dict) else None
+        if calendar is not None and calendar.shape not in ((720,5),(720,6)):
+            raise ValueError('Calendar must contain exactly the past 720 rows and 5 or 6 features')
+        if accepts_calendar and calendar is None:
+            raise ValueError('This predictor requires calendar metadata; use a calendar-enabled task snapshot')
         with contextlib.redirect_stdout(sys.stderr):
-            pred = predict(history)
+            pred = predict(history, calendar=calendar) if accepts_calendar else predict(history)
             if hasattr(pred, 'detach'):
                 pred = pred.detach().cpu().numpy()
             pred = np.asarray(pred)

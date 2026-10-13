@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "error": null,
+  "seconds": 4.57,
+  "contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+      "year",
+      "month",
+      "day",
+      "weekday",
+      "hour"
+    ]
+  },
+  "seed": 0,
+  "training": "one batch of eight; smoke only",
+  "test_windows": 8,
+  "validation_windows": 8,
+  "paper_score": null,
+  "network": "none",
+  "unused_import_stubs": [
+    "pandas",
+    "tqdm"
+  ],
+  "retrieval_sampling": "sample once and memoize per history+calendar, as in the original stored retrieval",
+  "source_hashes": {
+    "models/SARAF.py": "24e3487053d3a33920da58052b7a266183f86352770cc1e4ed456f27eeb3dc83",
+    "layers/Retrieval.py": "fb664a004743d9bf7279be93b86c791e513fa41b1f2edf970e2397c432818348"
+  },
+  "adapter_sha256": "93e5bbfb5687cd51f328cbec19191d827dfb88a47d8962bfc80b81bf9d5e7e4a",
+  "dataset_sha256": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+}

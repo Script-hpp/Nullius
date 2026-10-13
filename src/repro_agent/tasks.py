@@ -73,7 +73,8 @@ class Task:
             name = Path(cfg['data']).stem.removesuffix('_public')
             first = math.ceil(int(ETT[name][4] * .8) / cfg['val_stride'])
             info.update(selection_samples=cfg['val_windows']-first, total_validation_samples=cfg['val_windows'],
-                        inference='causal_stream_v1', deterministic_rechecks=8)
+                        inference='causal_stream_v2', deterministic_rechecks=8,
+                        calendar_features=['year','month','day','weekday','hour'] + (['minute'] if name.startswith('ettm') else []))
         else:
             total = 210 if 'cora_lcc' in cfg['data'] else 500
             info.update(selection_samples=math.ceil(total*.2), total_validation_samples=total)
@@ -101,6 +102,8 @@ class Task:
                            io_val_notes='nullius_io writes selection predictions from the whole-graph output. ' + notes,
                            val_smoke_ids_cmd=self.val_smoke_ids_cmd.replace("['val_idx']", "['selection_idx']"))
         else:
+            changes['setup_cmds'] = [('NULLIUS_FORECAST_CALENDAR=1 ' + cmd) if cmd.startswith('python /opt/prep/')
+                                     else cmd for cmd in changes['setup_cmds']]
             cfg['val_stride'] = ETT[Path(cfg['data']).stem.removesuffix('_public')][7]
             changes['io_config'] = json.dumps(cfg)
             forecast_output = (
@@ -108,6 +111,10 @@ class Task:
                 'The factory fits only on data[\"train\"], uses the visible data[\"val\"] for checkpoint selection, seeds numpy and torch, '
                 'and returns a callable that predicts [96,7] from one numpy history [720,7]. Crop each history to the paper input length. '
                 'Use nullius_io.forecast_data(length) for exact train/val input and target arrays; these have REAL targets, never zeros. '
+                'The same helper supplies train_calendar and val_calendar aligned with each input window. '
+                'If the method uses timestamps, return predictor(history, *, calendar): calendar contains the same past '
+                '720 rows, with columns year, month, day, weekday (Monday=0), hour, plus minute for ETTm. '
+                'Crop calendar together with history. A predictor(history) without calendar remains valid for methods that do not use dates. '
                 'Keep the trained model in eval mode and use deterministic inference without gradient updates or fitting on supplied histories. '
                 'No full test_inputs is exposed to the factory. Our isolated runner supplies one history only after the preceding forecast is recorded. '
                 'Store temporary checkpoints under /tmp/forecast-agent. /output belongs to the runner and is not writable. '

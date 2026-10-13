@@ -1,0 +1,39 @@
+{
+  "status": "stopped",
+  "error": "Smoke run (SMOKE=1) crashed:\ncal/lib/python3.11/site-packages/torch/_compile.py\", line 47, in inner\n    import torch._dynamo\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/__init__.py\", line 13, in <module>\n    from . import (\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/aot_compile.py\", line 17, in <module>\n    from torch._dynamo.convert_frame import GraphRuntimeEnv\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/convert_frame.py\", line 62, in <module>\n    from torch._dynamo.symbolic_convert import TensorifyState\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/symbolic_convert.py\", line 65, in <module>\n    from . import (\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/trace_rules.py\", line 4060, in <module>\n    add(_name)\n  File \"/usr/local/lib/python3.11/site-packages/torch/_dynamo/trace_rules.py\", line 3802, in add\n    module_spec = find_spec(import_name)\n                  ^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib.util>\", line 115, in find_spec\nValueError: pandas.__spec__ is None\nTraceback (most recent call last):\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 71, in main\n    pred = predict(history, calendar)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 55, in predict\n    proc.stdin.write(json.dumps(payload, allow_nan=False) + '\\n')\nBrokenPipeError: [Errno 32] Broken pipe\n(exit code 1)",
+  "seconds": 4.43,
+  "contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+      "year",
+      "month",
+      "day",
+      "weekday",
+      "hour"
+    ]
+  },
+  "seed": 0,
+  "training": "one batch of eight; smoke only",
+  "test_windows": 8,
+  "validation_windows": 8,
+  "paper_score": null,
+  "network": "none",
+  "unused_import_stubs": [
+    "pandas",
+    "tqdm"
+  ],
+  "source_hashes": {
+    "models/SARAF.py": "24e3487053d3a33920da58052b7a266183f86352770cc1e4ed456f27eeb3dc83",
+    "layers/Retrieval.py": "fb664a004743d9bf7279be93b86c791e513fa41b1f2edf970e2397c432818348"
+  },
+  "adapter_sha256": "d0f16afeb266c43e93f129c7d10b1ba8680df53c6cd59ce6a67ee8e088210b2c",
+  "dataset_sha256": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+}

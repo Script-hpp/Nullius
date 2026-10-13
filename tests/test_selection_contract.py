@@ -60,15 +60,20 @@ def test_contract_is_explicit_and_idempotent_and_preserves_legacy_tasks():
 
 
 @pytest.mark.skipif(os.getenv('NULLIUS_DOCKER_TESTS') != '1', reason='explicit offline Docker integration check')
-@pytest.mark.parametrize('adaptive', [False, True])
-def test_real_causal_broker_hides_future_data_and_drops_worker_privileges(tmp_path, monkeypatch, adaptive):
+@pytest.mark.parametrize('adaptive,calendar_enabled', [(False,False),(True,False),(False,True)])
+def test_real_causal_broker_hides_future_data_and_drops_worker_privileges(tmp_path, monkeypatch, adaptive, calendar_enabled):
     import repro_agent.loop as loop
     image = 'repro-snapshot:gate-etth1'
     subprocess.run(['docker', 'image', 'inspect', image], check=True, capture_output=True)
     series = np.arange(1400 * 7, dtype=np.float32).reshape(1400, 7) / 100
     test = np.stack([series[500+i:1220+i] for i in range(3)])
     buf = io.BytesIO()
-    np.savez_compressed(buf, train=series[:800], val=series[800:1400], test_inputs=test)
+    arrays = dict(train=series[:800], val=series[800:1400], test_inputs=test)
+    if calendar_enabled:
+        calendar = np.repeat(np.arange(1400)[:,None],5,axis=1)
+        arrays.update(train_calendar=calendar[:800], val_calendar=calendar[800:],
+                      test_calendar=np.stack([calendar[500+i:1220+i] for i in range(3)]))
+    np.savez_compressed(buf, **arrays)
     class OfflineSandbox(LocalSandbox):
         def __init__(self): self.containers = []
         def branch(self, snapshot):
@@ -109,6 +114,12 @@ def train_forecaster(data, seed, smoke):
         code = code.replace('    return lambda history: np.repeat(history[-1:,:], 96, axis=0)',
                             '    calls=[0]\n    def predict(history):\n        calls[0]+=1\n'
                             '        return np.repeat(history[-1:,:],96,axis=0)+calls[0]*.01\n    return predict')
+    if calendar_enabled:
+        code = code.replace('    return lambda history: np.repeat(history[-1:,:], 96, axis=0)',
+                            '    def predict(history, *, calendar):\n'
+                            '        assert calendar.shape == (720,5)\n'
+                            '        assert np.array_equal(calendar[:,0], np.rint(history[:,0]*100/7).astype(int))\n'
+                            '        return np.repeat(history[-1:,:],96,axis=0)\n    return predict')
     # Score code remains trusted and network free; this test checks the broker,
     # not a paper number. Actual forecast bytes are checked independently below.
     real_harness = loop.HARNESS_DIR
@@ -141,5 +152,5 @@ def test_report_records_contract_and_selection_sample_count_without_relabeling_o
     info = etth1_task().with_independent_selection().selection_info()
     assert info['selection_samples'] == 21 and info['total_validation_samples'] == 117
     text = render_markdown(Dossier(paper_id='p', selection_contract=info))
-    assert '21 of 117' in text and 'causal_stream_v1' in text
+    assert '21 of 117' in text and 'causal_stream_v2' in text
     assert 'withheld_validation_v1' not in render_markdown(Dossier(paper_id='historical'))

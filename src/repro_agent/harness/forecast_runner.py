@@ -42,11 +42,17 @@ def main(config_path: str):
     train_end = len(arrays['train'])
     val_starts = train_end + cfg['val_stride'] * np.arange(cfg['val_windows'])
     val_inputs = np.stack([series[s-720:s] for s in val_starts])
+    val_calendar = test_calendar = None
+    if 'train_calendar' in arrays:
+        calendar = np.concatenate([arrays['train_calendar'], arrays['val_calendar']])
+        val_calendar = np.stack([calendar[s-720:s] for s in val_starts])
+        test_calendar = arrays['test_calendar']
     count = cfg['smoke_windows'] if os.environ.get('SMOKE') == '1' else None
     checks = []
     n_seen = 0
-    def predict(history):
-        proc.stdin.write(json.dumps(history.tolist(), allow_nan=False) + '\n')
+    def predict(history, calendar):
+        payload = {'history': history.tolist(), 'calendar': calendar.tolist()} if calendar is not None else history.tolist()
+        proc.stdin.write(json.dumps(payload, allow_nan=False) + '\n')
         proc.stdin.flush()
         line = proc.stdout.readline(256_000)
         if not line or not line.endswith('\n'):
@@ -56,24 +62,26 @@ def main(config_path: str):
             raise ValueError('Forecast worker output must be finite [96,7]')
         return pred
     try:
-        for filename, inputs in [('val_predictions.csv', val_inputs), ('predictions.csv', arrays['test_inputs'])]:
+        for filename, inputs, calendars in [('val_predictions.csv', val_inputs, val_calendar),
+                                            ('predictions.csv', arrays['test_inputs'], test_calendar)]:
             with open('/output/' + filename, 'w') as out:
                 out.write('id,prediction\n')
                 for i, history in enumerate(inputs[:count]):
-                    pred = predict(history)
+                    calendar = calendars[i] if calendars is not None else None
+                    pred = predict(history, calendar)
                     # Reservoir sampling keeps eight unknown-to-agent stability probes.
                     n_seen += 1
                     if len(checks) < 8:
-                        checks.append((history.copy(), pred.copy()))
+                        checks.append((history.copy(), None if calendar is None else calendar.copy(), pred.copy()))
                     else:
                         slot = secrets.randbelow(n_seen)
                         if slot < len(checks):
-                            checks[slot] = (history.copy(), pred.copy())
+                            checks[slot] = (history.copy(), None if calendar is None else calendar.copy(), pred.copy())
                     # Commit this prediction before exposing any later input.
                     out.writelines(f'{i}_{h}_{c},{pred[h,c]:.8g}\n' for h in range(96) for c in range(7))
                     out.flush()
-        for history, expected in checks:
-            if not np.allclose(predict(history), expected, rtol=0, atol=1e-4):
+        for history, calendar, expected in checks:
+            if not np.allclose(predict(history, calendar), expected, rtol=0, atol=1e-4):
                 raise ValueError('Prediction changed for a previously seen history; inference must be deterministic and must not update the model')
         proc.stdin.close()
         proc.wait(timeout=10)

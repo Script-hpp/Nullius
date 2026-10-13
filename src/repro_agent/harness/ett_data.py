@@ -12,6 +12,8 @@ Testfenster i: Ziel = Zeilen [VAL_END+i, VAL_END+i+PRED_LEN), Eingabe = Zeilen d
 from __future__ import annotations
 
 import csv
+from datetime import datetime
+import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -127,12 +129,19 @@ def prepare_public(name: str, csv_path: Path, out_npz: Path, pred_len: int = PRE
     z = load_standardized(name, csv_path)
     starts = val_end + np.arange(n_windows(name, pred_len))
     idx = starts[:, None] - MAX_HISTORY + np.arange(MAX_HISTORY)[None, :]
-    np.savez_compressed(
-        out_npz,
-        train=z[:train_end].astype(np.float32),
-        val=z[train_end:val_end].astype(np.float32),
-        test_inputs=z[idx].astype(np.float32),
-    )
+    arrays = dict(train=z[:train_end].astype(np.float32),
+                  val=z[train_end:val_end].astype(np.float32),
+                  test_inputs=z[idx].astype(np.float32))
+    if os.environ.get('NULLIUS_FORECAST_CALENDAR') == '1':
+        with open(csv_path, newline='') as stream:
+            dates = [datetime.fromisoformat(row['date']) for row in csv.DictReader(stream)][:len(z)]
+        calendar = np.asarray([[d.year, d.month, d.day, d.weekday(), d.hour] +
+                               ([d.minute] if name.startswith('ettm') else []) for d in dates], dtype=np.int64)
+        if len(calendar) != len(z):
+            raise ValueError('Calendar observations must align with the measured series')
+        arrays.update(train_calendar=calendar[:train_end], val_calendar=calendar[train_end:val_end],
+                      test_calendar=calendar[idx])
+    np.savez_compressed(out_npz, **arrays)
     data_identity.write_manifest(out_npz, [csv_path])
 
 

@@ -51,7 +51,12 @@ def forecast_data(length: int, stride: int = 1) -> dict:
         raise ValueError('Not enough train/visible-validation rows for this history and horizon')
     tx, ty = windows(train, starts)
     vx, vy = windows(np.concatenate([train, val]), val_starts)
-    return {'train_inputs': tx, 'train_targets': ty, 'val_inputs': vx, 'val_targets': vy}
+    result = {'train_inputs': tx, 'train_targets': ty, 'val_inputs': vx, 'val_targets': vy}
+    if 'train_calendar' in d and 'val_calendar' in d:
+        calendar = np.concatenate([d['train_calendar'], d['val_calendar']])
+        result.update(train_calendar=np.stack([calendar[s-length:s] for s in starts]),
+                      val_calendar=np.stack([calendar[s-length:s] for s in val_starts]))
+    return result
 
 
 def _write(path: str, ids: list[str], values, fmt: str = "") -> None:
