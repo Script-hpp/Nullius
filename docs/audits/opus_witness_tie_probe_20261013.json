@@ -1,0 +1,149 @@
+{
+ "FITS": [
+  {
+   "key": "lr",
+   "value": "0.0005",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "--learning_rate 0.0005",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "epochs",
+   "value": "50",
+   "source": "repo:run_longExp_F.py@d040bb0",
+   "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "batch_size",
+   "value": "128",
+   "source": "repo:run_longExp_F.py@d040bb0",
+   "quote": "args.batch_size = args.batch_size * 2",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "patience",
+   "value": "20",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "--patience 20",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "seq_len",
+   "value": "360",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "for seq_len in 360",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "cut_freq",
+   "value": "106",
+   "source": "repo:run_longExp_F.py@d040bb0",
+   "quote": "args.cut_freq = int(args.seq_len // args.base_T + 1) * args.H_order + 10",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "enc_in",
+   "value": "7",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "--enc_in 7",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "pred_len",
+   "value": "96",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "--pred_len 96",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "train_mode",
+   "value": "1",
+   "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+   "quote": "for m in 1",
+   "quote_in_source": true,
+   "value_in_quote": true
+  }
+ ],
+ "DLinear": [
+  {
+   "key": "lr",
+   "value": "0.005",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "quote": "--learning_rate 0.005",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "epochs",
+   "value": "10",
+   "source": "repo:run_longExp.py@0c11366",
+   "quote": "parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "batch_size",
+   "value": "32",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "quote": "--batch_size 32",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "patience",
+   "value": "3",
+   "source": "repo:run_longExp.py@0c11366",
+   "quote": "parser.add_argument('--patience', type=int, default=3, help='early stopping patience')",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "seq_len",
+   "value": "336",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "quote": "seq_len=336",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "enc_in",
+   "value": "7",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "quote": "--enc_in 7",
+   "quote_in_source": true,
+   "value_in_quote": true
+  },
+  {
+   "key": "pred_len",
+   "value": "96",
+   "source": "repo:scripts/EXP-LongForecasting/Linear/etth1.sh@0c11366",
+   "quote": "--pred_len 96",
+   "quote_in_source": true,
+   "value_in_quote": true
+  }
+ ],
+ "later_literal_witness": [
+  [
+   "seq_len",
+   "336",
+   "repo:scripts/FITS/etth1.sh@x",
+   "--seq_len 336"
+  ],
+  [
+   "batch_size",
+   "64",
+   "repo:scripts/FITS/etth1.sh@x",
+   "--batch_size 64"
+  ]
+ ],
+ "tie": "BLOCKED: Author launch settings remain ambiguous: batch_size. No experiment was started"
+}

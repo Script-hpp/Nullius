@@ -135,3 +135,23 @@ Restpunkte (keine Blocker):
 2. **NLinear-Altlast (wie committed):** Die alten Rohregeln nehmen weiter den Aufruf mit `--model $model_name`, obwohl die
    neue Auswertung ihn als DLinear aufloest. Dieselbe Aufloesung sollte den Rohpfad fuer andere Modelle sperren.
 3. Gleichrang-Konflikte bleiben nicht erzwungen; ein eigener Stopp dafuer ist im Code nicht zu sehen.
+
+## Nachtrag 3: Delta-Pruefung (features, Rohregeln, Gleichstand, Belege)
+
+Stand **2026-10-13, 18:14 UTC**, `ceo` `d45b015` plus Diff `43591420…` (bis 18:22 nur Doku/Skripte geaendert,
+`src/` gleich). Scratch-Kopie, keine Calls/Downloads. **Gesamtsuite 1561 passed, 20 skipped, 5 xfailed.**
+**Kein Restblocker.** Proben: `docs/audits/opus_witness_tie_probe_20261013.{py,json}`, `opus_setting_delta_probes_20261013.json`.
+
+| Pruefung | Ergebnis |
+| --- | --- |
+| `features=M` inkl. `--feature S` | univariates DLinear-Skript faellt raus; DLinear jetzt mit `enc_in` 7 erzwungen, kein Gleichstand |
+| Rohregeln mit gleicher Shell-Aufloesung | NLinear erhaelt nicht mehr lr/batch des DLinear-Aufrufs; nur `seq_len` 336 aus der Skriptvariablen `seq_len=336` (alte Zuweisungsregel, Wert hier zufaellig richtig) |
+| Gleichrangige Laufzeitwerte (batch 64 vs 128) | sichtbarer Stopp „Author launch settings remain ambiguous: batch_size“ |
+| Belege (`runtime_witness`) FITS und DLinear | alle 16 Laufzeitwerte: Zitat steht woertlich in der genannten Quelldatei und traegt den Wert bzw. die Rechenvorschrift (`args.cut_freq = int(...)`, `args.batch_size = args.batch_size * 2`, `for seq_len in 360`, `for m in 1`) |
+| Literal nur im spaeteren 96-Aufruf, erster Aufruf 192 mit `$bs` | Beleg `--batch_size 64` aus dem passenden Aufruf |
+| Fruehere Proben (SparseTSF/SegRNN echt, Mutationen, Horizont-/Datensatzschleifen) | unveraendert gruen |
+
+Restgrenzen ohne Blocker: Der Beleg fuer abgeleitete Werte zeigt nur die letzte Rechenzeile, nicht den Ausgangswert
+(FITS batch 128 = `for bs in 64` mal 2). `enc_in == 7` ist als ETT-Kanalzahl fest eingebaut; fuer neue
+Forecast-Datensaetze anpassen. Die alte Zuweisungsregel (`seq_len=336` in einem Skript eines anderen Modells)
+bleibt modellunabhaengig.
