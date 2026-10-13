@@ -1,0 +1,273 @@
+{
+ "cross_paper": {
+  "FITS ETTh1 (tests fixture)": {
+   "enforced": {
+    "lr": "0.0005",
+    "epochs": "50",
+    "batch_size": "128",
+    "patience": "20",
+    "seq_len": "360",
+    "cut_freq": "106",
+    "enc_in": "7",
+    "pred_len": "96",
+    "train_mode": "1"
+   },
+   "runtime": [
+    "batch_size",
+    "cut_freq",
+    "enc_in",
+    "epochs",
+    "lr",
+    "patience",
+    "pred_len",
+    "seq_len",
+    "train_mode"
+   ],
+   "not_enforced": {}
+  },
+  "DLinear ETTh1 (LTSF-Linear fixture)": {
+   "enforced": {
+    "lr": "0.005",
+    "epochs": "10",
+    "batch_size": "32",
+    "patience": "3",
+    "seq_len": "336",
+    "enc_in": "7",
+    "pred_len": "96"
+   },
+   "runtime": [
+    "batch_size",
+    "enc_in",
+    "epochs",
+    "lr",
+    "patience",
+    "pred_len",
+    "seq_len"
+   ],
+   "not_enforced": {}
+  },
+  "NLinear ETTh1 (same repo, script launches DLinear)": {
+   "enforced": {
+    "seq_len": "336"
+   },
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "MoHETS ETTh1 (weather scripts only)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "GCN Cora (graph family)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  }
+ },
+ "real_scripts": {
+  "SparseTSF scripts/SparseTSF/linear/etth1.sh": [
+   [
+    "batch_size",
+    "256"
+   ],
+   [
+    "epochs",
+    "30"
+   ],
+   [
+    "lr",
+    "0.02"
+   ],
+   [
+    "patience",
+    "5"
+   ],
+   [
+    "period_len",
+    "24"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "720"
+   ]
+  ],
+  "SegRNN scripts/SegRNN/etth1.sh": [
+   [
+    "batch_size",
+    "64"
+   ],
+   [
+    "d_model",
+    "512"
+   ],
+   [
+    "epochs",
+    "30"
+   ],
+   [
+    "lr",
+    "0.0003"
+   ],
+   [
+    "patience",
+    "5"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seg_len",
+    "24"
+   ],
+   [
+    "seq_len",
+    "720"
+   ]
+  ]
+ },
+ "mutations": {
+  "function_body_mutation": {
+   "batch_size": null,
+   "learning_rate": 0.001,
+   "seq_len": 360
+  },
+  "set_defaults": {
+   "batch_size": 64,
+   "learning_rate": 0.0005,
+   "seq_len": 360
+  },
+  "setattr_from_config_loop": {
+   "batch_size": null,
+   "learning_rate": null,
+   "seq_len": null
+  },
+  "dict_update": {
+   "batch_size": null,
+   "learning_rate": null,
+   "seq_len": null
+  },
+  "vars_update": {
+   "batch_size": null,
+   "learning_rate": null,
+   "seq_len": null
+  },
+  "other_name_opt": {
+   "batch_size": 128,
+   "learning_rate": 0.001,
+   "seq_len": 360
+  },
+  "known_args_load_config": {
+   "batch_size": null,
+   "learning_rate": null,
+   "seq_len": null
+  },
+  "class_self_args_store": {
+   "batch_size": null,
+   "learning_rate": 0.001,
+   "seq_len": 360
+  },
+  "namespace_copy_alias": {
+   "batch_size": 256,
+   "learning_rate": 0.001,
+   "seq_len": 360
+  },
+  "horizon_loop_fixed_seq": [
+   [
+    "batch_size",
+    "256"
+   ],
+   [
+    "lr",
+    "0.02"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "720"
+   ]
+  ],
+  "dataset_loop": [
+   [
+    "batch_size",
+    "32"
+   ],
+   [
+    "lr",
+    "0.001"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "336"
+   ]
+  ],
+  "explicit_unread_flags": [
+   [
+    "batch_size",
+    "32"
+   ],
+   [
+    "lr",
+    "0.001"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "336"
+   ]
+  ],
+  "mutation_in_imported_module": "BLOCKED: Author launch has unresolved model parameters: batch_size. No experiment was started"
+ },
+ "nonmatching_loop": {
+  "only_concrete_96": [
+   [
+    "batch_size",
+    "64"
+   ],
+   [
+    "lr",
+    "0.0001"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "336"
+   ]
+  ],
+  "plus_long_horizon_loop": [
+   [
+    "batch_size",
+    "64"
+   ],
+   [
+    "lr",
+    "0.0001"
+   ],
+   [
+    "pred_len",
+    "96"
+   ],
+   [
+    "seq_len",
+    "336"
+   ]
+  ]
+ }
+}
