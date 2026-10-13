@@ -167,7 +167,10 @@ def export_run(run: Path, out: Path, titles: dict[str, str]) -> dict:
         write_badge(dest, Dossier.load(dest / "dossier.json"), ts, catalog=paper_id.startswith("disc_"))
     except Exception as exc:   # noqa: BLE001
         print(f"Badge skipped for {paper_id}/{ts}: {type(exc).__name__}: {exc}")
-    att = [a for a in dossier["attempts"] if a["measured"] is not None] or dossier["attempts"]
+    own_attempts = [a for a in dossier['attempts'] if first is not None and a.get('claim_id') == first['id']]
+    selected = any(isinstance(a.get('chosen'), bool) for a in own_attempts)
+    att = [a for a in own_attempts if a.get('measured') is not None and (not selected or a.get('chosen') is True)]
+    (dest / 'code.py').unlink(missing_ok=True)
     code = next(iter(run.glob(f"*_{att[-1]['code_hash']}.py")), None) if att else None
     if code:
         shutil.copy(code, dest / "code.py")

@@ -11,6 +11,7 @@ Aufteilung nach Staerken der Werkzeuge:
 from __future__ import annotations
 
 import json
+import ast
 import re
 import shlex
 from dataclasses import asdict, dataclass, field
@@ -46,6 +47,8 @@ class RepoDump:
     files: dict[str, str] = field(default_factory=dict)   # Pfad -> Inhalt (gelesene Auswahl)
     n_tracked: int = 0
     subdir: str = ""   # gelesener Unterordner eines Sammel-Repos (Pfade in `files` bleiben relativ zur Repo-Wurzel)
+    listing: list[str] = field(default_factory=list)
+    truncation: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -253,7 +256,18 @@ def imported_files(files: dict[str, str], listing: list[str], relative: bool = F
         if not path.endswith(".py"):
             continue
         base = path.rsplit("/", 1)[0] if "/" in path else ""
-        for a, names, b in (IMPORT_RE_S4 if relative else IMPORT_RE).findall(text):
+        try:
+            tree = ast.parse(text)
+            imports = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imports += [('', '', alias.name) for alias in node.names]
+                elif isinstance(node, ast.ImportFrom):
+                    if relative or not any(a.name == '*' for a in node.names):
+                        imports.append(('.' * node.level + (node.module or ''), ','.join(a.name for a in node.names), ''))
+        except SyntaxError:
+            imports = (IMPORT_RE_S4 if relative else IMPORT_RE).findall(text)
+        for a, names, b in imports:
             raw = a or b
             if relative and raw.startswith("."):
                 dots = len(raw) - len(raw.lstrip("."))
@@ -444,7 +458,7 @@ def read_repo(
 
     fixture_dir = fixture_dir or FIXTURE_DIR
     fixture = fixture_dir / (unit_fixture_name(url, unit_key) if unit_key else f"{_repo_key(url)}.json")
-    if fixture.exists():
+    if mode == "fixture" and fixture.exists():
         dump = RepoDump(**json.loads(fixture.read_text()))
         if unit_key:
             dump.files = {p: t for p, t in dump.files.items() if is_source_text(p, t)}
@@ -477,11 +491,16 @@ def read_repo(
         if on_note is not None:
             on_note(f"Dateiwahl des Modells lieferte keinen gueltigen Pfad ({len(listing)} Dateien im Repo); Rueckfall auf Namensheuristik: {', '.join(chosen) or 'keine Datei'}")
     files = {}
+    cuts = []
 
     def read(paths):
         for path in paths:
             try:
-                text = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")[:MAX_FILE_CHARS]
+                full = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")
+                limit = IMPORT_CHAR_BUDGET if unit_key else MAX_FILE_CHARS
+                text = full[:limit]
+                if len(full) > limit:
+                    cuts.append({"file": path, "kept_chars": limit, "of_chars": len(full)})
             except (OSError, UnicodeDecodeError):
                 continue
             if unit_key and not is_source_text(path, text):
@@ -514,7 +533,8 @@ def read_repo(
     else:
         read(chosen)
         read(imported_files(files, listing)[:MAX_IMPORTED])
-    dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing), subdir=subdir)
+    dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing), subdir=subdir,
+                    listing=listing, truncation=cuts)
     if mode == "live":
         return dump
     fixture_dir.mkdir(parents=True, exist_ok=True)

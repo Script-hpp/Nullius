@@ -139,9 +139,11 @@ def test_hard_sandbox_timeout_still_a_timeout(tmp_path):
     assert d.attempts[0].status == "timeout" and "printed nothing" in calls["repair"][0]
 
 
-def test_run_result_exit_code_reaches_attempt_log(tmp_path):
+def test_run_result_exit_code_reaches_attempt_log(tmp_path, monkeypatch):
     """F8: _attempt-Ergebnis traegt exit_code; der Gate-Wrapper schreibt eine Zeile je Versuch."""
     import cg_gate
+    from test_fault_repair import settings
+    monkeypatch.setattr('repro_agent.config.load_settings', lambda: settings(False))
     sb = SimpleNamespace(begin_attempt=lambda: None, release_attempt=lambda: None, times={})
     log = tmp_path / "attempts.jsonl"
     o = cg_gate.make_orchestrator(sb, attempt_log=log)

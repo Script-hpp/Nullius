@@ -798,10 +798,10 @@ def test_max_searches_and_dedup(monkeypatch, tmp_path):
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=tavily, cache_path=str(tmp_path / "c.json"))
     agent.discover(["Cora"])
     from repro_agent.discovery import MAX_SEARCHES_PER_DATASET
-    assert len(tavily.paper_queries) == MAX_SEARCHES_PER_DATASET == 3
-    assert len(set(tavily.paper_queries)) == 3
+    assert len(tavily.paper_queries) == MAX_SEARCHES_PER_DATASET == 5
+    assert len(set(tavily.paper_queries)) == 5
     ids = urls[0]["id_list"].split(",")
-    assert ids.count("2101.12345") == 1 and len(ids) == 4
+    assert ids.count("2101.12345") == 1 and len(ids) == 6
 
 
 def test_prompt_contains_protocol_hints(monkeypatch, arxiv_xml, tmp_path):
@@ -1468,7 +1468,7 @@ def test_papers_mentioning_code_come_first():
 def test_search_covers_all_datasets_and_stays_bounded():
     from repro_agent.discovery import DISCOVERY_QUERIES, MAX_SEARCHES_PER_DATASET
     assert set(DISCOVERY_QUERIES) == {"Cora", "CiteSeer", "ETTh1"}
-    assert all(1 <= len(q) <= MAX_SEARCHES_PER_DATASET <= 3 for q in DISCOVERY_QUERIES.values())
+    assert all(1 <= len(q) <= MAX_SEARCHES_PER_DATASET <= 5 for q in DISCOVERY_QUERIES.values())
     assert any("github" in q for q in DISCOVERY_QUERIES["Cora"])
     assert any("linear" in q.lower() for q in DISCOVERY_QUERIES["ETTh1"])
 

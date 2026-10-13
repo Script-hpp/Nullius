@@ -139,6 +139,8 @@ def test_build_spec_numeric_only_prompt_has_no_text_keys_and_keeps_raw_excerpt()
 def test_orchestrator_flag_implies_spec_mode_and_setup_v2(monkeypatch):
     import repro_agent.loop as loop_mod
     monkeypatch.setattr(loop_mod, "get_sandbox", lambda name: None)
+    from test_fault_repair import settings
+    monkeypatch.setattr(loop_mod, 'load_settings', lambda: settings(False))
     o = Orchestrator(code_grounded=True)
     assert o.code_grounded and o.spec_mode and o.setup_v2
     o = Orchestrator()

@@ -6,6 +6,8 @@ Jede Aussage braucht ein woertliches Zitat, das im Quelltext steht; der Quelltex
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -70,7 +72,7 @@ def extract_objections(
     rohen Extraktor-Kandidaten je Seite {url, topic, statement, quote, quote_in_page}, auch die behaltenen."""
     jobs = [(d, c) for d in docs for c in _chunks(d.text[:60000])]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw = list(pool.map(lambda j: _extract_chunk(llm, j[1], paper, dataset), jobs))
+        raw = list(context_map(pool, lambda j: _extract_chunk(llm, j[1], paper, dataset), jobs))
     hay = {d.name: _norm(d.text) for d in docs}
     kept, dropped, seen = [], 0, set()
     for (doc, _), lst in zip(jobs, raw):

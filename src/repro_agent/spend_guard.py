@@ -39,6 +39,16 @@ class JobBudget:
 current_budget = contextvars.ContextVar("job_budget", default=None)
 
 
+def context_map(pool, function, items):
+    """Keep job budget/cancellation context in each executor task.
+
+    A Context cannot be entered concurrently, so each item needs its own copy.
+    Lazily constructed clients must capture the same budget as their caller.
+    """
+    tasks = [(contextvars.copy_context(), item) for item in items]
+    return pool.map(lambda task: task[0].run(function, task[1]), tasks)
+
+
 def number(name: str, default: float) -> float:
     try:
         value = float(os.environ.get(name, default))

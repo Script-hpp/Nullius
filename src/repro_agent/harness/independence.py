@@ -69,9 +69,15 @@ def parse_predictions(csv_bytes: bytes, n_windows: int | None = None) -> np.ndar
     if text.split("\n", 1)[0].strip() != "id,prediction":
         raise ValueError("predictions.csv muss Spalten id,prediction haben")
     data = np.loadtxt(io.StringIO(text.replace("_", ",")), delimiter=",", skiprows=1, ndmin=2)   # Spalten: Fenster, Schritt, Kanal, Wert
+    if data.shape[1] != 4 or not np.isfinite(data).all() or not np.equal(data[:, :3], np.floor(data[:, :3])).all():
+        raise ValueError('Prediction rows need three integer indices and a finite value.')
     idx = data[:, :3].astype(np.int64)
     vals = data[:, 3]
     n = n_windows if n_windows is not None else int(idx[:, 0].max()) + 1
+    if (idx < 0).any() or (idx[:, 0] >= n).any() or (idx[:, 1] >= PRED_LEN).any() or (idx[:, 2] >= N_CHANNELS).any():
+        raise ValueError('Prediction id outside window/step/channel bounds.')
+    if len(np.unique(idx, axis=0)) != len(idx):
+        raise ValueError('Duplicate prediction id.')
     out = np.full((n, PRED_LEN, N_CHANNELS), np.nan)
     out[idx[:, 0], idx[:, 1], idx[:, 2]] = vals
     return out

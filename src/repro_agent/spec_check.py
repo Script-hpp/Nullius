@@ -54,7 +54,7 @@ def _used_keys(tree: ast.Module, cfg: ast.Assign) -> set[str]:
     for node in ast.walk(tree):
         if id(node) in inside:
             continue
-        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id in aliases:
+        if isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Load) and isinstance(node.value, ast.Name) and node.value.id in aliases:
             k = _literal(node.slice)
             if isinstance(k, str):
                 used.add(k)
@@ -88,6 +88,34 @@ def _keyword_conflicts(tree: ast.Module, spec: Spec) -> list[dict]:
     return out
 
 
+def _config_mutations(tree: ast.Module, cfg: ast.Assign, spec: Spec) -> list[dict]:
+    """Known module-level overwrites must not undo the injected spec values.
+    Runtime learning-rate schedules inside loops/functions are a separate
+    protocol, not a conflicting initial configuration.
+    """
+    out = []
+    for node in tree.body:
+        if node.lineno <= (cfg.end_lineno or cfg.lineno):
+            continue
+        writes = []
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name) and target.value.id == 'CONFIG':
+                    writes.append((_literal(target.slice), _literal(node.value)))
+        if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute)
+                and isinstance(node.value.func.value, ast.Name) and node.value.func.value.id == 'CONFIG'
+                and node.value.func.attr == 'update'):
+            call = node.value
+            if call.args and isinstance(call.args[0], ast.Dict):
+                writes += [(_literal(k), _literal(v)) for k, v in zip(call.args[0].keys, call.args[0].values) if k is not None]
+            writes += [(kw.arg, _literal(kw.value)) for kw in call.keywords if kw.arg is not None]
+        for key, value in writes:
+            for item in spec.enforced():
+                if key == item.key and isinstance(value, (int, float)) and not isinstance(value, bool) and not _equal(value, item.number):
+                    out.append({'key': key, 'literal': value, 'line': node.lineno, 'kind': 'config_overwrite'})
+    return out
+
+
 def config_check(code: str, spec: Spec) -> tuple[str, dict]:
     """S2. Rueckgabe (Code mit Override-Zeilen, Bericht). Bericht: has_config, overrides [{key, old, new}], unused, conflicts, error."""
     report: dict = {"has_config": False, "overrides": [], "unused": [], "conflicts": [], "error": ""}
@@ -117,7 +145,7 @@ def config_check(code: str, spec: Spec) -> tuple[str, dict]:
             report["overrides"].append({"key": item.key, "old": old if old != "<missing>" else None, "new": item.number})
     used = _used_keys(tree, cfg)
     report["unused"] = [i.key for i in enf if i.key not in used]
-    report["conflicts"] = _keyword_conflicts(tree, spec)
+    report["conflicts"] = _keyword_conflicts(tree, spec) + _config_mutations(tree, cfg, spec)
     if lines:
         src = code.splitlines(keepends=True)
         end = cfg.end_lineno or cfg.lineno

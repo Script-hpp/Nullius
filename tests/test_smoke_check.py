@@ -83,6 +83,17 @@ def test_smoke_timeout_and_pass_is_cached():
     assert len(sb.cmds) == 2                                 # Smoke + rm, nicht wiederholt
 
 
+def test_smoke_cache_is_scoped_to_task_and_seed():
+    from dataclasses import replace
+    sb = FakeSandbox([ok(), ok(), ok(), ok(), ok(), ok()], out=csv_for(IDS))
+    o = _orch(sb)
+    t = _task()
+    assert o._smoke_check('b', 'code', t, 0) is None
+    assert o._smoke_check('b', 'code', t, 1) is None
+    assert o._smoke_check('b', 'code', replace(t, data_description=t.data_description+'different task'), 1) is None
+    assert len(sb.cmds)==6
+
+
 def test_smoke_wrong_shape_message():
     swapped = tuple(f"{w}_{c}_{s}" for w in range(2) for s in range(3) for c in range(4))
     o = _orch(FakeSandbox([ok()], out=csv_for(swapped)))

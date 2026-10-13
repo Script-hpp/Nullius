@@ -18,7 +18,7 @@ const ACTOR_HINT: Record<Actor, string> = {
   tavily: 'Tavily is the researcher: it fetches pages from the web (paper, README) for the agent.',
   nemotron: 'Nemotron is the brain: NVIDIA language models that plan, write code and read text. Different roles use different model sizes.',
   sandbox: 'The sandbox is the lab: an isolated machine where the agent code runs. Every seed runs in its own branch of the same snapshot.',
-  harness: 'The harness is the examiner: our own code loads the true labels itself and computes the score, so the agent cannot fake a number.',
+  harness: 'The harness loads the targets separately after training and computes the score from the saved predictions.',
   system: 'Infrastructure: retries and waiting.',
 }
 const TERM_HINT = {
@@ -318,7 +318,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
                   )}
                   <p className="mt-3 flex items-start gap-2 rounded-lg border border-line bg-surface p-3 text-[13px] leading-relaxed text-fg-3">
                     <ShieldCheck className="mt-0.5 w-3.5 h-3.5 shrink-0 text-muted" />
-                    The agent only writes predictions. Our harness loads the true labels itself and computes the score, so the agent cannot fake the number.
+                    The agent writes predictions. Our harness loads the targets separately after training and computes the score. Method fidelity requires separate checks.
                   </p>
                 </>
               ) : (

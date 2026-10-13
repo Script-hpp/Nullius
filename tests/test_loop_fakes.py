@@ -77,6 +77,7 @@ def make_orch(sandbox, seeds=3, max_attempts=3, repairs=None, write=GOOD_CODE):
     o = Orchestrator.__new__(Orchestrator)
     o.sandbox, o.seeds, o._smoke_ok, o._lock = sandbox, seeds, set(), threading.Lock()
     o.details, o._cost_base, o._snapshots = [], 0.0, {}
+    o.allow_test_feedback = True  # explicit reproduction of the historical diagnostic policy
     o.llm = SimpleNamespace(total_cost_usd=0.0, gross=lambda x: x * 1.19)
     o.settings = Settings(
         llm=LLMConfig("tokenfactory", "http://x", "k", "m", "m", "m"), sandbox_backend="local",
@@ -115,7 +116,7 @@ def test_main_run_never_sees_smoke(tmp_path):
     sb = FakeSandbox()
     d = run_claim(make_orch(sb)[0], tmp_path)
     smoke = [c for _, c in sb.cmds if "SMOKE=1" in c]
-    assert len(smoke) == 1 and "SEED=0" in smoke[0]        # Formpruefung einmal je Code
+    assert len(smoke) == 3 and {int(re.search(r'SEED=(\d+)', c).group(1)) for c in smoke} == {0, 1, 2}
     assert train_cmds(sb) and all("SMOKE" not in c for c in train_cmds(sb))
     assert len(d.attempts) == 3 and {a.seed for a in d.attempts} == {0, 1, 2}
 

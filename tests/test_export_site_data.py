@@ -87,6 +87,21 @@ def test_export_copies_the_plan_of_the_first_paper_claim_not_a_placebos(tmp_path
         assert (out / "p1" / "20261001-000000" / "plan.md").read_text() == "PAPER PLAN"
 
 
+def test_export_final_code_belongs_to_the_selected_paper_measurement(tmp_path):
+    from repro_agent import site_export as se
+    run=run_dir(tmp_path,[{'id':'c','origin':'paper'},{'id':'placebo','origin':'placebo'}],{})
+    p=run/'dossier.json';d=json.loads(p.read_text())
+    d['attempts']=[{'claim_id':'c','code_hash':'good','measured':0.8,'chosen':True},
+                   {'claim_id':'c','code_hash':'rejected','measured':0.9,'chosen':False},
+                   {'claim_id':'placebo','code_hash':'placebo','measured':0.99}]
+    p.write_text(json.dumps(d))
+    for h in ['good','rejected','placebo']: (run/f'c_{h}.py').write_text(h)
+    out=tmp_path/'out';se.export_run(run,out,{})
+    assert (out/'p1'/run.name/'code.py').read_text()=='good'
+    d['attempts'][0]['chosen']=False;p.write_text(json.dumps(d));se.export_run(run,out,{})
+    assert not (out/'p1'/run.name/'code.py').exists()
+
+
 def test_export_without_the_claims_plan_copies_nothing_when_several_plans_exist(tmp_path):
     from repro_agent import site_export as se
     run = run_dir(tmp_path, [{"id": "c", "origin": "paper"}], {"x_plan.md": "X", "y_plan.md": "Y"})

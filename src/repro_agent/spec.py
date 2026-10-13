@@ -92,7 +92,7 @@ def model_name_of(claim_text: str) -> str:
 # ---- Quelltext-Filter (S4) ------------------------------------------------------------------------------------------
 def is_source_text(path: str, text: str) -> bool:
     """Nur lesbarer Quelltext/Konfiguration: keine Binaer- oder Datendateien (SGC: sechs Pickles, ~153 000 Zeichen)."""
-    if BINARY_EXT.search(path) or DATA_DIR.search(path):
+    if BINARY_EXT.search(path) or DATA_DIR.search(path) and not path.lower().endswith('.py'):
         return False
     if "\x00" in text:
         return False
@@ -229,6 +229,7 @@ class Spec:
     excerpt_docs: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
     excerpt: str = ""                                          # code_grounded: roher Ausschnitt fuer Plan-, Code- und Reparatur-Prompt
+    model_code_present: bool = True
     dropped_defaults: list[str] = field(default_factory=list)  # code_grounded: argparse-Flags, deren Default entfernt wurde
 
     def get(self, key: str) -> SpecItem | None:
@@ -538,13 +539,18 @@ def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], na
     return resolve(kept + raw, family, True, corroborate=paper_numbers(details, kept))
 
 
-def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False) -> Spec:
+def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False,
+               repo_listing: list[str] | None = None) -> Spec:
     """ask(system, user) -> Antworttext. Ein LLM-Aufruf; alles danach ist deterministisch.
     numeric_only (code_grounded): nur Zahlenschluessel (S2 erzwingt sie), der Ausschnitt bleibt roh im Spec (argparse-Defaults
     entfernt, wo ein Startskript das Flag setzt) und geht in Plan-, Code- und Reparatur-Prompt. Nur dort gelten F1 und F4:
     Quellen ohne @commit werden abgebildet, Startskript- und Konfigurationswerte deterministisch gelesen, Konflikte gleichen Rangs nach F4 entschieden."""
     model, family = model_name_of(claim_text), family_for(dataset)
-    excerpt, names = focused_excerpt(docs, model, dataset, details)
+    if numeric_only:
+        from .source_context import author_excerpt
+        excerpt, names = author_excerpt(docs, model, dataset, listing=repo_listing)
+    else:
+        excerpt, names = focused_excerpt(docs, model, dataset, details)
     dropped_defaults: list[str] = []
     if numeric_only:
         excerpt, dropped_defaults = drop_run_script_defaults(excerpt)
@@ -555,7 +561,8 @@ def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str
     else:
         items, missing = resolve(kept, family, numeric_only)
     return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=names, missing=missing,
-                excerpt=excerpt if numeric_only else "", dropped_defaults=dropped_defaults)
+                excerpt=excerpt if numeric_only else "", dropped_defaults=dropped_defaults,
+                model_code_present=bool(model_files(docs, model)))
 
 
 def excerpt_docs(excerpt: str) -> list[Doc]:
@@ -648,6 +655,8 @@ CG_INTRO = (
     "learning-rate-schedule functions, run scripts, configs). It defines the method AND the training protocol of the paper's "
     "experiment: model definition, preprocessing, optimiser, learning-rate schedule, early stopping, how the dataset is run. "
     "Re-implement exactly this method in your own single script for the task below (our data file and output contract); do not "
+    "treat every declared layer as active: trace the actual forward/encoder path and the functions it calls. "
+    "Preserve its normalisation, retrieval exclusions and training protocol. Do not "
     "copy data-loading or I/O code. If a script or default selects a model other than {model}, ignore that selection. "
     "Argparse defaults that a run script overrides were removed from the excerpt."
 )

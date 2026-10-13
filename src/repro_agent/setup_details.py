@@ -7,6 +7,8 @@ woertlichen Zitat belegt sein, das im Quelltext steht; sonst wird sie verworfen.
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -199,14 +201,14 @@ def collect_middle_ground(llm: LLMClient, docs: list[Doc], claim_text: str, data
         
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw_lists = list(pool.map(_ask, jobs))
+        raw_lists = list(context_map(pool, _ask, jobs))
         
     return [{"doc": doc.name, "item": item} for (doc, _, _), lst in zip(jobs, raw_lists) for item in lst]
 def collect_raw(llm: LLMClient, docs: list[Doc], claim_text: str, dataset: str, v2: bool = False) -> list[dict]:
     """Rohangaben des Modells je Dokument, noch ungeprueft: [{"doc": Name, "item": Objekt}]."""
     jobs = [(doc, chunk) for doc in docs for chunk in _chunks(extraction_text(doc.text))]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw_lists = list(pool.map(lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2, j[0].name), jobs))
+        raw_lists = list(context_map(pool, lambda j: _extract_chunk(llm, j[1], claim_text, dataset, v2, j[0].name), jobs))
     return [{"doc": doc.name, "item": item} for (doc, _), lst in zip(jobs, raw_lists) for item in lst]
 
 
@@ -426,6 +428,8 @@ GENERIC_DATASET_WORDS = GENERIC_MODEL_WORDS | {   # Obermengen und Platzhalter: 
 PATH_STOP = {"conf", "config", "cfg", "yaml", "yml", "json", "toml", "ini", "train", "training", "test", "tests", "run", "main", "exp", "utils",
              "util", "data", "dataset", "datasets", "model", "models", "optimized", "reference", "scripts", "script", "readme", "args", "execute",
              "process", "layers", "tools", "base", "common", "default", "sparse", "single", "job", "preprocess", "loader", "provider", "init"}
+PATH_STOP |= {"long", "term", "forecast", "forecasting", "retrieval", "basic", "classification", "regression",
+              "learning", "rate", "optimizer", "early", "stopping", "time", "features"}
 
 
 def paper_model_words(paper_text: str, tokens: list[str]) -> set[str]:
@@ -697,7 +701,7 @@ def extract_setup_details_v2(
         jobs = [(d, c) for d in targets for c in _chunks(extraction_text(d.text))]
         if jobs:
             with ThreadPoolExecutor(max_workers=4) as pool:
-                lists = list(pool.map(lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing, j[0].name), jobs))
+                lists = list(context_map(pool, lambda j: _targeted_chunk(llm, j[1], claim_text, dataset, missing, j[0].name), jobs))
             raw2 = [{"doc": d.name, "item": it} for (d, _), lst in zip(jobs, lists) for it in lst]
             extra, dropped2 = verify_raw_v2(raw2, targets)
             info["added"] = merge(extra)

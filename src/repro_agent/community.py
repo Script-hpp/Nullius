@@ -10,6 +10,8 @@ Kontingent: Ergebnis je arXiv-ID in `logs/community_cache.json` (7 Tage), Discov
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import json
 import math
 import re
@@ -328,7 +330,7 @@ def possible_explanations(tools, llm, title: str, arxiv_id: str, dataset: str) -
     docs = select_docs(drop_noise(res, arxiv_id).get("results", []), title, arxiv_id)[:MAX_CHUNKS]
     jobs = [(d, c) for d in docs for c in _chunks(d.text[:60000])][:MAX_CHUNKS]
     with ThreadPoolExecutor(max_workers=4) as pool:
-        raw = list(pool.map(lambda j: _explain_chunk(llm, j[1], title, dataset), jobs))
+        raw = list(context_map(pool, lambda j: _explain_chunk(llm, j[1], title, dataset), jobs))
     hay = {d.name: _norm(d.text) for d in docs}
     items, dropped, seen = [], 0, set()
     for (doc, _), lst in zip(jobs, raw):

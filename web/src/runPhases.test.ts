@@ -104,6 +104,29 @@ test('a mean repair request does not falsely claim failure, and acceptance chang
   assert.equal(build(events).stats!.mean, 0.5)
 })
 
+test('identical code shared by candidates keeps attempt labels and the chosen measurement separate', () => {
+  const events: Event[] = [
+    { ts: 100, type: 'code_written', candidate: 0, code_hash: 'shared' },
+    { ts: 101, type: 'code_written', candidate: 1, code_hash: 'shared' },
+    { ts: 102, type: 'attempt', candidate: 0, seed: 0, code_hash: 'shared', measured: 0.4 },
+    { ts: 103, type: 'attempt', candidate: 1, seed: 0, code_hash: 'shared', measured: 0.9 },
+    { ts: 104, type: 'fault_repair', result: 'repariert', from_hash: 'shared', to_hash: 'other' },
+    { ts: 105, type: 'candidates', chosen: 0, chosen_hash: 'shared' },
+  ]
+  const m=build(events)
+  assert.equal(m.stats!.mean,0.4)
+  const rows=m.phases.flatMap(p=>p.rows)
+  assert.ok(rows.some(r=>r.title.startsWith('Candidate 1 · Seed 0') && r.raw[0]?.measured===0.4))
+  assert.ok(rows.some(r=>r.title.startsWith('Candidate 2 · Seed 0') && r.raw[0]?.measured===0.9))
+})
+
+test('validation repairs are described separately from historical test-score repairs', () => {
+  const m = build([...start, { ts: 110, type: 'fault_repair', basis: 'validation', result: 'repariert' }])
+  const rows = m.phases.flatMap(p => p.rows)
+  assert.ok(rows.some(r => r.title === 'Validation check failed; the implementation was repaired' && r.detail?.includes('Only validation data')))
+  assert.ok(!rows.some(r => r.title.includes('Baseline check failed after all seeds')))
+})
+
 test('completed event charts agree with published verdict means', () => {
   const root = new URL('../public/data/', import.meta.url)
   for (const paper of readdirSync(root, { withFileTypes: true }).filter(x => x.isDirectory())) {

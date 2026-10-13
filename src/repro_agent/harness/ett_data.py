@@ -83,6 +83,17 @@ def val_targets(name: str, csv_path: Path, pred_len: int = PRED_LEN) -> np.ndarr
     return z[idx]
 
 
+def val_baselines(name: str, csv_path: Path, pred_len: int = PRED_LEN) -> dict:
+    """Validation-only baselines; never consult rows from the test period."""
+    train_end, _, _ = borders(name)
+    z = load_standardized(name, csv_path)
+    starts = train_end + val_stride(name) * np.arange(n_val_windows(name, pred_len))
+    truth = z[starts[:, None] + np.arange(pred_len)[None, :]]
+    repeat = z[starts - 1][:, None, :]
+    return {'repeat': {'mse': float(((repeat - truth) ** 2).mean())},
+            'zero': {'mse': float((truth ** 2).mean())}}
+
+
 def targets(name: str, csv_path: Path, pred_len: int = PRED_LEN) -> np.ndarray:
     """[W, pred_len, 7] Ground Truth. Nur der Harness ruft das auf."""
     _, val_end, _ = borders(name)

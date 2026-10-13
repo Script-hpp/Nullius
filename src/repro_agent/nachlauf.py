@@ -11,6 +11,8 @@ Je Seed drei Arten von Branches, der Agenten-Adapter sieht nie Testlabels und ni
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import difflib
 import hashlib
 import json
@@ -569,7 +571,7 @@ class _Run:
             results = [one(j) for j in jobs]
         else:
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                results = list(pool.map(one, jobs))
+                results = list(context_map(pool, one, jobs))
         summary = independence.summarize(results)
         self.emit("nachlauf_independence", seed=seed, ok=summary["ok"], offsets=summary["offsets"], max_abs_diff=summary["max_abs_diff"], reason=summary["reason"])
         return summary

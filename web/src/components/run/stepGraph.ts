@@ -134,7 +134,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
       id: `seed_${s}`, kind: 'seed', title: `Seed ${s}`, sub: valid ? fmtValue(metric, valid.measured) : s === 0 && model.candidateSelectionPending ? 'testing code candidates…' : failed ? 'no valid run' : list.length ? 'retrying…' : null,
       state: st(!!valid, isNext && has('code_written') && !verdictSeen, failed), tone: valid ? 'gray' : failed ? 'red' : 'gray',
       what: s === 0
-        ? 'The code trains in its own sandbox branch. It must write predictions only; it never sees the test labels. This first run catches crashes early.'
+        ? 'The code trains in its own sandbox branch and writes predictions. The harness loads the target file separately. This first run catches crashes early.'
         : 'The same code runs again with a different random start, in its own sandbox branch, in parallel with the other seeds.',
       why: 'One run can be lucky or unlucky. Several seeds show how much the result changes by chance. The verdict uses their mean.',
       facts, row: 5, col: s, rowSize: seedCount,
@@ -230,7 +230,7 @@ export function buildStepGraph(events: Event[], model: RunModel, running: boolea
     }),
     one({
       id: 'code', kind: 'code', title: 'Code', sub: codeVersions ? `version ${codeVersions}${codeVersions > 1 ? ' (rewritten)' : ''}` : null, state: st(has('code_written') && (has('attempt') || has('ablation')), active('code') || (has('code_written') && !has('attempt'))), tone: 'violet',
-      what: 'Nemotron (Super) writes a training script. It must output predictions only.', why: 'The agent never reports a score itself and never sees the test labels, so it cannot tune its answer to the test.',
+      what: 'Nemotron (Super) writes a training script. It must output predictions only.', why: 'The score is computed separately by the harness. Input-window independence and method fidelity require separate checks.',
       facts: codeFacts, expand: lastCode?.expand, row: 4,
     }),
     ...seedNodes,

@@ -40,12 +40,16 @@ def _write(path: str, ids: list[str], values, fmt: str = "") -> None:
 
 def _node_values(pred, name: str, n_nodes: int) -> np.ndarray:
     p = _array(pred, name)
+    if not np.isfinite(p).all():
+        raise ValueError(f"nullius_io: {name} contains NaN or inf")
     if p.ndim == 2:   # Logits / Wahrscheinlichkeiten [N, C]
         p = p.argmax(1)
     if p.ndim != 1 or p.shape[0] != n_nodes:
         raise ValueError(f"nullius_io: {name} must hold one class per node of the WHOLE graph, shape [{n_nodes}] (or logits "
                          f"[{n_nodes}, n_classes]) indexable by node id, got shape {tuple(p.shape)}. Predict for all nodes, "
                          "do not slice to test_idx yourself.")
+    if (p < 0).any() or not np.equal(p, np.floor(p)).all():
+        raise ValueError(f"nullius_io: {name} must contain nonnegative integer class ids; probabilities need one row of logits per node.")
     return p.astype(np.int64)
 
 

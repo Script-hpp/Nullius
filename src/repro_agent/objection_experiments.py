@@ -10,6 +10,8 @@ docs/tavily_experiments.md und benchmark/experiments/tavily_experiments_test.md)
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import hashlib
 import json
 import math
@@ -360,7 +362,7 @@ def _parallel(orch, ctx, claim, code, seeds, c) -> dict[int, float]:
     if not seeds:
         return {}
     with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(seeds))) as pool:
-        results = list(pool.map(lambda s: _measure(orch, ctx, claim, code, s, c), seeds))
+        results = list(context_map(pool, lambda s: _measure(orch, ctx, claim, code, s, c), seeds))
     out = {}
     for s, (v, rec) in zip(seeds, results):
         c.attempts.append(rec)
@@ -371,14 +373,14 @@ def _parallel(orch, ctx, claim, code, seeds, c) -> dict[int, float]:
 
 def main_values(dossier, claim_id: str, code_hash: str) -> dict[int, float]:
     """Messwerte des Hauptlaufs je Seed fuer genau den Code, der das Urteil trug."""
-    return {a.seed: a.measured for a in dossier.attempts if a.claim_id == claim_id and a.code_hash == code_hash and a.measured is not None}
+    return {a.seed: a.measured for a in dossier.attempts if a.claim_id == claim_id and a.code_hash == code_hash and a.measured is not None and a.chosen is not False}
 
 
 def _run_protocol_change(dossier, claim, ctx, c: ObjectionCheck) -> None:
     """Keine Sandbox, kein Agentencode: der Harness hat die Metrik im Hauptlauf schon je Seed ueber die Fenster eines Loaders mit
     drop_last=True gerechnet (Attempt.metrics_droplast, aus denselben Vorhersagen wie der Vollwert). Hier wird nur ausgewertet."""
     c.rule, c.main_code_hash = RULE_PROTOCOL, _hash(ctx["code"])
-    atts = [a for a in dossier.attempts if a.claim_id == claim.id and a.code_hash == c.main_code_hash and a.measured is not None and a.metrics_droplast]
+    atts = [a for a in dossier.attempts if a.claim_id == claim.id and a.code_hash == c.main_code_hash and a.measured is not None and a.metrics_droplast and a.chosen is not False]
     c.status, c.measured, c.note = rule_protocol_droplast([(a.measured, a.metrics_droplast) for a in atts], claim.metric, claim.tolerance,
                                                          claim.target, c.to_value)
     if c.measured is not None:

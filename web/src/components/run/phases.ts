@@ -93,7 +93,7 @@ const PHASE_TEXT: Record<PhaseId, { title: string; actors: Actor[]; what: string
   code: {
     title: 'Write the code', actors: ['nemotron'],
     what: 'Nemotron (code model) writes a training script that outputs predictions only.',
-    why: 'The agent never sees the test labels and never reports a score itself.',
+    why: 'The agent supplies predictions. A separate harness loads the targets and computes the score.',
   },
   sandbox: {
     title: 'Run in the sandbox', actors: ['sandbox', 'harness'],
@@ -145,18 +145,26 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
   const target = num(claimStart?.target)
   const seedsTotal = num(runStart?.seeds)
   const modelName = (role: 'fast' | 'code' | 'reasoning') => (models[role] ? String(models[role]).replace(/^nvidia\//i, '') : undefined)
-  const discarded = new Set(events.filter((e) => (e.type === 'graph_repair' || e.type === 'fault_repair') && e.result === 'repariert').map((e) => String(e.from_hash)))
+  const discarded = new Set<string>()
   const selection = events.filter((e) => e.type === 'candidates').pop()
   const selectedCandidate = num(selection?.chosen)
   const candidateSelectionPending = !selection && events.some((e) => num(e.candidate) != null)
-  let selectedHash = selection?.chosen_hash ? String(selection.chosen_hash) : null
-  const candidateOfHash = new Map<string, number>()
+  let selectedHash: string | null = null
+  const candidateOfHash = new Map<string, Set<number>>()
+  const assignCandidate = (hash: string, candidate: number) => {
+    if (!candidateOfHash.has(hash)) candidateOfHash.set(hash, new Set())
+    candidateOfHash.get(hash)!.add(candidate)
+  }
   const codeAnnouncedAt = new Map<string, number>()
   for (const e of events) {
     const candidate = num(e.candidate)
-    if (candidate != null && e.code_hash) candidateOfHash.set(String(e.code_hash), candidate)
+    if (candidate != null && e.code_hash) assignCandidate(String(e.code_hash), candidate)
     if (e.type === 'repair_result' && candidateOfHash.has(String(e.from_hash))) {
-      candidateOfHash.set(String(e.to_hash), candidateOfHash.get(String(e.from_hash))!)
+      for (const c of candidate != null ? [candidate] : candidateOfHash.get(String(e.from_hash))!) assignCandidate(String(e.to_hash), c)
+    }
+    if (e.type === 'candidates') {
+      selectedHash = e.chosen_hash ? String(e.chosen_hash) : null
+      if (selectedHash) discarded.delete(selectedHash)
     }
     if (e.type === 'code_text' && !codeAnnouncedAt.has(String(e.code_hash))) codeAnnouncedAt.set(String(e.code_hash), e.ts)
     if ((e.type === 'repo_diff' || e.type === 'fault_repair_result') && e.result === 'kept' && e.to_hash && e.to_hash !== e.from_hash) discarded.add(String(e.to_hash))
@@ -168,7 +176,11 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       if (String(e.from_hash) === selectedHash) selectedHash = String(e.to_hash)
     }
   }
-  const candidateLabel = (h: string) => candidateOfHash.has(h) ? `Candidate ${candidateOfHash.get(h)! + 1} · ` : ''
+  const candidateLabel = (h: string, candidate?: unknown) => {
+    const explicit = num(candidate)
+    const owners = candidateOfHash.get(h)
+    return explicit != null ? `Candidate ${explicit + 1} · ` : owners?.size === 1 ? `Candidate ${[...owners][0] + 1} · ` : owners?.size ? 'Shared code · ' : ''
+  }
   const graphTask = events.some((e) => e.type === 'ablation') || metric === 'accuracy'
 
   const rows: Record<PhaseId, Row[]> = { claim: [], setup: [], plan: [], code: [], sandbox: [], seeds: [], verdict: [], community: [] }
@@ -270,7 +282,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       case 'code_written': {
         const h = String(e.code_hash)
         const v = versionOf(h)
-        push('code', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `${candidateLabel(h)}Code version ${v} written`, expand: { kind: 'code', hash: h, version: v } })
+        push('code', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet', title: `${candidateLabel(h, e.candidate)}Code version ${v} written`, expand: { kind: 'code', hash: h, version: v } })
         break
       }
       case 'repair': {
@@ -278,7 +290,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         versionOf(h)
         push('sandbox', {
           actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'red',
-          title: `${candidateLabel(h)}Code version ${versionOf(h)} crashed; Nemotron rewrites it`,
+          title: `${candidateLabel(h, e.candidate)}Code version ${versionOf(h)} crashed; Nemotron rewrites it`,
           detail: short(lastLine(e.error), 160) || undefined,
           expand: e.error ? { kind: 'error', text: String(e.error) } : undefined,
         })
@@ -307,7 +319,7 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
         const secs = num(e.seconds)
         const phase: PhaseId = seed === 0 ? 'sandbox' : 'seeds'
         const attempt = num(e.n) ?? 1
-        const name = `${candidateLabel(h)}Seed ${seed}, attempt ${attempt} · Code version ${versionOf(h)}`
+        const name = `${candidateLabel(h, e.candidate)}Seed ${seed}, attempt ${attempt} · Code version ${versionOf(h)}`
         if (m == null) {
           push(phase, { actor: 'sandbox', tone: 'red', title: `${name} did not produce a valid run`, detail: short(lastLine(e.error), 160) || undefined, expand: e.error ? { kind: 'error', text: String(e.error) } : undefined })
         } else {
@@ -348,6 +360,12 @@ export function buildRunModel(events: Event[], opts: { running: boolean; metricH
       }
       case 'fault_repair': {
         const r = String(e.result)
+        if (e.basis === 'validation') {
+          push('sandbox', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet',
+            title: r === 'repariert' ? 'Validation check failed; the implementation was repaired' : 'Validation repair failed; the previous code is kept',
+            detail: 'Only validation data guided this repair. Test measurements did not select the code.' })
+          break
+        }
         if (e.runde === 'mittelwert' && e.result == null) {
           push('sandbox', { actor: 'nemotron', role: 'code', model: modelName('code'), tone: 'violet',
             title: 'Baseline check failed after all seeds; a code repair is requested',

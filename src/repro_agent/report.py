@@ -42,6 +42,10 @@ def mode_line(mode: str) -> str:
 
 def render_markdown(dossier: Dossier) -> str:
     lines = [f"# Reproduktions-Zeugnis: {dossier.paper_id}", ""]
+    if dossier.selection_policy == 'validation_only':
+        lines += ['Code-Auswahl und Reparaturen: Validierung und strukturelle Pruefungen. Testmessungen steuerten keine Code-Aenderung.', '']
+    elif dossier.selection_policy == 'test_feedback_diagnostic':
+        lines += ['Diagnostischer Lauf: Testmessungen wurden als Rueckmeldung fuer Code-Aenderungen verwendet.', '']
     if dossier.warnings:
         lines.append("## Hinweise zur Belegbarkeit")
         lines.extend(f"- {w}" for w in dossier.warnings)

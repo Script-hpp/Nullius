@@ -41,6 +41,8 @@ def main(name: str) -> None:
             count = 0
             for row_id, value in reader:
                 w, h, c = (int(x) for x in row_id.split("_"))
+                if not (0 <= w < n_win and 0 <= h < PRED_LEN and 0 <= c < n_ch):
+                    return fail(f"ID ausserhalb des erlaubten Bereichs: {row_id}")
                 if seen[w, h, c]:
                     return fail(f"ID doppelt: {row_id}")
                 seen[w, h, c] = True

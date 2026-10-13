@@ -10,9 +10,12 @@ TODO Meilenstein 3: Abweichungs-Loop, Einwaende als Branches, Seeds parallel (Se
 
 from __future__ import annotations
 
+from .spend_guard import context_map
+
 import dataclasses
 import hashlib
 import json
+import math
 import re
 import os
 import statistics
@@ -146,9 +149,12 @@ def select_candidate(vals: list[dict | None]) -> tuple[int, str]:
     """Waehlt den Kandidaten mit der besten VALIDIERUNGS-Metrik (Accuracy max, MSE/MAE min). Eingabe sind nur Val-Ergebnisse
     ({"metric", "value"}) lauffaehiger Kandidaten oder None; Testwerte und Zielwert des Papers gehen nie hinein.
     Gleichstand: kleinerer Index. Ohne jeden Val-Wert: erster Kandidat mit Eintrag, Grund "fallback"."""
-    scored = [(i, v) for i, v in enumerate(vals) if isinstance(v, dict) and v.get("value") is not None]
+    scored = [(i, v) for i, v in enumerate(vals) if isinstance(v, dict) and
+              isinstance(v.get('value'), (int, float)) and not isinstance(v['value'], bool) and math.isfinite(v['value'])]
     if not scored:
         return 0, "fallback"
+    if len({v.get('metric') for _, v in scored}) != 1:
+        raise ValueError('Candidate validation metrics differ; they cannot be compared.')
     lower = scored[0][1].get("metric") in LOWER_IS_BETTER_VAL
     best = min(scored, key=lambda iv: (iv[1]["value"] if lower else -iv[1]["value"], iv[0]))
     return best[0], "val"
@@ -314,6 +320,7 @@ class Orchestrator:
         error_search_live: bool = False, n_candidates: int | None = None, setup_v2: bool = False,
         objection_experiments: bool = False, objection_quick: bool = False,
         spec_mode: bool = False, code_grounded: bool = False, io_helper: bool = False, repo_verify: bool = False,
+        allow_test_feedback: bool = False,
     ) -> None:
         # repo_verify (nur Produktpfad, product_kwargs): Repo-Wahl mit Pruefung. Paper-Link zuerst, dann mehrere Suchtreffer; ein Repo zaehlt nur,
         # wenn sein README Modellname, Titel oder arXiv-ID nennt; inoffizielle Repos werden nie als Autorencode gelesen. Aus: alte Wahl
@@ -322,6 +329,9 @@ class Orchestrator:
         # graph_repair: Ablation nach Seed 0; meldet sie "Graph nicht genutzt", wird der Code (max. MAX_GRAPH_REPAIRS Mal)
         # repariert. Nur Katalog-Laeufe (curate_catalog.py); Benchmark-Laeufe bleiben unveraendert und vergleichbar.
         self.graph_repair = graph_repair
+        # Legacy diagnostic experiments may opt in explicitly. Product/default
+        # code repair and candidate acceptance must not depend on test scores.
+        self.allow_test_feedback = allow_test_feedback
         # Einwand-Experimente (objection_experiments.py): Funde der Community-Suche werden eingeordnet und, wo messbar, im eigenen
         # Branch geprueft. Nur Bericht. Default aus, damit Benchmark und vorab festgelegte Experimente unveraendert bleiben (API: an).
         self.objection_experiments = objection_experiments
@@ -362,7 +372,7 @@ class Orchestrator:
         self._run_dir: Path | None = None
         self._cost_base = 0.0
         self.events = EventLog(None)       # ab run(): runs/<paper>/<ts>/events.jsonl
-        self._smoke_ok: set[str] = set()   # Codes, die die Formpruefung bestanden haben
+        self._smoke_ok: set[tuple[str, str, int]] = set()   # Code, Task und Seed der bestandenen Formpruefung
         self._snapshots: dict[str, str] = {}   # Basis-Snapshot pro Task im Prozess wiederverwenden
         self.settings = load_settings()
         if llm_cache is not None:   # ueberschreibt LLM_CACHE aus .env (die API setzt False: Live-Laeufe rufen das Modell wirklich auf)
@@ -406,7 +416,7 @@ class Orchestrator:
             reason = "setup details switched off or paper text not read"
         elif repo_info is None:
             reason = getattr(self, "_repo_fallback_reason", None) or "no repository found or clone failed"
-        elif spec is None or not spec.excerpt:
+        elif spec is None or not spec.excerpt or not spec.model_code_present:
             reason = "no model code found in the repository"
         else:
             return MODE_AUTHOR_CODE, ""
@@ -552,7 +562,9 @@ class Orchestrator:
         if not getattr(self, "graph_repair", False):
             return ""
         val_notes = getattr(task, "val_notes", "")
-        return PRODUCT_LIB_NOTE + (f" {val_notes}" if val_notes else "")
+        return (PRODUCT_LIB_NOTE + ' If retaining the best epoch, copy its parameter tensors independently (copy.deepcopy or tensor clones). '
+                'Before merging nonadjacent tensor axes for a projection, explicitly permute them into the required order; preserve the task output axes.'
+                + (f" {val_notes}" if val_notes else ""))
 
     def _spec_note(self) -> str:
         spec = self._active_spec()
@@ -650,7 +662,7 @@ class Orchestrator:
         Findet Tensorform-Fehler in Sekunden statt nach dem Training. None = bestanden."""
         if not (task.smoke_ids or task.smoke_ids_cmd):
             return None
-        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        code_hash = (hashlib.sha256(code.encode()).hexdigest(), repr(task), seed)
         if code_hash in self._smoke_ok:
             return None
         sb = self.sandbox
@@ -763,6 +775,15 @@ class Orchestrator:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
         violations = find_violations(code)
+        from .harness.training_check import checkpoint_issues
+        violations += checkpoint_issues(code)
+        spec = self._active_spec()
+        if spec is not None and not getattr(self, 'allow_test_feedback', False):
+            _, config = spec_check.config_check(code, spec)
+            if config['overrides'] or config['conflicts']:
+                keys = sorted({item['key'] for item in config['overrides'] + config['conflicts']})
+                violations.append('Configuration contradicts the reproduction spec: ' + ', '.join(keys) +
+                                  '. Restore the reference values before training; later module-level writes must not undo them.')
         if violations:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
@@ -839,6 +860,9 @@ class Orchestrator:
             return {"status": "ungueltig", "detail": out.get("reason", "")}
         if metric not in out.get("metrics", {}):
             return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
+               for v in out['metrics'].values()):
+            return {'status': 'ungueltig', 'detail': 'Harness metrics must be finite numbers.'}
         val = self._val_eval(branch, harness_dir, task, seed) if with_val else None
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
@@ -854,12 +878,17 @@ class Orchestrator:
         sb = self.sandbox
         sb.put_files(branch, {f"{harness_dir}/{n}": (HARNESS_DIR / n).read_bytes() for n in task.val_harness_files})
         e = sb.run(branch, task.val_eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
+        if e.timed_out or e.exit_code != 0:
+            return {'error': 'Validation harness did not complete successfully.'}
         try:
             out = json.loads(e.stdout.strip().splitlines()[-1])
         except (IndexError, json.JSONDecodeError):
             return {"error": f"Val-Harness-Ausgabe unlesbar: {(e.stderr or e.stdout)[-200:]}"}
         if out.get("status") != "ok":
             return {"error": str(out.get("reason", ""))[:300]}
+        if (isinstance(out.get('value'), bool) or not isinstance(out.get('value'), (int, float))
+                or not math.isfinite(out['value']) or not out.get('metric')):
+            return {'error': 'Validation metric must be a finite number with a metric name.'}
         return {"metric": out["metric"], "value": float(out["value"]), "baselines": out.get("baselines") or {}}
 
     # ---- Kurzbeschreibung des Papers (nur Bericht) ----------------------------
@@ -1066,6 +1095,11 @@ class Orchestrator:
             self._emit("model_file_missing", model=model_name_of(claim_text), url=url, files=sorted(dump.files))   # S4: nie still ignorieren
             self._warn(f"Steckbrief: Datei des Modells {model_name_of(claim_text)} nicht im Repo-Ausschnitt")
         self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump
+        self._repo_listing = dump.listing or list(dump.files)
+        if getattr(self, "code_grounded", False) and dump.truncation:
+            from .source_context import SourceContextBlocked
+            raise SourceContextBlocked(f"Author repository files were truncated: {', '.join(c['file'] for c in dump.truncation)}. "
+                                       "No experiment was started.")
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
         info = {"url": url, "commit": dump.commit, "files": sorted(dump.files)}
@@ -1207,7 +1241,7 @@ class Orchestrator:
             selected_measurements = [{"seed": seeds[0], "code_hash": hashlib.sha256(code.encode()).hexdigest()[:12], "measured": v0}]
             if rest:
                 with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, len(rest))) as pool:
-                    results = list(pool.map(
+                    results = list(context_map(pool,
                         lambda sd: self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, sd, cand),
                         rest,
                     ))
@@ -1217,10 +1251,15 @@ class Orchestrator:
                                           for sd, (v, _, seed_code) in zip(rest, results) if v is not None]
             return got, rnotes
 
+        def selected_attempts():
+            return [next((a for a in reversed(dossier.attempts) if a.claim_id == claim.id and a.seed == m['seed']
+                          and a.code_hash == m['code_hash'] and a.measured == m['measured']
+                          and (cand is None or a.candidate == cand)), None) for m in selected_measurements]
+
         def metrics_mean() -> dict[str, float]:
             per_metric: dict[str, list[float]] = {}
-            for a in dossier.attempts:
-                if a.claim_id == claim.id and a.metrics and a.measured is not None and a.code_hash not in discarded:
+            for a in selected_attempts():
+                if a is not None and a.metrics:
                     for name, value in a.metrics.items():
                         per_metric.setdefault(name, []).append(value)
             return {name: statistics.mean(v) for name, v in per_metric.items()}
@@ -1238,11 +1277,14 @@ class Orchestrator:
             measured, rnotes = run_rest(code, v0)
             notes += rnotes
         all_metrics = metrics_mean()
+        if len(measured) != len(seeds) and not getattr(self, 'allow_test_feedback', False):
+            raise MethodImplementationBlocked(f'Only {len(measured)} of {len(seeds)} planned seeds produced valid measurements with the selected code. '
+                                              'The check stopped without a paper verdict. ' + '; '.join(notes))
         if v0 is None and getattr(self, "graph_repair", False) and placeholder_issues(code, getattr(self, "_repo_files", {})):
             raise MethodImplementationBlocked("Incomplete method: the generated retrieval component is a placeholder after repair attempts. "
                                               "The paper is not assessable; no experiment measurement or paper verdict was produced.")
         verdict = self._verdict(claim, measured, len(seeds), notes, dossier.baselines, all_metrics)
-        if (getattr(self, "graph_repair", False) and verdict.urteil == "Agenten-Fehler vermutet" and v0 is not None
+        if (getattr(self, "allow_test_feedback", False) and getattr(self, "graph_repair", False) and verdict.urteil == "Agenten-Fehler vermutet" and v0 is not None
                 and dossier.fault_repairs.get(claim.id, 0) < MAX_FAULT_REPAIRS
                 and not self._fault_check(claim, dossier, hashlib.sha256(code.encode()).hexdigest()[:12], seeds[0], v0)):
             # Seed 0 lag ueber der Baseline, der Mittelwert ueber alle Seeds nicht (instabiler Code): eine Reparatur, alle Seeds neu
@@ -1280,10 +1322,10 @@ class Orchestrator:
             print(f"[{claim.id}] Graph-Ablation: {ab['verdict']} (mit Graph {v0:.4f}, ohne Kanten {ab['accuracy_ablated']})", flush=True)
             if ab["verdict"] == "Graph nicht genutzt":   # deterministischer Beleg, nur herabstufend
                 verdict.methode = "nein"
-        if cand is not None:   # alle Kandidaten-Versuche bleiben im Dossier, gewaehlter Kandidat markiert
-            for a in dossier.attempts:
-                if a.claim_id == claim.id and a.candidate is not None:
-                    a.chosen = a.candidate == cand and a.code_hash not in discarded
+        selected_ids = {id(a) for a in selected_attempts() if a is not None}
+        for a in dossier.attempts:
+            if a.claim_id == claim.id:
+                a.chosen = id(a) in selected_ids
         self.__dict__.setdefault("_claim_ctx", {})[claim.id] = {"code": code, "plan": plan, "task": task, "snapshot": snapshot, "n_seeds": len(seeds)}   # fuer Einwand-Experimente
         dossier.verdicts.append(verdict)
         # The live/replay chart must use the exact measurements behind this verdict,
@@ -1370,17 +1412,23 @@ class Orchestrator:
             return res
 
         with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, k)) as pool:
-            results = list(pool.map(one, range(len(codes))))
+            results = list(context_map(pool, one, range(len(codes))))
         runnable = [r for r in results if r["v0"] is not None]
         val_warning = None
         if runnable:
             # B1: Kandidaten, die Validierungslabels im Training nutzen, scheiden aus der Auswahl aus; sind alle betroffen, gilt die alte Auswahl
             eligible = [r for r in runnable if not (r["val_check"] or {}).get("excluded")]
             if not eligible:
+                if not getattr(self, 'allow_test_feedback', False):
+                    raise MethodImplementationBlocked('All runnable candidates trained on validation labels. No independent candidate selection or paper verdict is possible.')
                 eligible = runnable
                 val_warning = "alle lauffaehigen Kandidaten nutzen Validierungslabels im Training (B1), Auswahl wie bisher"
             elif len(eligible) < len(runnable):
                 val_warning = f"{len(runnable) - len(eligible)} Kandidat(en) wegen Validierungslabels im Training aus der Auswahl genommen (B1)"
+            if not getattr(self, 'allow_test_feedback', False) and task.val_eval_cmd:
+                eligible = [r for r in eligible if r['val'] is not None]
+                if not eligible:
+                    raise MethodImplementationBlocked('Candidate validation did not complete. No candidate was selected using test measurements; no paper verdict was produced.')
             
             if self._active_spec() is not None:
                 max_score = max((r.get("spec_score", (0, 0))[0] for r in eligible), default=0)
@@ -1407,7 +1455,7 @@ class Orchestrator:
         loser_hashes = {a.code_hash for a in dossier.attempts
                         if a.claim_id == claim.id and a.candidate is not None and a.candidate != win["i"]}
         v0, note0, code, ab, notes, discarded = win["v0"], win["note0"], win["code"], win["ab"], list(win["notes"]), set(win["discarded"])
-        if v0 is not None and getattr(task, "ablation_cmd", ""):   # Graph-Check mit Reparatur nur fuer den Sieger (Seed 0 wird wiederverwendet)
+        if v0 is not None and getattr(self, "allow_test_feedback", False) and getattr(task, "ablation_cmd", ""):   # legacy diagnostic repair only
             v0, note0, code, ab, notes2, disc2, _ = self._seed0_quality_loop(
                 claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seed, win["i"], graph=True, fault_rounds0=win["faults"])
             notes += notes2
@@ -1469,7 +1517,7 @@ class Orchestrator:
             reason = f"neuer Code lief nicht ({nnote})"
         elif new_h == old_h:
             reason = "Reparatur lieferte denselben Code"
-        elif self._fault_check(claim, dossier, new_h, seed, nv) or self._val_fault_check(claim, new_h, seed):
+        elif (getattr(self, "allow_test_feedback", False) and self._fault_check(claim, dossier, new_h, seed, nv)) or self._val_fault_check(claim, new_h, seed):
             reason = "neuer Code faellt beim Fehler-Check durch"
         elif not (isinstance(old_val, dict) and isinstance(new_val, dict) and "value" in old_val and "value" in new_val):
             reason = "Validierungswert fehlt, alter Code bleibt"
@@ -1477,7 +1525,7 @@ class Orchestrator:
             lower = new_val.get("metric") in LOWER_IS_BETTER_VAL
             if (new_val["value"] > old_val["value"]) if lower else (new_val["value"] < old_val["value"]):
                 reason = "Validierung schlechter als beim alten Code"
-            elif getattr(task, "ablation_cmd", ""):
+            elif getattr(self, "allow_test_feedback", False) and getattr(task, "ablation_cmd", ""):
                 new_ab = self.ablation_check(snapshot, new_code, seed, task, claim.metric, nv)
                 self._emit("ablation", claim_id=claim.id, code_hash=new_h, runde="repo_diff", **new_ab)
                 if new_ab["verdict"] == "Graph nicht genutzt":
@@ -1499,23 +1547,23 @@ class Orchestrator:
         if claim.metric not in ("mse", "mae") or not (verdict.measured_mean == verdict.measured_mean):   # NaN = kein Messwert
             return
         per_seed = [a.metrics_droplast for a in dossier.attempts if a.claim_id == claim.id and a.metrics_droplast
-                    and a.measured is not None and a.code_hash not in discarded]
+                    and a.measured is not None and a.chosen is not False and a.code_hash not in discarded]
         note = droplast_note(claim.metric, claim.target, claim.tolerance, verdict.measured_mean, per_seed)
         if note:
             dossier.droplast_notes[claim.id] = note
             self._emit("droplast_note", claim_id=claim.id, kind=note["kind"], batch_size=note["batch_size"], droplast=note["droplast"], full=note["full"])
 
     def _val_fault_check(self, claim: Claim, code_hash: str, seed: int) -> str | None:
-        """Klassifikation: Validierungs-Genauigkeit (vom Harness mit eigenen Val-Labels) unter der Mehrheitsklasse-Baseline = Zufallsniveau,
-        typisch falsche Zuordnung Vorhersage -> Knoten (M1). Deterministisch, kein LLM; der Hinweis an `code` enthaelt keine Zahlen."""
-        if claim.metric != "accuracy":
-            return None
+        """Compare validation predictions with validation-only trivial baselines.
+        No test measurements or paper target enter this repair decision.
+        """
         val = self.__dict__.get("_val", {}).get((code_hash, seed))
-        if not isinstance(val, dict) or val.get("value") is None:
+        if not isinstance(val, dict) or not isinstance(val.get("value"), (int, float)) or not math.isfinite(val["value"]):
             return None
-        base = (val.get("baselines") or {}).get("majority")
-        if base is not None and val["value"] < base:
-            return f"Validierungs-Genauigkeit {val['value']:.4f} unter der Mehrheitsklasse-Baseline {base:.4f}"
+        lower = val.get("metric", claim.metric) in LOWER_IS_BETTER_VAL
+        bases = [v for v in (val.get("baselines") or {}).values() if isinstance(v, (int, float)) and math.isfinite(v)]
+        if bases and ((val['value'] > min(bases)) if lower else (val['value'] < max(bases))):
+            return 'Validation predictions are worse than a trivial validation baseline.'
         return None
 
     def _fault_check(self, claim: Claim, dossier: Dossier, code_hash: str, seed: int, v0: float) -> str | None:
@@ -1567,7 +1615,8 @@ class Orchestrator:
             return True, new_code, nv, nnote
 
         while True:
-            fault = self._fault_check(claim, dossier, h(code), seed, v0)
+            legacy_feedback = getattr(self, "allow_test_feedback", False)
+            fault = self._fault_check(claim, dossier, h(code), seed, v0) if legacy_feedback else None
             val_fault = None if fault else self._val_fault_check(claim, h(code), seed)   # M1: Zufallsniveau auf Validierung
             if (fault or val_fault) and budget(fault_rounds, MAX_FAULT_REPAIRS):
                 fault_rounds += 1
@@ -1575,10 +1624,15 @@ class Orchestrator:
                 diag = getattr(self, "_diag", {}).get((from_hash, seed)) or {}
                 pred_std = diag.get("pred_std") if isinstance(diag, dict) else None
                 message = (fault_message(claim.metric, v0, claim.target, dossier.baselines, pred_std) if fault
-                           else val_fault_message())
+                           else val_fault_message() if claim.metric == 'accuracy' else
+                           'The validation predictions are worse than a trivial validation baseline. Check the implementation against the complete author reference. Keep its method and training protocol; choose any uncertain setting using validation only.')
                 fault = fault or val_fault
                 ev = {"claim_id": claim.id, "runde": fault_rounds, "from_hash": from_hash, "measured": v0,
+                      "basis": 'test' if legacy_feedback else 'validation',
                       "baselines": {k: v.get(claim.metric) for k, v in (dossier.baselines or {}).items() if isinstance(v, dict)}}
+                if not legacy_feedback:
+                    val = self.__dict__.get('_val', {}).get((from_hash, seed), {})
+                    ev.update(measured=val.get('value'), metric=val.get('metric'), baselines=val.get('baselines', {}))
                 head = f"Fehler-Reparatur Runde {fault_rounds}: Code {from_hash} schlechter als triviale Baseline ({fault})"
                 ok, code, v0, note0 = repair("fault", fault_rounds, message, head, ev)
                 if not ok:
@@ -1586,7 +1640,7 @@ class Orchestrator:
                 self._emit("fault_repair", result="repariert", to_hash=h(code), **ev)
                 notes.append(f"{head}; neuer Code {h(code)}")
                 continue
-            if not task.ablation_cmd or not graph:
+            if not legacy_feedback or not task.ablation_cmd or not graph:
                 break
             ab = self.ablation_check(snapshot, code, seed, task, claim.metric, v0)
             self._emit("ablation", claim_id=claim.id, runde=fault_rounds + graph_rounds, code_hash=h(code), **ab)
@@ -1683,6 +1737,8 @@ class Orchestrator:
                 dossier.baselines = res["baselines"]
             if value is not None:
                 return value, None, code
+            if seed != 0 and not getattr(self, 'allow_test_feedback', False):
+                return None, f'Seed {seed}: selected code did not finish; no per-seed rewrite was made, to keep the method identical across seeds.', code
             if status == "timeout":
                 if not product:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
@@ -1691,15 +1747,15 @@ class Orchestrator:
             if n < self.settings.max_attempts_per_claim:
                 hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:
-                    self._emit("repair", claim_id=claim.id, seed=seed, from_hash=code_hash, error=(summary or "")[-400:])
+                    self._emit("repair", claim_id=claim.id, seed=seed, candidate=candidate, from_hash=code_hash, error=(summary or "")[-400:])
                     extra = (repair_hint(summary) + (STAY_FAST_NOTE if timed_out_before and status != "timeout" else "")) if product else ""
                     code = self.repair_code(plan, task, code, (summary or "") + extra + hints)
-                    self._emit("repair_result", claim_id=claim.id, seed=seed, from_hash=code_hash, to_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
+                    self._emit("repair_result", claim_id=claim.id, seed=seed, candidate=candidate, from_hash=code_hash, to_hash=hashlib.sha256(code.encode()).hexdigest()[:12])
                 except ValueError as exc:   # Modell lieferte trotz Wiederholung keinen Code
                     if not product:
                         return None, f"Seed {seed}: Reparatur ohne Code-Block ({exc}), Abbruch nach {n} Versuchen", code
                     try:   # Produktpfad: Code neu aus dem Plan schreiben statt abbrechen
-                        self._emit("rewrite", claim_id=claim.id, seed=seed, from_hash=code_hash)
+                        self._emit("rewrite", claim_id=claim.id, seed=seed, candidate=candidate, from_hash=code_hash)
                         code = self.write_code(plan, task)
                     except ValueError as exc2:
                         return None, f"Seed {seed}: Reparatur und Neuschreiben ohne Code-Block ({exc2}), Abbruch nach {n} Versuchen", code
@@ -1771,6 +1827,8 @@ class Orchestrator:
         self._code_sent = set()
         self._claim_ctx = {}
         self._repo_files = {}
+        self._repo_listing = []
+        self._smoke_ok = set()
         self._setup_missing: list[str] = []
         self.events = EventLog(run_dir / "events.jsonl")
         self._set_author_code(True)   # jeder Lauf startet im angeforderten Modus, ein Rueckfall des vorigen Laufs gilt nicht weiter
@@ -1778,6 +1836,7 @@ class Orchestrator:
         requested = MODE_AUTHOR_CODE if getattr(self, "code_grounded", False) else MODE_PAPER
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode_requested=requested, use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
+                   selection_policy='test_feedback_diagnostic' if getattr(self, 'allow_test_feedback', False) else 'validation_only',
                    models={"fast": self.settings.llm.model_fast, "code": self.settings.llm.model_code,
                            "reasoning": self.settings.llm.model_reasoning},
                    seeds=self.seeds or paper.get("seeds", DEFAULT_SEEDS), claims=[c.id for c in claims])
@@ -1821,7 +1880,8 @@ class Orchestrator:
             if getattr(self, "spec_mode", False) and not (getattr(self, "code_grounded", False) and repo_info is None):
                 self.spec = build_spec(
                     lambda system, user: self._ask("extract", system, user, max_tokens=SPEC_MAX_TOKENS, temperature=0.0).content,
-                    self.details, docs, claims[0].text, paper["dataset"], numeric_only=getattr(self, "code_grounded", False)
+                    self.details, docs, claims[0].text, paper["dataset"], numeric_only=getattr(self, "code_grounded", False),
+                    repo_listing=getattr(self, "_repo_listing", None)
                 )
                 self._emit("spec", **spec_as_dict(self.spec))
                 print(f"Steckbrief (S1): {len(self.spec.items)} Werte erzwungen/pruefbar, {len(self.spec.missing)} fehlend", flush=True)
@@ -1840,6 +1900,7 @@ class Orchestrator:
             setup_details=[dataclasses.asdict(d) for d in self.details], warnings=list(self._warnings), summary=paper_head,
             setup_missing=list(self._setup_missing) if getattr(self, "setup_v2", False) else [],
             spec=spec_as_dict(getattr(self, "spec", None)) if getattr(self, "spec", None) is not None else None,
+            selection_policy='test_feedback_diagnostic' if getattr(self, 'allow_test_feedback', False) else 'validation_only',
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
