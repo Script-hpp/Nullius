@@ -1,0 +1,38 @@
+{
+ "fits_root": {
+  "n_listing": 1410,
+  "partial_lo_entry": false,
+  "files": [
+   "models/FITS.py",
+   "scripts/FITS/etth1_best.sh",
+   "run_longExp_F.py",
+   "README.md"
+  ],
+  "AD_read": false,
+  "listing_bytes": 83540
+ },
+ "fits_subdir_logs": {
+  "n_listing": 1340,
+  "expected": 1340,
+  "subdir": "logs",
+  "listing_bytes": 163833
+ },
+ "odd_names": {
+  "listing": [
+   "a b.py",
+   "models/Ünïcode.py",
+   "new\nline.py",
+   "quote\"d.py",
+   "tab\tname.py"
+  ],
+  "all_exact": true
+ },
+ "odd_names_old_ls_files": [
+  "a b.py",
+  "\"models/\\303\\234n\\303\\257code.py\"",
+  "\"new\\nline.py\"",
+  "\"quote\\\"d.py\"",
+  "\"tab\\tname.py\""
+ ],
+ "big_1MB": "BLOCKED: Repository listing could not be verified; no experiment was started; transferred=False"
+}
