@@ -238,5 +238,40 @@ bauen; Aufrufzaehler aus dem LLM-Client (zentral) statt aus einzelnen Events.
 
 Der Nutzer hat nach Abschluss der Analyse Fixes fuer E07–E12 und E15–E19 freigegeben, beschraenkt auf `spec.py`, `spec_check.py`,
 `source_context.py`, `repo_source.py`, `harness/code_check.py`, `harness/training_check.py`, `method_guard.py` und deren Tests.
-Umsetzung und Testbelege stehen im Abschnitt „Umsetzung“ weiter unten, sobald sie vorliegen. Nicht in diesem Worktree: E01–E06,
-E13, E14, E20–E23, N01–N03, R01–R04 (Orchestrator, Tasks, Sandbox, UI).
+Nicht in diesem Worktree: E01–E06, E13, E14, E20–E23, N01–N03, R01–R04 (Orchestrator, Tasks, Sandbox, UI; laut `ceo` dort in Arbeit).
+Kein Befund aus diesem Block war widerlegt, deshalb gibt es zu jedem eine Aenderung.
+
+### Umsetzung
+
+| ID | Aenderung (kleinster Layer) | Grenze |
+| --- | --- | --- |
+| E07 | `spec.verify_entries` verwirft Zahlen aus Zitaten mit Inferenz-/Effizienzkontext, wenn das Zitat das Training nicht nennt (`not_training_context`). Grund steht im Dossier (`spec.dropped`). | Wortliste; ein Satz „trained … inference speed“ bleibt gueltig (gewollt). |
+| N04 (Teil E07) | `spec.inactive_mechanisms`: `dropout` faellt aus dem Steckbrief, wenn Modelldatei und ihre transitiv importierten, gelesenen Module keinen Dropout enthalten. Kein Erzwingen, keine S3-Frage, keine Reparatur. | Nur Mechanismus `dropout`; andere Schluessel bleiben wie bisher. |
+| E08 | `drop_run_script_defaults(excerpt, dataset, horizon, model)`: nur Flags aus Aufrufen, die zu Datensatz, Horizont (ETT: 96) und Modell passen (`call_matches`). Shell-Variablen (`$h`) gelten als passend; nur ein ausdruecklich anderer Literalwert schliesst aus. | Ohne Kontext (alte Aufrufer, Erstaudit-Probe) unveraendertes Verhalten. |
+| E09 | `raw_items(..., dataset, horizon)`: `--flag Zahl` je passendem Aufruf; nur Mehrdeutigkeit innerhalb passender Aufrufe verwirft den Wert. Zitat ist das Flag selbst. | Datensatzvergleich mit Praefix (Cora / Cora-LCC). |
+| E10 | `spec_check._keyword_applies`: `p=` zaehlt nur fuer Dropout-Aufrufe; `batch_size=` nur fuer Trainings-Loader (Name mit `train` oder `shuffle=True`). `dropout=` und `lr=` weiterhin ueberall. | Heuristik ueber Namen; ein Trainings-Loader ohne `train`-Namen und ohne `shuffle=True` wird nicht geprueft. |
+| E11 | `spec_check._config_mutations`: Alias, Neuzuweisung des ganzen Dicts (auch `{**CONFIG, ...}`), `+=`/`*=`, `__setitem__`, `pop`/`del`/`clear`, `update(<nicht literal>)`, in `if`/`with`/`try`. Nicht auswertbare Schreibzugriffe gelten als Konflikt. Eigene Reparaturmeldung „changes CONFIG … after the CONFIG block“. | Schreibzugriffe in Schleifen und Funktionen bleiben erlaubt (Lernraten-Plan, bewusst unveraendert). |
+| E12 | `paper_numbers` liefert Zahlen je Parameter: ein Zitat mit Parameterwort stuetzt nur diesen (Horizont bindet 96/32 an `horizon`), Tabellenzeilen ohne Parameterwort bleiben ungebunden. `resolve` akzeptiert weiterhin eine flache Menge (alte Aufrufer). | Wortliste je Schluessel. |
+| E15 | `author_excerpt`: Trainingshelfer transitiv gegen das vollstaendige Listing; gelistet, aber nicht gelesen = `SourceContextBlocked` wie beim Modellkern. Andere Modelle neben der Modelldatei (Registry wie `exp_basic`) werden nie verlangt. `read_repo` liest bis zu 5 statt 2 Importebenen, begrenzt durch das bestehende Zeichenbudget. | **Verhaltensaenderung:** Laeufe, die frueher mit unvollstaendigem Protokoll starteten, stoppen jetzt vor dem Experiment. |
+| E16 | `requested_ref`, `RepoLink.ref`, `RepoDump.ref`: Tag/Release-Branch/Commit aus `tree/<ref>/...` wird geklont und ausgecheckt (`git checkout -q <ref>`); fehlt er, scheitert das Setup sichtbar. `main`, `master`, `HEAD` bleiben Standard-Branch, weil alte Links oft auf den damaligen Standard zeigen. | `clone_plan` behaelt seine Signatur; Repo-Suchtreffer (Tavily) bleiben beim Standard-Branch. |
+| E17 | `method_guard`: konstante Nullen auch ueber eine nie veraenderte Variable, `0 * x`, `full_like(x, 0)`; umbenannte Retrieval-Methode mit Eingabeparameter wird gegen die Retrieval des Repos insgesamt geprueft. Hilfsfunktionen `init*`, `reset*`, `pad*` usw. bleiben erlaubt. | Weiterhin keine Methodentreue-Zertifizierung. |
+| E18 | `training_check`: Wiederherstellung per `state_dict=`-Keyword und ueber Attribute (`self.best`); Trainingsschritt = `backward()` oder `step()` eines beliebig benannten Optimierers (ausser Scheduler); flache Kopien auch per Dict-Comprehension, `detach()` ohne `clone()`, `OrderedDict(...)`. | Wiederherstellung in einer anderen Funktion bleibt ungeprueft (wie bisher). |
+| E19 | `code_check.executable_text`: Kommentare und Docstrings werden vor den Regeln positionsgleich ausgeblendet; `fetch_*` nur noch fuer bekannte Datensatz-Lader. Strings im Code (z. B. URL) bleiben verboten; nicht parsebarer Code wird unveraendert (streng) geprueft. | Netzsperre `unshare -n` bleibt die erste Schicht. |
+
+### Testbelege
+
+| Befehl | Ergebnis |
+| --- | --- |
+| Fokussierte Suite vor den Aenderungen (23 Dateien: Spec, Raw, Check, Config, Repo, Source, Guards, Kandidaten, Val-Label, Referenzen, Nachlauf) | 427 passed, 3 skipped |
+| Dieselbe Suite nach den Aenderungen plus `tests/test_reliability_spec_guards.py` und `tests/test_author_code_mode.py` | 491 passed, 3 skipped |
+| Neue Datei `tests/test_reliability_spec_guards.py` gegen den unveraenderten Stand `e945e01` (git archive im Scratchpad) | 34 failed, 17 passed: alle Befundtests rot, alle Erhaltungstests gruen |
+| Geaenderter Test | `tests/test_spec_raw.py::test_raw_items_shell_flags_ambiguous_runs_are_skipped`: Der Aufruf fuer Modell B verdraengt den Wert fuer Modell A nicht mehr (neue Invariante), echte Mehrdeutigkeit wird zusaetzlich geprueft. |
+| Echte Artefakte | Referenzloesungen `tests/reference/*.py`: keine Treffer der Guards; vorher meldete `code_check` bei `gcnii_cora_reference.py` faelschlich „Planetoid“ aus dem Docstring. Sechs gespeicherte SARAF-Codeversionen: Platzhalter-, Checkpoint- und Code-Guard unveraendert (keine neuen Fehlalarme). |
+
+Erstaudit-Proben nach den Fixes: `training_vs_inference_batch`, `unrelated_keyword_conflicts`, `silent_config_overwrites`,
+`placeholder_blind_spots`, `checkpoint_blind_spots`, `protocol_dependency_omission`, `comments_rejected_as_operations` und
+`inactive_model_setting_enforced` bestaetigen das alte Verhalten nicht mehr. `unrelated_default_stripping`, `multi_command_values`,
+`paper_number_collision` und `requested_repo_ref_lost` laufen weiter gruen, weil sie die Funktionen ohne Experimentkontext, mit einer
+flachen Zahlenmenge oder ueber die unveraenderte `clone_plan`-Signatur aufrufen. Der Produktpfad (`build_spec`, `paper_numbers`,
+`requested_ref`/`read_repo`) ist durch eigene Tests abgedeckt, darunter `test_build_spec_passes_the_experiment_to_script_parsing`.
+Die vollstaendige Suite laeuft nach der Integration in `ceo`.

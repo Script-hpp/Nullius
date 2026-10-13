@@ -342,6 +342,59 @@ _NUM = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
 ASSIGN_RE = re.compile(rf"^(?:export\s+)?([A-Za-z_]\w*)\s*(?:=|:)\s*(?:!!float\s+)?({_NUM})\s*[,;]?\s*(?:#.*)?$")   # nur Zeilen ohne Einrueckung
 FLAG_NUM_RE = re.compile(rf"--([A-Za-z_][\w-]*)(?:\s+|=)({_NUM})(?![\w.])")
 NUM_TOKEN_RE = re.compile(r"\d+\.\d+(?:[eE][+-]?\d+)?|\.\d+|\d+(?:[eE][+-]?\d+)?")
+FORECAST_HORIZON = 96   # alle ETT-Tasks prognostizieren 96 Schritte (harness/ett_data.PRED_LEN)
+
+# ---- Startskripte je Aufruf (E08/E09): nur der Aufruf des Experiments zaehlt, nicht der fuer einen anderen Datensatz/Horizont ------
+SH_CONT_RE = re.compile(r"\\[ \t]*\r?\n")
+SH_VALUE_RE = re.compile(r"--([A-Za-z_][\w-]*)(?:[ \t]+|=)(['\"]?)([^\s'\"]+)\2")
+DATA_FLAGS = {"data", "data_path", "dataset", "data_name", "dataset_name"}
+HORIZON_FLAGS = {"pred_len", "horizon", "prediction_length", "out_len", "output_len", "forecast_horizon"}
+MODEL_FLAGS = {"model", "model_name", "model_type"}
+
+
+def _flag(name: str) -> str:
+    return name.lower().replace("-", "_")
+
+
+def sh_invocations(body: str) -> tuple[list[str], list[str]]:
+    """(Aufrufe, uebrige Zeilen) eines Shell-Skripts. Fortsetzungszeilen (`\\`) werden zu einem Aufruf zusammengefuegt; ein Aufruf ist eine
+    Zeile mit mindestens einem `--flag`."""
+    calls, rest = [], []
+    for line in SH_CONT_RE.sub(" ", body).splitlines():
+        (calls if SH_FLAG_RE.search(line) else rest).append(line)
+    return calls, rest
+
+
+def _dataset_token(value: str) -> str:
+    stem = value.rsplit("/", 1)[-1]
+    stem = re.sub(r"\.(csv|npz|npy|txt|pkl|h5)$", "", stem, flags=re.I)
+    return re.sub(r"[^a-z0-9]", "", stem.lower())
+
+
+def call_matches(call: str, dataset: str | None = None, horizon: int | None = None, model: str | None = None) -> bool:
+    """Passt ein Aufruf zum Experiment des Claims? Nur ein ausdruecklich anderer Wert (Literal, keine Shell-Variable) schliesst ihn aus."""
+    values: dict[str, list[str]] = {}
+    for name, _, value in SH_VALUE_RE.findall(call):
+        values.setdefault(_flag(name), []).append(value)
+
+    def literals(flags: set[str]) -> list[str]:
+        return [v for f in flags for v in values.get(f, []) if not v.startswith("$")]
+
+    if dataset and (lits := literals(DATA_FLAGS)):
+        want = _dataset_token(dataset)
+        # Praefix genuegt ("cora" im Skript fuer den Task Cora-LCC); ETTh1 und ETTh2 bleiben verschieden
+        if not any(t == want or (min(len(t), len(want)) >= 4 and (t.startswith(want) or want.startswith(t)))
+                   for t in map(_dataset_token, lits)):
+            return False
+    if horizon is not None and (lits := literals(HORIZON_FLAGS)):
+        try:
+            if all(float(v) != float(horizon) for v in lits):
+                return False
+        except ValueError:
+            pass
+    if model and (lits := literals(MODEL_FLAGS)) and model.lower() not in {v.lower() for v in lits}:
+        return False
+    return True
 
 
 def _doc_path(name: str) -> str:
@@ -354,10 +407,12 @@ def _is_specific(source: str, model: str) -> bool:
     return model.lower() in path.lower() if CONFIG_RE.search(path) else True
 
 
-def raw_items(docs: list[Doc], names: list[str], model: str, family: str) -> list[SpecItem]:
+def raw_items(docs: list[Doc], names: list[str], model: str, family: str, dataset: str | None = None,
+              horizon: int | None = None) -> list[SpecItem]:
     """F1 (Startskript) und F4 (c, Konfiguration): Zuweisungen `name = Zahl`, `name: Zahl` und `--flag Zahl` in den Startskripten und
-    Konfigurationsdateien des Ausschnitts. Steht ein Schluessel in einer Datei mit mehreren verschiedenen Werten (mehrere Laeufe in einem
-    Shell-Skript), wird er dort nicht gelesen. Deterministisch, kein LLM."""
+    Konfigurationsdateien des Ausschnitts. Steht ein Schluessel mit mehreren verschiedenen Werten da, wird er nicht gelesen.
+    Shell-Skripte (E09): `--flag Zahl` nur aus den Aufrufen, die zu Datensatz, Horizont und Modell passen (`call_matches`); ein anderer
+    Aufruf im selben Skript verdraengt den passenden Wert nicht mehr. Deterministisch, kein LLM."""
     num_keys = {k for k, _ in keys_for(family, True)[0]}
     want = {n.replace(" (function body)", "") for n in names}
     out: list[SpecItem] = []
@@ -366,15 +421,20 @@ def raw_items(docs: list[Doc], names: list[str], model: str, family: str) -> lis
         if d.name not in want or not (START_RE.search(path) or CONFIG_RE.search(path)):
             continue
         found: dict[str, list[tuple[str, str]]] = {}
-        for line in d.text.splitlines():
+        if path.endswith(".sh"):
+            calls, rest = sh_invocations(d.text)
+            lines = [(ln, False) for ln in rest] + [(c, True) for c in calls if call_matches(c, dataset, horizon, model)]
+        else:
+            lines = [(ln, False) for ln in d.text.splitlines()]
+        for line, is_call in lines:
             m = ASSIGN_RE.match(line.rstrip())
-            hits = [(m.group(1), m.group(2))] if m else []
-            if path.endswith(".sh"):
-                hits += FLAG_NUM_RE.findall(line)
-            for name, value in hits:
+            hits = [(m.group(1), m.group(2), line.strip())] if m else []
+            if is_call:   # Zitat = das Flag selbst (der zusammengefuegte Aufruf steht so nicht woertlich im Skript)
+                hits += [(f.group(1), f.group(2), f.group(0)) for f in FLAG_NUM_RE.finditer(line)]
+            for name, value, quote in hits:
                 key = ALIAS_KEY.get(name.lower().replace("-", "_")) or ALIAS_KEY.get(name.lower())
                 if key in num_keys:
-                    found.setdefault(key, []).append((value, line.strip()))
+                    found.setdefault(key, []).append((value, quote))
         for key, occ in found.items():
             if len({float(v) for v, _ in occ}) != 1:
                 continue
@@ -386,18 +446,63 @@ def raw_items(docs: list[Doc], names: list[str], model: str, family: str) -> lis
     return out
 
 
-def paper_numbers(details: list[SetupDetail], items: list[SpecItem]) -> set[float]:
-    """Zahlen aus belegten Paper-Zitaten (Rolle 4 und Steckbrief-Eintraege der Quelle 'paper'): Belege, die einen Konfigurationswert stuetzen."""
-    texts = [d.quote for d in details if getattr(d, "source", "") == "paper" and not getattr(d, "excluded", "")]
-    texts += [i.quote for i in items if i.source == "paper"]
-    nums: set[float] = set()
-    for t in texts:
-        for tok in NUM_TOKEN_RE.findall(t):
-            try:
-                nums.add(float(tok))
-            except ValueError:
-                pass
-    return nums
+# E12: Bestaetigung nur fuer denselben Parameter. Woerter, an denen ein Paper-Zitat seinen Parameter erkennen laesst ("horizon" ist kein
+# Steckbrief-Schluessel, bindet aber Zahlen wie 96 oder 32, damit sie keinen fremden Konflikt entscheiden).
+PARAM_WORDS = {
+    "lr": r"learning[ _-]?rates?|\blr\b",
+    "weight_decay": r"weight[ _-]?decay|\bl2\b|regulari[sz]",
+    "epochs": r"\bepochs?\b",
+    "batch_size": r"\bbatch",
+    "dropout": r"dropout",
+    "hidden": r"hidden|\bunits\b|d_model|embedding (?:size|dim)",
+    "layers": r"\blayers?\b",
+    "patience": r"patience|early[ -]?stop",
+    "heads": r"\bheads?\b",
+    "seq_len": r"look-?back|input (?:length|window|sequence)|seq(?:uence)?[ _]len|history length|lookback",
+    "horizon": r"horizon|prediction length|pred(?:iction)?[ _]len|forecast(?:ing)? (?:length|steps)|output length",
+}
+PARAM_WORDS_RE = {k: re.compile(v, re.I) for k, v in PARAM_WORDS.items()}
+UNBOUND = "*"
+
+
+def _numbers(text: str) -> set[float]:
+    out: set[float] = set()
+    for tok in NUM_TOKEN_RE.findall(text):
+        try:
+            out.add(float(tok))
+        except ValueError:
+            pass
+    return out
+
+
+def quote_params(text: str) -> set[str]:
+    """Parameter, die ein Text ausdruecklich nennt (Schluessel des Steckbriefs oder 'horizon')."""
+    return {k for k, rx in PARAM_WORDS_RE.items() if rx.search(text or "")}
+
+
+def paper_numbers(details: list[SetupDetail], items: list[SpecItem]) -> dict[str, set[float]]:
+    """Zahlen aus belegten Paper-Zitaten (Rolle 4 und Steckbrief-Eintraege der Quelle 'paper'), je Parameter (E12).
+    Ein Zitat, das Parameter nennt, stuetzt nur diese; ein Zitat ohne Parameterwort (Tabellenzeile) bleibt ungebunden (UNBOUND) und
+    stuetzt jeden Schluessel. Das Thema einer Angabe bindet ihren Wert. Steckbrief-Eintraege des Papers stuetzen ihren eigenen Schluessel."""
+    out: dict[str, set[float]] = {UNBOUND: set()}
+    for d in details:
+        if getattr(d, "source", "") != "paper" or getattr(d, "excluded", ""):
+            continue
+        for k in quote_params(d.quote) or {UNBOUND}:   # Tabellenzeile ohne Parameterwort: ungebunden
+            out.setdefault(k, set()).update(_numbers(d.quote))
+        for k in quote_params(getattr(d, "topic", "")):   # das Thema bindet nur den eigenen Wert der Angabe
+            out.setdefault(k, set()).update(_numbers(str(getattr(d, "value", ""))))
+    for i in items:
+        if i.source == "paper":
+            out.setdefault(i.key, set()).update(_numbers(i.quote))
+    return out
+
+
+def _corroborating(corroborate: set[float] | dict[str, set[float]], key: str) -> set[float]:
+    """Zahlen, die einen Wert fuer `key` stuetzen. Eine flache Menge (aeltere Aufrufer) gilt fuer jeden Schluessel."""
+    if isinstance(corroborate, dict):
+        return set(corroborate.get(key, set())) | set(corroborate.get(UNBOUND, set()))
+    return set(corroborate)
 
 
 def normalize_source(source: str, names: list[str]) -> str:
@@ -407,6 +512,18 @@ def normalize_source(source: str, names: list[str]) -> str:
     base = source.removeprefix("repo:").split("@")[0]
     hits = [n for n in names if n.startswith("repo:") and n.removeprefix("repo:").split("@")[0] == base]
     return hits[0] if len(hits) == 1 else source
+
+
+# E07: Zahl mit anderer Rolle. "inference speed with batch size 32" belegt keine Trainingsbatchgroesse. Ein Zitat mit Inferenz-/Effizienzkontext
+# zaehlt nur, wenn es das Training ausdruecklich nennt ("All models are trained for 10 epochs ... inference speed").
+INFERENCE_CONTEXT_RE = re.compile(
+    r"\binferen\w*|throughput|latency|\bspeed\b|efficien\w*|run-?time|wall-?clock|\bFLOPs?\b|memory (?:usage|footprint|consumption|cost)",
+    re.I)
+TRAINING_CONTEXT_RE = re.compile(r"\btrain\w*|fine-?tun\w*|optimi[sz]\w*", re.I)
+
+
+def not_training_context(quote: str) -> bool:
+    return bool(INFERENCE_CONTEXT_RE.search(quote)) and not TRAINING_CONTEXT_RE.search(quote)
 
 
 def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_only: bool = False, normalize: bool = False
@@ -440,6 +557,8 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
             reason = f"andere Modellwahl ({other_model_selected(quote, model)})"
         elif source == "repo-readme" and OPTIONAL_RE.search(quote):
             reason = "optionaler README-Hinweis"
+        elif key in num_keys and not_training_context(quote):
+            reason = "Zitat beschreibt Inferenz/Effizienz, nicht das Training"
         if reason:
             dropped.append({"item": it, "reason": reason})
             continue
@@ -458,11 +577,11 @@ def _same_value(a: SpecItem, b: SpecItem) -> bool:
     return _norm(a.value) == _norm(b.value)
 
 
-def resolve(items: list[SpecItem], family: str, numeric_only: bool = False, corroborate: set[float] | None = None
-            ) -> tuple[list[SpecItem], list[str]]:
+def resolve(items: list[SpecItem], family: str, numeric_only: bool = False,
+            corroborate: set[float] | dict[str, set[float]] | None = None) -> tuple[list[SpecItem], list[str]]:
     """Ein Eintrag je Schluessel: hoechster Rang gewinnt; argparse-Defaults fallen weg, sobald eine hoehere Quelle den Schluessel
     setzt (D-Klasse). Widersprechen sich zwei Quellen GLEICHEN Rangs, wird nichts erzwungen (Hinweis statt Raten).
-    corroborate (F4, code_grounded): Zahlen aus belegten Paper-Zitaten. Dann gilt zusaetzlich: eine Modell-Konfiguration schlaegt die
+    corroborate (F4, code_grounded): Zahlen aus belegten Paper-Zitaten, je Parameter (paper_numbers; E12). Dann gilt zusaetzlich: eine Modell-Konfiguration schlaegt die
     allgemeine (train.conf), und von zwei widersprechenden gleichrangigen Werten gewinnt der, dessen Zahl das Paper nennt (wenn genau einer).
     Rueckgabe (Eintraege in Schluesselreihenfolge, Schluessel ohne Beleg)."""
     num, txt = keys_for(family, numeric_only)
@@ -481,7 +600,8 @@ def resolve(items: list[SpecItem], family: str, numeric_only: bool = False, corr
         note = ""
         if tie and corroborate is not None:
             cands = [win] + tie
-            backed = [c for c in cands if c.number is not None and any(abs(float(c.number) - x) <= 1e-12 * max(1.0, abs(x)) for x in corroborate)]
+            support = _corroborating(corroborate, key)
+            backed = [c for c in cands if c.number is not None and any(abs(float(c.number) - x) <= 1e-12 * max(1.0, abs(x)) for x in support)]
             if backed and len({float(c.number) for c in backed}) == 1:
                 win = backed[0]
                 alts = [i for i in group if i is not win and not _same_value(i, win)]
@@ -504,13 +624,17 @@ ADD_ARG_RE = re.compile(r"add_argument\((?:[^()]|\([^()]*\))*\)", re.S)
 DEFAULT_KW_RE = re.compile(r",?[ \t]*\bdefault\s*=\s*(?:'[^']*'|\"[^\"]*\"|\[[^\]]*\]|\([^)]*\)|[^,)\n]+)")
 
 
-def drop_run_script_defaults(excerpt: str) -> tuple[str, list[str]]:
+def drop_run_script_defaults(excerpt: str, dataset: str | None = None, horizon: int | None = None,
+                             model: str | None = None) -> tuple[str, list[str]]:
     """Setzt ein Startskript (.sh) ein Flag, faellt der argparse-Default dieses Flags aus den Python-Stuecken weg (D-Klasse: der Default
-    0.0001 neben `--learning_rate 0.005` im Skript). Rueckgabe (Ausschnitt, entfernte Flags). Deterministisch, ohne LLM."""
+    0.0001 neben `--learning_rate 0.005` im Skript). Rueckgabe (Ausschnitt, entfernte Flags). Deterministisch, ohne LLM.
+    E08: Mit Datensatz/Horizont/Modell zaehlen nur die Aufrufe dieses Experiments (`call_matches`). Ein Flag, das nur ein Aufruf fuer
+    einen anderen Datensatz oder Horizont setzt, laesst den Default stehen, denn der passende Aufruf benutzt ihn."""
     heads = list(SECTION_RE.finditer(excerpt))
     sections = [(m.group(1), excerpt[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(excerpt)]) for i, m in enumerate(heads)]
     is_sh = lambda name: name.split(" (")[0].split("@")[0].endswith(".sh")   # Name wie "repo:scripts/etth1.sh@0c11366"
-    flags = {f for name, body in sections if is_sh(name) for f in SH_FLAG_RE.findall(body)}
+    flags = {f for name, body in sections if is_sh(name) for call in sh_invocations(body)[0]
+             if call_matches(call, dataset, horizon, model) for f in SH_FLAG_RE.findall(call)}
     if not flags:
         return excerpt, []
     dropped: list[str] = []
@@ -531,12 +655,51 @@ def drop_run_script_defaults(excerpt: str) -> tuple[str, list[str]]:
     return excerpt[: heads[0].start()] + "".join(out), sorted(set(dropped))
 
 
-def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], names: list[str], details: list[SetupDetail]
-              ) -> tuple[list[SpecItem], list[str]]:
+# N04: Mechanismus-Schluessel, die nur gelten, wenn der Modellcode des Autors den Mechanismus enthaelt. Ein globaler argparse-Default
+# (dropout 0.1 in run.py) fuer ein Modell ohne Dropout darf keine Reparatur erzwingen, die eine Dropout-Schicht einbaut.
+MECHANISM_WORDS = {"dropout": re.compile(r"dropout", re.I)}
+
+
+def model_core_docs(docs: list[Doc], model: str) -> list[Doc]:
+    """Modelldatei(en) des Claims und alle gelesenen lokalen Module, die sie (transitiv) importieren."""
+    from .repo_source import imported_files
+
+    repo = {_path(d): d for d in docs if d.name.startswith("repo:")}
+    core = {_path(d): d for d in model_files(docs, model)[:2]}
+    while True:
+        new = [p for p in imported_files({p: d.text for p, d in core.items()}, list(repo), relative=True) if p not in core]
+        if not new:
+            return list(core.values())
+        core.update({p: repo[p] for p in new})
+
+
+def inactive_mechanisms(items: list[SpecItem], docs: list[Doc], model: str) -> tuple[list[SpecItem], list[dict]]:
+    """Eintraege fuer Mechanismen, die der gelesene Modellkern nicht enthaelt, fallen aus dem Steckbrief (mit Grund im Dossier)."""
+    core = model_core_docs(docs, model)
+    if not core:
+        return items, []
+    text = "\n".join(d.text for d in core)
+    keep, dropped = [], []
+    for i in items:
+        rx = MECHANISM_WORDS.get(i.key)
+        if rx is not None and not rx.search(text):
+            dropped.append({"item": {"key": i.key, "value": i.value, "quote": i.quote, "source": i.source},
+                            "reason": "Modellcode des Autors enthaelt diesen Mechanismus nicht"})
+        else:
+            keep.append(i)
+    return keep, dropped
+
+
+def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], names: list[str], details: list[SetupDetail],
+              dataset: str | None = None) -> tuple[list[SpecItem], list[str], list[dict]]:
     """code_grounded: zu den Eintraegen des Extraktors kommen die deterministisch gelesenen Zeilen des Ausschnitts (F1, F4 c); die Rangregel
-    entscheidet (Startskript > Config > Paper), bei gleichem Rang gilt F4 (Modell-Konfiguration, Paper-Zahl)."""
-    raw = raw_items(docs, names, model, family)
-    return resolve(kept + raw, family, True, corroborate=paper_numbers(details, kept))
+    entscheidet (Startskript > Config > Paper), bei gleichem Rang gilt F4 (Modell-Konfiguration, Paper-Zahl). Startskripte zaehlen nur mit
+    den Aufrufen dieses Experiments (E09); Mechanismen ohne Gegenstueck im Modellkern fallen weg (N04)."""
+    horizon = FORECAST_HORIZON if family == "forecast" else None
+    raw = raw_items(docs, names, model, family, dataset=dataset, horizon=horizon)
+    items, missing = resolve(kept + raw, family, True, corroborate=paper_numbers(details, kept))
+    items, inactive = inactive_mechanisms(items, docs, model)
+    return items, missing, inactive
 
 
 def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False,
@@ -553,11 +716,13 @@ def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str
         excerpt, names = focused_excerpt(docs, model, dataset, details)
     dropped_defaults: list[str] = []
     if numeric_only:
-        excerpt, dropped_defaults = drop_run_script_defaults(excerpt)
+        excerpt, dropped_defaults = drop_run_script_defaults(
+            excerpt, dataset=dataset, horizon=FORECAST_HORIZON if family == "forecast" else None, model=model)
     raw = _parse_list(ask(SPEC_SYSTEM, build_prompt(details, excerpt, claim_text, dataset, model, family, numeric_only)))
     kept, dropped = verify_entries(raw, docs, model, family, numeric_only, normalize=numeric_only)
     if numeric_only:
-        items, missing = _assemble(model, family, kept, docs, names, details)
+        items, missing, inactive = _assemble(model, family, kept, docs, names, details, dataset=dataset)
+        dropped += inactive
     else:
         items, missing = resolve(kept, family, numeric_only)
     return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=names, missing=missing,
@@ -596,7 +761,8 @@ def rebuild_spec(old: dict, details: list[SetupDetail], paper_text: str | None =
     again, still = verify_entries(redo, docs, model, family, True, normalize=True)
     dropped = [d for d in old.get("dropped", []) if d.get("reason") != "Quelle unbekannt"] + still
     names = [d.name for d in docs if d.name != "paper"]
-    items, missing = _assemble(model, family, kept + again, docs, names, details)
+    items, missing, inactive = _assemble(model, family, kept + again, docs, names, details)
+    dropped += inactive
     return Spec(model=model, family=family, items=items, dropped=dropped, excerpt_docs=old.get("excerpt_docs", []), missing=missing,
                 excerpt=old["excerpt"], dropped_defaults=old.get("dropped_defaults", []))
 
