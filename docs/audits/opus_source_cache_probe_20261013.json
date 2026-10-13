@@ -1,0 +1,32 @@
+{
+ "reserve": {
+  "arxiv_id": "2307.03756",
+  "url": "https://export.arxiv.org/src/2307.03756v3",
+  "source_kind": "latex",
+  "retrieved_at": "2026-10-13T16:29:12+00:00",
+  "sha256": "9022b12b628fc1807f0ef11bfd7d1266f25b8575c1418afeb7bb90c251a00d64",
+  "arxiv_version": "v3",
+  "text": 127032,
+  "from_cache": false
+ },
+ "reserve_hash_ok": true,
+ "reserve_used_for_v3": "source v3 from_cache=True sha=9022b12b628f",
+ "other_requested_version_v4": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "file_named_v3_but_content_v2": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "other_paper_id": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "corrupt_text_hash_mismatch": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "pdf_kind": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "truncated_json": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "broken_json_file": "stopped: Selected LaTeX claim source is temporarily unavailable. No alternate-format extraction was started",
+ "rehashed_different_text_same_version": "source v3 from_cache=True sha=09d35a63df6c",
+ "fresh_download_wins": "source v3 from_cache=False sha=09d35a63df6c",
+ "unknown_version_picks": "source v1 from_cache=True sha=9022b12b628f",
+ "saved_after_download": {
+  "url": "https://arxiv.org/src/2307.03756v3",
+  "from_cache": false,
+  "version": "v3",
+  "asdict_deepcopy_ok": true
+ },
+ "html_page_decoded": "''",
+ "pdf_bytes_decoded": "''"
+}
