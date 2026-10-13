@@ -188,3 +188,24 @@ Grenzen und kleine Nacharbeit:
    HTTP-Status bzw. Fehlerklasse (ohne URL-Parameter, ohne Geheimnisse) in die Stoppmeldung und das Ereignis
    uebernehmen. Die Reserve deckt nur FITS ab; andere Papers stoppen bei gleichem Netzfehler weiter.
 4. **Quellenliste.** `_record_source` vermerkt den Cache nicht; nur Warnung und `paper_text.json` tragen `from_cache`.
+
+## Nachtrag 3: Schlusspruefung der Cache-Nacharbeit
+
+Stand **2026-10-13, 16:41 UTC**, ceo `261c0ca` plus Diff `a90ac583…`. Scratch-Kopie, keine Calls, keine Downloads.
+238 fokussierte Tests passed (inkl. `test_paper_source_cache.py`), `git diff --check` sauber.
+Probe: `docs/audits/opus_source_cache_probe_final_20261013.{py,json}`.
+
+**Kein Blocker.** Alle vier Hinweise sind umgesetzt:
+
+| Hinweis | Ergebnis |
+| --- | --- |
+| 1 Hash | Mit Katalog-Hash (FITS) wird ein neu gehashter anderer Text abgewiesen; die Reserve `9022b12b…` wird angenommen. Ohne Katalog-Hash bleibt die Pruefung selbstkonsistent (erwartet). |
+| 2 Version | Unbekannte Version waehlt v10 vor v3 vor v1, `current_version_unknown=True`; Datei v9 mit Inhalt v3 wird abgewiesen. |
+| 3 Ursache | Letzter Fehler erscheint in Stoppmeldung und Ereignis, z. B. „HTTP 403 at https://arxiv.org/src/2307.03756v3“; nur offizielle URL, keine Parameter. |
+| 4 Quellenliste | `_record_source(..., from_cache=True)` |
+
+Zwei Randnotizen ohne Handlungsbedarf vor dem Smoke-Test:
+- Ein erfolgreicher frischer Download derselben Version mit anderem Hash als im Katalog wird ohne eigene Warnung
+  verwendet; der Binder entscheidet. Eine Warnung „Quelle weicht vom Discovery-Hash ab“ waere hilfreich.
+- Im Modus `fixture` faellt eine Fixture mit anderer Version oder anderem Hash jetzt auf den Netzabruf durch.
+  Betrifft nur Katalogeintraege mit `source_evidence` im Fixture-Modus.
