@@ -1,0 +1,712 @@
+{
+  "job_id": "ee039f0f-5a4c-47d3-83a7-ad7388473738",
+  "monitoring_complete": true,
+  "events": [
+    {
+      "ts": 1791910528.3304842,
+      "type": "run_start",
+      "paper_id": "disc_2307_03756",
+      "title": "FITS: Modeling Time Series with $10k$ Parameters",
+      "mode_requested": "nachbau_autorencode",
+      "use_tavily": true,
+      "use_setup_details": true,
+      "paper_only": false,
+      "selection_policy": "validation_only",
+      "selection_contract": {
+        "version": "withheld_validation_v1",
+        "heldout_fraction": 0.2,
+        "kind": "windows",
+        "checkpoint_validation": "visible validation only",
+        "train_test_split": "unchanged",
+        "selection_samples": 21,
+        "total_validation_samples": 117,
+        "inference": "causal_stream_v2",
+        "deterministic_rechecks": 8,
+        "calendar_features": [
+          "year",
+          "month",
+          "day",
+          "weekday",
+          "hour"
+        ]
+      },
+      "models": {
+        "fast": "nvidia/Nemotron-3_5-Lightning",
+        "code": "nvidia/nemotron-3-super-120b-a12b",
+        "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+      },
+      "seeds": 3,
+      "claims": [
+        "disc_2307_03756_mse"
+      ]
+    },
+    {
+      "ts": 1791910528.6961644,
+      "type": "target_check",
+      "claim_id": "disc_2307_03756_mse",
+      "verified_value": 0.372,
+      "configured_value": 0.372,
+      "agrees": true,
+      "url": "https://export.arxiv.org/src/2307.03756v3",
+      "from_store": false
+    },
+    {
+      "ts": 1791910528.697148,
+      "type": "target_resolved",
+      "claim_id": "disc_2307_03756_mse",
+      "value": 0.372,
+      "quote": "FITS & \\textbf{0.372} & \\textbf{0.404} & \\textbf{0.427} & \\textbf{0.424} & \\textbf{0.271} & \\textbf{0.331} & \\textbf{0.354} & \\textbf{0.377} & 0.303 & 0.337 & {\\underline{0.366}} & \\textbf{0.415} & \\textbf{0.162} & \\textbf{0.216} & \\textbf{0.268} & \\textbf{0.348}",
+      "table": "tab:FITSett",
+      "url": "https://export.arxiv.org/src/2307.03756v3",
+      "arxiv_version": "v3",
+      "column_check": "ok",
+      "caveat": null,
+      "from_store": false
+    },
+    {
+      "ts": 1791910637.2709668,
+      "type": "setup_details",
+      "n": 28,
+      "dropped": 2,
+      "by_source": {
+        "paper": 2,
+        "repo:AD/FITS.py": 7,
+        "repo:exp/exp_main_F.py": 4,
+        "repo:exp/exp_main.py": 1,
+        "repo:layers/utils.py": 1,
+        "repo-readme": 1,
+        "repo:README.md": 2,
+        "repo:data_provider/data_factory.py": 4,
+        "repo:AD/solver_recon.py": 5,
+        "discovery": 1
+      },
+      "repo": {
+        "url": "https://github.com/VEWOXIC/FITS",
+        "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+        "files": [
+          "AD/FITS.py",
+          "AD/main.py",
+          "AD/solver_recon.py",
+          "README.md",
+          "data_provider/data_factory.py",
+          "data_provider/data_loader.py",
+          "exp/exp_basic.py",
+          "exp/exp_main.py",
+          "exp/exp_main_F.py",
+          "layers/FED_FourierCorrelation.py",
+          "layers/utils.py"
+        ],
+        "status": "official",
+        "status_reason": "linked in the paper text",
+        "source": "paper",
+        "evidence": "title 'FITS: Modeling Time Series with $10k$ Parameters' in README"
+      },
+      "details": [
+        {
+          "topic": "input length",
+          "value": "90",
+          "quote": "& Look-back Window & \\multicolumn{2}{c}{90} & \\multicolumn{2}{c}{180} & \\multicolumn{2}{c}{360} & \\multicolumn{2}{c}{720} \\\\",
+          "source": "paper",
+          "applies_to": null,
+          "source_rank": "paper",
+          "optional": false,
+          "excluded": ""
+        },
+        {
+          "topic": "input length",
+          "value": "seq_len (from configs)",
+          "quote": "self.seq_len = configs.seq_len",
+          "source": "repo:AD/FITS.py@d040bb0",
+          "applies_to": {
+            "model": "fits",
+            "dataset": "all",
+            "setting": "not stated",
+            "quote": "self.seq_len = configs.seq_len"
+          },
+          "source_rank": "code",
+          "optional": false,
+          "excluded": ""
+        },
+        {
+          "topic": "batch size",
+          "value": "32",
+          "quote": "% \\textbf{Note that the following results are run under batch size 32 which may introduce sub-optimal results. }",
+          "source": "paper",
+          "applies_to": {
+            "model": "fits",
+            "dataset": "ETTh1",
+            "setting": "not stated",
+            "quote": "## ETTh1, ETTm1 \\& m2"
+          },
+          "source_rank": "paper",
+          "optional": false,
+          "excluded": ""
+        },
+        {
+          "topic": "batch size",
+          "value": "128",
+          "quote": "**FITS benefits from large batch size. Our latest version uses batch size of 128.**",
+          "source": "repo-readme",
+          "applies_to": {
+            "model": "fits",
+            "dataset": "all",
+            "setting": "not stated",
+            "quote": "**FITS benefits from large batch size. Our latest version uses batch size of 128.**"
+          },
+          "source_rank": "readme text",
+          "optional": false,
+          "excluded": ""
+        },
+        {
+          "topic": "batch size",
+          "value": "128",
+          "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time.~~",
+          "source": "repo:README.md@d040bb0",
+          "applies_to": {
+            "model": "fits",
+            "dataset": "all",
+            "setting": "not stated",
+            "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time.~~"
+          },
+          "source_rank": "code",
+          "optional": false,
+          "excluded": ""
+        },
+        {
+          "topic": "input length",
+          "value": "360",
+          "quote": "look-back window of 360",
+          "source": "discovery"
+        }
+      ]
+    },
+    {
+      "ts": 1791910637.3317661,
+      "type": "setup_v2",
+      "family": "forecast",
+      "missing_first": [
+        "learning rate"
+      ],
+      "missing": [
+        "learning rate"
+      ],
+      "targeted_docs": [
+        "paper",
+        "repo:exp/exp_main_F.py@d040bb0",
+        "repo:exp/exp_basic.py@d040bb0",
+        "repo:AD/main.py@d040bb0",
+        "repo:exp/exp_main.py@d040bb0",
+        "repo:data_provider/data_loader.py@d040bb0",
+        "repo:data_provider/data_factory.py@d040bb0",
+        "repo:layers/utils.py@d040bb0"
+      ],
+      "added": 0,
+      "bodies": [
+        {
+          "function": "adjust_learning_rate",
+          "doc": "repo:AD/solver_recon.py@d040bb0",
+          "topic": "learning-rate schedule",
+          "added": 0
+        }
+      ],
+      "literals": 0,
+      "excluded": []
+    },
+    {
+      "ts": 1791910651.998639,
+      "type": "spec",
+      "model": "FITS",
+      "family": "forecast",
+      "items": [
+        {
+          "key": "batch_size",
+          "value": "32",
+          "quote": "% \\textbf{Note that the following results are run under batch size 32 which may introduce sub-optimal results. }",
+          "source": "paper",
+          "rank": "paper",
+          "number": 32,
+          "enforce": true,
+          "alternatives": [],
+          "note": "",
+          "specific": true,
+          "origin": "model",
+          "tie": []
+        },
+        {
+          "key": "seq_len",
+          "value": "90",
+          "quote": "& Look-back Window & \\multicolumn{2}{c}{90} & \\multicolumn{2}{c}{180} & \\multicolumn{2}{c}{360} & \\multicolumn{2}{c}{720} \\\\",
+          "source": "paper",
+          "rank": "paper",
+          "number": 90,
+          "enforce": true,
+          "alternatives": [],
+          "note": "",
+          "specific": true,
+          "origin": "model",
+          "tie": []
+        }
+      ],
+      "dropped": [],
+      "excerpt_docs": [
+        "repo:AD/FITS.py@d040bb0",
+        "repo:exp/exp_main_F.py@d040bb0",
+        "repo:data_provider/data_loader.py@d040bb0",
+        "repo:AD/main.py@d040bb0",
+        "repo:exp/exp_main.py@d040bb0",
+        "repo:layers/utils.py@d040bb0",
+        "repo:AD/solver_recon.py@d040bb0",
+        "repo:data_provider/data_factory.py@d040bb0",
+        "repo:exp/exp_basic.py@d040bb0"
+      ],
+      "missing": [
+        "lr",
+        "weight_decay",
+        "epochs",
+        "dropout",
+        "hidden",
+        "layers",
+        "patience"
+      ],
+      "model_code_present": true,
+      "excerpt_chars": 87953
+    },
+    {
+      "ts": 1791910652.003701,
+      "type": "mode",
+      "mode": "nachbau_autorencode",
+      "requested": "nachbau_autorencode",
+      "fallback_reason": null,
+      "repo": "https://github.com/VEWOXIC/FITS",
+      "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+      "excerpt_docs": [
+        "repo:AD/FITS.py@d040bb0",
+        "repo:exp/exp_main_F.py@d040bb0",
+        "repo:data_provider/data_loader.py@d040bb0",
+        "repo:AD/main.py@d040bb0",
+        "repo:exp/exp_main.py@d040bb0",
+        "repo:layers/utils.py@d040bb0",
+        "repo:AD/solver_recon.py@d040bb0",
+        "repo:data_provider/data_factory.py@d040bb0",
+        "repo:exp/exp_basic.py@d040bb0"
+      ]
+    },
+    {
+      "ts": 1791910710.8241663,
+      "type": "plan_text",
+      "claim_id": "disc_2307_03756_mse",
+      "text": "\n\n- **Model**: FITS (Frequency Interpolation Time Series Forecasting) – seq_len = 90, pred_len = 96, enc_in = 7 (ETTh1 channels), individual = False (uncertain), cut_freq = seq_len⁄24 ≈ 3 (uncertain).  \n- **Architecture**: RevIN → real‑FFT → zero‑out frequencies > dominance_freq → linear upsampler (shared if !individual) → zero‑pad to full spectrum → iFFT → multiply by length_ratio → add back RevIN mean/std.  \n- **Hyper‑parameters (from paper/code)**: batch_size = 32, learning_rate = 0.001 (uncertain), weight_decay = 0 (uncertain), epochs = 10 (uncertain), patience = 3 (uncertain), optimizer = Adam, loss = MSE.  \n- **LR schedule**: lr ← lr × 0.95 each epoch after the first (as in `adjust_learning_rate`) (uncertain).  \n- **Dropout**: none in the FITS block (p = 0) (uncertain).  \n- **Hidden size / layers**: no hidden layers; the upsampler maps `dominance_freq` → `dominance_freq × length_ratio` (dimensions derived from seq_len/pred_len) (uncertain).  \n- **Training**: fit on `data[\"train\"]`; use `data[\"val\"]` for validation, holding out the final 20 % of validation samples for early‑stopping checkpoint selection.  \n- **Seed**: read `os.environ[\"SEED\"]`, set `numpy.random.seed` and `torch.manual_seed`.  \n- **Normalization**: data already z‑scored with training mean/std; model applies RevIN internally, no extra scaling.  \n- **Inference**: `model.eval()`, deterministic forward, returns a `[96,7]` NumPy array (or torch tensor converted to NumPy).  \n- **Checkpointing**: best model saved to `/tmp/forecast-agent/checkpoint.pth` and re‑loaded before returning the predictor.  \n- **Budget**: whole procedure (training + validation) finishes < 5 minutes on CPU."
+    },
+    {
+      "ts": 1791910754.3499038,
+      "type": "spec_check",
+      "claim_id": "disc_2307_03756_mse",
+      "candidate": 0,
+      "round": 0,
+      "score": [
+        2,
+        2
+      ],
+      "fails": [],
+      "code_hash": "947d5088ab2c"
+    },
+    {
+      "ts": 1791910824.823686,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 1,
+      "branch_id": "repro-branch-2bf86320",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "947d5088ab2c",
+      "status": "abweichung",
+      "measured": 0.7042857621142269,
+      "seconds": 70.5,
+      "error": null,
+      "stdout_tail": "",
+      "diagnostics": {
+        "pred_std": 0.6995524234021792,
+        "target_std": 1.0527909706034841,
+        "corr": 0.6065861193854079
+      },
+      "candidate": 0,
+      "val": {
+        "metric": "mse",
+        "value": 0.7269202064331332,
+        "baselines": {
+          "repeat": 0.8706257279171906,
+          "zero": 0.882098931582407
+        }
+      }
+    },
+    {
+      "ts": 1791910853.6238418,
+      "type": "spec_check",
+      "claim_id": "disc_2307_03756_mse",
+      "candidate": 1,
+      "round": 0,
+      "score": [
+        2,
+        2
+      ],
+      "fails": [],
+      "code_hash": "83f508ba9484"
+    },
+    {
+      "ts": 1791910866.3631463,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 1,
+      "branch_id": "repro-branch-188b4988",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "83f508ba9484",
+      "status": "fehler",
+      "measured": null,
+      "seconds": 12.7,
+      "error": "e/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 71, in main\n    pred = predict(history, calendar)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 55, in predict\n    proc.stdin.write(json.dumps(payload, allow_nan=False) + '\\n')\nBrokenPipeError: [Errno 32] Broken pipe\n(exit code 1)",
+      "stdout_tail": null,
+      "diagnostics": null,
+      "candidate": 1
+    },
+    {
+      "ts": 1791910906.4064794,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 2,
+      "branch_id": "repro-branch-d0ffbd9f",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "2419afb87d31",
+      "status": "fehler",
+      "measured": null,
+      "seconds": 14.0,
+      "error": "e/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 71, in main\n    pred = predict(history, calendar)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 55, in predict\n    proc.stdin.write(json.dumps(payload, allow_nan=False) + '\\n')\nBrokenPipeError: [Errno 32] Broken pipe\n(exit code 1)",
+      "stdout_tail": null,
+      "diagnostics": null,
+      "candidate": 1
+    },
+    {
+      "ts": 1791911014.1502573,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 3,
+      "branch_id": "repro-branch-01e4a545",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "b1d7c4d038db",
+      "status": "abweichung",
+      "measured": 0.7029395600254136,
+      "seconds": 76.3,
+      "error": null,
+      "stdout_tail": "",
+      "diagnostics": {
+        "pred_std": 0.6994954311322262,
+        "target_std": 1.0527909706034841,
+        "corr": 0.6074963366997763
+      },
+      "candidate": 1,
+      "val": {
+        "metric": "mse",
+        "value": 0.727366556348874,
+        "baselines": {
+          "repeat": 0.8706257279171906,
+          "zero": 0.882098931582407
+        }
+      }
+    },
+    {
+      "ts": 1791911014.1755643,
+      "type": "spec_check",
+      "claim_id": "disc_2307_03756_mse",
+      "candidate": 1,
+      "stage": "final_candidate",
+      "code_hash": "b1d7c4d038db",
+      "score": [
+        2,
+        2
+      ],
+      "fails": []
+    },
+    {
+      "ts": 1791911067.2567768,
+      "type": "spec_check",
+      "claim_id": "disc_2307_03756_mse",
+      "candidate": 2,
+      "round": 0,
+      "score": [
+        2,
+        2
+      ],
+      "fails": [],
+      "code_hash": "4ae41af7085b"
+    },
+    {
+      "ts": 1791911080.2638152,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 1,
+      "branch_id": "repro-branch-aa1b1ab4",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "4ae41af7085b",
+      "status": "fehler",
+      "measured": null,
+      "seconds": 13.0,
+      "error": "e/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 71, in main\n    pred = predict(history, calendar)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 55, in predict\n    proc.stdin.write(json.dumps(payload, allow_nan=False) + '\\n')\nBrokenPipeError: [Errno 32] Broken pipe\n(exit code 1)",
+      "stdout_tail": null,
+      "diagnostics": null,
+      "candidate": 2
+    },
+    {
+      "ts": 1791911114.0028882,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 2,
+      "branch_id": "repro-branch-8580c375",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "295103ca4ff7",
+      "status": "fehler",
+      "measured": null,
+      "seconds": 13.1,
+      "error": "e/forecast_runner.py\", line 97, in <module>\n    main(sys.argv[1])\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 71, in main\n    pred = predict(history, calendar)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/forecast-runtime/forecast_runner.py\", line 55, in predict\n    proc.stdin.write(json.dumps(payload, allow_nan=False) + '\\n')\nBrokenPipeError: [Errno 32] Broken pipe\n(exit code 1)",
+      "stdout_tail": null,
+      "diagnostics": null,
+      "candidate": 2
+    },
+    {
+      "ts": 1791911204.7181811,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 0,
+      "n": 3,
+      "branch_id": "repro-branch-3178e7db",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "b602d12171b4",
+      "status": "abweichung",
+      "measured": 0.7028835425262714,
+      "seconds": 73.3,
+      "error": null,
+      "stdout_tail": "",
+      "diagnostics": {
+        "pred_std": 0.6996118835130676,
+        "target_std": 1.0527909706034841,
+        "corr": 0.6075353444539461
+      },
+      "candidate": 2,
+      "val": {
+        "metric": "mse",
+        "value": 0.7274953602804798,
+        "baselines": {
+          "repeat": 0.8706257279171906,
+          "zero": 0.882098931582407
+        }
+      }
+    },
+    {
+      "ts": 1791911204.7419229,
+      "type": "spec_check",
+      "claim_id": "disc_2307_03756_mse",
+      "candidate": 2,
+      "stage": "final_candidate",
+      "code_hash": "b602d12171b4",
+      "score": [
+        2,
+        2
+      ],
+      "fails": []
+    },
+    {
+      "ts": 1791911204.763964,
+      "type": "candidates",
+      "claim_id": "disc_2307_03756_mse",
+      "k": 3,
+      "requested": 3,
+      "chosen": 0,
+      "chosen_hash": "947d5088ab2c",
+      "reason": "spec (2) + val",
+      "candidates": [
+        {
+          "index": 0,
+          "code_hash": "947d5088ab2c",
+          "runnable": true,
+          "val": {
+            "metric": "mse",
+            "value": 0.7269202064331332
+          }
+        },
+        {
+          "index": 1,
+          "code_hash": "b1d7c4d038db",
+          "runnable": true,
+          "val": {
+            "metric": "mse",
+            "value": 0.727366556348874
+          }
+        },
+        {
+          "index": 2,
+          "code_hash": "b602d12171b4",
+          "runnable": true,
+          "val": {
+            "metric": "mse",
+            "value": 0.7274953602804798
+          }
+        }
+      ]
+    },
+    {
+      "ts": 1791911224.184079,
+      "type": "repo_diff",
+      "claim_id": "disc_2307_03756_mse",
+      "result": "incomplete",
+      "deviations": [],
+      "dropped": 2,
+      "truncation": [
+        {
+          "file": "data_provider/data_factory.py",
+          "kept_chars": 592,
+          "of_chars": 1401
+        },
+        {
+          "file": "AD/FITS.py",
+          "kept_chars": 0,
+          "of_chars": 2756
+        },
+        {
+          "file": "AD/main.py",
+          "kept_chars": 0,
+          "of_chars": 2214
+        },
+        {
+          "file": "README.md",
+          "kept_chars": 0,
+          "of_chars": 12608
+        },
+        {
+          "file": "exp/exp_main.py",
+          "kept_chars": 0,
+          "of_chars": 14181
+        },
+        {
+          "file": "AD/solver_recon.py",
+          "kept_chars": 0,
+          "of_chars": 13379
+        }
+      ],
+      "from_hash": "947d5088ab2c",
+      "method_fidelity": "not_checked",
+      "scope": "selected implementation aspects"
+    },
+    {
+      "ts": 1791911294.1853876,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 2,
+      "n": 1,
+      "branch_id": "repro-branch-b6f14eb5",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "947d5088ab2c",
+      "status": "abweichung",
+      "measured": 0.7032369177365247,
+      "seconds": 70.0,
+      "error": null,
+      "stdout_tail": "",
+      "diagnostics": {
+        "pred_std": 0.6997398121598882,
+        "target_std": 1.0527909706034841,
+        "corr": 0.6073075425671056
+      },
+      "candidate": 0
+    },
+    {
+      "ts": 1791911294.4893951,
+      "type": "attempt",
+      "claim_id": "disc_2307_03756_mse",
+      "seed": 1,
+      "n": 1,
+      "branch_id": "repro-branch-e5fec740",
+      "parent_snapshot": "repro-snapshot-disc-2307-03756-20261013-165528",
+      "code_hash": "947d5088ab2c",
+      "status": "abweichung",
+      "measured": 0.7032250044323861,
+      "seconds": 70.3,
+      "error": null,
+      "stdout_tail": "",
+      "diagnostics": {
+        "pred_std": 0.6997190465017813,
+        "target_std": 1.0527909706034841,
+        "corr": 0.6073051026040717
+      },
+      "candidate": 0
+    },
+    {
+      "ts": 1791911294.4942143,
+      "type": "measurements_selected",
+      "claim_id": "disc_2307_03756_mse",
+      "attempts": [
+        {
+          "seed": 0,
+          "code_hash": "947d5088ab2c",
+          "measured": 0.7042857621142269
+        },
+        {
+          "seed": 1,
+          "code_hash": "947d5088ab2c",
+          "measured": 0.7032250044323861
+        },
+        {
+          "seed": 2,
+          "code_hash": "947d5088ab2c",
+          "measured": 0.7032369177365247
+        }
+      ]
+    },
+    {
+      "ts": 1791911294.4978707,
+      "type": "verdict",
+      "claim_id": "disc_2307_03756_mse",
+      "urteil": "nicht reproduziert",
+      "methode": "nicht geprueft",
+      "gesamt": "vorlaeufig",
+      "mean": 0.7035825614277126,
+      "std": 0.0006090187893977632,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0006. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.372 +/- 0.01, tab:FITSett, arXiv v3 (latex)): Mittel 0.7036. Code-Kandidaten: 3, gewaehlt Kandidat 0 (Code 947d5088ab2c) nach Validierungs-Metrik (0: mse 0.7269, 1: mse 0.7274, 2: mse 0.7275); Repo comparison incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked.; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.; Forecast histories were streamed chronologically to an unprivileged predictor after fitting; each forecast was recorded before the next history was exposed."
+    },
+    {
+      "ts": 1791911339.6026394,
+      "type": "run_end",
+      "cost_net_usd": 0.2577,
+      "cost_gross_usd": 0.3067
+    },
+    {
+      "ts": 1791911339.8717813,
+      "type": "finished",
+      "run_id": "disc_2307_03756--20261013-165528",
+      "verdict": {
+        "urteil": "nicht reproduziert",
+        "measured_mean": 0.703583,
+        "measured_std": 0.000609,
+        "seeds": 3,
+        "target": 0.372,
+        "tolerance": 0.01,
+        "gesamtaussage": "vorlaeufig",
+        "mode": "nachbau_autorencode",
+        "graph_repairs": 0,
+        "fault_repairs": 0,
+        "run_dir": "runs/disc_2307_03756/20261013-165528"
+      },
+      "cost_gross_usd": 0.3067
+    }
+  ],
+  "probes": {
+    "ambiguous_seq_len_90_accepted": true,
+    "latex_comment_batch_32_accepted": true,
+    "verified_discovery_360_rejected_as_unknown_source": true,
+    "same_quote_as_paper_source_accepted": true,
+    "candidate_83f508ba9484_synthetic_smoke_error": "RuntimeError: The size of tensor a (186) must match the size of tensor b (96) at non-singleton dimension 1"
+  },
+  "cost_net_usd": 0.2577,
+  "cost_gross_usd": 0.3067
+}
