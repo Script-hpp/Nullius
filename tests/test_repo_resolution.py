@@ -30,6 +30,7 @@ PAPER_FOOT = ("We refer to the example script in GluonTS (Alexandrov et al., 202
 M5_URL = "https://github.com/devmofl/M5_Accuracy_3rd"
 M5_README = "# M5 Accuracy 3rd place solution\nPyTorch-ts based LightGBM and DeepAR ensembles for the Kaggle M5 forecasting competition. " * 3
 OFFICIAL = "https://github.com/google-research/google-research/tree/HEAD/tsmixer"
+OFFICIAL_LINK = "https://github.com/google-research/google-research/tree/master/tsmixer"   # E16: Ref des Paperlinks bleibt erhalten
 OFFICIAL_README = "# TSMixer\nTSMixer: An All-MLP Architecture for Time Series Forecasting (arXiv:2303.06053). Run train.py --model tsmixer."
 UNOFFICIAL = "https://github.com/giuliomattolin/tsmixer-pytorch"
 UNOFFICIAL_README = "# tsmixer-pytorch\nUnofficial PyTorch re-implementation of TSMixer."
@@ -50,9 +51,9 @@ def test_repo_links_come_only_from_the_supplied_paper(text, expected):
 def test_paper_link_with_subfolder_beats_footnote_repo():
     text = PAPER_HEAD + "x " * 3000 + PAPER_FOOT
     links = find_repo_links(text)
-    assert [(l.strength, l.target) for l in links][0] == ("strong", OFFICIAL)
+    assert [(l.strength, l.target) for l in links][0] == ("strong", OFFICIAL_LINK)
     assert links[0].subdir == "tsmixer" and links[0].root == "https://github.com/google-research/google-research"
-    assert find_repo_url(text) == OFFICIAL
+    assert find_repo_url(text) == OFFICIAL_LINK
     assert all("gluonts" not in l.target for l in links)   # Blob-Link auf ein Notebook ist kein Repo
 
 
@@ -120,11 +121,11 @@ def test_wrong_repo_m5_is_rejected_and_unofficial_is_not_author_code(monkeypatch
 
 
 def test_paper_link_is_preferred_over_search_and_needs_no_search_call(monkeypatch):
-    o, seen = orch(monkeypatch, PAPER_HEAD + "x " * 3000 + PAPER_FOOT, {OFFICIAL: OFFICIAL_README, M5_URL: M5_README}, search=[UNOFFICIAL])
+    o, seen = orch(monkeypatch, PAPER_HEAD + "x " * 3000 + PAPER_FOOT, {OFFICIAL_LINK: OFFICIAL_README, M5_URL: M5_README}, search=[UNOFFICIAL])
     url, readme, status = o._resolve_repo(CLAIM, lambda: None)
-    assert url == OFFICIAL and readme == OFFICIAL_README
+    assert url == OFFICIAL_LINK and readme == OFFICIAL_README
     assert status["status"] == "official" and status["source"] == "paper"
-    assert seen["searched"] == 0 and seen["fetched"] == [OFFICIAL]   # kein weiterer Lesezugriff, keine Suche
+    assert seen["searched"] == 0 and seen["fetched"] == [OFFICIAL_LINK]   # kein weiterer Lesezugriff, keine Suche
     assert [kw["verdict"] for t, kw in seen["emitted"] if t == "repo_candidate"] == ["accepted"]
 
 
@@ -259,14 +260,14 @@ def test_real_model_selections_still_detected(quote, expected):
 
 
 def test_gather_docs_returns_status_and_root_for_subfolder_repo(monkeypatch):
-    o, seen = orch(monkeypatch, PAPER_HEAD + "x " * 100, {OFFICIAL: OFFICIAL_README})
+    o, seen = orch(monkeypatch, PAPER_HEAD + "x " * 100, {OFFICIAL_LINK: OFFICIAL_README})
     o.paper_only = False
     o._tavily_calls = 0
     monkeypatch.setattr(loop_mod, "read_repo", lambda *a, **k: repo_source.RepoDump(
-        url=OFFICIAL, commit="abcdef1234567", files={"tsmixer/train.py": "x = 1"}, n_tracked=1, subdir="tsmixer"))
+        url=OFFICIAL_LINK, commit="abcdef1234567", files={"tsmixer/train.py": "x = 1"}, n_tracked=1, subdir="tsmixer", ref="master"))
     docs, info = o._gather_docs(CLAIM, "ETTh1")
     assert [d.name for d in docs][:2] == ["paper", "repo-readme"] and docs[-1].name == "repo:tsmixer/train.py@abcdef1"
-    assert info["url"] == OFFICIAL and info["root"] == "https://github.com/google-research/google-research" and info["subdir"] == "tsmixer"
+    assert info["url"] == OFFICIAL_LINK and info["root"] == "https://github.com/google-research/google-research" and info["subdir"] == "tsmixer"
     assert info["status"] == "official" and info["source"] == "paper"
     assert [s["kind"] for s in o._sources] == ["readme"]   # README als Quelle festgehalten
 

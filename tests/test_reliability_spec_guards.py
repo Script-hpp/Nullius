@@ -202,24 +202,51 @@ class OneLLM:
 
 def test_requested_ref_is_checked_out_and_recorded(tmp_path):
     assert requested_ref("https://github.com/a/b/tree/v1/model") == "v1"
-    assert requested_ref("https://github.com/a/b/tree/main/model") == requested_ref("https://github.com/a/b") == ""
+    assert requested_ref("https://github.com/a/b/tree/main/model") == "main"
+    assert requested_ref("https://github.com/a/b/tree/HEAD/model") == requested_ref("https://github.com/a/b") == ""
     sb = CloneSandbox()
     dump = read_repo(sb, OneLLM(), "https://github.com/a/b/tree/v1/model", "Toy", "ETTh1", fixture_dir=tmp_path, mode="live")
     clone = " ".join(sb.setup)
     assert "git checkout -q v1" in clone and "sparse-checkout set model" in clone and "--depth 1" not in clone
     assert dump.ref == "v1" and clone_plan("https://github.com/a/b/tree/v1/model") == ("https://github.com/a/b", "model")
-    read_repo(sb, OneLLM(), "https://github.com/a/b/tree/main/model", "Toy", "ETTh1", fixture_dir=tmp_path, mode="live")
+    read_repo(sb, OneLLM(), "https://github.com/a/b/tree/HEAD/model", "Toy", "ETTh1", fixture_dir=tmp_path, mode="live")
     assert "checkout -q" not in " ".join(sb.setup)
     with pytest.raises(ValueError):
         requested_ref("https://github.com/a/b/tree/-x/model")
 
 
-def test_paper_link_keeps_tag_and_default_names_stay_head():
+class DefaultMasterSandbox(CloneSandbox):
+    """Repository whose default branch is master and that has no branch main: checking out main fails like git would."""
+    def __init__(self):
+        super().__init__()
+        self.attempts = []
+
+    def base_snapshot(self, image, cmds, label=None):
+        from repro_agent.sandbox.base import SandboxSetupError
+        self.attempts.append(list(cmds))
+        if any("git checkout -q main" in c for c in cmds):
+            raise SandboxSetupError("error: pathspec 'main' did not match any file(s) known to git")
+        return super().base_snapshot(image, cmds, label)
+
+
+def test_requested_main_is_not_replaced_by_a_different_default_branch(tmp_path):
+    from repro_agent.sandbox.base import SandboxSetupError
+    sb = DefaultMasterSandbox()
+    with pytest.raises(SandboxSetupError, match="pathspec 'main'"):
+        read_repo(sb, OneLLM(), "https://github.com/a/b/tree/main", "Toy", "ETTh1", fixture_dir=tmp_path, mode="live")
+    assert len(sb.attempts) == 1   # no silent second clone of the default branch
+    dump = read_repo(sb, OneLLM(), "https://github.com/a/b/tree/master", "Toy", "ETTh1", fixture_dir=tmp_path, mode="live")
+    assert dump.ref == "master" and "git checkout -q master" in " ".join(sb.setup)
+
+
+def test_paper_link_keeps_every_explicit_ref():
     links = find_repo_links("Code is available at https://github.com/a/b/tree/v2.1/src and more.")
     assert links[0].target == "https://github.com/a/b/tree/v2.1/src"
     assert RepoLink("a", "b", "", "strong", 0, "v3").target == "https://github.com/a/b/tree/v3"
     links = find_repo_links("Code is available at https://github.com/a/b/tree/master/src and more.")
-    assert links[0].target == "https://github.com/a/b/tree/HEAD/src"
+    assert links[0].target == "https://github.com/a/b/tree/master/src" and links[0].ref == "master"
+    links = find_repo_links("Code is available at https://github.com/a/b/tree/HEAD/src and more.")
+    assert links[0].target == "https://github.com/a/b/tree/HEAD/src" and links[0].ref == ""
 
 
 # ---- E17-E19: guard variants and false positives ---------------------------------------------------------------------
