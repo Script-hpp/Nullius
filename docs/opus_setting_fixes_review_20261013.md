@@ -155,3 +155,24 @@ Restgrenzen ohne Blocker: Der Beleg fuer abgeleitete Werte zeigt nur die letzte 
 (FITS batch 128 = `for bs in 64` mal 2). `enc_in == 7` ist als ETT-Kanalzahl fest eingebaut; fuer neue
 Forecast-Datensaetze anpassen. Die alte Zuweisungsregel (`seq_len=336` in einem Skript eines anderen Modells)
 bleibt modellunabhaengig.
+
+## Nachtrag 4: Feature-/Kanal-Guard
+
+Stand **2026-10-13, 18:24 UTC**, `ceo` `f4142dd` plus Diff (Guard in `spec.runtime_items`). Scratch-Kopie, keine Calls.
+192 fokussierte Tests passed; Cross-Paper-Gate (FITS, DLinear, NLinear, MoHETS, GCN) und echte SparseTSF/SegRNN-Skripte
+unveraendert. Proben: `docs/audits/opus_feature_guard_probe_20261013.{py,json}`, `opus_feature_raw_probe_20261013.{py,json}`.
+
+| Fall | Ergebnis |
+| --- | --- |
+| bekannte M/7 | unveraendert (batch 64, enc_in 7, seq 336) |
+| `def main(): args.features = 'S'` bzw. `args.enc_in = 1` | Stopp „feature/channel identity is unresolved“ |
+| `args.enc_in = load_data().shape[1]` auf Modulebene | Stopp (fail-closed; bei ETTh1 waere 7 richtig, akzeptiert) |
+| CLI `--feature S --enc_in 1`, `--features MS` | Aufruf passt nicht |
+| Entrypoint ohne `--features` | unveraendert |
+
+**Kleiner Restblocker (gleiche Klasse wie der eben behobene Fall):** Ist der Aufruf nach der Auswertung sicher nicht
+das M-Experiment (Modulebene `args.features = 'S'` nach `parse_args`, ebenso ein argparse-Default `'S'` ohne CLI-Flag),
+ueberspringt `runtime_items` ihn nur (`continue`). Die alten Rohregeln sehen im CLI kein `--features` und erzwingen
+seine Werte trotzdem: lr 0.01, batch 64, seq 336 mit `origin=raw`, `enforce=True`. Fix: in diesem Zweig sichtbar
+stoppen oder den Aufruf auch fuer `raw_items`/`drop_run_script_defaults` ausschliessen; Regressionstest mit
+Modulebene-`S` und Default-`S`.
