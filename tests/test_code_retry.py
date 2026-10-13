@@ -62,3 +62,20 @@ def test_all_replies_truncated_raises():
     with pytest.raises(ValueError, match="abgeschnitten"):
         o._code_from_llm("s", "u")
     assert len(calls) == 3
+
+
+def test_code_temperature_is_capped_and_retry_prompts_stay_distinct():
+    # FITS-Live-Lauf 35758c32: Kandidat 2 lief bei 0.8/1.1/1.4 und lieferte abgebrochenen Code und Wortsalat
+    o = Orchestrator.__new__(Orchestrator)
+    calls = []
+
+    def ask(role, system, user, max_tokens=None, temperature=0.2):
+        calls.append((temperature, user))
+        return SimpleNamespace(content="no code", finish_reason="stop")
+
+    o._ask = ask
+    o._emit = lambda *a, **k: None
+    with pytest.raises(ValueError):
+        o._code_from_llm("s", "u", temperature=0.7)
+    assert all(t <= 0.7 for t, _ in calls)
+    assert len({(t, u) for t, u in calls}) == 3   # sonst lieferte der Cache dreimal dieselbe Antwort

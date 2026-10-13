@@ -82,7 +82,7 @@ def test_best_val_wins_even_if_another_has_best_test(tmp_path):
     # Test: C0 am besten (0.83), Val: C1 am besten -> gewaehlt wird C1
     o, sb, temps, events = setup({C0: 0.83, C1: 0.60, C2: 0.70}, {C0: 0.70, C1: 0.80, C2: 0.75})
     d = run(o, tmp_path)
-    assert temps == pytest.approx([0.2, 0.5, 0.8])
+    assert temps == pytest.approx([0.2, 0.5, 0.7])
     (ev,) = [kw for t, kw in events if t == "candidates"]
     assert ev["chosen"] == 1 and ev["reason"] == "val" and [c["val"]["value"] for c in ev["candidates"]] == [0.70, 0.80, 0.75]
     assert "measured" not in json.dumps(ev) and "0.83" not in json.dumps(ev)          # keine Testwerte im Ereignis

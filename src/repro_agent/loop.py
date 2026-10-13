@@ -101,8 +101,12 @@ GRAPH_REPAIR_MESSAGE = (
     "Your code does not use the graph: accuracy with edges {full:.4f} equals accuracy without edges {ablated:.4f} "
     "(the code ignores the adjacency). Implement the propagation over the adjacency described in the plan."
 )
-CANDIDATES = 3          # Code-Kandidaten pro Claim im Produktpfad (A1); Temperatur 0.2, 0.5, 0.8, Auswahl nur ueber Validierung
+CANDIDATES = 3          # Code-Kandidaten pro Claim im Produktpfad (A1); Temperatur 0.2, 0.5, 0.7, Auswahl nur ueber Validierung
 CANDIDATE_TEMP_STEP = 0.3
+CODE_RETRY_TEMP_STEP = 0.15
+# Obergrenze fuer Code-Antworten. FITS-Live-Lauf 35758c32 (2026-10-13): Nemotron Super brach bei 0.5-1.1 sechsmal
+# mitten im Skript ab (finish_reason nicht "length"), lieferte bei 1.1 einen SyntaxError und bei 1.4 Wortsalat.
+CODE_MAX_TEMPERATURE = 0.7
 LOWER_IS_BETTER_VAL = ("mse", "mae")
 PRODUCT_LIB_NOTE = (
     " Libraries such as torch_geometric, torch_scatter, torch_sparse, dgl and ogb are NOT installed and are forbidden: "
@@ -111,6 +115,7 @@ PRODUCT_LIB_NOTE = (
 TRAIN_TIMEOUT_S = 600
 ABRT_GRACE_S = 15       # F2: `timeout -s ABRT` greift diese Sekunden vor dem harten Sandbox-Timeout (der Branch und seine Dateien sind danach weg)
 SOFT_TIMEOUT_EXIT = 124   # Exit-Code von `timeout`
+AGENT_OUTPUT_TAIL_BYTES = 30000   # je Strom; Nebius kappt stdout/stderr sonst nach 65535 Bytes am KOPF (Ausnahme und Broker-Zusammenfassung stehen am Ende)
 EVAL_TIMEOUT_S = 300
 SMOKE_TIMEOUT_S = 90
 INFRA_RETRIES = 3       # Wiederholungen eines Versuchs bei Sandbox-Infrastrukturfehler (neuer Branch je Versuch)
@@ -173,6 +178,21 @@ def extract_code(text: str, lenient: bool = False) -> str:
     if not blocks:
         raise ValueError("Keine Code-Block in der Antwort des Modells")
     return max(blocks, key=len)
+
+
+def keep_output_tail(cmd: str) -> str:
+    """Agentenlauf mit Ausgabe in Dateien; danach nur das Ende beider Stroeme, Exit-Code unveraendert.
+
+    Das Sandbox-SDK schneidet jeden Strom nach 65535 Bytes ab und behaelt den Anfang. Bei langen Trainingslogs
+    gingen so genau Traceback, `WorkerFailure`-Zusammenfassung und faulthandler-Stacks verloren. `tr` ersetzt
+    Nicht-ASCII-Bytes, damit ein mitten in einem UTF-8-Zeichen abgeschnittenes Ende die strikte Dekodierung des SDK
+    nicht bricht.
+    """
+    n = AGENT_OUTPUT_TAIL_BYTES
+    ascii_only = "LC_ALL=C tr -c '\\11\\12\\15\\40-\\176' '?'"
+    # mktemp -d: frisches 0700-Verzeichnis, damit vorher gelaufener Agentencode keinen Symlink unterschieben kann
+    return (f'_nd=$(mktemp -d) || exit 125; {cmd} >"$_nd/o" 2>"$_nd/e"; rc=$?; '
+            f'tail -c {n} "$_nd/o" | {ascii_only}; tail -c {n} "$_nd/e" | {ascii_only} >&2; rm -rf "$_nd"; exit $rc')
 
 
 def _is_python(src: str) -> bool:
@@ -563,9 +583,12 @@ class Orchestrator:
         last: ValueError | None = None
         for i in range(3):
             first_max = CODE_RETRY_MAX_TOKENS if self._active_spec() is not None else None   # Steckbrief: Limit auch beim ersten Aufruf
+            # Temperatur gedeckelt; die Versuchsnummer im Hinweis haelt den Cache-Schluessel auch an der Obergrenze verschieden
+            note = CODE_ONLY_NOTE + (f" (Retry {i}.)" if i > 1 else "") if i else ""
             resp = self._ask(
-                "code", system, user + (CODE_ONLY_NOTE if i else ""),
-                max_tokens=CODE_RETRY_MAX_TOKENS if i else first_max, temperature=temperature + 0.3 * i,
+                "code", system, user + note,
+                max_tokens=CODE_RETRY_MAX_TOKENS if i else first_max,
+                temperature=min(temperature + CODE_RETRY_TEMP_STEP * i, max(temperature, CODE_MAX_TEMPERATURE)),
             )
             if getattr(resp, "finish_reason", None) == "length":
                 last = ValueError("Antwort abgeschnitten (finish_reason length)")
@@ -635,6 +658,8 @@ class Orchestrator:
         live = getattr(self, "tavily_mode", None) == "live" or getattr(self, "error_search_live", False)
         if not (getattr(self, "use_tavily", False) and live):
             return ""
+        if "nullius_io.py line" in (summary or ""):
+            return ""   # Fehler im eigenen Datenhelfer: der Vertrag im Prompt erklaert ihn, Websuche lieferte fremde Repos (FITS 35758c32)
         q = error_query(summary or "")
         with self._lock:
             done = self.__dict__.setdefault("_error_searches", {})
@@ -745,7 +770,7 @@ class Orchestrator:
             expected = tuple(sb.run(branch, task.smoke_ids_cmd, 60).stdout.split())
         r = getattr(sb, "run_agent", sb.run)(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} SMOKE=1 unshare -n {self._agent_runner(task)}",
+            keep_output_tail(f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} SMOKE=1 unshare -n {self._agent_runner(task)}"),
             SMOKE_TIMEOUT_S,
         )
         if r.timed_out:
@@ -956,8 +981,8 @@ class Orchestrator:
         soft = max(1, limit - ABRT_GRACE_S)
         r = getattr(sb, "run_agent", sb.run)(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} PYTHONFAULTHANDLER=1 PYTHONUNBUFFERED=1 "
-            f"unshare -n timeout -s ABRT {soft} {runner}",
+            keep_output_tail(f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} PYTHONFAULTHANDLER=1 PYTHONUNBUFFERED=1 "
+                             f"unshare -n timeout -s ABRT {soft} {runner}"),
             limit,
         )
         if r.timed_out or r.exit_code == SOFT_TIMEOUT_EXIT:
@@ -1626,7 +1651,7 @@ class Orchestrator:
         results = []
         for i in range(k):
             try:
-                c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
+                c = self.write_code(plan, task, temperature=min(0.2 + CANDIDATE_TEMP_STEP * i, CODE_MAX_TEMPERATURE))
             except (CostLimitExceeded, BudgetExceeded):
                 if getattr(self, 'allow_test_feedback', False) or not any(
                         r['v0'] is not None and r['val'] is not None and not (r['val_check'] or {}).get('excluded') for r in results):
