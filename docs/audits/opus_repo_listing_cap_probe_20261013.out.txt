@@ -1,0 +1,48 @@
+{
+ "nebius_cap": {
+  "n_listing": 1090,
+  "last_listing_entry": "lo",
+  "files": [
+   "AD/FITS.py",
+   "AD/main.py",
+   "README.md",
+   "data_provider/data_factory.py",
+   "data_provider/data_loader.py",
+   "exp/exp_basic.py",
+   "exp/exp_main.py",
+   "exp/exp_main_F.py",
+   "layers/utils.py"
+  ],
+  "chars": 86810,
+  "truncation": [],
+  "llm_prompt_has_models_FITS": false,
+  "llm_prompt_has_etth1_best": false
+ },
+ "full": {
+  "n_listing": 1410,
+  "last_listing_entry": "utils/tools.py",
+  "files": [
+   "models/FITS.py",
+   "scripts/FITS/etth1_best.sh",
+   "run_longExp_F.py",
+   "README.md",
+   "data_provider/data_factory.py",
+   "data_provider/data_loader.py",
+   "exp/exp_basic.py",
+   "exp/exp_main.py",
+   "exp/exp_main_F.py",
+   "layers/utils.py",
+   "models/NLinear.py",
+   "utils/timefeatures.py",
+   "utils/augmentations.py",
+   "utils/tools.py",
+   "utils/metrics.py"
+  ],
+  "chars": 111091,
+  "truncation": [],
+  "llm_prompt_has_models_FITS": false,
+  "llm_prompt_has_etth1_best": false
+ }
+}
+nebius_cap target_docs: ['paper', 'repo:AD/main.py@d040bb0', 'repo:exp/exp_basic.py@d040bb0', 'repo:exp/exp_main.py@d040bb0', 'repo:exp/exp_main_F.py@d040bb0', 'repo:data_provider/data_factory.py@d040bb0', 'repo:data_provider/data_loader.py@d040bb0', 'repo:layers/utils.py@d040bb0'] repo chunks: 18
+full target_docs: ['paper', 'repo:scripts/FITS/etth1_best.sh@d040bb0', 'repo:run_longExp_F.py@d040bb0', 'repo:exp/exp_basic.py@d040bb0', 'repo:exp/exp_main.py@d040bb0', 'repo:exp/exp_main_F.py@d040bb0', 'repo:data_provider/data_factory.py@d040bb0', 'repo:data_provider/data_loader.py@d040bb0'] repo chunks: 18
