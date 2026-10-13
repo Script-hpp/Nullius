@@ -206,6 +206,7 @@ def _is_python(src: str) -> bool:
 
 MAX_ERROR_SEARCHES = 4   # Rolle 5: Tavily-Suchen pro Lauf (Kontingent), gleiche Fehlerzeile wird nur einmal gesucht
 ERROR_HINT_CHARS = 400   # Auszug je Treffer im Reparatur-Prompt
+OWN_RUNTIME_FILES = ("nullius_io.py", "forecast_worker.py", "forecast_runner.py")   # unser Datenhelfer und Vorhersage-Runner
 _ERROR_LINE = re.compile(r"^\s*([A-Za-z_][\w.]*(?:Error|Exception|Warning)\b.*)$", re.M)
 
 
@@ -658,8 +659,8 @@ class Orchestrator:
         live = getattr(self, "tavily_mode", None) == "live" or getattr(self, "error_search_live", False)
         if not (getattr(self, "use_tavily", False) and live):
             return ""
-        if "nullius_io.py line" in (summary or ""):
-            return ""   # Fehler im eigenen Datenhelfer: der Vertrag im Prompt erklaert ihn, Websuche lieferte fremde Repos (FITS 35758c32)
+        if any(f"{name} line" in (summary or "") for name in OWN_RUNTIME_FILES):
+            return ""   # Fehler aus unserem Helfer/Runner: der Vertrag im Prompt erklaert ihn, Websuche lieferte fremde Repos (FITS 35758c32)
         q = error_query(summary or "")
         with self._lock:
             done = self.__dict__.setdefault("_error_searches", {})

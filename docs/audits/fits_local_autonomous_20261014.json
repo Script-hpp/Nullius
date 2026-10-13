@@ -1,0 +1,880 @@
+{
+ "scope": "Local autonomous product run (api.make_orchestrator quick=True, run_candidate), Token Factory + Nebius sandbox, from the analyst machine; src identical to main 469fc10 (fixes 589feae included)",
+ "summary": {
+  "status": "geprueft",
+  "reason": null,
+  "run_dir": "/home/onuralp/orca/workspaces/research/analyst/runs/disc_2307_03756/20261014-010342",
+  "seconds": 1391.5,
+  "spent_net_usd": 0.25129
+ },
+ "events": [
+  {
+   "ts": 1791932622.592403,
+   "type": "run_start",
+   "paper_id": "disc_2307_03756",
+   "title": "FITS: Modeling Time Series with $10k$ Parameters",
+   "mode_requested": "nachbau_autorencode",
+   "use_tavily": true,
+   "use_setup_details": true,
+   "paper_only": false,
+   "selection_policy": "validation_only",
+   "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+     "year",
+     "month",
+     "day",
+     "weekday",
+     "hour"
+    ]
+   },
+   "models": {
+    "fast": "nvidia/Nemotron-3_5-Lightning",
+    "code": "nvidia/nemotron-3-super-120b-a12b",
+    "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+   },
+   "seeds": 3,
+   "claims": [
+    "disc_2307_03756_mse"
+   ]
+  },
+  {
+   "ts": 1791932622.5925274,
+   "type": "warning",
+   "text": "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren."
+  },
+  {
+   "ts": 1791932622.5925696,
+   "type": "warning",
+   "text": "Independent candidate selection uses 21 of 117 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs."
+  },
+  {
+   "ts": 1791932622.9173024,
+   "type": "source",
+   "kind": "paper",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "mode": "fixture",
+   "n_chars": 127032,
+   "retrieved_at": "2026-10-13T23:03:42+00:00",
+   "sha256": "9022b12b628fc1807f0ef11bfd7d1266f25b8575c1418afeb7bb90c251a00d64"
+  },
+  {
+   "ts": 1791932622.9583356,
+   "type": "target_check",
+   "claim_id": "disc_2307_03756_mse",
+   "verified_value": 0.372,
+   "configured_value": 0.372,
+   "agrees": true,
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "from_store": false
+  },
+  {
+   "ts": 1791932622.9585166,
+   "type": "target_resolved",
+   "claim_id": "disc_2307_03756_mse",
+   "value": 0.372,
+   "quote": "FITS & \\textbf{0.372} & \\textbf{0.404} & \\textbf{0.427} & \\textbf{0.424} & \\textbf{0.271} & \\textbf{0.331} & \\textbf{0.354} & \\textbf{0.377} & 0.303 & 0.337 & {\\underline{0.366}} & \\textbf{0.415} & \\textbf{0.162} & \\textbf{0.216} & \\textbf{0.268} & \\textbf{0.348}",
+   "table": "tab:FITSett",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "arxiv_version": "v3",
+   "column_check": "ok",
+   "caveat": null,
+   "from_store": false
+  },
+  {
+   "ts": 1791932631.7901506,
+   "type": "source",
+   "kind": "readme",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "mode": "live",
+   "n_chars": 15455,
+   "retrieved_at": "2026-10-13T23:03:51+00:00",
+   "sha256": "15ac38b43634291d14fe65a5e7ba37723d0f48427de5dd21400e11f0ae1219dc"
+  },
+  {
+   "ts": 1791932763.4763026,
+   "type": "setup_details",
+   "n": 49,
+   "dropped": 1,
+   "by_source": {
+    "paper": 4,
+    "repo:models/FITS.py": 6,
+    "repo:scripts/FITS/etth1_best.sh": 8,
+    "repo:run_longExp_F.py": 4,
+    "repo:exp/exp_main_F.py": 3,
+    "repo:README.md": 2,
+    "repo:utils/tools.py": 3,
+    "repo:data_provider/data_factory.py": 8,
+    "repo:utils/augmentations.py": 10,
+    "discovery": 1
+   },
+   "repo": {
+    "url": "https://github.com/VEWOXIC/FITS",
+    "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+    "files": [
+     "README.md",
+     "data_provider/data_factory.py",
+     "data_provider/data_loader.py",
+     "exp/exp_basic.py",
+     "exp/exp_main_F.py",
+     "layers/Embed.py",
+     "layers/FED_FourierCorrelation.py",
+     "layers/Transformer_EncDec.py",
+     "models/FITS.py",
+     "models/NLinear.py",
+     "run_longExp_F.py",
+     "scripts/FITS/etth1_best.sh",
+     "utils/augmentations.py",
+     "utils/metrics.py",
+     "utils/timefeatures.py",
+     "utils/tools.py"
+    ],
+    "n_tracked": 1410,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "title 'FITS: Modeling Time Series with $10k$ Parameters' in README"
+   }
+  },
+  {
+   "ts": 1791932774.0854588,
+   "type": "spec",
+   "model": "FITS",
+   "family": "forecast",
+   "items": [
+    {
+     "key": "lr",
+     "value": "0.0005",
+     "quote": "--learning_rate 0.0005",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 0.0005,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "epochs",
+     "value": "50",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 50,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "batch_size",
+     "value": "128",
+     "quote": "args.batch_size = args.batch_size * 2",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 128,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "patience",
+     "value": "20",
+     "quote": "--patience 20",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 20,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "seq_len",
+     "value": "360",
+     "quote": "for seq_len in 360",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 360,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "cut_freq",
+     "value": "106",
+     "quote": "args.cut_freq = int(args.seq_len // args.base_T + 1) * args.H_order + 10",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 106,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "enc_in",
+     "value": "7",
+     "quote": "--enc_in 7",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "pred_len",
+     "value": "96",
+     "quote": "--pred_len 96",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 96,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "train_mode",
+     "value": "1",
+     "quote": "for m in 1",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 1,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    }
+   ],
+   "dropped": [
+    {
+     "item": {
+      "key": "dropout",
+      "value": "0.05",
+      "quote": "parser.add_argument('--dropout', type=float, default=0.05, help='dropout')",
+      "source": "repo:run_longExp_F.py@d040bb0"
+     },
+     "reason": "Modellcode des Autors enthaelt diesen Mechanismus nicht"
+    }
+   ],
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ],
+   "missing": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "model_code_present": true,
+   "dropped_defaults": [
+    "H_order",
+    "batch_size",
+    "data",
+    "data_path",
+    "des",
+    "enc_in",
+    "features",
+    "gpu",
+    "is_training",
+    "itr",
+    "learning_rate",
+    "model",
+    "model_id",
+    "patience",
+    "pred_len",
+    "root_path",
+    "seed",
+    "seq_len",
+    "train_mode"
+   ],
+   "excerpt_chars": 71059
+  },
+  {
+   "ts": 1791932774.0857244,
+   "type": "mode",
+   "mode": "nachbau_autorencode",
+   "requested": "nachbau_autorencode",
+   "fallback_reason": null,
+   "repo": "https://github.com/VEWOXIC/FITS",
+   "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ]
+  },
+  {
+   "ts": 1791932837.601258,
+   "type": "plan",
+   "claim_id": "disc_2307_03756_mse",
+   "text": "\n\n**Reproduction plan (\u226415 lines)**  \n\n1. **Model** \u2013 FITS (Frequency Interpolation Time Series Forecasting) with `individual=False`, `enc_in=7`, `seq_len=360` (paper input length), `pred_len=96`, `cut_freq=106` (computed as `int(seq_len//base_T+1)*H_order+10` with `base_T=24`, `H_order=6`), `length_ratio=(seq_len+pred_len)/seq_len`.  \n\n2. **Hyper\u2011parameters** \u2013 learning rate `lr=0.0005` (start script), batch size `batch_size=128` (the script doubles the commanded `--batch_size` because no augmentation is used), epochs `=50`, patience `=20`, optimizer `Adam` (weight decay\u202f=\u202f0\u202f*(uncertain)*).  \n\n3. **Learning\u2011rate schedule** \u2013 `type3` (`--lradj type3`): lr \u2190 lr\u202f\u00d7\u202f0.95\u207d\u1d49\u1d56\u1d52\u1d9c\u02b0\u207b\u00b9\u207e each epoch.  \n\n4. **Training protocol** \u2013 fit **only** on `data[\"train\"]`; use `data[\"val\"]` for early\u2011stopping checkpoint selection (the final 20\u202f% of validation is withheld for the final unbiased evaluation, but the visible part drives checkpoint choice).  \n\n5. **Normalization inside the model** \u2013 RevIN: subtract temporal mean, divide by \u221a(var\u202f+\u202f1e\u20115) before FFT; after IFFT multiply by \u221a(var) and add mean back.  \n\n6. **Frequency pipeline** \u2013 FFT \u2192 zero\u2011pad frequencies beyond `cut_freq` \u2192 linear complex up\u2011sampler to `int(cut_freq*length_ratio)` \u2192 zero\u2011pad to `(seq_len+pred_len)//2+1` bins \u2192 IFFT \u2192 multiply by `length_ratio`. No DLinear branch (commented out in the source).  \n\n7. **Inference** \u2013 set model to `eval()`, disable gradients; predictor receives a `[L,7]` history, crops it to `seq_len` (or les"
+  },
+  {
+   "ts": 1791932857.3942769,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "0a288f635696",
+   "candidate": 0
+  },
+  {
+   "ts": 1791932857.406255,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "0a288f635696"
+  },
+  {
+   "ts": 1791932881.2604346,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "5bfc75108aee"
+  },
+  {
+   "ts": 1791932895.5982232,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-536ff3c4",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "5bfc75108aee",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 14.3,
+   "error": "t, got shape [456, 7]\n  raised in forecast_worker.py line 94 in _serve: raise ValueError(f'predictor(history) must return a finite [96,7] forecast, got shape {list(pred.shape)}')\nThe trusted broker stopped while waiting for the forecast of val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791932898.7659354,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "5bfc75108aee",
+   "error": "t, got shape [456, 7]\n  raised in forecast_worker.py line 94 in _serve: raise ValueError(f'predictor(history) must return a finite [96,7] forecast, got shape {list(pred.shape)}')\nThe trusted broker stopped while waiting for the forecast of val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791932914.4134364,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "5bfc75108aee",
+   "to_hash": "741340050f41"
+  },
+  {
+   "ts": 1791932938.3453083,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-4420246b",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "741340050f41",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 23.9,
+   "error": "ed\n\nForecast worker failed during training (train_forecaster): NameError: name 'base_base' is not defined\n  at train.py line 110 in train_forecaster: base_batch_size = base_base if not smoke else 32\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791932941.7520013,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "741340050f41",
+   "error": "ed\n\nForecast worker failed during training (train_forecaster): NameError: name 'base_base' is not defined\n  at train.py line 110 in train_forecaster: base_batch_size = base_base if not smoke else 32\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791932966.546419,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "741340050f41",
+   "to_hash": "a4b55125816e"
+  },
+  {
+   "ts": 1791933215.4186182,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 3,
+   "branch_id": "repro-branch-32d67156",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "a4b55125816e",
+   "status": "stabil",
+   "measured": 0.3727691481720175,
+   "seconds": 248.9,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9020135079411097,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8157003968207571
+   },
+   "candidate": 0,
+   "val": {
+    "metric": "mse",
+    "value": 0.48041074792542365,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791933215.4323335,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "stage": "final_candidate",
+   "code_hash": "a4b55125816e",
+   "score": [
+    9,
+    9
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791933233.1458027,
+   "type": "code_missing",
+   "try_n": 1,
+   "content_tail": "\"/tmp/forecast-agent/checkpoint.pth\")\n    \n    # Plan step 7 -> define predictor function\n    def predictor(history, *, calendar=None):\n        # history: numpy array [L, 7] where L can be up to 720\n        # We crop to the last CONFIG[\"seq_len\"] points\n        if history.shape[0] > CONFIG[\"seq_len\"]:\n            history = history[-CONFIG[\"seq_len\"]:, :]\n        elif history.shape[0] < CONFIG[\"seq_len\"]:\n            # If history is too short, we pad by repeating the last value? \n            # But the runner supplies [720,7] so we assume it's at least as long as seq_len.\n            # For safety, we pad with zeros (or repeat) but the spec says crop, so we assume sufficient length.\n            # We'll pad by repeating the first element to avoid zeros (which might be misleading after RevIN)\n            repeat_times = CONFIG[\"seq_len\"] - history.shape[0]\n            history = np.vstack([np.repeat(history[0:1, :], repeat_times, axis=0), history])\n        \n        # Convert to tensor and add batch dimension\n        tensor_history = torch.from_numpy(history).float().unsqueeze(0)  # [1, seq_len, 7]\n        \n        # Model inference\n        with torch.no_grad():\n            output, _ = model(tensor_history)\n            # Output shape: [1, pred_len, 7] -> take last pred_len steps (though the model already returns pred_len steps)\n            forecast = output[:, -CONFIG[\"pred_len\"]:, :].squeeze(0).cpu().numpy()  # [pred_len, 7]\n        \n        return forecast\n    \n    return predictor"
+  },
+  {
+   "ts": 1791933278.0660646,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "a9aac7172d7d",
+   "candidate": 1
+  },
+  {
+   "ts": 1791933278.0798323,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "round": 0,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "a9aac7172d7d"
+  },
+  {
+   "ts": 1791933304.293295,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-d855e871",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "a9aac7172d7d",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 26.2,
+   "error": " train.py line 146 in train_forecaster: loss = criterion(outputs, batch_y)\n  raised in functional.py line 76 in broadcast_tensors: return _VF.broadcast_tensors(tensors)  # type: ignore[attr-defined]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 1
+  },
+  {
+   "ts": 1791933308.0678177,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "a9aac7172d7d",
+   "error": " train.py line 146 in train_forecaster: loss = criterion(outputs, batch_y)\n  raised in functional.py line 76 in broadcast_tensors: return _VF.broadcast_tensors(tensors)  # type: ignore[attr-defined]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791933320.9520714,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "a9aac7172d7d",
+   "to_hash": "c7ae2aaf1e69"
+  },
+  {
+   "ts": 1791933528.909097,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-62909626",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "c7ae2aaf1e69",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 208.0,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 1,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791933528.9262571,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "stage": "final_candidate",
+   "code_hash": "c7ae2aaf1e69",
+   "score": [
+    9,
+    9
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791933543.392233,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "d7103c6a7734",
+   "candidate": 2
+  },
+  {
+   "ts": 1791933543.4032476,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "d7103c6a7734"
+  },
+  {
+   "ts": 1791933565.2130678,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "d6def1656b0c"
+  },
+  {
+   "ts": 1791933579.0963085,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-a12ca742",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "d6def1656b0c",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 13.9,
+   "error": " 1\n  at train.py line 202 in train_forecaster: loss = F.mse_loss(pred, by)\n  raised in functional.py line 76 in broadcast_tensors: return _VF.broadcast_tensors(tensors)  # type: ignore[attr-defined]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791933579.0966976,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "d6def1656b0c",
+   "error": " 1\n  at train.py line 202 in train_forecaster: loss = F.mse_loss(pred, by)\n  raised in functional.py line 76 in broadcast_tensors: return _VF.broadcast_tensors(tensors)  # type: ignore[attr-defined]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791933594.0325558,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "d6def1656b0c",
+   "to_hash": "4edb984c3553"
+  },
+  {
+   "ts": 1791933680.858694,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-73cb4892",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "4edb984c3553",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 86.8,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 2,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791933680.8733215,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "stage": "final_candidate",
+   "code_hash": "4edb984c3553",
+   "score": [
+    9,
+    9
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791933680.8878329,
+   "type": "candidates",
+   "claim_id": "disc_2307_03756_mse",
+   "k": 3,
+   "requested": 3,
+   "chosen": 1,
+   "chosen_hash": "c7ae2aaf1e69",
+   "reason": "spec (9) + val",
+   "candidates": [
+    {
+     "index": 0,
+     "code_hash": "a4b55125816e",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.48041074792542365
+     }
+    },
+    {
+     "index": 1,
+     "code_hash": "c7ae2aaf1e69",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    },
+    {
+     "index": 2,
+     "code_hash": "4edb984c3553",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    }
+   ]
+  },
+  {
+   "ts": 1791933885.4349995,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 2,
+   "n": 1,
+   "branch_id": "repro-branch-cb3b21d5",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "c7ae2aaf1e69",
+   "status": "stabil",
+   "measured": 0.3720914549998737,
+   "seconds": 184.8,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9045934230384426,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8161759662209683
+   },
+   "candidate": 1
+  },
+  {
+   "ts": 1791933983.8646755,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 1,
+   "n": 1,
+   "branch_id": "repro-branch-fa93a13d",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-010342",
+   "code_hash": "c7ae2aaf1e69",
+   "status": "stabil",
+   "measured": 0.37200731015273036,
+   "seconds": 283.3,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047041371645836,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162253560533874
+   },
+   "candidate": 1
+  },
+  {
+   "ts": 1791933983.8665946,
+   "type": "verdict",
+   "claim_id": "disc_2307_03756_mse",
+   "urteil": "reproduziert",
+   "methode": "nicht geprueft",
+   "gesamt": "vorlaeufig",
+   "mean": 0.37203104275710164,
+   "std": 5.271750876232656e-05,
+   "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0001. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.372 +/- 0.01, tab:FITSett, arXiv v3 (latex)): Mittel 0.3720. Code-Kandidaten: 3, gewaehlt Kandidat 1 (Code c7ae2aaf1e69) nach Validierungs-Metrik (0: mse 0.4804, 1: mse 0.4697, 2: mse 0.4697); Repo comparison incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked.; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.; Forecast histories were streamed chronologically to an unprivileged predictor after fitting; each forecast was recorded before the next history was exposed."
+  },
+  {
+   "ts": 1791934012.2047944,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "mode": "live",
+   "n_chars": 11204,
+   "retrieved_at": "2026-10-13T23:26:23+00:00",
+   "sha256": "1026437df566efc2c401428e5d48dd5ab0708c46e5c5e7de92dcd5cfdaad88fd"
+  },
+  {
+   "ts": 1791934012.2050924,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2606.27282v1",
+   "mode": "live",
+   "n_chars": 51892,
+   "retrieved_at": "2026-10-13T23:26:23+00:00",
+   "sha256": "2dba76aafbd0e8326d3fa3c35d4f464e6bd200d782c52d26cabc54014783044f"
+  },
+  {
+   "ts": 1791934012.205226,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2409.06169v1",
+   "mode": "live",
+   "n_chars": 35763,
+   "retrieved_at": "2026-10-13T23:26:23+00:00",
+   "sha256": "2d6d4502c13fbab92d2f9d703943f3bf177c2784f700466e22eaec8623cf51ca"
+  },
+  {
+   "ts": 1791934012.2053146,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS/issues/23",
+   "mode": "live",
+   "n_chars": 2336,
+   "retrieved_at": "2026-10-13T23:26:23+00:00",
+   "sha256": "7ba487c9f9f3d8b97a0bf2c7366d778c6e85a19d976f8640b5df737e0537fc1f"
+  },
+  {
+   "ts": 1791934012.2054107,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS/blob/main/AD/runAD.md",
+   "mode": "live",
+   "n_chars": 1323,
+   "retrieved_at": "2026-10-13T23:26:23+00:00",
+   "sha256": "5008a72f5a1113ca4daf8d72a1e03fd1fbf2a62f3b1a7eb917642c91a9f6c7cb"
+  },
+  {
+   "ts": 1791934014.0954452,
+   "type": "run_end",
+   "cost_net_usd": 0.2513,
+   "cost_gross_usd": 0.299
+  }
+ ]
+}

@@ -52,3 +52,40 @@ funktional wie der Autorenkern um, und die gesamte Abweichung kommt aus dem fals
 abgeschnitten). Das stuetzt die Setting-Fixes aus `be1a643`/`30c67b0`; es ist kein Nachweis eines
 autonomen Erfolgs. Skript `scripts/review/fits_live_setting_probe.py`, Beleg
 `docs/audits/fits_live_setting_probe_20261014.json`. Keine Provideraufrufe.
+
+## Lokaler autonomer Lauf: FITS reproduziert
+
+Gleiche Produktkonfiguration wie ein Live-Schnelltest (`api.make_orchestrator(quick=True)`,
+`catalog.run_candidate`), gestartet von diesem Rechner: Token Factory, Nebius-Sandbox, Tavily live,
+kein LLM-Cache. `src` identisch mit main `469fc10`. Skript `scripts/review/local_product_run.py`,
+kuratierte Ereignisse `docs/audits/fits_local_autonomous_20261014.json`.
+
+- Dateiliste 1410/1410, gelesen `models/FITS.py`, `scripts/FITS/etth1_best.sh`, `run_longExp_F.py`,
+  `exp/exp_main_F.py`; kein `AD/`.
+- Spec mit allen neun Werten aus dem Autorenrepo (LR 0.0005, 50 Epochen, Batch 128, Patience 20,
+  L360, `cut_freq` 106, 7 Kanaele, H96, `train_mode` 1); Spec-Pruefung 9/9 fuer alle Kandidaten.
+- Alle drei Kandidaten liefen nach je einer bzw. zwei Reparaturen; Auswahl nur ueber die verborgene
+  Validierung (Kandidat 1).
+- Seeds 0/1/2: 0.3719944 / 0.3720073 / 0.3720915, Mittel **0.3720310 +/- 0.0000527**, Ziel 0.372,
+  Produkturteil `reproduziert`, Methode `nicht geprueft`, Gesamtaussage `vorlaeufig`.
+- Dauer 1391 s (Server-Watchdog 2700 s), Modellkosten **0.2513 $ netto / 0.299 $ brutto**.
+
+Damit funktioniert der autonome Nachbau fuer FITS lokal. Der Live-Nachweis auf dem Server steht aus.
+
+### Restliche Reibung, allgemein behoben
+
+- **Ausgabelaenge:** Jeder der drei Kandidaten scheiterte zuerst daran, dass FITS Rekonstruktion plus
+  Forecast liefert (456 bzw. 186 Schritte); zweimal im Loss, einmal in der Rueckgabe des Predictors.
+  Im Live-Lauf 35758c32 war genau das der letzte, nicht mehr reparierte Fehler. Der Forecast-Vertrag
+  sagt jetzt allgemein: Loss und Rueckgabe decken genau die 96 Zukunftsschritte ab; ein Modell, das
+  auch das Eingabefenster ausgibt, wird auf die letzten 96 Schritte geschnitten, ausser das Paper
+  trainiert auch auf der Rekonstruktion. Das betrifft jede Backcast-/Rekonstruktionsarchitektur,
+  nicht nur FITS, und legt keinen Hyperparameter fest.
+- **Websuche:** Auch Fehler, die unser `forecast_worker.py`/`forecast_runner.py` ausloest
+  (z. B. falsche Rueckgabeform), loesen keine Tavily-Suche mehr aus.
+
+### Beobachtet, nicht behoben
+
+Eine Code-Antwort brach erneut mitten im Skript ab, `finish_reason stop`, 4193 Completion-Tokens
+(davon 1586 Reasoning) bei Limit 24000. Kein Ausgabelimit; der Wiederholungsversuch lieferte Code.
+Ursache auf Provider-/Modellseite nicht weiter eingrenzbar.

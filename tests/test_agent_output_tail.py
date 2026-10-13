@@ -31,3 +31,18 @@ def test_errors_in_own_data_helper_skip_web_search():
     summary = ("train.py line 40: x = nio.forecast_data('train')\n  at nullius_io.py line 40 in forecast_data: "
                "raise ValueError('history length must be 1..720')")
     assert o._error_hints(None, summary) == ""
+
+
+def test_errors_raised_by_our_forecast_worker_skip_web_search():
+    from repro_agent.loop import Orchestrator
+    o = Orchestrator.__new__(Orchestrator)
+    o.use_tavily, o.tavily_mode, o.tavily = True, "live", None
+    summary = ("ValueError: predictor(history) must return a finite [96,7] forecast, got shape [456, 7]\n"
+               "  raised in forecast_worker.py line 94 in _serve: raise ValueError(...)")
+    assert o._error_hints(None, summary) == ""
+
+
+def test_forecast_contract_names_backcast_slicing():
+    from repro_agent.tasks import etth1_task
+    notes = etth1_task().with_independent_selection().with_io_helper().code_notes
+    assert "slice its last 96 steps" in notes
