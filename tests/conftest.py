@@ -61,3 +61,4 @@ def _isolate_live_candidates(tmp_path, monkeypatch):
     monkeypatch.setattr(live_catalog, "PATH", tmp_path / "live_candidates.json")
     monkeypatch.setattr(live_catalog, "CACHE_PATH", tmp_path / "discovery_cache.json")
     monkeypatch.setattr(live_catalog, "REPLAY_PATH", tmp_path / "discovery_replay.json")
+    monkeypatch.setattr('repro_agent.api.REPRO_ARCHIVE_DIR', tmp_path / 'reproduction_jobs')

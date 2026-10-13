@@ -17,6 +17,10 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
+try:
+    from . import data_identity
+except ImportError:
+    import data_identity
 
 BASE_URL = "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/"
 HOUR, QUARTER = 24 * 30, 24 * 30 * 4     # Zeilen pro Monat
@@ -46,6 +50,7 @@ def download(name: str, target: Path) -> Path:
     dest = target / SPECS[name][0]
     if not dest.exists():
         urllib.request.urlretrieve(url(name), dest)
+    data_identity.verify([dest])
     return dest
 
 
@@ -128,6 +133,7 @@ def prepare_public(name: str, csv_path: Path, out_npz: Path, pred_len: int = PRE
         val=z[train_end:val_end].astype(np.float32),
         test_inputs=z[idx].astype(np.float32),
     )
+    data_identity.write_manifest(out_npz, [csv_path])
 
 
 def bind(name: str) -> dict:

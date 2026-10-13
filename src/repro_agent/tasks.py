@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import dataclasses
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,6 +61,67 @@ class Task:
     io_output: str = ""             # ersetzt den Abschnitt "Output: ..." der Datenbeschreibung
     io_smoke: str = ""              # ersetzt die Smoke-Anweisung in code_notes
     io_val_notes: str = ""          # ersetzt val_notes
+    selection_contract: bool = False
+
+    def selection_info(self) -> dict | None:
+        if not self.selection_contract:
+            return None
+        cfg = json.loads(self.io_config)
+        info = {'version': 'withheld_validation_v1', 'heldout_fraction': .2, 'kind': cfg['kind'],
+                'checkpoint_validation': 'visible validation only', 'train_test_split': 'unchanged'}
+        if cfg['kind'] == 'windows':
+            name = Path(cfg['data']).stem.removesuffix('_public')
+            first = math.ceil(int(ETT[name][4] * .8) / cfg['val_stride'])
+            info.update(selection_samples=cfg['val_windows']-first, total_validation_samples=cfg['val_windows'],
+                        inference='causal_stream_v1', deterministic_rechecks=8)
+        else:
+            total = 210 if 'cora_lcc' in cfg['data'] else 500
+            info.update(selection_samples=math.ceil(total*.2), total_validation_samples=total)
+        return info
+
+    def with_independent_selection(self) -> "Task":
+        if self.selection_contract or not self.io_config:
+            return self
+        cfg = json.loads(self.io_config)
+        cfg['selection_contract'] = True
+        notes = (' Independent candidate selection: the final 20% of validation observations are withheld from fitting. '
+                 'The visible validation observations remain available for checkpoint choice. Original training and test splits are unchanged. ')
+        changes = dict(selection_contract=True, io_config=json.dumps(cfg),
+                       harness_files=[*self.harness_files, 'selection_contract.py'],
+                       val_harness_files=(*self.val_harness_files, 'selection_contract.py'),
+                       val_eval_cmd='NULLIUS_SELECTION_HOLDOUT=1 ' + self.val_eval_cmd)
+        pins = {'numpy': '2.4.6', 'scipy': '1.17.1', 'torch': '2.14.1', 'coverage': '7.16.2'}
+        changes['setup_cmds'] = [re.sub(r'\b(numpy|scipy|torch|coverage)\b(?=\s|$)',
+                                      lambda m: m.group(1) + '==' + pins[m.group(1)], cmd)
+                                 if cmd.startswith('pip install ') else cmd for cmd in self.setup_cmds]
+        if cfg['kind'] == 'nodes':
+            changes.update(data_description=self.data_description + notes +
+                           'selection_idx names the hidden selection nodes; their labels are -1. val_idx contains only visible checkpoint nodes.',
+                           val_notes='Write val_predictions.csv for selection_idx, not val_idx. ' + notes,
+                           io_val_notes='nullius_io writes selection predictions from the whole-graph output. ' + notes,
+                           val_smoke_ids_cmd=self.val_smoke_ids_cmd.replace("['val_idx']", "['selection_idx']"))
+        else:
+            cfg['val_stride'] = ETT[Path(cfg['data']).stem.removesuffix('_public')][7]
+            changes['io_config'] = json.dumps(cfg)
+            forecast_output = (
+                'Define train_forecaster(data, seed, smoke) -> predictor(history). No training or file writing at module import. '
+                'The factory fits only on data[\"train\"], uses the visible data[\"val\"] for checkpoint selection, seeds numpy and torch, '
+                'and returns a callable that predicts [96,7] from one numpy history [720,7]. Crop each history to the paper input length. '
+                'Use nullius_io.forecast_data(length) for exact train/val input and target arrays; these have REAL targets, never zeros. '
+                'Keep the trained model in eval mode and use deterministic inference without gradient updates or fitting on supplied histories. '
+                'No full test_inputs is exposed to the factory. Our isolated runner supplies one history only after the preceding forecast is recorded. '
+                'Store temporary checkpoints under /tmp/forecast-agent. /output belongs to the runner and is not writable. '
+                'Do not write these files yourself. The runner writes predictions.csv and val_predictions.csv.'
+            )
+            desc = re.sub(r'- test_inputs:.*?Output:.*?\nEnvironment:',
+                          lambda _: 'Task: multivariate forecasting, horizon 96, input length <=720.\nOutput: ' + forecast_output + '\nEnvironment:',
+                          self.data_description, count=1, flags=re.S)
+            changes.update(data_description=desc + notes, io_output=forecast_output, code_notes=
+                           'Implement the paper model in PyTorch. ' + forecast_output +
+                           ' Smoke mode: smoke=True requires one batch and one epoch; the runner checks eight windows. ' + notes,
+                           io_smoke='Smoke mode: nio.SMOKE is True when smoke=True. Fit one batch for one epoch. The runner checks eight windows.',
+                           val_notes=notes, io_val_notes=notes)
+        return dataclasses.replace(self, **changes)
 
     def env_for(self, seed: int) -> str:
         if self.seeds_per_split:
@@ -192,6 +254,7 @@ def planetoid_task(name: str) -> Task:
     path = f"/data/{name}_public.npz"
     prep = [
         _file_cmd(HARNESS_DIR / "planetoid_data.py", "/opt/prep/planetoid_data.py"),
+        _file_cmd(HARNESS_DIR / "data_identity.py", "/opt/prep/data_identity.py"),
         _file_cmd(HARNESS_DIR / f"{name}_data.py", f"/opt/prep/{name}_data.py"),
         "pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         f"python /opt/prep/{name}_data.py && rm -rf /opt/prep",
@@ -201,7 +264,7 @@ def planetoid_task(name: str) -> Task:
         tunable=CORA_TUNABLE,
         image="python:3.11-slim",
         setup_cmds=prep,
-        harness_files=["planetoid_data.py", f"{name}_data.py", "metrics.py", "verify.py", "planetoid_eval.py", f"{name}_eval.py"],
+        harness_files=["data_identity.py", "planetoid_data.py", f"{name}_data.py", "metrics.py", "verify.py", "planetoid_eval.py", f"{name}_eval.py"],
         eval_cmd=f"python {{harness_dir}}/{name}_eval.py",
         data_description=planetoid_data_description(name),
         code_notes=(
@@ -354,6 +417,7 @@ def ett_task(name: str) -> Task:
     path = f"/data/{name}_public.npz"
     prep = [
         _file_cmd(HARNESS_DIR / "ett_data.py", "/opt/prep/ett_data.py"),
+        _file_cmd(HARNESS_DIR / "data_identity.py", "/opt/prep/data_identity.py"),
         _file_cmd(HARNESS_DIR / f"{name}_data.py", f"/opt/prep/{name}_data.py"),
         "pip install -q numpy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu",
         f"python /opt/prep/{name}_data.py && rm -rf /opt/prep",
@@ -365,7 +429,7 @@ def ett_task(name: str) -> Task:
         protocols=("drop_last",),
         image="python:3.11-slim",
         setup_cmds=prep,
-        harness_files=["ett_data.py", f"{name}_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "ett_eval.py", f"{name}_eval.py"],
+        harness_files=["data_identity.py", "ett_data.py", f"{name}_data.py", "metrics.py", "verify.py", "diagnostics.py", "droplast.py", "ett_eval.py", f"{name}_eval.py"],
         eval_cmd=f"python {{harness_dir}}/{name}_eval.py",
         data_description=ett_data_description(name),
         code_notes=(
@@ -429,7 +493,7 @@ def cora_lcc_task() -> Task:
         tunable=CORA_TUNABLE,
         image=base.image,
         setup_cmds=["pip install -q numpy scipy torch coverage --extra-index-url https://download.pytorch.org/whl/cpu"],
-        harness_files=["planetoid_data.py", "cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
+        harness_files=["data_identity.py", "planetoid_data.py", "cora_data.py", "cora_lcc_data.py", "metrics.py", "verify.py", "cora_lcc_eval.py"],
         eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_eval.py",
         data_description=CORA_LCC_DATA_DESCRIPTION,
         code_notes=base.code_notes.replace("/data/cora_public.npz", "/data/cora_lcc_public.npz"),
@@ -441,7 +505,7 @@ def cora_lcc_task() -> Task:
         val_harness_files=("cora_lcc_val_eval.py",),
         val_eval_cmd="SPLIT={split} python {harness_dir}/cora_lcc_val_eval.py",
         val_smoke_ids_cmd=base.val_smoke_ids_cmd.replace("cora_public", "cora_lcc_public"),
-        prepare_files=("planetoid_data.py", "cora_data.py", "cora_lcc_data.py"),
+        prepare_files=("data_identity.py", "planetoid_data.py", "cora_data.py", "cora_lcc_data.py"),
         prepare_cmd="mkdir -p /data && python {dir}/cora_lcc_data.py public {split} /data/cora_lcc_public.npz",
         seeds_per_split=CORA_LCC_SEEDS_PER_SPLIT,
         io_config=json.dumps({"kind": "nodes", "data": "/data/cora_lcc_public.npz", "smoke_n": CORA_SMOKE_N}),

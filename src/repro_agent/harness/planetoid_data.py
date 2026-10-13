@@ -17,6 +17,10 @@ from pathlib import Path
 
 import numpy as np
 import scipy.sparse as sp
+try:
+    from . import data_identity
+except ImportError:
+    import data_identity
 
 BASE_URL = "https://github.com/kimiyoung/planetoid/raw/master/data/"
 NAMES = ["x", "y", "tx", "ty", "allx", "ally", "graph"]
@@ -35,6 +39,7 @@ def download_raw(name: str, target: Path) -> None:
         dest = target / f"ind.{name}.{part}"
         if not dest.exists():
             urllib.request.urlretrieve(BASE_URL + f"ind.{name}.{part}", dest)
+    data_identity.verify([target / f'ind.{name}.{part}' for part in NAMES + ['test.index']])
 
 
 def _load(path: Path):
@@ -84,6 +89,7 @@ def prepare_public(name: str, raw_dir: Path, out_npz: Path) -> None:
         val_idx=np.arange(n_train, n_train + N_VAL),
         test_idx=test_idx,
     )
+    data_identity.write_manifest(out_npz, [raw_dir / f'ind.{name}.{part}' for part in NAMES + ['test.index']])
 
 
 def majority_baseline(name: str, raw_dir: Path) -> float:

@@ -60,6 +60,9 @@ def prepare_public(raw_dir: Path, k: int, out_npz: Path) -> None:
     public[train], public[val] = labels[train], labels[val]
     np.savez_compressed(out_npz, features=features, edges=edges, labels=public,
                         train_idx=train, val_idx=val, test_idx=test)
+    import cora_data
+    cora_data.planetoid_data.data_identity.write_manifest(out_npz, [raw_dir / f'ind.cora.{part}'
+                                                                  for part in cora_data.NAMES + ['test.index']])
 
 
 def test_labels(raw_dir: Path, k: int) -> dict[str, str]:

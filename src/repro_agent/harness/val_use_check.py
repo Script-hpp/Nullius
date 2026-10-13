@@ -68,7 +68,8 @@ def _label_mask(node: ast.Compare) -> bool:
 
 
 class _Analyzer:
-    def __init__(self, tree: ast.Module):
+    def __init__(self, tree: ast.Module, forecasting: bool = False):
+        self.forecasting = forecasting
         self.defs: dict[str, ast.FunctionDef] = {}
         for n in ast.walk(tree):
             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -93,7 +94,7 @@ class _Analyzer:
         if expr is None:
             return False
         for n in ast.walk(expr):
-            if isinstance(n, ast.Constant) and n.value == "val_idx":
+            if isinstance(n, ast.Constant) and (n.value == "val_idx" or (self.forecasting and n.value == "val")):
                 self.val_seen = True
                 return True
             if isinstance(n, ast.Compare) and id(n) not in self.ignored and _label_mask(n):
@@ -171,6 +172,16 @@ class _Analyzer:
         elif isinstance(st, ast.Assign):
             self.calls(st.value, env, report, depth)
             for t in st.targets:
+                if isinstance(t, ast.Subscript) and (_key(t.value) or '').lower() not in {'y', 'labels', 'targets'}:
+                    # Clamping model outputs to visible validation labels is not
+                    # early stopping. The labels>=0 form includes validation nodes.
+                    reads_labels = any(isinstance(n, ast.Subscript) and (_labelish(n.value) or
+                                       (isinstance(n.slice, ast.Constant) and n.slice.value in {'labels', 'targets', 'y'}))
+                                       for n in ast.walk(st.value))
+                    uses_val = self.tainted(t.slice, env) or self.tainted(st.value, env)
+                    uses_visible = any(isinstance(n, ast.Compare) and _label_mask(n) for n in ast.walk(t.slice))
+                    if reads_labels and (uses_val or uses_visible):
+                        self.hit(report, st, "Validation labels copied into prediction outputs")
                 self.assign(t, st.value, env)
         elif isinstance(st, (ast.AugAssign, ast.AnnAssign)):
             if st.value is not None:
@@ -243,7 +254,7 @@ class _Analyzer:
                 self.hits.append(msg)
 
 
-def static_val_use(code: str) -> dict:
+def static_val_use(code: str, forecasting: bool = False) -> dict:
     """{"verdict": "training" | "selection" | "none" | "unklar", "hits": [...]}.
     training: Validierungslabels/-indizes fliessen in einen Gradienten- oder Fit-Schritt; selection: Validierungsknoten werden nur
     gelesen (Auswahl, Early Stopping); none: keine Validierungsknoten im Code; unklar: Code nicht parsebar."""
@@ -251,7 +262,7 @@ def static_val_use(code: str) -> dict:
         tree = ast.parse(code)
     except SyntaxError:
         return {"verdict": "unklar", "hits": []}
-    a = _Analyzer(tree)
+    a = _Analyzer(tree, forecasting)
     # Modul-Ebene: Funktionsdefinitionen werden bei Aufruf oder als Closure (Umgebung der Definitionsstelle) analysiert
     env: set[str] = set()
     a.block(tree.body, env, [False], True, 0, nested=False)

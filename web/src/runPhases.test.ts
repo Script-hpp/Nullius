@@ -22,11 +22,37 @@ const start: Event[] = [
 const selection: Event = { ts: 110, type: 'candidates', chosen: 0, chosen_hash: 'a', k: 2 }
 const build = (events: Event[]) => buildRunModel(events, { running: true })
 
+test('stopped candidate selection never announces running tests or promotes unselected scores', () => {
+  const m = buildRunModel(start, { running: false })
+  assert.equal(m.candidateSelectionPending, false)
+  assert.equal(m.measurementSelectionUnavailable, true)
+  assert.equal(m.waiting, null)
+  assert.equal(m.stats, null)
+})
+
+test('claim target, measurements and verdict always belong to the same claim', () => {
+  const events: Event[] = [
+    {ts: 1, type: 'run_start', seeds: 1},
+    {ts: 2, type: 'claim_start', claim_id: 'paper', metric: 'accuracy', target: .815},
+    {ts: 3, type: 'attempt', claim_id: 'paper', code_hash: 'a', seed: 0, measured: .8151},
+    {ts: 4, type: 'verdict', claim_id: 'paper', urteil: 'reproduziert', mean: .8151, std: 0},
+    {ts: 5, type: 'claim_start', claim_id: 'placebo', metric: 'accuracy', target: .88},
+    {ts: 6, type: 'attempt', claim_id: 'placebo', code_hash: 'b', seed: 0, measured: .8151},
+    {ts: 7, type: 'verdict', claim_id: 'placebo', urteil: 'nicht reproduziert', mean: .8151, std: 0},
+  ]
+  const paper = buildRunModel(events, {running: false})
+  assert.equal(paper.target, .815)
+  assert.equal(paper.verdict!.urteil, 'reproduziert')
+  const placebo = buildRunModel(events, {running: false, claimId: 'placebo'})
+  assert.equal(placebo.target, .88)
+  assert.equal(placebo.verdict!.urteil, 'nicht reproduziert')
+})
+
 test('parallel candidates keep their scores in history until selection, then chart only selected seed 0', () => {
   const pending = build(start)
   assert.equal(pending.candidateSelectionPending, true)
   assert.equal(pending.stats, null)
-  assert.match(pending.waiting!, /candidates in parallel/)
+  assert.match(pending.waiting!, /candidates on seed 0/)
   assert.ok(pending.phases.flatMap(p => p.rows).some(r => r.title.includes('scored 0.827')))
   const selected = build([...start, selection])
   assert.equal(selected.selectedCandidate, 0)

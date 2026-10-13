@@ -41,12 +41,27 @@ class FakeSandbox:
     def put_file(self, branch, path, content):
         self.puts = getattr(self, "puts", [])
         self.puts.append((branch, path, content))
+        # Evaluation now receives only predictions in a clean branch. The fake scorer
+        # uses their originating run's metadata instead of executing an actual model.
+        if hasattr(content, 'run_metadata'):
+            meta = content.run_metadata
+            self.seed[branch] = meta['seed']
+            for name in ('ablated', 'masked'):
+                if meta.get(name):
+                    getattr(self, name).add(branch)
+            if hasattr(self, 'code_of'):
+                self.code_of[branch] = meta.get('code')
 
     def put_files(self, branch, files):
         pass
 
     def get_file(self, branch, path):
-        return csv_ids(SMOKE_IDS)
+        class Predictions(bytes):
+            pass
+        data = Predictions(csv_ids(SMOKE_IDS))
+        data.run_metadata = {'seed': self.seed.get(branch, 0), 'code': getattr(self, 'code_of', {}).get(branch),
+                             'ablated': branch in self.ablated, 'masked': branch in getattr(self, 'masked', set())}
+        return data
 
     def run(self, branch, cmd, timeout_s):
         with self.lock:

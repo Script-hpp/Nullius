@@ -281,7 +281,7 @@ def test_benchmark_rolle2_failure_still_aborts(tmp_path, monkeypatch):
 def test_input_length_reaches_the_plan(tmp_path, monkeypatch):
     e = entry(etth1(input_length=336))
     o = tavily_orch(tmp_path, monkeypatch, [e], evidence(0.35))
-    monkeypatch.setattr(loop_mod, "TASKS", {"ETTh1": lambda: SimpleNamespace(ablation_cmd=None, image="i", setup_cmds=[])})
+    monkeypatch.setattr(loop_mod, "TASKS", {"ETTh1": lambda: SimpleNamespace(ablation_cmd=None, image="i", setup_cmds=[], selection_contract=False, selection_info=lambda: None)})
     monkeypatch.setattr(o, "run_claim", lambda *a, **k: None, raising=False)
     d = o.run(e["id"], source="catalog")
     assert [(x["topic"], x["value"], x["source"]) for x in d.setup_details] == [("input length", "336", "discovery")]

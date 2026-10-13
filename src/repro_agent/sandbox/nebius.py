@@ -137,7 +137,7 @@ class NebiusSandbox:
         session = self._sessions[branch]
         self._sessions[branch] = self._guard("put_files", lambda: session.apply_files(files))
 
-    def get_file(self, branch: Branch, path: str) -> bytes:
+    def get_file(self, branch: Branch, path: str, max_bytes: int | None = None) -> bytes:
         # `session.read()` liest das Ausgangsimage (Session-uuid wird nie aktualisiert),
         # nicht den Branch-Stand. Daher ueber `run`: gzip nach /tmp, Hash und Groesse im
         # Branch, dann Chunks per base64 (stdout ist hart auf < 10 MiB begrenzt).
@@ -153,6 +153,8 @@ class NebiusSandbox:
             raise FileNotFoundError(f"{path}: {meta.stderr.strip() or 'nicht gefunden'}")
         digest, size_s = meta.stdout.split()
         size = int(size_s)
+        if max_bytes is not None and (size < 0 or size > max_bytes + 1024 * 1024):
+            raise ValueError('Compressed prediction artifact exceeds its size limit')
         parts: list[bytes] = []
         for off in range(0, size, _CHUNK):
             r = self.run(
@@ -168,9 +170,19 @@ class NebiusSandbox:
         if len(blob) != size:
             raise OSError(f"{path}: Transfer unvollstaendig ({len(blob)} von {size} Bytes)")
         try:
-            data = gzip.decompress(blob)
+            if max_bytes is None:
+                data = gzip.decompress(blob)
+            else:
+                import io
+                with gzip.GzipFile(fileobj=io.BytesIO(blob)) as source:
+                    data = source.read(max_bytes + 1)
+                if len(data) > max_bytes:
+                    raise ValueError('Prediction artifact exceeds its size limit')
         except (OSError, EOFError) as exc:
             raise OSError(f"{path}: gzip-Daten beschaedigt ({exc})") from exc
         if hashlib.sha256(data).hexdigest() != digest:
             raise OSError(f"{path}: SHA-256 stimmt nicht (Transfer beschaedigt)")
         return data
+
+    def get_file_limited(self, branch: Branch, path: str, max_bytes: int) -> bytes:
+        return self.get_file(branch, path, max_bytes=max_bytes)

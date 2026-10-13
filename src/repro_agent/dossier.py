@@ -99,6 +99,7 @@ class Dossier:
     ablations: dict = field(default_factory=dict)   # claim_id -> Graph-Ablation (Seed 0), siehe ablation_gcn.md
     mode: str = "nachbau"         # nachbau: Agent schreibt eigenen Code; Repo nie im Branch
     selection_policy: str | None = None  # None for historical records; never relabel old evaluations
+    selection_contract: dict | None = None
     graph_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Graph-Reparaturen (nur mit graph_repair)
     fault_repairs: dict = field(default_factory=dict)   # claim_id -> Zahl der Fehler-Reparaturen (schlechter als Baseline, nur mit graph_repair)
     droplast_notes: dict = field(default_factory=dict)   # claim_id -> Hinweis "Paperzahl passt zur drop_last-Rechnung" (droplast_note.py), nur Bericht
@@ -139,6 +140,7 @@ class Dossier:
             repo=data.get("repo"),
             mode=data.get("mode", "nachbau"),
             selection_policy=data.get('selection_policy'),
+            selection_contract=data.get('selection_contract'),
             ablations=data.get("ablations", {}),
             sources=data.get("sources", []),
             baselines=data.get("baselines"),

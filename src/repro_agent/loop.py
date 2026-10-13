@@ -11,12 +11,15 @@ TODO Meilenstein 3: Abweichungs-Loop, Einwaende als Branches, Seeds parallel (Se
 from __future__ import annotations
 
 from .spend_guard import context_map
+from . import spend_guard
 
 import dataclasses
 import hashlib
+import io
 import json
 import math
 import re
+import shlex
 import os
 import statistics
 import sys
@@ -306,7 +309,7 @@ def product_kwargs(author_code: bool = True) -> dict:
     Schalter zurueck auf den reinen Paper-Nachbau (die Produktkonfiguration von v4).
     Gewollt KEIN Default des Orchestrators: Benchmark- und Experiment-Skripte legen ihre Konfiguration vorab fest und bauen
     `Orchestrator(...)` ohne diese Funktion, damit ihre Laeufe reproduzierbar bleiben."""
-    kw: dict = dict(graph_repair=True, setup_v2=True, repo_verify=True)
+    kw: dict = dict(graph_repair=True, setup_v2=True, repo_verify=True, independent_selection=True)
     if author_code:
         kw.update(AUTHOR_CODE_KWARGS)
     return kw
@@ -321,6 +324,7 @@ class Orchestrator:
         objection_experiments: bool = False, objection_quick: bool = False,
         spec_mode: bool = False, code_grounded: bool = False, io_helper: bool = False, repo_verify: bool = False,
         allow_test_feedback: bool = False,
+        independent_selection: bool = False,
     ) -> None:
         # repo_verify (nur Produktpfad, product_kwargs): Repo-Wahl mit Pruefung. Paper-Link zuerst, dann mehrere Suchtreffer; ein Repo zaehlt nur,
         # wenn sein README Modellname, Titel oder arXiv-ID nennt; inoffizielle Repos werden nie als Autorencode gelesen. Aus: alte Wahl
@@ -332,6 +336,7 @@ class Orchestrator:
         # Legacy diagnostic experiments may opt in explicitly. Product/default
         # code repair and candidate acceptance must not depend on test scores.
         self.allow_test_feedback = allow_test_feedback
+        self.independent_selection = independent_selection
         # Einwand-Experimente (objection_experiments.py): Funde der Community-Suche werden eingeordnet und, wo messbar, im eigenen
         # Branch geprueft. Nur Bericht. Default aus, damit Benchmark und vorab festgelegte Experimente unveraendert bleiben (API: an).
         self.objection_experiments = objection_experiments
@@ -380,12 +385,21 @@ class Orchestrator:
         if fresh:  # --fresh: LLM-Cache weder lesen noch schreiben (Stabilitaetsbeleg, Benchmark)
             self.settings = dataclasses.replace(self.settings, llm_cache=False)
         self.llm = LLMClient(self.settings)
+        self.llm.on_call = self._llm_completed
         self.sandbox = get_sandbox(self.settings.sandbox_backend)
         self._lock = threading.Lock()  # LLM-Aufrufe/Kostenzaehler/Dossier aus Seed-Threads
 
     @property
     def spent_usd(self) -> float:
         return self.llm.total_cost_usd - self._cost_base   # Kosten seit Start des aktuellen Laufs
+
+    def close(self) -> None:
+        try:
+            if hasattr(self.sandbox, 'close'):
+                self.sandbox.close()
+        finally:
+            if hasattr(self.llm, 'close'):
+                self.llm.close()
 
     def _infrastructure_failure(self, dossier: Dossier, ts: str, run_dir: Path, exc: SandboxSetupError) -> None:
         """Sandbox-Setup gescheitert (z. B. Daten-Download): Warnung und Ereignis, Dossier und Zeugnis ohne Urteile speichern. Kein "nicht reproduzierbar (Setup)"."""
@@ -471,6 +485,10 @@ class Orchestrator:
         return self.llm.gross(self.spent_usd)
 
     # ---- LLM ----------------------------------------------------------------
+    def _llm_completed(self, role, resp) -> None:
+        self._emit_live("llm_call", role=str(role), model=getattr(resp, "model", None), cached=bool(getattr(resp, "cached", False)),
+                        cost_net_usd=round(resp.cost_usd, 5), total_net_usd=round(self.spent_usd, 5))
+
     def _ask(
         self, role, system: str, user: str, max_tokens: int | None = None, temperature: float = 0.2
     ) -> LLMResponse:
@@ -485,8 +503,8 @@ class Orchestrator:
                 [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 max_tokens=max_tokens, temperature=temperature,
             )
-        self._emit_live("llm_call", role=str(role), model=getattr(resp, "model", None), cached=bool(getattr(resp, "cached", False)),
-                        cost_net_usd=round(resp.cost_usd, 5), total_net_usd=round(self.spent_usd, 5))
+        if getattr(self.llm, "on_call", None) is None:
+            self._llm_completed(role, resp)  # compatibility with injected test/experiment clients
         return resp
 
     def plan(self, paper: dict, claim: Claim, task: Task) -> str:
@@ -583,6 +601,8 @@ class Orchestrator:
 
     def _prompt_task(self, task: Task) -> Task:
         """Task fuer Code- und Reparatur-Prompt: mit `io_helper` der Ausgabevertrag ueber den Helfer, sonst unveraendert (Prompts byte-gleich)."""
+        if getattr(self, 'independent_selection', False):
+            task = task.with_independent_selection()
         return task.with_io_helper() if getattr(self, "io_helper", False) else task
 
     def write_code(self, plan: str, task: Task, temperature: float = 0.2) -> str:
@@ -647,6 +667,58 @@ class Orchestrator:
         return text.strip()[-TRIAGE_CHARS:]
 
     # ---- Sandbox ------------------------------------------------------------
+    def _prediction_file(self, branch: Branch, task: Task, val: bool = False) -> bytes:
+        path = '/output/val_predictions.csv' if val else '/output/predictions.csv'
+        cfg = json.loads(task.io_config) if task.io_config else {}
+        limit = 2_000_000
+        if cfg.get('kind') == 'windows':
+            windows = cfg['val_windows'] if val else cfg['test_windows']
+            limit = 64 * windows * cfg['steps'] * cfg['channels'] + 32
+        getter = getattr(self.sandbox, 'get_file_limited', None)
+        data = getter(branch, path, limit) if getter else self.sandbox.get_file(branch, path)
+        if len(data) > limit:
+            raise ValueError('Prediction artifact exceeds its size limit')
+        return data
+    def _prepare_selection_contract(self, branch: Branch, task: Task) -> str | None:
+        if not task.selection_contract:
+            return None
+        import numpy as np
+        from .harness.selection_contract import graph_public
+        sb = self.sandbox
+        cfg = json.loads(task.io_config)
+        try:
+            if cfg['kind'] == 'nodes':
+                original = sb.get_file(branch, cfg['data'])
+                with np.load(io.BytesIO(original), allow_pickle=False) as raw:
+                    arrays = graph_public({k: raw[k] for k in raw.files})
+                buf = io.BytesIO()
+                np.savez_compressed(buf, **arrays)
+                sb.put_file(branch, cfg['data'], buf.getvalue())
+            else:
+                private = '/opt/forecast-runtime/source.npz'
+                sb.put_files(branch, {f'/opt/forecast-runtime/{name}': (HARNESS_DIR / name).read_bytes()
+                                      for name in ('forecast_runner.py', 'forecast_worker.py', 'selection_contract.py')})
+                sb.put_file(branch, '/opt/forecast-runtime/config.json', json.dumps(dict(cfg, private_data=private)).encode())
+                sb.put_file(branch, f'{WORKDIR}/nullius_io.py', task.io_helper_source().encode())
+                setup = sb.run(branch, f'mv {shlex.quote(cfg["data"])} {private} && '
+                               'chmod 755 /opt/forecast-runtime /work && '
+                               'chmod 444 /opt/forecast-runtime/*.py /work/*.py && '
+                               'chmod 400 /opt/forecast-runtime/source.npz /opt/forecast-runtime/config.json && '
+                               'setpriv --reuid=65534 --regid=65534 --clear-groups --bounding-set=-all '
+                               '--inh-caps=-all --ambient-caps=-all --no-new-privs '
+                               'python -I -c "import os; assert os.getuid() == 65534; '
+                               'assert not os.access(\'/opt/forecast-runtime/source.npz\', os.R_OK)"', 30)
+                if setup.exit_code != 0 or setup.timed_out:
+                    return 'Forecast isolation requires setpriv and a runtime able to drop privileges.'
+        except Exception as exc:
+            return f'Independent selection data could not be prepared: {type(exc).__name__}'
+        return None
+
+    def _agent_runner(self, task: Task) -> str:
+        if task.selection_contract and json.loads(task.io_config)['kind'] == 'windows':
+            return 'python -I /opt/forecast-runtime/forecast_runner.py /opt/forecast-runtime/config.json'
+        return 'python train.py'
+
     def _prepare_data(self, branch: Branch, seed: int, task: Task) -> str | None:
         """Daten fuer diesen Lauf (Split) im Branch erzeugen. Das Skript liegt nur waehrend der Vorbereitung dort."""
         sb = self.sandbox
@@ -669,9 +741,9 @@ class Orchestrator:
         expected = task.smoke_ids
         if task.smoke_ids_cmd:
             expected = tuple(sb.run(branch, task.smoke_ids_cmd, 60).stdout.split())
-        r = sb.run(
+        r = getattr(sb, "run_agent", sb.run)(
             branch,
-            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} SMOKE=1 unshare -n python train.py",
+            f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} SMOKE=1 unshare -n {self._agent_runner(task)}",
             SMOKE_TIMEOUT_S,
         )
         if r.timed_out:
@@ -680,7 +752,7 @@ class Orchestrator:
         if r.exit_code != 0:
             return "Smoke run (SMOKE=1) crashed:\n" + describe_exit(r.exit_code, (r.stderr or r.stdout).strip()[-TRIAGE_CHARS:])
         try:
-            out = sb.get_file(branch, "/output/predictions.csv")
+            out = self._prediction_file(branch, task)
         except Exception as exc:   # Sandbox-Adapter melden fehlende Datei unterschiedlich
             return f"Smoke run wrote no /output/predictions.csv ({exc})"
         error = check_smoke_output(out, expected, task.smoke_dims, task.smoke_dim_names)
@@ -691,7 +763,7 @@ class Orchestrator:
             if task.val_smoke_ids_cmd:
                 val_expected = tuple(sb.run(branch, task.val_smoke_ids_cmd, 60).stdout.split())
             try:
-                val_out = sb.get_file(branch, "/output/val_predictions.csv")
+                val_out = self._prediction_file(branch, task, val=True)
             except Exception as exc:
                 return f"Smoke run wrote no /output/val_predictions.csv ({exc}); the task requires it"
             error = check_smoke_output(val_out, val_expected, task.val_smoke_dims, task.smoke_dim_names)
@@ -709,7 +781,7 @@ class Orchestrator:
         for k in range(INFRA_RETRIES):
             branch = self.sandbox.branch(snapshot)
             try:
-                return branch, self._run_and_eval(branch, code, seed, task, metric, **kw)
+                return branch, self._run_and_eval(branch, code, seed, task, metric, eval_snapshot=snapshot, **kw)
             except SandboxUnavailable as exc:
                 self._emit("infra_retry", seed=seed, attempt=k + 1, error=str(exc)[:200])
                 print(f"WARNUNG: {exc} (Infrastruktur-Wiederholung {k + 1}/{INFRA_RETRIES})", file=sys.stderr, flush=True)
@@ -737,10 +809,13 @@ class Orchestrator:
                 "detail": None if acc_a is not None else str(res.get("detail", ""))[-300:]}
 
     def val_label_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str, val: dict) -> dict:
-        """B1 (v5): zweiter Seed-0-Lauf mit maskierten Validierungslabels, Vergleich der Validierungs-Metrik des Harness (eigene Labels),
-        dazu statische Nutzung (harness/val_use_check). Ausgeschlossen wird nur bei Abfall >= 0,10 UND statischem Treffer `training`
-        (Modellauswahl/Early Stopping bricht mit Maske ebenfalls ein und darf nicht ausscheiden). Deterministisch, kein LLM,
-        weder Zahlen noch Ergebnis gehen in einen Prompt."""
+        """Compare a masked-label control with independent validation and inspect static use.
+
+        Product admission rejects detected validation training or an unmeasurable
+        control. Early stopping alone remains allowed. Historical test-feedback
+        experiments retain their original combined score-drop/static criterion.
+        No measurements from this control enter a model prompt.
+        """
         static = static_val_use(code)
         _, res = self._attempt(snapshot, code, seed, task, metric, mask_val=True, with_val=True)
         masked = res.get("val") if res["status"] == "ok" else None
@@ -749,9 +824,39 @@ class Orchestrator:
         return {
             "verdict": verdict, "val_full": val.get("value"), "val_masked": masked_value,
             "static": static["verdict"], "static_hits": static["hits"][:3],
-            "excluded": verdict == "Validierungslabels genutzt" and static["verdict"] == "training",
+            "excluded": ((masked_value is None or static["verdict"] == "training")
+                         if not getattr(self, 'allow_test_feedback', False)
+                         else verdict == "Validierungslabels genutzt" and static["verdict"] == "training"),
             "detail": None if masked_value is not None else str(res.get("detail", ""))[-300:],
         }
+
+    def _selection_check(self, snapshot: str, code: str, seed: int, task: Task, metric: str, val: dict | None) -> dict:
+        """Same admission checks for original candidates and every replacement hash."""
+        key = (snapshot, hashlib.sha256(code.encode()).hexdigest(), seed, repr(task))
+        cache = self.__dict__.setdefault('_selection_checks', {})
+        if key in cache:
+            return cache[key]
+        if task.mask_val_cmd and isinstance(val, dict) and 'value' in val:
+            result = self.val_label_check(snapshot, code, seed, task, metric, val)
+        else:
+            forecast = bool(task.io_config and json.loads(task.io_config).get('kind') == 'windows')
+            static = static_val_use(code, forecasting=forecast)
+            result = {'static': static['verdict'], 'static_hits': static['hits'][:3],
+                      'excluded': static['verdict'] in {'training', 'unklar'},
+                      'verdict': 'Validation training detected' if static['verdict'] == 'training' else 'Static validation review only',
+                      'scope': 'Known validation-use patterns; not a general independence certificate'}
+        cache[key] = result
+        return result
+
+    def _admit_final_code(self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, code: str, seed: int) -> dict:
+        code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+        val = self.__dict__.get('_val', {}).get((code_hash, seed))
+        check = self._selection_check(snapshot, code, seed, task, claim.metric, val)
+        self._emit('val_label_check', claim_id=claim.id, code_hash=code_hash, stage='final_admission', **check)
+        dossier.val_label_check.setdefault(claim.id, {})[code_hash] = {'code_hash': code_hash, **check}
+        if check.get('excluded'):
+            raise MethodImplementationBlocked('Selected code failed the independent validation controls. No paper verdict was produced.')
+        return check
 
     def _measure_coverage(self, branch: Branch) -> dict | None:
         """Zeilenabdeckung des gerade gelaufenen train.py (coverage im Basis-Snapshot). None = nicht verfuegbar."""
@@ -771,6 +876,7 @@ class Orchestrator:
     def _run_and_eval(
         self, branch: Branch, code: str, seed: int, task: Task, metric: str, measure_coverage: bool = False,
         ablate: bool = False, with_val: bool = False, mask_val: bool = False, edge_probe: bool = False,
+        eval_snapshot: str | None = None,
     ) -> dict:
         """Ein Versuch im Branch. Rueckgabe: {"status": timeout|fehler|ungueltig|ok, ...}."""
         sb = self.sandbox
@@ -794,7 +900,7 @@ class Orchestrator:
             path, n_nodes, n_val, n_test = task.edge_probe
             npz, truth = make_probe(n_nodes, n_val, n_test, seed=0, n_classes=task.probe_dims[0], n_features=task.probe_dims[1])
             sb.put_file(branch, path, probe_bytes(npz))
-            r = sb.run(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", self._train_timeout())
+            r = getattr(sb, "run_agent", sb.run)(branch, f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} unshare -n python train.py", self._train_timeout())
             if r.timed_out or r.exit_code != 0:
                 return {"status": "fehler", "detail": "timeout" if r.timed_out else (r.stderr or r.stdout)}
             try:
@@ -806,11 +912,26 @@ class Orchestrator:
             prep_error = self._prepare_data(branch, seed, task)
             if prep_error:
                 return {"status": "ungueltig", "detail": prep_error}
+        prepared_identity = None
+        if task.io_config:
+            try:
+                prepared_identity = json.loads(sb.get_file(branch, json.loads(task.io_config)['data'] + '.source.json'))
+                if not isinstance(prepared_identity, dict):
+                    prepared_identity = None
+            except Exception:
+                pass
+        selection_error = self._prepare_selection_contract(branch, task)
+        if selection_error:
+            return {'status': 'ungueltig', 'infrastructure': True, 'detail': selection_error}
         if ablate:   # Nutzungspruefung: veraenderte Daten, kein Smoke-Lauf, keine Abdeckung
-            sb.run(branch, task.ablation_cmd, 120)
+            control = sb.run(branch, task.ablation_cmd, 120)
+            if control.timed_out or control.exit_code != 0:
+                return {"status": "ungueltig", "detail": "Graph control preparation failed: " + (control.stderr or control.stdout)[-300:]}
             measure_coverage = False
         elif mask_val:   # B1: Labels der Validierungsknoten maskiert, kein Smoke-Lauf (lief schon), keine Abdeckung
-            sb.run(branch, task.mask_val_cmd, 120)
+            control = sb.run(branch, task.mask_val_cmd, 120)
+            if control.timed_out or control.exit_code != 0:
+                return {"status": "ungueltig", "detail": "Validation control preparation failed: " + (control.stderr or control.stdout)[-300:]}
             measure_coverage = False
         else:
             smoke_error = self._smoke_check(branch, code, task, seed)
@@ -819,13 +940,14 @@ class Orchestrator:
         # `unshare -n`: eigener Netz-Namespace ohne Interfaces -> kein Internet waehrend des
         # Agenten-Codes (Setup ist vorher im Basis-Snapshot abgeschlossen).
         # Abdeckung nur im ersten vollstaendigen Seed-Lauf (Smoke-Lauf ist zu kurz: Epochen-/Early-Stopping-Zweige)
-        with_cov = measure_coverage and sb.run(branch, "python -c 'import coverage'", 30).exit_code == 0
-        runner = "python -m coverage run --data-file=/tmp/.cov train.py" if with_cov else "python train.py"
+        with_cov = (measure_coverage and self._agent_runner(task) == 'python train.py'
+                    and sb.run(branch, "python -c 'import coverage'", 30).exit_code == 0)
+        runner = "python -m coverage run --data-file=/tmp/.cov train.py" if with_cov else self._agent_runner(task)
         # F2: `timeout -s ABRT` beendet das Skript kurz VOR dem harten Sandbox-Timeout; `faulthandler` schreibt dabei alle Python-Stacks nach stderr
         # (Stelle des Zeitlimits), stdout (unbuffered) bleibt lesbar. Der harte Timeout toetet auf Nebius den ganzen Branch (Dateien danach weg).
         limit = self._train_timeout()
         soft = max(1, limit - ABRT_GRACE_S)
-        r = sb.run(
+        r = getattr(sb, "run_agent", sb.run)(
             branch,
             f"mkdir -p /output && cd {WORKDIR} && {task.env_for(seed)} PYTHONFAULTHANDLER=1 PYTHONUNBUFFERED=1 "
             f"unshare -n timeout -s ABRT {soft} {runner}",
@@ -843,27 +965,61 @@ class Orchestrator:
             return {"status": "fehler", "detail": describe_exit(r.exit_code, r.stderr or r.stdout), "exit_code": r.exit_code}
         coverage = self._measure_coverage(branch) if with_cov else None
 
-        # Harness frisch aus unserem Repo kopieren, in ein Verzeichnis mit Zufallsnamen: der
-        # Agent-Code ist schon gelaufen und kannte den Pfad nicht, kann ihn also nicht vorbelegt haben.
+        # Only prediction bytes cross into a fresh branch of the trusted setup snapshot.
+        # A random harness path in the agent's branch cannot protect Python startup/imports.
+        if eval_snapshot is None:
+            return {"status": "ungueltig", "detail": "Independent evaluation requires the trusted setup snapshot."}
+        eval_branch = sb.branch(eval_snapshot)
+        prep_error = self._prepare_data(eval_branch, seed, task) if task.prepare_cmd else None
+        if prep_error:
+            return {"status": "ungueltig", "detail": prep_error}
+        sb.run(eval_branch, "mkdir -p /output", 30)
+        identity_env = ''
+        if task.io_config:
+            manifest_path = json.loads(task.io_config)['data'] + '.source.json'
+            try:
+                # Read only from the pristine evaluation branch, never agent state.
+                manifest = json.loads(sb.get_file(eval_branch, manifest_path))
+                if not isinstance(manifest, dict) or not manifest or any(not isinstance(k, str) or not isinstance(v, str)
+                                                                       or not re.fullmatch('[0-9a-f]{64}', v) for k, v in manifest.items()):
+                    raise ValueError('Invalid dataset manifest')
+                if prepared_identity != manifest:
+                    return {'status': 'ungueltig', 'infrastructure': True, 'detail': 'Raw dataset identity differs between preparation and evaluation.'}
+                identity_env = 'NULLIUS_DATA_IDENTITY=' + shlex.quote(json.dumps(manifest, sort_keys=True)) + ' '
+                self._emit('data_identity', seed=seed, files=manifest)
+            except Exception:
+                if task.selection_contract:
+                    return {'status': 'ungueltig', 'infrastructure': True, 'detail': 'Trusted raw dataset identity unavailable; evaluation stopped.'}
+        try:
+            predictions = self._prediction_file(branch, task)
+            sb.put_file(eval_branch, "/output/predictions.csv", predictions)
+        except Exception as exc:
+            return {"status": "ungueltig", "detail": f"Prediction transfer failed: {type(exc).__name__}"}
+        if with_val:
+            try:
+                sb.put_file(eval_branch, "/output/val_predictions.csv", self._prediction_file(branch, task, val=True))
+            except Exception:
+                pass  # The validation harness reports the missing file; no selection fallback.
         harness_dir = f"{SANDBOX_HARNESS_DIR}-{uuid.uuid4().hex[:10]}"
-        sb.put_files(branch, {
+        sb.put_files(eval_branch, {
             f"{harness_dir}/{name}": (HARNESS_DIR / name).read_bytes() for name in task.harness_files
         })
-        e = sb.run(branch, task.eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
+        e = sb.run(eval_branch, identity_env + task.eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
         if e.timed_out or e.exit_code != 0:
-            return {"status": "ungueltig", "detail": f"Harness-Lauf fehlgeschlagen: {e.stderr[-500:]}"}
+            return {"status": "ungueltig", "infrastructure": 'Raw dataset changed since preparation' in e.stderr,
+                    "detail": f"Harness-Lauf fehlgeschlagen: {e.stderr[-500:]}"}
         try:
-            out = json.loads(e.stdout.strip().splitlines()[-1])
+            out = json.loads(e.stdout.strip())
         except (IndexError, json.JSONDecodeError):
             return {"status": "ungueltig", "detail": f"Harness-Ausgabe unlesbar: {e.stdout[-300:]}"}
-        if out["status"] != "ok":
-            return {"status": "ungueltig", "detail": out.get("reason", "")}
+        if not isinstance(out, dict) or out.get("status") != "ok":
+            return {"status": "ungueltig", "detail": out.get("reason", "") if isinstance(out, dict) else "Harness output must be an object."}
         if metric not in out.get("metrics", {}):
             return {"status": "ungueltig", "detail": f"Harness lieferte Metrik {metric} nicht"}
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
                for v in out['metrics'].values()):
             return {'status': 'ungueltig', 'detail': 'Harness metrics must be finite numbers.'}
-        val = self._val_eval(branch, harness_dir, task, seed) if with_val else None
+        val = self._val_eval(eval_branch, harness_dir, task, seed, identity_env=identity_env) if with_val else None
         return {
             "status": "ok", "measured": float(out["metrics"][metric]), "metrics": out["metrics"],
             "baselines": out.get("baselines"), "coverage": coverage, "val": val,
@@ -872,18 +1028,20 @@ class Orchestrator:
             "stdout_tail": (r.stdout or "")[-300:],            # Ende der Trainingsausgabe (z. B. Val-Loss) als Evidenz
         }
 
-    def _val_eval(self, branch: Branch, harness_dir: str, task: Task, seed: int) -> dict | None:
+    def _val_eval(self, branch: Branch, harness_dir: str, task: Task, seed: int, identity_env: str = '') -> dict | None:
         """Validierungs-Metrik des Seed-0-Laufs durch unseren Harness (eigene Val-Labels). Fehler machen den Versuch nie ungueltig:
         ohne Val-Wert nimmt die Auswahl den Kandidaten nur als Rueckfall."""
         sb = self.sandbox
         sb.put_files(branch, {f"{harness_dir}/{n}": (HARNESS_DIR / n).read_bytes() for n in task.val_harness_files})
-        e = sb.run(branch, task.val_eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
+        e = sb.run(branch, identity_env + task.val_eval_cmd.format(harness_dir=harness_dir, split=task.split_for(seed)), EVAL_TIMEOUT_S)
         if e.timed_out or e.exit_code != 0:
             return {'error': 'Validation harness did not complete successfully.'}
         try:
-            out = json.loads(e.stdout.strip().splitlines()[-1])
+            out = json.loads(e.stdout.strip())
         except (IndexError, json.JSONDecodeError):
             return {"error": f"Val-Harness-Ausgabe unlesbar: {(e.stderr or e.stdout)[-200:]}"}
+        if not isinstance(out, dict):
+            return {"error": "Validation harness output must be an object."}
         if out.get("status") != "ok":
             return {"error": str(out.get("reason", ""))[:300]}
         if (isinstance(out.get('value'), bool) or not isinstance(out.get('value'), (int, float))
@@ -1207,6 +1365,8 @@ class Orchestrator:
     def run_claim(
         self, paper: dict, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path
     ) -> None:
+        if getattr(self, 'independent_selection', False):
+            task = task.with_independent_selection()
         self._emit("claim_start", claim_id=claim.id, text=claim.text, metric=claim.metric, target=claim.target,
                    tolerance=claim.tolerance)
         plan = self.plan(paper, claim, task)
@@ -1269,6 +1429,15 @@ class Orchestrator:
                 claim, task, snapshot, dossier, run_dir, plan, code, v0, seeds[0], cand, graph_ab, discarded,
                 paper.get("dataset", ""))
             notes += rd_notes
+
+        if v0 is not None and getattr(self, 'graph_repair', False) and not getattr(self, 'allow_test_feedback', False):
+            self._admit_final_code(claim, task, snapshot, dossier, code, seeds[0])
+            if task.selection_contract:
+                notes.append('Independent selection used the final 20% of validation observations, withheld from fitting; '
+                             'checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.')
+                if json.loads(task.io_config)['kind'] == 'windows':
+                    notes.append('Forecast histories were streamed chronologically to an unprivileged predictor after fitting; '
+                                 'each forecast was recorded before the next history was exposed.')
 
         measured: list[float] = []
         if v0 is None:
@@ -1351,6 +1520,7 @@ class Orchestrator:
                 code, spec)
             fails = spec_check.failures(cfg_report, items_report)
             spec_score = spec_check.score(spec, cfg_report, items_report)
+            self.__dict__.setdefault('_spec_scores', {})[(id(spec), hashlib.sha256(code.encode()).hexdigest())] = spec_score
             self._emit("spec_check", claim_id=claim.id, candidate=cand, round=rep, score=spec_score, fails=fails, code_hash=h(code))
             if not fails or rep == MAX_SPEC_REPAIRS:
                 break
@@ -1359,16 +1529,34 @@ class Orchestrator:
                 disc.add(h(code))
                 code = new_code
                 self._announce_code(claim, code)
+            except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
+                raise
             except Exception as exc:
                 self._warn(f"Steckbrief-Reparatur gescheitert: {exc}")
                 break
         return code, spec_score, disc
 
+    def _current_spec_score(self, code: str) -> tuple[int, int] | None:
+        spec = self._active_spec()
+        if spec is None:
+            return None
+        key = (id(spec), hashlib.sha256(code.encode()).hexdigest())
+        cached = self.__dict__.get('_spec_scores', {}).get(key)
+        if cached is not None:
+            return cached
+        checked_code, config = spec_check.config_check(code, spec)
+        # Do not change an already measured program. An override still needed
+        # here means this version has not satisfied those keys.
+        config['unused'] = list(set(config.get('unused', [])) | {i['key'] for i in config.get('overrides', [])})
+        items = [{'key': i.key, 'ok': False} for i in spec.checkable()]
+        return spec_check.score(spec, config, items)
+
     def _run_candidates(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, seed: int, k: int,
     ):
         """A1: k Code-Kandidaten (Temperatur 0.2 + 0.3 i, gleicher Prompt), je Seed 0 mit Reparatur- und Qualitaetsschleife
-        parallel. Auswahl allein ueber die Validierungs-Metrik, die unser Harness rechnet (select_candidate); Testwerte und
+        im Produktpfad nacheinander, im historischen Testfeedback-Pfad parallel. Auswahl allein ueber die
+        Validierungs-Metrik, die unser Harness rechnet (select_candidate); Testwerte und
         Zielwert gehen nie in die Auswahl. Rueckgabe wie die Seed-0-Phase plus Index des Siegers und Hinweise fuer das Urteil."""
         def h(c: str) -> str:
             return hashlib.sha256(c.encode()).hexdigest()[:12]
@@ -1376,22 +1564,6 @@ class Orchestrator:
         codes: list[str] = []
         idx: list[int] = []
         last_exc: Exception | None = None
-        for i in range(k):   # ein Kandidat ohne Code faellt weg; erst wenn keiner Code liefert, endet der Lauf wie ohne A1
-            try:
-                c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
-            except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
-                raise
-            except (RuntimeError, ValueError) as exc:
-                last_exc = exc
-                self._emit("code_missing", claim_id=claim.id, candidate=i, reason=str(exc)[:300])
-                continue
-            codes.append(c)
-            idx.append(i)
-            self._announce_code(claim, c)
-            self._emit("code_written", claim_id=claim.id, code_hash=h(c), candidate=i)
-        if not codes:   # RuntimeError: der Benchmark haelt den Lauf als 'abgebrochen' fest, statt dass der Prozess endet
-            raise RuntimeError(f"Kein Code-Kandidat lieferte Code: {last_exc}")
-
         def one(j: int) -> dict:
             i = idx[j]
             code = codes[j]
@@ -1405,14 +1577,48 @@ class Orchestrator:
                 v0, note0, code, ab, notes, disc2, faults = self._seed0_quality_loop(
                     claim, task, snapshot, dossier, run_dir, plan, code, v0, note0, seed, i, graph=False)
                 res.update(v0=v0, note0=note0, code=code, ab=ab, notes=notes, discarded=disc | disc2, faults=faults)
+            if self._active_spec() is not None:
+                res['spec_score'] = self._current_spec_score(res['code'])
+                if (id(self._active_spec()), hashlib.sha256(res['code'].encode()).hexdigest()) not in self.__dict__.get('_spec_scores', {}):
+                    self._emit('spec_check', claim_id=claim.id, candidate=i, stage='final_candidate',
+                               code_hash=h(res['code']), score=res['spec_score'], fails=[])
             val = self.__dict__.get("_val", {}).get((h(res["code"]), seed)) if res["v0"] is not None else None
             res["val"] = val if isinstance(val, dict) and "value" in val else None
-            res["val_check"] = (self.val_label_check(snapshot, res["code"], seed, task, claim.metric, res["val"])
-                                if res["val"] is not None and getattr(task, "mask_val_cmd", "") else None)
+            res["val_check"] = (self._selection_check(snapshot, res["code"], seed, task, claim.metric, res["val"])
+                                if res['v0'] is not None and (not getattr(self, 'allow_test_feedback', False) or task.mask_val_cmd)
+                                else None)
             return res
 
-        with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, k)) as pool:
-            results = list(context_map(pool, one, range(len(codes))))
+        results = []
+        for i in range(k):
+            try:
+                c = self.write_code(plan, task, temperature=0.2 + CANDIDATE_TEMP_STEP * i)
+            except (CostLimitExceeded, BudgetExceeded):
+                if getattr(self, 'allow_test_feedback', False) or not any(
+                        r['v0'] is not None and r['val'] is not None and not (r['val_check'] or {}).get('excluded') for r in results):
+                    raise
+                budget = spend_guard.current_budget.get()
+                if budget is not None:
+                    budget.check()  # Cancellation/uncertain billing never becomes a fallback.
+                self._warn('Additional candidate generation stopped at the spending limit; selecting only independently validated existing candidates.')
+                break
+            except BillingBlocked:
+                raise
+            except (RuntimeError, ValueError) as exc:
+                last_exc = exc
+                self._emit('code_missing', claim_id=claim.id, candidate=i, reason=str(exc)[:300])
+                continue
+            codes.append(c)
+            idx.append(i)
+            self._announce_code(claim, c)
+            self._emit('code_written', claim_id=claim.id, code_hash=h(c), candidate=i)
+            if not getattr(self, 'allow_test_feedback', False):
+                results.append(one(len(codes)-1))
+        if not codes:
+            raise RuntimeError(f'Kein Code-Kandidat lieferte Code: {last_exc}')
+        if getattr(self, 'allow_test_feedback', False):
+            with ThreadPoolExecutor(max_workers=min(MAX_PARALLEL, k)) as pool:
+                results = list(context_map(pool, one, range(len(codes))))
         runnable = [r for r in results if r["v0"] is not None]
         val_warning = None
         if runnable:
@@ -1441,7 +1647,7 @@ class Orchestrator:
                 win = eligible[pick]
         else:
             win, reason = results[0], "fallback"
-        self._emit("candidates", claim_id=claim.id, k=k, chosen=win["i"], chosen_hash=h(win["code"]), reason=reason,
+        self._emit("candidates", claim_id=claim.id, k=len(results), requested=k, chosen=win["i"], chosen_hash=h(win["code"]), reason=reason,
                    candidates=[{"index": r["i"], "code_hash": h(r["code"]), "runnable": r["v0"] is not None,
                                 "val": ({"metric": r["val"]["metric"], "value": r["val"]["value"]} if r["val"] else None)}
                                for r in results])
@@ -1482,7 +1688,17 @@ class Orchestrator:
             devs, dropped, cuts = find_deviations(
                 lambda system, user: self._ask("extract", system, user, max_tokens=REPO_DIFF_MAX_TOKENS, temperature=0.0),
                 code, files, dataset or "the dataset")
-        except (CostLimitExceeded, BillingBlocked, BudgetExceeded):
+        except (CostLimitExceeded, BudgetExceeded):
+            if getattr(self, 'allow_test_feedback', False):
+                raise
+            budget = spend_guard.current_budget.get()
+            if budget is not None:
+                budget.check()
+            self._emit('repo_diff', claim_id=claim.id, result='incomplete', from_hash=h(code), reason='Optional comparison exceeds the spending limit')
+            dossier.repo_diff[claim.id] = {'result': 'incomplete', 'from_hash': h(code), 'reason': 'Optional comparison exceeds the spending limit',
+                                         'method_fidelity': 'not_checked'}
+            return v0, code, graph_ab, ['Optional repository comparison not completed within budget; validated selected code retained.'], discarded
+        except BillingBlocked:
             raise
         except (RuntimeError, ValueError) as exc:
             self._emit("repo_diff", claim_id=claim.id, result="error", reason=str(exc)[:300], from_hash=h(code))
@@ -1519,6 +1735,9 @@ class Orchestrator:
             reason = "Reparatur lieferte denselben Code"
         elif (getattr(self, "allow_test_feedback", False) and self._fault_check(claim, dossier, new_h, seed, nv)) or self._val_fault_check(claim, new_h, seed):
             reason = "neuer Code faellt beim Fehler-Check durch"
+        elif (not getattr(self, 'allow_test_feedback', False)
+              and self._selection_check(snapshot, new_code, seed, task, claim.metric, new_val).get('excluded')):
+            reason = "new code failed independent validation controls"
         elif not (isinstance(old_val, dict) and isinstance(new_val, dict) and "value" in old_val and "value" in new_val):
             reason = "Validierungswert fehlt, alter Code bleibt"
         else:
@@ -1539,7 +1758,7 @@ class Orchestrator:
             return v0, code, graph_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Reparatur nicht uebernommen ({reason})"], discarded
         discarded.add(old_h)
         discarded.discard(new_h)
-        finish("adopted", "Fehler-Check, Ablation und Validierung bestanden", **val_info)
+        finish("adopted", "Validation and implementation checks passed" + ("; graph ablation passed" if new_ab is not None else ""), **val_info)
         return nv, new_code, new_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Code {old_h} durch {new_h} ersetzt"], discarded
 
     def _droplast_round(self, claim: Claim, dossier: Dossier, discarded: set[str], verdict: Verdict) -> None:
@@ -1706,6 +1925,8 @@ class Orchestrator:
             else:
                 branch, res = self._attempt(snapshot, code, seed, task, claim.metric, measure_coverage=seed == 0, **extra_kw)
             status, value = res["status"], res.get("measured")
+            if res.get('infrastructure'):
+                raise SandboxSetupError(res['detail'])
             summary = None
             if status == "ok":
                 status = "stabil" if abs(value - claim.target) <= claim.tolerance else "abweichung"
@@ -1817,7 +2038,14 @@ class Orchestrator:
         if self.claim_ids:
             claims = [c for c in claims if c.id in self.claim_ids]
         task = TASKS[paper["dataset"]]()
+        if getattr(self, 'independent_selection', False):
+            task = task.with_independent_selection()
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        contract = task.selection_info()
+        if contract:
+            self._warnings.append(f"Independent candidate selection uses {contract['selection_samples']} of {contract['total_validation_samples']} "
+                                  "validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. "
+                                  "Training/test splits are unchanged; this selection protocol differs from older runs.")
         run_dir = REPO_ROOT / "runs" / paper_id / ts
         run_dir.mkdir(parents=True, exist_ok=True)
         self.last_run_dir = run_dir
@@ -1837,6 +2065,7 @@ class Orchestrator:
         self._emit("run_start", paper_id=paper_id, title=paper["title"], mode_requested=requested, use_tavily=self.use_tavily,
                    use_setup_details=self.use_setup_details, paper_only=self.paper_only,
                    selection_policy='test_feedback_diagnostic' if getattr(self, 'allow_test_feedback', False) else 'validation_only',
+                   selection_contract=task.selection_info(),
                    models={"fast": self.settings.llm.model_fast, "code": self.settings.llm.model_code,
                            "reasoning": self.settings.llm.model_reasoning},
                    seeds=self.seeds or paper.get("seeds", DEFAULT_SEEDS), claims=[c.id for c in claims])
@@ -1901,11 +2130,13 @@ class Orchestrator:
             setup_missing=list(self._setup_missing) if getattr(self, "setup_v2", False) else [],
             spec=spec_as_dict(getattr(self, "spec", None)) if getattr(self, "spec", None) is not None else None,
             selection_policy='test_feedback_diagnostic' if getattr(self, 'allow_test_feedback', False) else 'validation_only',
+            selection_contract=task.selection_info(),
         )
 
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
         print(f"Basis-Snapshot bauen ({label}) ...")
-        key = paper["dataset"]
+        contract_key = hashlib.sha256(json.dumps([task.image, task.setup_cmds, task.selection_contract], sort_keys=True).encode()).hexdigest()[:12]
+        key = paper["dataset"] + '-' + contract_key
         if key not in self._snapshots:
             try:
                 self._snapshots[key] = self.sandbox.base_snapshot(task.image, task.setup_cmds, label=label)
@@ -1936,19 +2167,25 @@ def main() -> None:
     # Standard: Produktpfad mit Nachbau aus Paper und Autorencode. `--no-author-code` = die bisherige schlichte CLI-Konfiguration
     # (reiner Paper-Nachbau, ohne Produktschalter); `--paper-only`/`--no-tavily` lesen kein Repo, der Lauf faellt dann selbst zurueck.
     kw = {} if "--no-author-code" in sys.argv else product_kwargs(True)
+    orchestrator = None
     try:
-        Orchestrator(
+        orchestrator = Orchestrator(
             use_tavily="--no-tavily" not in sys.argv,
             fresh="--fresh" in sys.argv,
             setup_details="--no-setup-details" not in sys.argv,
             paper_only="--paper-only" in sys.argv,
             tavily_mode="fixture" if "--offline" in sys.argv else None,
             **kw,
-        ).run(paper_id, source="catalog" if "--catalog" in sys.argv else "benchmark")
+        )
+        orchestrator.run(paper_id, source="catalog" if "--catalog" in sys.argv else "benchmark")
     except BillingBlocked as exc:
         sys.exit(f"ABBRUCH: {exc}")
     except SandboxSetupError as exc:
         sys.exit(f"ABBRUCH: Sandbox-Setup fehlgeschlagen (Infrastruktur): {exc}")
+    finally:
+        close = getattr(orchestrator, 'close', None)
+        if close:
+            close()
 
 
 if __name__ == "__main__":

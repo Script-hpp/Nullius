@@ -46,6 +46,14 @@ def render_markdown(dossier: Dossier) -> str:
         lines += ['Code-Auswahl und Reparaturen: Validierung und strukturelle Pruefungen. Testmessungen steuerten keine Code-Aenderung.', '']
     elif dossier.selection_policy == 'test_feedback_diagnostic':
         lines += ['Diagnostischer Lauf: Testmessungen wurden als Rueckmeldung fuer Code-Aenderungen verwendet.', '']
+    if dossier.selection_contract:
+        info = dossier.selection_contract
+        lines += [f"Selection protocol {info['version']}: {info['selection_samples']} of {info['total_validation_samples']} validation "
+                  'windows/nodes were withheld from fitting and used for candidate selection. Checkpoints used the remaining visible validation data. '
+                  'Original training/test splits unchanged. This selection protocol differs from older runs.', '']
+        if info.get('inference'):
+            lines += [f"Forecast input contract {info['inference']}: histories exposed chronologically after fitting, "
+                      f"{info['deterministic_rechecks']} repeated-history spot checks. Method fidelity remains unchecked.", '']
     if dossier.warnings:
         lines.append("## Hinweise zur Belegbarkeit")
         lines.extend(f"- {w}" for w in dossier.warnings)

@@ -31,6 +31,15 @@ def main() -> None:
         cora_data.download_raw(raw)
         labels = cora_lcc_data.val_labels(raw, split)
         majority = cora_lcc_data.val_majority_baseline(raw, split)
+        if os.environ.get('NULLIUS_SELECTION_HOLDOUT') == '1':
+            from selection_contract import selection_ids
+            chosen = {str(i) for i in selection_ids([int(i) for i in labels])}
+            labels = {k: v for k, v in labels.items() if k in chosen}
+            import numpy as np
+            _, y, _ = cora_lcc_data.load_lcc(raw)
+            train, _, _ = cora_lcc_data.make_split(y, split)
+            klass = int(np.bincount(y[train]).argmax())
+            majority = sum(int(v) == klass for v in labels.values()) / len(labels)
     if set(preds) != set(labels):
         print(json.dumps({"status": "ungueltig", "reason": "val_predictions.csv: IDs unvollstaendig oder falsch"}))
         return
