@@ -1,0 +1,42 @@
+{
+ "module_level_features_S": {
+  "lr": [
+   "0.01",
+   true,
+   "raw"
+  ],
+  "batch_size": [
+   "64",
+   true,
+   "raw"
+  ],
+  "seq_len": [
+   "336",
+   true,
+   "raw"
+  ]
+ },
+ "cli_feature_S": {},
+ "known_M": {
+  "lr": [
+   "0.01",
+   true,
+   "runtime"
+  ],
+  "batch_size": [
+   "64",
+   true,
+   "runtime"
+  ],
+  "seq_len": [
+   "336",
+   true,
+   "runtime"
+  ],
+  "enc_in": [
+   "7",
+   true,
+   "runtime"
+  ]
+ }
+}
