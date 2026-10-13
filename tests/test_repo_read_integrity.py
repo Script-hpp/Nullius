@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from repro_agent import repo_source as rs
@@ -8,8 +9,12 @@ class Sandbox:
     def __init__(self, text): self.text, self.clones = text, 0
     def base_snapshot(self, *a, **k): self.clones += 1; return 'snapshot'
     def branch(self, *a): return 'branch'
-    def run(self, *a): return SimpleNamespace(stdout='models/NewForecast.py', exit_code=0)
-    def get_file(self, b, path): return b'new-commit' if path.endswith('.head_commit') else self.text.encode()
+    def run(self, *a):
+        data=b'models/NewForecast.py\0'
+        return SimpleNamespace(stdout=f'{len(data)}\n{data.count(0)}\n{hashlib.sha256(data).hexdigest()}\n', exit_code=0)
+    def get_file(self, b, path):
+        if path == '/tmp/.nullius_repo_listing': return b'models/NewForecast.py\0'
+        return b'new-commit' if path.endswith('.head_commit') else self.text.encode()
 
 
 def test_live_repository_ignores_old_fixture_without_overwriting_it(tmp_path, monkeypatch):

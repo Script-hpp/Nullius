@@ -189,9 +189,12 @@ class CloneSandbox:
         return "b"
 
     def run(self, branch, cmd, timeout_s):
-        return SimpleNamespace(stdout="100644 blob a 10\tmodel/train.py\n", stderr="", exit_code=0)
+        import hashlib
+        self.listing=b'100644 blob a 10\tmodel/train.py\0'
+        return SimpleNamespace(stdout=f'{len(self.listing)}\n{self.listing.count(0)}\n{hashlib.sha256(self.listing).hexdigest()}\n', stderr="", exit_code=0)
 
     def get_file(self, branch, path):
+        if path == '/tmp/.nullius_repo_listing': return self.listing
         return b"abcdef1234567\n" if path.endswith(".head_commit") else b"x = 1\n"
 
 

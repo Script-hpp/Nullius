@@ -44,7 +44,8 @@ def author_excerpt(docs, model: str, dataset: str, *, budget: int = MAX_AUTHOR_C
     # layer declarations. Whole pieces are retained or explicitly rejected.
     protocol = [d for p, d in repo.items() if p not in core and (
         TRAIN_RE.search(d.text) or 'add_argument(' in d.text or CONFIG_RE.search(p) or
-        START_RE.search(p) and (dataset.lower() in d.text.lower() or model.lower() in d.text.lower()))]
+        START_RE.search(p) and (dataset.lower() in d.text.lower() or model.lower() in d.text.lower() or
+                               dataset.lower() in p.lower() or model.lower() in p.lower()))]
     pieces = list(core.values()) + protocol
     # Schedule/preprocessing helpers are often imported by a trainer. Resolve them transitively against the full listing, with the
     # same completeness rule as the model core (E15). Files next to the claimed model (a generic experiment registry such as

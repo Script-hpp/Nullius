@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import ast
+import hashlib
 import re
 import shlex
 from dataclasses import asdict, dataclass, field
@@ -25,6 +26,7 @@ MAX_FILES = 12
 MAX_FILE_CHARS = 30_000
 MAX_IMPORTED = 6   # zusaetzliche, von den gewaehlten Dateien importierte lokale Module
 MAX_LISTING = 600
+MAX_LISTING_BYTES = 1_000_000
 MAX_SUBDIR_FILE_BYTES = 1_000_000   # Unterordner-Klon: groessere Dateien (Daten, Gewichte) kommen nicht in die Dateiliste
 MAX_SUBDIR_TOTAL_BYTES = 200_000_000   # Unterordner groesser als das: Klon wird abgelehnt (SandboxSetupError)
 
@@ -323,7 +325,47 @@ def model_file_in_listing(listing: list[str], model: str) -> str | None:
     """Datei, die nach dem Claim-Modell heisst (models/NLinear.py, gnnbench/models/gat.py), kuerzester Pfad zuerst."""
     m = model.lower()
     hits = [p for p in listing if p.endswith(".py") and p.rsplit("/", 1)[-1][:-3].lower() == m]
-    return min(hits, key=len) if hits else None
+    return min(hits, key=lambda p: (not re.search(r'(^|/)models?/', p, re.I), len(p))) if hits else None
+
+
+def forecast_selection(listing, chosen, model, dataset, read_file):
+    """Ensure the dataset launch preset and canonical model survive a bad file choice.
+
+    A named final/best preset only displaces grid-search scripts when the README
+    explicitly designates it. No result metric is used to choose a file.
+    """
+    from .experiment_settings import shell_calls, entrypoint
+    canonical = model_file_in_listing(listing, model)
+    if not canonical:
+        return chosen
+    ds = re.sub(r'[^a-z0-9]', '', dataset.lower())
+    scripts = [p for p in listing if p.endswith('.sh') and ds in re.sub(r'[^a-z0-9]', '', p.rsplit('/',1)[-1].lower())
+               and model.lower() in {seg.lower() for seg in p.split('/')}]
+    readmes = [p for p in listing if p.rsplit('/',1)[-1].lower() in ('readme.md', 'readme.rst', 'readme.txt')]
+    final = []
+    for path in readmes[:2]:
+        try: readme = read_file(path)
+        except OSError: continue
+        if re.search(r'_best[^.\n]*(?:optimal|final|reported|results)|(?:optimal|final|reported)[^.\n]*_best', readme, re.I):
+            final = [p for p in scripts if re.search(r'_best\.sh$', p, re.I)]
+            break
+    selected_scripts = final or scripts
+    if len(selected_scripts) > 4:
+        from .source_context import SourceContextBlocked
+        raise SourceContextBlocked('Author launch preset is ambiguous; too many dataset scripts to read safely')
+    # Exclude a different task variant when a canonical forecast model exists.
+    other_task = re.compile(r'(^|/)(AD|anomaly_detection|anomaly|classification|imputation)/', re.I)
+    filtered = [p for p in chosen if not (re.search(r'(^|/)models?/', canonical, re.I) and other_task.search(p))
+                and not (final and p in scripts and p not in final)]
+    starts = []
+    for path in selected_scripts:
+        try: text = read_file(path)
+        except OSError: continue
+        for _, call, _ in shell_calls(text):
+            script = entrypoint(call)
+            if script in listing and script not in starts:
+                starts.append(script)
+    return list(dict.fromkeys([canonical] + selected_scripts + starts + filtered))
 
 
 def model_config_in_listing(listing: list[str], model: str) -> list[str]:
@@ -457,7 +499,7 @@ def subdir_listing(ls_tree_out: str) -> list[str]:
     from .sandbox.base import SandboxSetupError
 
     paths, total = [], 0
-    for line in ls_tree_out.splitlines():
+    for line in ls_tree_out.split('\0') if '\0' in ls_tree_out else ls_tree_out.splitlines():
         meta, _, path = line.partition("\t")
         parts = meta.split()
         if len(parts) < 4 or not path:
@@ -473,6 +515,35 @@ def subdir_listing(ls_tree_out: str) -> list[str]:
 
 def unit_fixture_name(url: str, unit_key: str) -> str:
     return f"{_repo_key(url)}__{re.sub(r'[^A-Za-z0-9_.-]+', '_', unit_key)}.json"
+
+
+def verified_listing(sandbox, branch, command: str) -> str:
+    """Transfer the complete Git listing as a bounded, verified artifact.
+
+    Sandbox stdout may silently truncate at 64 KiB. Only the small size/hash
+    manifest uses stdout; the established file transport carries the listing.
+    """
+    from .source_context import SourceContextBlocked
+    path = '/tmp/.nullius_repo_listing'
+    result = sandbox.run(branch, f"cd /repo && {command} > {path} && wc -c < {path} && "
+                         f"tr -cd '\\000' < {path} | wc -c && "
+                         f"sha256sum < {path} | cut -d' ' -f1", 60)
+    if getattr(result, 'timed_out', False) or result.exit_code != 0:
+        raise SourceContextBlocked('Repository listing command failed; no experiment was started')
+    try:
+        size_text, count_text, digest = result.stdout.split()
+        size, count = int(size_text), int(count_text)
+        if size > MAX_LISTING_BYTES:
+            raise SourceContextBlocked(f'Repository listing exceeds the transfer limit ({size} bytes > {MAX_LISTING_BYTES}); no experiment was started')
+        if not 0 <= count <= size or not re.fullmatch(r'[0-9a-f]{64}', digest):
+            raise ValueError('Invalid listing manifest')
+        limited = getattr(sandbox, 'get_file_limited', None)
+        data = limited(branch, path, size) if limited else sandbox.get_file(branch, path)
+        if len(data) != size or data.count(0) != count or (size and not data.endswith(b'\0')) or hashlib.sha256(data).hexdigest() != digest:
+            raise ValueError('Listing size or hash mismatch')
+        return data.decode('utf-8')
+    except (OSError, ValueError) as exc:
+        raise SourceContextBlocked('Repository listing could not be verified; no experiment was started') from exc
 
 
 def read_repo(
@@ -516,10 +587,9 @@ def read_repo(
     )
     branch = sandbox.branch(snap)
     commit = sandbox.get_file(branch, "/repo/.head_commit").decode().strip()
-    if subdir:
-        listing = subdir_listing(sandbox.run(branch, f"cd /repo && git ls-tree -r -l HEAD -- {shlex.quote(subdir)}", 60).stdout)
-    else:
-        listing = sandbox.run(branch, "cd /repo && git ls-files", 60).stdout.splitlines()
+    listing_cmd = f"git ls-tree -r -l -z HEAD -- {shlex.quote(subdir)}" if subdir else "git ls-files -z"
+    listing_text = verified_listing(sandbox, branch, listing_cmd)
+    listing = subdir_listing(listing_text) if subdir else listing_text.split('\0')[:-1]
     chosen = select_files(llm, listing, claim_text, dataset, focus_model)
     if not chosen:   # beide Antworten ohne gueltigen Pfad: Namensheuristik statt leerem Ausschnitt, sichtbar gemacht
         chosen = heuristic_files(listing, model or "", dataset)
@@ -547,6 +617,10 @@ def read_repo(
             if mf and mf not in chosen:
                 chosen = [mf] + chosen
             chosen = chosen + [c for c in model_config_in_listing(listing, model) if c not in chosen]
+            from .setup_details import family_for
+            if family_for(dataset) == 'forecast':
+                chosen = forecast_selection(listing, chosen, model, dataset,
+                                            lambda p: sandbox.get_file(branch, f'/repo/{p}').decode(errors='replace'))
         read(chosen)
         if model:   # Modellklasse fehlt in der Auswahl (z. B. nur train.py gewaehlt): Dateien namens models.py/<Modell>.py nachladen
             from .setup_details import Doc
@@ -557,7 +631,13 @@ def read_repo(
         for _ in range(IMPORT_LEVELS):   # E15: Ketten von Trainingshelfern, begrenzt durch das Zeichenbudget
             budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
             nxt = []
+            mf = model_file_in_listing(listing, model) if model else None
+            core_imports = imported_files({mf: files[mf]}, listing, relative=True) if mf in files else []
             for p in imported_files(files, listing, relative=True):
+                # Experiment registries import every baseline; these are not
+                # dependencies of the claimed model. Keep its direct imports.
+                if mf and '/' in mf and p.rsplit('/',1)[0] == mf.rsplit('/',1)[0] and p not in core_imports:
+                    continue
                 if budget <= 0:
                     break
                 nxt.append(p)

@@ -114,7 +114,7 @@ def model_files(docs: list[Doc], model: str) -> list[Doc]:
     m = model.lower()
     cls = re.compile(rf"^\s*class\s+{re.escape(model)}\b", re.M | re.I)
     out = [d for d in docs if d.name.startswith("repo:") and _path(d).endswith(".py") and (_stem(_path(d)) == m or cls.search(d.text))]
-    return sorted(out, key=lambda d: (_stem(_path(d)) != m, len(d.text)))
+    return sorted(out, key=lambda d: (_stem(_path(d)) != m, not re.search(r'(^|/)models?/', _path(d), re.I), len(d.text)))
 
 
 def _imported_docs(src: list[Doc], docs: list[Doc]) -> list[Doc]:
@@ -350,6 +350,7 @@ SH_VALUE_RE = re.compile(r"--([A-Za-z_][\w-]*)(?:[ \t]+|=)(['\"]?)([^\s'\"]+)\2"
 DATA_FLAGS = {"data", "data_path", "dataset", "data_name", "dataset_name"}
 HORIZON_FLAGS = {"pred_len", "horizon", "prediction_length", "out_len", "output_len", "forecast_horizon"}
 MODEL_FLAGS = {"model", "model_name", "model_type"}
+FEATURE_FLAGS = {'features', 'feature'}  # argparse permits the unambiguous --feature abbreviation
 
 
 def _flag(name: str) -> str:
@@ -371,7 +372,8 @@ def _dataset_token(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", stem.lower())
 
 
-def call_matches(call: str, dataset: str | None = None, horizon: int | None = None, model: str | None = None) -> bool:
+def call_matches(call: str, dataset: str | None = None, horizon: int | None = None, model: str | None = None,
+                 features: str | None = None) -> bool:
     """Passt ein Aufruf zum Experiment des Claims? Nur ein ausdruecklich anderer Wert (Literal, keine Shell-Variable) schliesst ihn aus."""
     values: dict[str, list[str]] = {}
     for name, _, value in SH_VALUE_RE.findall(call):
@@ -393,6 +395,8 @@ def call_matches(call: str, dataset: str | None = None, horizon: int | None = No
         except ValueError:
             pass
     if model and (lits := literals(MODEL_FLAGS)) and model.lower() not in {v.lower() for v in lits}:
+        return False
+    if features and (lits := literals(FEATURE_FLAGS)) and any(v.upper() != features for v in lits):
         return False
     return True
 
@@ -423,7 +427,13 @@ def raw_items(docs: list[Doc], names: list[str], model: str, family: str, datase
         found: dict[str, list[tuple[str, str]]] = {}
         if path.endswith(".sh"):
             calls, rest = sh_invocations(d.text)
-            lines = [(ln, False) for ln in rest] + [(c, True) for c in calls if call_matches(c, dataset, horizon, model)]
+            from .experiment_settings import shell_calls
+            identities = {key: model for key in MODEL_FLAGS} if model else {}
+            if dataset: identities |= {key: dataset for key in DATA_FLAGS}
+            if horizon is not None: identities |= {key: horizon for key in HORIZON_FLAGS}
+            if family == 'forecast': identities |= {key: 'M' for key in FEATURE_FLAGS}
+            lines = [(ln, False) for ln in rest] + [(c, True) for _, c, _ in shell_calls(d.text, identities)
+                     if call_matches(c, dataset, horizon, model, 'M' if family == 'forecast' else None)]
         else:
             lines = [(ln, False) for ln in d.text.splitlines()]
         for line, is_call in lines:
@@ -532,7 +542,8 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
     normalize (F4 a, code_grounded): fehlt der `@commit` in der Quelle, wird sie auf die eindeutige Dokumentzeile abgebildet."""
     num, txt = keys_for(family, numeric_only)
     num_keys, txt_keys = {k for k, _ in num}, {k for k, _ in txt}
-    hay = {d.name: _norm(d.text) for d in docs}
+    from .experiment_settings import active_paper_text
+    hay = {d.name: _norm(active_paper_text(d.text) if d.name == 'paper' else d.text) for d in docs}
     kept, dropped = [], []
     for it in raw:
         if not isinstance(it, dict):
@@ -542,6 +553,8 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
         source = re.sub(r"\s*\(function body\)\s*$", "", source)
         if normalize:
             source = normalize_source(source, list(hay))
+            if source == 'discovery' and quote_in_text(quote, hay.get('paper', '')):
+                source = 'paper'  # discovery is provenance; the actual quoted document is the paper
         reason = ""
         if key not in num_keys | txt_keys:
             reason = "unbekannter Schluessel"
@@ -559,12 +572,23 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
             reason = "optionaler README-Hinweis"
         elif key in num_keys and not_training_context(quote):
             reason = "Zitat beschreibt Inferenz/Effizienz, nicht das Training"
+        elif key == 'seq_len' and ambiguous_length_quote(quote):
+            reason = "Zitat nennt mehrere Eingabelaengen, keine einzelne Experimentvorgabe"
         if reason:
             dropped.append({"item": it, "reason": reason})
             continue
         number = parse_number(key, value) if key in num_keys else None
         kept.append(SpecItem(key, value, quote, source, source_rank(source, quote), number, specific=_is_specific(source, model)))
     return kept, dropped
+
+
+def ambiguous_length_quote(quote: str) -> bool:
+    # A multi-column option header is not a selected setting. Preserve sentences
+    # that state input length and a separate prediction horizon.
+    columns = re.findall(r'\\multicolumn\{\d+\}\{[^}]*\}\{([\d.]+)\}', quote)
+    if len(set(columns)) > 1:
+        return True
+    return bool(re.search(r'(?:search|choices?|candidates?|range|lengths|windows)\b[^.\n]*\[?\d+(?:\s*[,/]\s*\d+){1,}', quote, re.I))
 
 
 def _rank_index(rank: str) -> int:
@@ -586,6 +610,7 @@ def resolve(items: list[SpecItem], family: str, numeric_only: bool = False,
     Rueckgabe (Eintraege in Schluesselreihenfolge, Schluessel ohne Beleg)."""
     num, txt = keys_for(family, numeric_only)
     order = [k for k, _ in num + txt]
+    order += sorted({i.key for i in items if i.origin == 'runtime' and i.key not in order})
     out, missing = [], []
     for key in order:
         group = sorted((i for i in items if i.key == key), key=lambda i: _rank_index(i.rank))
@@ -633,8 +658,15 @@ def drop_run_script_defaults(excerpt: str, dataset: str | None = None, horizon: 
     heads = list(SECTION_RE.finditer(excerpt))
     sections = [(m.group(1), excerpt[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(excerpt)]) for i, m in enumerate(heads)]
     is_sh = lambda name: name.split(" (")[0].split("@")[0].endswith(".sh")   # Name wie "repo:scripts/etth1.sh@0c11366"
-    flags = {f for name, body in sections if is_sh(name) for call in sh_invocations(body)[0]
-             if call_matches(call, dataset, horizon, model) for f in SH_FLAG_RE.findall(call)}
+    from .experiment_settings import shell_calls
+    identities = {key: horizon for key in HORIZON_FLAGS if horizon is not None}
+    identities |= {key: model for key in MODEL_FLAGS if model}
+    identities |= {key: dataset for key in DATA_FLAGS if dataset}
+    if horizon is not None:
+        identities |= {key: 'M' for key in FEATURE_FLAGS}
+    flags = {f for name, body in sections if is_sh(name) for _, call, _ in shell_calls(body, identities)
+             if call_matches(call, dataset, horizon, model, 'M' if horizon is not None else None)
+             for f in SH_FLAG_RE.findall(call)}
     if not flags:
         return excerpt, []
     dropped: list[str] = []
@@ -697,9 +729,136 @@ def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], na
     den Aufrufen dieses Experiments (E09); Mechanismen ohne Gegenstueck im Modellkern fallen weg (N04)."""
     horizon = FORECAST_HORIZON if family == "forecast" else None
     raw = raw_items(docs, names, model, family, dataset=dataset, horizon=horizon)
-    items, missing = resolve(kept + raw, family, True, corroborate=paper_numbers(details, kept))
+    # Preserve primary-source Discovery settings independently of model recall.
+    discovery_raw = [{'key': k, 'value': d.value, 'quote': d.quote, 'source': d.source}
+                     for d in details if d.source == 'discovery' and not getattr(d, 'excluded', '')
+                     for k in quote_params(d.topic) if k in {key for key, _ in keys_for(family, True)[0]}]
+    discovered, _ = verify_entries(discovery_raw, docs, model, family, True, normalize=True)
+    for item in discovered:
+        item.origin = 'source_detail'
+    lengths = {i.number for i in discovered if i.key == 'seq_len'}
+    runtime = runtime_items(docs, names, model, family, dataset, next(iter(lengths)) if len(lengths) == 1 else None)
+    runtime_keys = {i.key for i in runtime}
+    raw = [i for i in raw if i.key not in runtime_keys]
+    kept = [i for i in kept if not (i.source.startswith('repo:') and i.key in runtime_keys)]
+    for item in discovered:
+        if item.key == 'seq_len':
+            conflicts = [r for r in runtime if r.key == item.key and r.number != item.number]
+            if conflicts:
+                from .source_context import SourceContextBlocked
+                raise SourceContextBlocked('Author launch input length conflicts with the selected source setting; no experiment was started')
+    items, missing = resolve(kept + raw + discovered + runtime, family, True, corroborate=paper_numbers(details, kept))
+    ambiguous = [i.key for i in items if i.tie and any(r.key == i.key for r in runtime)]
+    if ambiguous:
+        from .source_context import SourceContextBlocked
+        raise SourceContextBlocked('Author launch settings remain ambiguous: ' + ', '.join(ambiguous) +
+                                   '. No experiment was started')
     items, inactive = inactive_mechanisms(items, docs, model)
     return items, missing, inactive
+
+
+def runtime_items(docs: list[Doc], names: list[str], model: str, family: str, dataset: str | None, selected_length=None) -> list[SpecItem]:
+    """Effective settings of matching launch commands, never executing the authors' code."""
+    if family != 'forecast':
+        return []
+    import ast
+    import math
+    from .experiment_settings import shell_calls, entrypoint, python_settings, namespace_reads
+    repo = {_path(d): d for d in docs if d.name.startswith('repo:')}
+    active = set()
+    for doc in model_core_docs(docs, model):
+        try: tree = ast.parse(doc.text)
+        except SyntaxError: continue
+        active.update(n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute) and
+                      isinstance(n.value, ast.Name) and n.value.id in ('configs', 'config', 'args', 'cfg'))
+    common = {k for k, _ in keys_for(family, True)[0]}
+    architectural = {'hidden', 'layers', 'heads', 'dropout'}
+    infrastructure = {'seed', 'gpu', 'devices', 'use_gpu', 'use_multi_gpu', 'num_workers', 'itr', 'is_training'}
+    out = []
+    incompatible_lengths = False
+    for doc in docs:
+        if doc.name not in names or not _path(doc).endswith('.sh'): continue
+        identities = {key: FORECAST_HORIZON for key in HORIZON_FLAGS} | {key: model for key in MODEL_FLAGS}
+        if dataset: identities |= {key: dataset for key in DATA_FLAGS}
+        identities |= {key: 'M' for key in FEATURE_FLAGS}
+        for original, expanded, bindings in shell_calls(doc.text, identities):
+            if not call_matches(expanded, dataset, FORECAST_HORIZON, model, 'M'): continue
+            script = repo.get(entrypoint(expanded))
+            if script is None: continue
+            try: script_tree = ast.parse(script.text)
+            except SyntaxError: continue
+            if not any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in ('parse_args', 'parse_known_args')
+                       for n in ast.walk(script_tree)):
+                continue  # no observed argparse namespace to interpret; retain existing source-literal rules
+            values, evidence = python_settings(script.text, expanded, [d.text for p, d in repo.items() if p.endswith('.py') and d is not script])
+            if any(key in evidence and key not in values for key in FEATURE_FLAGS | {'enc_in'}):
+                from .source_context import SourceContextBlocked
+                raise SourceContextBlocked('Author launch feature/channel identity is unresolved; no experiment was started')
+            if any(values.get(key, 'M') != 'M' for key in FEATURE_FLAGS) or values.get('enc_in', 7) != 7:
+                from .source_context import SourceContextBlocked
+                raise SourceContextBlocked('Author launch feature/channel identity is incompatible; no experiment was started')
+            if selected_length is not None and 'seq_len' in values and values['seq_len'] != selected_length:
+                incompatible_lengths = True
+                continue
+            for identity, desired in [('model', model), ('model_name', model), ('model_type', model)]:
+                if identity in evidence and str(values.get(identity, '')).lower() != model.lower():
+                    from .source_context import SourceContextBlocked
+                    raise SourceContextBlocked('Author launch model does not match the selected method; no experiment was started')
+            for identity in HORIZON_FLAGS:
+                if identity in evidence and values.get(identity) != FORECAST_HORIZON:
+                    from .source_context import SourceContextBlocked
+                    raise SourceContextBlocked('Author launch prediction horizon is unresolved or incompatible; no experiment was started')
+            for identity in DATA_FLAGS - {'data_path'}:
+                if dataset and identity in evidence and _dataset_token(str(values.get(identity, ''))) != _dataset_token(dataset):
+                    from .source_context import SourceContextBlocked
+                    raise SourceContextBlocked('Author launch dataset is unresolved or incompatible; no experiment was started')
+            unresolved = sorted(name for name in set(evidence) - set(values) if name in active or
+                                ALIAS_KEY.get(name.lower(), name) in common - architectural)
+            if unresolved:
+                from .source_context import SourceContextBlocked
+                raise SourceContextBlocked('Author launch has unresolved model parameters: ' + ', '.join(unresolved) +
+                                           '. No experiment was started')
+            explicit = {_flag(n) for n, _, _ in SH_VALUE_RE.findall(expanded)} - infrastructure
+            read = set().union(*(namespace_reads(d.text, values) for d in repo.values()))
+            explicit &= read
+            # Derived constructor values already include their source inputs.
+            # Do not demand redundant CONFIG entries for intermediate CLI knobs.
+            derived_inputs = {name for key in active if key in evidence and '\n' in evidence[key]
+                              for name in re.findall(r'args\.(\w+)', evidence[key]) if name != key}
+            for name, value in values.items():
+                key = ALIAS_KEY.get(name.lower()) or name
+                if key in architectural and name not in active: continue
+                if key not in common and name not in active and (name not in explicit or name in derived_inputs): continue
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value): continue
+                source, quote = runtime_witness(doc, script, name, evidence.get(name, ''), original, bindings)
+                out.append(SpecItem(key, str(value), quote, source,
+                                    'start script', value, origin='runtime'))
+    if incompatible_lengths and not out:
+        from .source_context import SourceContextBlocked
+        raise SourceContextBlocked('No author launch matches the selected input length; no experiment was started')
+    return out
+
+
+def runtime_witness(doc, script, name, evidence, original, bindings):
+    """One actual source fragment for a derived setting, never a synthesized quote."""
+    parts = re.split(r'\n(?=[A-Za-z_]\w*\.\w+\s*[+*/-]?=)', evidence)
+    if len(parts) > 1:
+        return script.name, parts[-1]  # the original post-parse arithmetic statement
+    if quote_in_text(evidence, _norm(script.text)):
+        return script.name, evidence
+    if quote_in_text(evidence, _norm(doc.text)):
+        return doc.name, evidence
+    for flag, _, raw in SH_VALUE_RE.findall(original):
+        if _flag(flag) != name.lower(): continue
+        var = re.fullmatch(r'\$(?:\{(\w+)\}|(\w+))', raw)
+        if var:
+            bound = var[1] or var[2]
+            for line in doc.text.splitlines():
+                if re.match(rf'\s*(?:for\s+{re.escape(bound)}\s+in\b|(?:export\s+)?{re.escape(bound)}\s*=)', line):
+                    return doc.name, line.strip()
+    # Retain a real original flag fragment even when its value came from a binding.
+    match = re.search(rf'--{re.escape(name)}(?:\s+|=)[^\s\\]+', doc.text)
+    return (doc.name, match[0]) if match else (script.name, evidence)
 
 
 def build_spec(ask, details: list[SetupDetail], docs: list[Doc], claim_text: str, dataset: str, numeric_only: bool = False,
