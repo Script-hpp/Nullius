@@ -74,45 +74,150 @@ def _used_keys(tree: ast.Module, cfg: ast.Assign) -> set[str]:
     return used
 
 
+DROPOUT_CALLEE_RE = re.compile(r"dropout", re.I)   # nn.Dropout, Dropout2d, AlphaDropout, F.dropout
+
+
+def _callee(node: ast.Call) -> str:
+    f = node.func
+    return f.attr if isinstance(f, ast.Attribute) else f.id if isinstance(f, ast.Name) else ""
+
+
+def _names(node: ast.AST) -> set[str]:
+    out = set()
+    for n in ast.walk(node):
+        if isinstance(n, ast.Name):
+            out.add(n.id)
+        elif isinstance(n, ast.Attribute):
+            out.add(n.attr)
+    return out
+
+
+def _training_loader(call: ast.Call, targets: set[str]) -> bool:
+    """E10: Batchgroesse eines Trainings-Loaders, nicht eines Retrieval-, Vorberechnungs- oder Test-Loaders. Training erkennt man am Namen
+    (Ziel oder Argument mit 'train') oder an shuffle=True."""
+    if any(kw.arg == "shuffle" and isinstance(kw.value, ast.Constant) and kw.value.value is True for kw in call.keywords):
+        return True
+    names = targets | {x for a in call.args for x in _names(a)} | {x for kw in call.keywords if kw.arg != "batch_size" for x in _names(kw.value)}
+    return any("train" in n.lower() for n in names)
+
+
+def _keyword_applies(key: str, arg: str, call: ast.Call, targets: set[str]) -> bool:
+    """Gehoert das Schluesselwort `arg` dieses Aufrufs zum Steckbrief-Schluessel `key`? Gleiche Namen anderer Funktionen zaehlen nicht
+    (F.normalize(p=2) ist kein Dropout, DataLoader(memory, batch_size=1024) fuer ein Retrieval keine Trainingsbatchgroesse)."""
+    if arg not in KEYWORDS.get(key, ()):
+        return False
+    if key == "dropout" and arg == "p":
+        return bool(DROPOUT_CALLEE_RE.search(_callee(call)))
+    if key == "batch_size":
+        return _training_loader(call, targets)
+    return True
+
+
 def _keyword_conflicts(tree: ast.Module, spec: Spec) -> list[dict]:
+    targets: dict[int, set[str]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)) and isinstance(node.value, ast.Call):
+            tg = node.targets if isinstance(node, ast.Assign) else [node.target]
+            targets[id(node.value)] = {x for t in tg for x in _names(t)}
     out = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         for kw in node.keywords:
             for item in spec.enforced():
-                if kw.arg in KEYWORDS.get(item.key, ()) and isinstance(kw.value, ast.Constant):
+                if kw.arg and isinstance(kw.value, ast.Constant) and _keyword_applies(item.key, kw.arg, node, targets.get(id(node), set())):
                     v = kw.value.value
                     if isinstance(v, (int, float)) and not isinstance(v, bool) and not _equal(v, item.number):
                         out.append({"key": item.key, "literal": v, "line": node.lineno})
     return out
 
 
+def _module_level(body: list[ast.stmt]):
+    """Anweisungen, die beim Laden des Moduls genau einmal laufen: auch in if/with/try, nie in Schleifen (Lernraten-Plan) oder Funktionen."""
+    for node in body:
+        yield node
+        if isinstance(node, ast.If):
+            yield from _module_level(node.body + node.orelse)
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            yield from _module_level(node.body)
+        elif isinstance(node, ast.Try):
+            yield from _module_level(node.body + [s for h in node.handlers for s in h.body] + node.orelse + node.finalbody)
+
+
 def _config_mutations(tree: ast.Module, cfg: ast.Assign, spec: Spec) -> list[dict]:
-    """Known module-level overwrites must not undo the injected spec values.
-    Runtime learning-rate schedules inside loops/functions are a separate
-    protocol, not a conflicting initial configuration.
-    """
-    out = []
-    for node in tree.body:
+    """Known module-level overwrites must not undo the injected spec values (E11: also through an alias, a reassignment of the
+    whole dict, augmented assignment, __setitem__/pop/del and inside if/with/try). Runtime learning-rate schedules inside
+    loops/functions are a separate protocol, not a conflicting initial configuration. A write that cannot be evaluated counts as a
+    conflict: the enforced value is then no longer provable."""
+    enforced = {i.key: i for i in spec.enforced()}
+    aliases = {"CONFIG"}
+    out: list[dict] = []
+
+    def is_alias(node: ast.AST) -> bool:
+        return isinstance(node, ast.Name) and node.id in aliases
+
+    def report(key, value, node):
+        keys = list(enforced) if key is None else [key] if key in enforced else []
+        for k in keys:
+            lit = _literal(value) if isinstance(value, ast.AST) else value
+            if isinstance(lit, (int, float)) and not isinstance(lit, bool) and _equal(lit, enforced[k].number):
+                continue
+            shown = lit if isinstance(lit, (int, float)) and not isinstance(lit, bool) else (
+                ast.unparse(value) if isinstance(value, ast.AST) else str(value))
+            out.append({"key": k, "literal": shown, "line": node.lineno, "kind": "config_overwrite"})
+
+    for node in _module_level(tree.body):
         if node.lineno <= (cfg.end_lineno or cfg.lineno):
             continue
-        writes = []
         if isinstance(node, ast.Assign):
+            if is_alias(node.value):
+                aliases |= {t.id for t in node.targets if isinstance(t, ast.Name)}
+                continue
             for target in node.targets:
-                if isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name) and target.value.id == 'CONFIG':
-                    writes.append((_literal(target.slice), _literal(node.value)))
-        if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute)
-                and isinstance(node.value.func.value, ast.Name) and node.value.func.value.id == 'CONFIG'
-                and node.value.func.attr == 'update'):
-            call = node.value
-            if call.args and isinstance(call.args[0], ast.Dict):
-                writes += [(_literal(k), _literal(v)) for k, v in zip(call.args[0].keys, call.args[0].values) if k is not None]
-            writes += [(kw.arg, _literal(kw.value)) for kw in call.keywords if kw.arg is not None]
-        for key, value in writes:
-            for item in spec.enforced():
-                if key == item.key and isinstance(value, (int, float)) and not isinstance(value, bool) and not _equal(value, item.number):
-                    out.append({'key': key, 'literal': value, 'line': node.lineno, 'kind': 'config_overwrite'})
+                if isinstance(target, ast.Subscript) and is_alias(target.value):
+                    k = _literal(target.slice)
+                    report(k if isinstance(k, str) else None, node.value, node)
+                elif is_alias(target):   # ganzes Dict neu: erzwungene Werte muessen sichtbar gleich bleiben
+                    if isinstance(node.value, ast.Dict):
+                        given = {_literal(k): v for k, v in zip(node.value.keys, node.value.values) if k is not None}
+                        keeps = any(k is None and is_alias(v) for k, v in zip(node.value.keys, node.value.values))
+                        for key in enforced:
+                            if key in given:
+                                report(key, given[key], node)
+                            elif not keeps:
+                                report(key, "<removed by reassignment>", node)
+                    else:
+                        report(None, node.value, node)
+        elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Subscript) and is_alias(node.target.value):
+            k = _literal(node.target.slice)
+            report(k if isinstance(k, str) else None, ast.unparse(node), node)
+        elif isinstance(node, ast.Delete):
+            for target in node.targets:
+                if isinstance(target, ast.Subscript) and is_alias(target.value):
+                    k = _literal(target.slice)
+                    report(k if isinstance(k, str) else None, "<deleted>", node)
+        elif (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute)
+              and is_alias(node.value.func.value)):
+            call, attr = node.value, node.value.func.attr
+            if attr == "update":
+                if call.args and isinstance(call.args[0], ast.Dict):
+                    for k, v in zip(call.args[0].keys, call.args[0].values):
+                        if k is None:
+                            report(None, v, node)
+                        elif isinstance(_literal(k), str):
+                            report(_literal(k), v, node)
+                elif call.args:
+                    report(None, call.args[0], node)
+                for kw in call.keywords:
+                    report(kw.arg, kw.value, node)
+            elif attr == "__setitem__" and len(call.args) == 2:
+                k = _literal(call.args[0])
+                report(k if isinstance(k, str) else None, call.args[1], node)
+            elif attr in ("pop", "__delitem__") and call.args:
+                k = _literal(call.args[0])
+                report(k if isinstance(k, str) else None, "<removed>", node)
+            elif attr in ("clear", "popitem"):
+                report(None, f"<{attr}>", node)
     return out
 
 
@@ -223,7 +328,8 @@ def failures(config: dict, items: list[dict]) -> list[dict]:
         out.append({"key": "CONFIG", "kind": "no_config"})
     else:
         out += [{"key": k, "kind": "unused"} for k in config.get("unused", [])]
-    out += [{"key": c["key"], "kind": "literal", "literal": c["literal"], "line": c["line"]} for c in config.get("conflicts", [])]
+    out += [{"key": c["key"], "kind": "overwrite" if c.get("kind") == "config_overwrite" else "literal", "literal": c["literal"],
+             "line": c["line"]} for c in config.get("conflicts", [])]
     out += [{"key": r["key"], "kind": "item", "reason": r["reason"]} for r in items if not r["ok"]]
     return out
 
@@ -248,6 +354,9 @@ def repair_message(fails: list[dict], spec: Spec) -> str:
                          "hyperparameters only from it.")
         elif f["kind"] == "unused":
             lines.append(f"- CONFIG[\"{f['key']}\"] is never read. Use CONFIG[\"{f['key']}\"] where {f['key']} is applied{src}.")
+        elif f["kind"] == "overwrite":
+            lines.append(f"- Line {f['line']} changes CONFIG[\"{f['key']}\"] after the CONFIG block ({f['literal']}). Remove this write; "
+                         f"the reference value must reach training unchanged{src}.")
         elif f["kind"] == "literal":
             lines.append(f"- Line {f['line']} hard-codes {f['key']} = {f['literal']!r}. Use CONFIG[\"{f['key']}\"] instead{src}.")
         else:

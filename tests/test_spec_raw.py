@@ -32,7 +32,10 @@ def test_raw_items_only_unindented_lines_and_only_listed_docs():
 def test_raw_items_shell_flags_ambiguous_runs_are_skipped():
     sh = "python run.py --model A --seq_len 336 --learning_rate 0.005 --batch_size 32 \\\n  --e 1\npython run.py --model B --seq_len 96\n"
     got = {i.key: i.number for i in raw_items([Doc("repo:scripts/x.sh@a", sh)], ["repo:scripts/x.sh@a"], "A", "forecast")}
-    assert got == {"lr": 0.005, "batch_size": 32}   # seq_len hat zwei Werte im Skript -> nicht gelesen
+    assert got == {"lr": 0.005, "batch_size": 32, "seq_len": 336}   # E09: der Aufruf fuer Modell B verdraengt den Wert von A nicht mehr
+    both = "python run.py --seq_len 336 --learning_rate 0.005\npython run.py --seq_len 96 --learning_rate 0.005\n"
+    got = {i.key: i.number for i in raw_items([Doc("repo:scripts/x.sh@a", both)], ["repo:scripts/x.sh@a"], "A", "forecast")}
+    assert got == {"lr": 0.005}   # zwei passende Aufrufe mit verschiedenen seq_len: wirklich mehrdeutig -> nicht gelesen
 
 
 def test_yaml_config_values_including_float_tag():

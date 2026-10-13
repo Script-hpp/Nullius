@@ -40,6 +40,9 @@ GENERIC_NAMES = {"model", "models", "method", "methods", "ours", "our", "propose
                  "frozen", "this", "paper", "the", "and", "all"}
 
 
+IMPORT_LEVELS = 5   # Importebenen im Steckbrief-Modus; das Zeichenbudget (IMPORT_CHAR_BUDGET) bleibt die harte Grenze
+
+
 @dataclass
 class RepoDump:
     url: str
@@ -49,6 +52,7 @@ class RepoDump:
     subdir: str = ""   # gelesener Unterordner eines Sammel-Repos (Pfade in `files` bleiben relativ zur Repo-Wurzel)
     listing: list[str] = field(default_factory=list)
     truncation: list[dict] = field(default_factory=list)
+    ref: str = ""      # E16: ausdruecklich angeforderter Ref, der ausgecheckt wurde ("" = Standard-Branch)
 
 
 @dataclass(frozen=True)
@@ -58,6 +62,7 @@ class RepoLink:
     subdir: str      # Unterordner in Sammel-Repos ("tsmixer" bei google-research/google-research/tree/master/tsmixer), sonst ""
     strength: str    # "strong" (Hinweis wie "available at"), "weak" (Hinweiswort davor), "single" (einziges Repo im Text)
     pos: int
+    ref: str = ""    # E16: ausdruecklich verlinkter Branch/Tag/Commit (`tree/v1/...`); "" = Standard-Branch
 
     @property
     def root(self) -> str:
@@ -65,7 +70,10 @@ class RepoLink:
 
     @property
     def target(self) -> str:
-        return f"{self.root}/tree/HEAD/{self.subdir}" if self.subdir else self.root
+        ref = self.ref or "HEAD"
+        if self.subdir:
+            return f"{self.root}/tree/{ref}/{self.subdir}"
+        return f"{self.root}/tree/{self.ref}" if self.ref else self.root
 
 
 def normalize_pdf_text(text: str) -> str:
@@ -94,6 +102,25 @@ def parse_github_url(url: str, lenient: bool = False) -> tuple[str, str, str] | 
     return owner, repo, subdir
 
 
+# Links auf den Standard-Branch: "tree/master/..." in aelteren Papers meint den damaligen Standard-Branch; viele Repos heissen inzwischen
+# "main". Diese Namen bleiben beim Standard-Branch (HEAD), jeder andere Ref (Tag, Release-Branch, Commit) wird exakt ausgecheckt.
+DEFAULT_REFS = frozenset({"head", "main", "master"})
+SAFE_REF_RE = re.compile(r"[\w][\w./-]*")
+
+
+def requested_ref(url: str) -> str:
+    """E16: Ref aus `.../tree/<ref>/...` einer GitHub-URL, wenn er nicht der Standard-Branch ist; sonst "". Unsichere Refs: ValueError."""
+    m = GITHUB_URL_RE.match((url or "").strip())
+    if not m:
+        return ""
+    segs = [x for x in m.group(3).split("/") if x]
+    if len(segs) < 2 or segs[0] != "tree" or segs[1].lower() in DEFAULT_REFS:
+        return ""
+    if not SAFE_REF_RE.fullmatch(segs[1]) or ".." in segs[1]:
+        raise ValueError(f"unsafe git ref in repository URL: {segs[1]!r}")
+    return segs[1]
+
+
 def find_repo_links(paper_text: str) -> list[RepoLink]:
     """Code-Links im Paper-Text, beste zuerst: (1) starker Hinweis ("The implementation is available at: ...", Reihenfolge im Text,
     Abstract vor Fussnoten), (2) schwacher Hinweis (naechstes Hinweiswort), (3) genau ein Repo im Text. Mehrere Repos ohne Hinweis
@@ -104,26 +131,30 @@ def find_repo_links(paper_text: str) -> list[RepoLink]:
         raw = m.group(0).rstrip(".,;:)>]'\"/")
         parsed = parse_github_url(raw)
         if parsed:
-            found.append((m.start(), *parsed))
+            try:
+                ref = requested_ref(raw)
+            except ValueError:
+                continue
+            found.append((m.start(), *parsed, ref))
     out: list[RepoLink] = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str, str, str]] = set()
     weak: list[tuple[int, RepoLink]] = []
-    for pos, owner, repo, subdir in found:
-        key = (owner.lower(), repo.lower(), subdir.lower())
+    for pos, owner, repo, subdir, ref in found:
+        key = (owner.lower(), repo.lower(), subdir.lower(), ref)
         if key in seen:
             continue
         seen.add(key)
         if STRONG_HINT.search(text[max(0, pos - 40): pos]):
-            out.append(RepoLink(owner, repo, subdir, "strong", pos))
+            out.append(RepoLink(owner, repo, subdir, "strong", pos, ref))
             continue
         window = text[max(0, pos - 120): pos]
         hits = [h.start() for h in WEAK_HINT.finditer(window)]
         if hits:
-            weak.append((len(window) - max(hits), RepoLink(owner, repo, subdir, "weak", pos)))
+            weak.append((len(window) - max(hits), RepoLink(owner, repo, subdir, "weak", pos, ref)))
     out += [link for _, link in sorted(weak, key=lambda x: x[0])]
     if not out and len({(f[1].lower(), f[2].lower()) for f in found}) == 1:   # genau ein Repo (Fussnote ohne Hinweiswort)
-        pos, owner, repo, subdir = found[0]
-        out.append(RepoLink(owner, repo, subdir, "single", pos))
+        pos, owner, repo, subdir, ref = found[0]
+        out.append(RepoLink(owner, repo, subdir, "single", pos, ref))
     return out
 
 
@@ -465,7 +496,11 @@ def read_repo(
         return dump
 
     clone_url, subdir = clone_plan(url)
-    if subdir:   # Sammel-Repo (google-research/google-research/tree/.../tsmixer): nur der Unterordner (sparse, ohne Blobs ausserhalb)
+    ref = requested_ref(url)
+    if ref:   # E16: Tag, Release-Branch oder Commit exakt auschecken; ist er nicht vorhanden, scheitert das Setup sichtbar (kein stiller HEAD)
+        clone_cmd = (f"git clone -q --filter=blob:none --no-checkout{' --sparse' if subdir else ''} {shlex.quote(clone_url)} /repo && cd /repo"
+                     + (f" && git sparse-checkout set {shlex.quote(subdir)}" if subdir else "") + f" && git checkout -q {shlex.quote(ref)}")
+    elif subdir:   # Sammel-Repo (google-research/google-research/tree/.../tsmixer): nur der Unterordner (sparse, ohne Blobs ausserhalb)
         clone_cmd = (f"git clone -q --depth 1 --filter=blob:none --sparse {shlex.quote(clone_url)} /repo && "
                      f"cd /repo && git sparse-checkout set {shlex.quote(subdir)}")
     else:
@@ -519,7 +554,7 @@ def read_repo(
 
             if not model_files([Doc(f"repo:{p}", t) for p, t in files.items()], model):
                 read([p for p in heuristic_model_files(listing, model) if p not in files][:2])
-        for _ in range(2):   # zwei Ebenen
+        for _ in range(IMPORT_LEVELS):   # E15: Ketten von Trainingshelfern, begrenzt durch das Zeichenbudget
             budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
             nxt = []
             for p in imported_files(files, listing, relative=True):
@@ -534,7 +569,7 @@ def read_repo(
         read(chosen)
         read(imported_files(files, listing)[:MAX_IMPORTED])
     dump = RepoDump(url=url, commit=commit, files=files, n_tracked=len(listing), subdir=subdir,
-                    listing=listing, truncation=cuts)
+                    listing=listing, truncation=cuts, ref=ref)
     if mode == "live":
         return dump
     fixture_dir.mkdir(parents=True, exist_ok=True)
