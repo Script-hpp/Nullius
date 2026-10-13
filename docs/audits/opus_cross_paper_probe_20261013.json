@@ -1,0 +1,108 @@
+{
+ "ceo_uncommitted_17_58": {
+  "FITS ETTh1 (tests fixture)": {
+   "enforced": {
+    "lr": "0.0005",
+    "epochs": "50",
+    "batch_size": "128",
+    "patience": "20",
+    "seq_len": "360",
+    "cut_freq": "106",
+    "enc_in": "7",
+    "pred_len": "96",
+    "train_mode": "1"
+   },
+   "runtime": [
+    "batch_size",
+    "cut_freq",
+    "enc_in",
+    "epochs",
+    "lr",
+    "patience",
+    "pred_len",
+    "seq_len",
+    "train_mode"
+   ],
+   "not_enforced": {}
+  },
+  "DLinear ETTh1 (LTSF-Linear fixture)": {
+   "enforced": {
+    "lr": "0.005",
+    "epochs": "10",
+    "batch_size": "32",
+    "patience": "3",
+    "seq_len": "336",
+    "pred_len": "96"
+   },
+   "runtime": [
+    "batch_size",
+    "enc_in",
+    "epochs",
+    "lr",
+    "patience",
+    "pred_len",
+    "seq_len"
+   ],
+   "not_enforced": {
+    "enc_in": "7"
+   }
+  },
+  "NLinear ETTh1 (same repo, script launches DLinear)": {
+   "enforced": {
+    "lr": "0.005",
+    "batch_size": "32",
+    "seq_len": "336"
+   },
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "MoHETS ETTh1 (weather scripts only)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "GCN Cora (graph family)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  }
+ },
+ "committed_410fd9f": {
+  "FITS ETTh1 (tests fixture)": {
+   "enforced": {
+    "lr": "0.0005",
+    "patience": "20"
+   },
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "DLinear ETTh1 (LTSF-Linear fixture)": {
+   "enforced": {
+    "lr": "0.005",
+    "batch_size": "32",
+    "seq_len": "336"
+   },
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "NLinear ETTh1 (same repo, script launches DLinear)": {
+   "enforced": {
+    "lr": "0.005",
+    "batch_size": "32",
+    "seq_len": "336"
+   },
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "MoHETS ETTh1 (weather scripts only)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  },
+  "GCN Cora (graph family)": {
+   "enforced": {},
+   "runtime": [],
+   "not_enforced": {}
+  }
+ }
+}

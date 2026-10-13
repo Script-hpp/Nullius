@@ -1,0 +1,102 @@
+{
+ "function_body_mutation": {
+  "batch_size": null,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "set_defaults": {
+  "batch_size": 64,
+  "learning_rate": 0.0005,
+  "seq_len": 360
+ },
+ "setattr_from_config_loop": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "dict_update": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "vars_update": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "other_name_opt": {
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "known_args_load_config": {
+  "batch_size": null,
+  "learning_rate": null,
+  "seq_len": null
+ },
+ "class_self_args_store": {
+  "batch_size": null,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "namespace_copy_alias": {
+  "batch_size": 256,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "horizon_loop_fixed_seq": [
+  [
+   "batch_size",
+   "256"
+  ],
+  [
+   "lr",
+   "0.02"
+  ],
+  [
+   "pred_len",
+   "96"
+  ],
+  [
+   "seq_len",
+   "720"
+  ]
+ ],
+ "dataset_loop": [
+  [
+   "batch_size",
+   "32"
+  ],
+  [
+   "lr",
+   "0.001"
+  ],
+  [
+   "pred_len",
+   "96"
+  ],
+  [
+   "seq_len",
+   "336"
+  ]
+ ],
+ "explicit_unread_flags": [
+  [
+   "batch_size",
+   "32"
+  ],
+  [
+   "lr",
+   "0.001"
+  ],
+  [
+   "pred_len",
+   "96"
+  ],
+  [
+   "seq_len",
+   "336"
+  ]
+ ],
+ "mutation_in_imported_module": "BLOCKED: Author launch has unresolved model parameters: batch_size. No experiment was started"
+}
