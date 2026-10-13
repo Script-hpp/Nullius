@@ -102,14 +102,14 @@ def parse_github_url(url: str, lenient: bool = False) -> tuple[str, str, str] | 
     return owner, repo, subdir
 
 
-# Links auf den Standard-Branch: "tree/master/..." in aelteren Papers meint den damaligen Standard-Branch; viele Repos heissen inzwischen
-# "main". Diese Namen bleiben beim Standard-Branch (HEAD), jeder andere Ref (Tag, Release-Branch, Commit) wird exakt ausgecheckt.
-DEFAULT_REFS = frozenset({"head", "main", "master"})
+# E16: Jeder ausdrueckliche Ref wird exakt ausgecheckt, auch `main` und `master` (der Standard-Branch des Repos kann ein anderer sein).
+# Nur `HEAD` bezeichnet selbst den Standard-Branch. Fehlt der Ref, scheitert das Setup sichtbar; es gibt keinen stillen Rueckfall.
+DEFAULT_REFS = frozenset({"head"})
 SAFE_REF_RE = re.compile(r"[\w][\w./-]*")
 
 
 def requested_ref(url: str) -> str:
-    """E16: Ref aus `.../tree/<ref>/...` einer GitHub-URL, wenn er nicht der Standard-Branch ist; sonst "". Unsichere Refs: ValueError."""
+    """E16: Ref aus `.../tree/<ref>/...` einer GitHub-URL; "" ohne Ref oder bei `HEAD`. Unsichere Refs: ValueError."""
     m = GITHUB_URL_RE.match((url or "").strip())
     if not m:
         return ""
