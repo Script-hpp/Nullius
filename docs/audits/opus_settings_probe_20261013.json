@@ -1,0 +1,135 @@
+{
+ "function_body_mutation": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "set_defaults": {
+  "batch_size": 64,
+  "learning_rate": 0.0005,
+  "seq_len": 360
+ },
+ "setattr_from_config_loop": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "setattr_module_level": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "dict_update": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "vars_update": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "other_name_opt": {
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "main_guard_mutation": {
+  "batch_size": null,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "module_level_known_branch": {
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "parse_known_args_config_file": {
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "seq_len": 360
+ },
+ "sh_conditional_assignment": [
+  {
+   "expanded": "python run.py --data ETTh1 --model FITS --pred_len 96 --learning_rate $lr",
+   "matches_ETTh1_96_FITS": true
+  }
+ ],
+ "sh_loop_multi_seq": [
+  {
+   "expanded": "python run.py --data ETTh1 --model FITS --pred_len 96 --seq_len $seq_len",
+   "matches_ETTh1_96_FITS": true
+  }
+ ],
+ "sh_loop_horizons_fixed_seq": [
+  {
+   "expanded": "python run.py --data ETTh1 --model FITS --pred_len $pred_len --seq_len 336",
+   "matches_ETTh1_96_FITS": true
+  }
+ ],
+ "two_scripts_runtime_items": [
+  [
+   "batch_size",
+   "64",
+   "repo:run.py@x"
+  ],
+  [
+   "lr",
+   "0.001",
+   "repo:run.py@x"
+  ],
+  [
+   "seq_len",
+   "360",
+   "repo:run.py@x"
+  ],
+  [
+   "pred_len",
+   "96",
+   "repo:run.py@x"
+  ],
+  [
+   "batch_size",
+   "64",
+   "repo:run.py@x"
+  ],
+  [
+   "lr",
+   "0.001",
+   "repo:run.py@x"
+  ],
+  [
+   "seq_len",
+   "720",
+   "repo:run.py@x"
+  ],
+  [
+   "pred_len",
+   "96",
+   "repo:run.py@x"
+  ]
+ ],
+ "two_scripts_resolved": [
+  [
+   "lr",
+   "0.001",
+   true
+  ],
+  [
+   "batch_size",
+   "64",
+   true
+  ],
+  [
+   "seq_len",
+   "360",
+   false
+  ],
+  [
+   "pred_len",
+   "96",
+   true
+  ]
+ ],
+ "graph_runtime_items": 0
+}
