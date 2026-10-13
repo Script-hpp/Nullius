@@ -1,0 +1,480 @@
+{
+  "paper": "FITS",
+  "paper_url": "https://arxiv.org/html/2307.03756v3",
+  "target": 0.372,
+  "tolerance": 0.01,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "settings_source": "live job ee039f0f plan/code 947d5088ab2c, not the paper preset",
+  "author_commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+  "source_hashes": {
+    "models/FITS.py": "11c28af651bada1ba3e1e19c1cec1e835cc4b974d75da27df7b84d322096c90c",
+    "models/NLinear.py": "4100df5a3432b5e0b4a4b50812e62c88aa03aca33c62727672df0c1b5b2fb125",
+    "scripts/FITS/etth1_best.sh": "0e63c9b20a099e89e3c75e69d37d54085bd4f11c660a31a79dcebc0a1f12c516",
+    "run_longExp_F.py": "f7f14594aa049d68b25b640b4f869a5414af55d6d0f69890a005e6d8688161dc",
+    "exp/exp_main_F.py": "85b70f874fa9a6ec1a40cf617ef4bc5ac340f36d214272a5286e2a5718d8db43",
+    "utils/tools.py": "b5c811ffffa4d1f249a594432f2a8816c119c316cba535948ed13b0034bfd05e",
+    "data_provider/data_factory.py": "3fbe2e862623bcc65c436341171a98c5b2b8a4536b23cc6693f7fa11fcebf15c"
+  },
+  "adapter_sha256": "28ed38815cd591b057a7b0b22882c57dd1e51e332b6f6dbaed96f55bfc59987f",
+  "contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+      "year",
+      "month",
+      "day",
+      "weekday",
+      "hour"
+    ]
+  },
+  "product_commit": "469fc10f11745680d33a59ed798b3a73a66485e3",
+  "dataset_sha256": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066",
+  "runs": [
+    {
+      "seed": 0,
+      "seconds": 34.16,
+      "result": {
+        "status": "ok",
+        "measured": 0.704047757939414,
+        "metrics": {
+          "mse": 0.704047757939414,
+          "mae": 0.5584641699098071
+        },
+        "baselines": {
+          "repeat": {
+            "mse": 1.2943705947845083,
+            "mae": 0.7131813544413363
+          },
+          "zero": {
+            "mse": 1.1099284100805409,
+            "mae": 0.7959633803546952
+          }
+        },
+        "coverage": null,
+        "val": {
+          "metric": "mse",
+          "value": 0.7260265254808319,
+          "baselines": {
+            "repeat": 0.8706257279171906,
+            "zero": 0.882098931582407
+          }
+        },
+        "metrics_droplast": {
+          "32": {
+            "mse": 0.7040739697413775,
+            "mae": 0.5584951286829558,
+            "windows": 2784,
+            "dropped": 1
+          },
+          "64": {
+            "mse": 0.7055454616400695,
+            "mae": 0.5599099147396642,
+            "windows": 2752,
+            "dropped": 33
+          },
+          "128": {
+            "mse": 0.7059847978533527,
+            "mae": 0.5606008487062228,
+            "windows": 2688,
+            "dropped": 97
+          },
+          "256": {
+            "mse": 0.6906656181805626,
+            "mae": 0.5582463193101287,
+            "windows": 2560,
+            "dropped": 225
+          }
+        },
+        "diagnostics": {
+          "pred_std": 0.699524935454493,
+          "target_std": 1.0527909706034841,
+          "corr": 0.606736559628662
+        },
+        "stdout_tail": ""
+      },
+      "training": {
+        "model": "FITS",
+        "train_windows": 8455,
+        "checkpoint_windows": 2209,
+        "epochs": [
+          {
+            "epoch": 1,
+            "training_loss": 0.5527439724766847,
+            "visible_validation_loss": 1.171054428902225,
+            "lr": 0.001
+          },
+          {
+            "epoch": 2,
+            "training_loss": 0.5342493019998074,
+            "visible_validation_loss": 1.1549731017886729,
+            "lr": 0.001
+          },
+          {
+            "epoch": 3,
+            "training_loss": 0.5322937526260362,
+            "visible_validation_loss": 1.1506168332652769,
+            "lr": 0.00095
+          },
+          {
+            "epoch": 4,
+            "training_loss": 0.5316676473753019,
+            "visible_validation_loss": 1.148457692153212,
+            "lr": 0.0009025
+          },
+          {
+            "epoch": 5,
+            "training_loss": 0.5316564569419081,
+            "visible_validation_loss": 1.1464856914851977,
+            "lr": 0.000857375
+          },
+          {
+            "epoch": 6,
+            "training_loss": 0.53167139558178,
+            "visible_validation_loss": 1.147284062012382,
+            "lr": 0.0008145062499999999
+          },
+          {
+            "epoch": 7,
+            "training_loss": 0.5314597794503877,
+            "visible_validation_loss": 1.146500131358271,
+            "lr": 0.0007737809374999998
+          },
+          {
+            "epoch": 8,
+            "training_loss": 0.5315172050261137,
+            "visible_validation_loss": 1.1469197178232498,
+            "lr": 0.0007350918906249999
+          }
+        ],
+        "fixed_parameters": {
+          "length": 360,
+          "horizon": 96,
+          "cut_freq": 106,
+          "H_order": 6,
+          "base_T": 24,
+          "batch_cli": 64,
+          "effective_batch": 128,
+          "learning_rate": 0.0005,
+          "epochs_max": 50,
+          "patience": 20,
+          "lradj": "type3",
+          "train_mode": 1,
+          "individual": false
+        },
+        "best_epoch": 5
+      }
+    },
+    {
+      "seed": 1,
+      "seconds": 32.77,
+      "result": {
+        "status": "ok",
+        "measured": 0.7034493656701997,
+        "metrics": {
+          "mse": 0.7034493656701997,
+          "mae": 0.5579132945437566
+        },
+        "baselines": {
+          "repeat": {
+            "mse": 1.2943705947845083,
+            "mae": 0.7131813544413363
+          },
+          "zero": {
+            "mse": 1.1099284100805409,
+            "mae": 0.7959633803546952
+          }
+        },
+        "coverage": null,
+        "val": {
+          "metric": "mse",
+          "value": 0.7257714437513292,
+          "baselines": {
+            "repeat": 0.8706257279171906,
+            "zero": 0.882098931582407
+          }
+        },
+        "metrics_droplast": {
+          "32": {
+            "mse": 0.7034739370365999,
+            "mae": 0.5579435004131132,
+            "windows": 2784,
+            "dropped": 1
+          },
+          "64": {
+            "mse": 0.7049115521793224,
+            "mae": 0.5593356169906829,
+            "windows": 2752,
+            "dropped": 33
+          },
+          "128": {
+            "mse": 0.7053580517507354,
+            "mae": 0.5600286956366721,
+            "windows": 2688,
+            "dropped": 97
+          },
+          "256": {
+            "mse": 0.6899670785515524,
+            "mae": 0.5576438656777399,
+            "windows": 2560,
+            "dropped": 225
+          }
+        },
+        "diagnostics": {
+          "pred_std": 0.6997651830229323,
+          "target_std": 1.0527909706034841,
+          "corr": 0.6071571022682908
+        },
+        "stdout_tail": ""
+      },
+      "training": {
+        "model": "FITS",
+        "train_windows": 8455,
+        "checkpoint_windows": 2209,
+        "epochs": [
+          {
+            "epoch": 1,
+            "training_loss": 0.5561667608492302,
+            "visible_validation_loss": 1.1966273793275806,
+            "lr": 0.001
+          },
+          {
+            "epoch": 2,
+            "training_loss": 0.5376763742304209,
+            "visible_validation_loss": 1.1691011898759482,
+            "lr": 0.001
+          },
+          {
+            "epoch": 3,
+            "training_loss": 0.5333675562658093,
+            "visible_validation_loss": 1.156409898529882,
+            "lr": 0.00095
+          },
+          {
+            "epoch": 4,
+            "training_loss": 0.5318479563928011,
+            "visible_validation_loss": 1.150807487791863,
+            "lr": 0.0009025
+          },
+          {
+            "epoch": 5,
+            "training_loss": 0.5314893995722135,
+            "visible_validation_loss": 1.1481581226639126,
+            "lr": 0.000857375
+          },
+          {
+            "epoch": 6,
+            "training_loss": 0.5311267046314297,
+            "visible_validation_loss": 1.1473472748977551,
+            "lr": 0.0008145062499999999
+          },
+          {
+            "epoch": 7,
+            "training_loss": 0.5313970551572063,
+            "visible_validation_loss": 1.1468453683714936,
+            "lr": 0.0007737809374999998
+          },
+          {
+            "epoch": 8,
+            "training_loss": 0.5312635503483542,
+            "visible_validation_loss": 1.1468795935312908,
+            "lr": 0.0007350918906249999
+          },
+          {
+            "epoch": 9,
+            "training_loss": 0.5312093054932175,
+            "visible_validation_loss": 1.146341659884522,
+            "lr": 0.0006983372960937497
+          },
+          {
+            "epoch": 10,
+            "training_loss": 0.5310581415665873,
+            "visible_validation_loss": 1.146429463573124,
+            "lr": 0.0006634204312890623
+          }
+        ],
+        "fixed_parameters": {
+          "length": 360,
+          "horizon": 96,
+          "cut_freq": 106,
+          "H_order": 6,
+          "base_T": 24,
+          "batch_cli": 64,
+          "effective_batch": 128,
+          "learning_rate": 0.0005,
+          "epochs_max": 50,
+          "patience": 20,
+          "lradj": "type3",
+          "train_mode": 1,
+          "individual": false
+        },
+        "best_epoch": 9
+      }
+    },
+    {
+      "seed": 2,
+      "seconds": 32.9,
+      "result": {
+        "status": "ok",
+        "measured": 0.7032144475842568,
+        "metrics": {
+          "mse": 0.7032144475842568,
+          "mae": 0.558165709918973
+        },
+        "baselines": {
+          "repeat": {
+            "mse": 1.2943705947845083,
+            "mae": 0.7131813544413363
+          },
+          "zero": {
+            "mse": 1.1099284100805409,
+            "mae": 0.7959633803546952
+          }
+        },
+        "coverage": null,
+        "val": {
+          "metric": "mse",
+          "value": 0.7268250149575918,
+          "baselines": {
+            "repeat": 0.8706257279171906,
+            "zero": 0.882098931582407
+          }
+        },
+        "metrics_droplast": {
+          "32": {
+            "mse": 0.703235773802372,
+            "mae": 0.5581943614888253,
+            "windows": 2784,
+            "dropped": 1
+          },
+          "64": {
+            "mse": 0.7046765289075235,
+            "mae": 0.5595919330510832,
+            "windows": 2752,
+            "dropped": 33
+          },
+          "128": {
+            "mse": 0.7051242352977295,
+            "mae": 0.5602754278384302,
+            "windows": 2688,
+            "dropped": 97
+          },
+          "256": {
+            "mse": 0.689719244550693,
+            "mae": 0.5578883563487979,
+            "windows": 2560,
+            "dropped": 225
+          }
+        },
+        "diagnostics": {
+          "pred_std": 0.6997291345621278,
+          "target_std": 1.0527909706034841,
+          "corr": 0.6073193725775009
+        },
+        "stdout_tail": ""
+      },
+      "training": {
+        "model": "FITS",
+        "train_windows": 8455,
+        "checkpoint_windows": 2209,
+        "epochs": [
+          {
+            "epoch": 1,
+            "training_loss": 0.5494969458968351,
+            "visible_validation_loss": 1.173504946888357,
+            "lr": 0.001
+          },
+          {
+            "epoch": 2,
+            "training_loss": 0.5341418943170345,
+            "visible_validation_loss": 1.1564194326815398,
+            "lr": 0.001
+          },
+          {
+            "epoch": 3,
+            "training_loss": 0.5323039782092427,
+            "visible_validation_loss": 1.1509684626606926,
+            "lr": 0.00095
+          },
+          {
+            "epoch": 4,
+            "training_loss": 0.531747428418109,
+            "visible_validation_loss": 1.1502209530360457,
+            "lr": 0.0009025
+          },
+          {
+            "epoch": 5,
+            "training_loss": 0.5315592994518352,
+            "visible_validation_loss": 1.1491908802502397,
+            "lr": 0.000857375
+          },
+          {
+            "epoch": 6,
+            "training_loss": 0.5315308255905454,
+            "visible_validation_loss": 1.1488834455393362,
+            "lr": 0.0008145062499999999
+          },
+          {
+            "epoch": 7,
+            "training_loss": 0.5315612010432013,
+            "visible_validation_loss": 1.148137344830278,
+            "lr": 0.0007737809374999998
+          },
+          {
+            "epoch": 8,
+            "training_loss": 0.5315106927671216,
+            "visible_validation_loss": 1.1461433336354685,
+            "lr": 0.0007350918906249999
+          },
+          {
+            "epoch": 9,
+            "training_loss": 0.5312207615510984,
+            "visible_validation_loss": 1.1478055862412937,
+            "lr": 0.0006983372960937497
+          },
+          {
+            "epoch": 10,
+            "training_loss": 0.5312787927687168,
+            "visible_validation_loss": 1.146959882715474,
+            "lr": 0.0006634204312890623
+          }
+        ],
+        "fixed_parameters": {
+          "length": 360,
+          "horizon": 96,
+          "cut_freq": 106,
+          "H_order": 6,
+          "base_T": 24,
+          "batch_cli": 64,
+          "effective_batch": 128,
+          "learning_rate": 0.0005,
+          "epochs_max": 50,
+          "patience": 20,
+          "lradj": "type3",
+          "train_mode": 1,
+          "individual": false
+        },
+        "best_epoch": 8
+      }
+    }
+  ],
+  "scope": "Author FITS kernel with the settings of live job ee039f0f (L90, cut_freq3, lr0.001, batch32, 10 epochs, patience3); checks whether 0.7036 comes from settings or from harness/agent code",
+  "protocol_differences": "Visible validation prefix/dense checkpoint windows, hidden last20%; seeds0/1/2; CPU; no author FLOP profiling RNG consumption",
+  "no_test_based_tuning": true,
+  "network_during_training": "none",
+  "complete": true,
+  "mean_mse": 0.7035705237312901,
+  "std_mse": 0.00042966381489306584,
+  "within_numeric_tolerance": false,
+  "fixed_parameters_note": "adapter metadata block still lists the published preset; the executed values are in the adapter file"
+}

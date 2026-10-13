@@ -38,3 +38,17 @@ Keine Hyperparameter, kein Zielwert, keine Methode und keine Auswahlregel. Der F
 (Rekonstruktion plus Forecast) bleibt Sache des Agenten; mit `train_mode 1` ist das Ausschneiden der
 letzten 96 Schritte laut `exp/exp_main_F.py` korrekt, und der Autorencode liegt nach `30c67b0` im Prompt.
 Ob der autonome Nachbau jetzt gelingt, zeigt nur ein neuer Live-Lauf.
+
+## Gegenprobe: woher kam 0.7036 im Lauf ee039f0f?
+
+Der Autorenkern `models/FITS.py` (Commit `d040bb0`) lief lokal im selben kausalen Vertrag, netzlos,
+mit genau den Werten des Live-Plans: L90, `cut_freq` 3, LR 0.001, Batch 32, 10 Epochen, Patience 3.
+Seeds 0/1/2: 0.70405 / 0.70345 / 0.70321, Mittel **0.70357 +/- 0.00043**. Der Live-Lauf hatte
+**0.70358 +/- 0.00061**. Mit dem veroeffentlichten Preset liefert derselbe Aufbau 0.37205.
+
+Damit ist belegt: Harness und Vertrag messen richtig, der Agentencode von ee039f0f setzte FITS
+funktional wie der Autorenkern um, und die gesamte Abweichung kommt aus dem falschen Setting
+(vor allem `cut_freq` 3: bei 90 Schritten liegt die Tagesperiode bei Frequenzindex 3.75 und wird
+abgeschnitten). Das stuetzt die Setting-Fixes aus `be1a643`/`30c67b0`; es ist kein Nachweis eines
+autonomen Erfolgs. Skript `scripts/review/fits_live_setting_probe.py`, Beleg
+`docs/audits/fits_live_setting_probe_20261014.json`. Keine Provideraufrufe.
