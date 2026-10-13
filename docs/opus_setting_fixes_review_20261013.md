@@ -102,3 +102,36 @@ falscher Wert dem Agenten aufgezwungen.
 
 Fail-closed bei mehr als vier Datensatzskripten und Gleichrang-Konflikten ohne Paperurteil: als bewusste
 Entscheidung akzeptiert; Blocker A zeigt aber, dass „unbekannt -> Stopp“ nur fuer wirklich unbestimmte Werte gelten darf.
+
+## Nachtrag 2: Schlusspruefung nach A/B-Nacharbeit
+
+Stand **2026-10-13, 17:58 UTC**, `ceo` `410fd9f` plus Diff `4621a43c…`. Scratch-Kopie, keine Calls/Downloads.
+**Gesamtsuite: 1551 passed, 20 skipped, 5 xfailed.** **Kein Blocker mehr.**
+
+| Pruefung | Ergebnis |
+| --- | --- |
+| Echte Skripte `SparseTSF/linear/etth1.sh`, `SegRNN/etth1.sh` (Horizontschleife) | kein Stopp; SparseTSF seq 720, batch 256, lr 0.02, epochs 30, patience 5, period 24; SegRNN seq 720, batch 64, lr 0.0003, seg 24, d_model 512 |
+| Zweites Skript nur mit Horizonten 336/720 neben konkretem 96-Aufruf | kein Stopp, Werte des 96-Aufrufs |
+| Mutationen: `def main`, `setattr`, `vars`/`__dict__`, `parse_known_args` + Neuzuweisung, `self.args` in Klasse | UNKNOWN |
+| Alias `hp = args; hp.batch_size = 256` (Modulebene) | 256 (richtig ausgewertet) |
+| `self.args`-Mutation im importierten `exp/exp_main.py` | Stopp „unresolved model parameters“ (fail-closed, akzeptiert) |
+
+Cross-Paper-Gate mit echten gecachten Autoren-Repos (`docs/audits/opus_cross_paper_probe_20261013.{py,json}`,
+deterministischer Teil von `build_spec`, Modellantwort leer):
+
+| Fall | committed `410fd9f` | neuer Stand |
+| --- | --- | --- |
+| FITS (`tests/fixtures/fits_runtime_settings.json`) | lr, patience | seq 360, batch 128, lr 0.0005, epochs 50, patience 20, cut 106, train_mode 1, enc_in 7, pred_len 96 |
+| DLinear (`cure-lab_LTSF-Linear`) | lr 0.005, batch 32, seq 336 | dazu epochs 10, patience 3 (argparse-Defaults von `run_longExp.py`, im Skript nicht ueberschrieben), pred_len 96; `enc_in` nicht erzwungen (7 vs 1, siehe unten) |
+| NLinear (gleiches Repo, Skript startet DLinear) | lr/batch/seq aus DLinear | unveraendert (kein Laufzeitwert) |
+| MoHETS (nur Weather-Skripte) | nichts | nichts |
+| GCN Cora (Graph) | nichts | nichts |
+
+Restpunkte (keine Blocker):
+1. **Feature-Modus nicht gebunden.** `Linear/univariate/etth1.sh` (`--feature S --enc_in 1`) zaehlt als passender
+   DLinear/ETTh1/96-Aufruf. Hier kostet das nur `enc_in` (Gleichstand, nicht erzwungen); bei abweichender lr waere
+   auch lr nicht erzwungen. `features`/`feature` = M als Identitaet binden (argparse kuerzt `--feature` zu `--features`;
+   `python_settings` fuehrt es als eigenen Namen).
+2. **NLinear-Altlast (wie committed):** Die alten Rohregeln nehmen weiter den Aufruf mit `--model $model_name`, obwohl die
+   neue Auswertung ihn als DLinear aufloest. Dieselbe Aufloesung sollte den Rohpfad fuer andere Modelle sperren.
+3. Gleichrang-Konflikte bleiben nicht erzwungen; ein eigener Stopp dafuer ist im Code nicht zu sehen.
