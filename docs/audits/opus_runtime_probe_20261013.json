@@ -1,0 +1,32 @@
+{
+  "image": "repro-snapshot:gate-etth1",
+  "image_id": "sha256:239848816c3fec2b100ed2716da1e41b171fe3f38d43badbd085e3adbc9db288",
+  "image_unchanged": true,
+  "agent_code_sha256": "b5aca9cb447ae60ffd4878ce9dfbca11c6a3e0e27307afa7253d0475dfdc8b49",
+  "static_guards_on_agent_code": {
+    "code_check": [],
+    "checkpoint_check": []
+  },
+  "A0_unmodified_local_put_file": {
+    "put_file_ok": false,
+    "error": "Command '['docker', 'cp', '/tmp/tmp3omjie4b', 'opus-audit-c1bef21f:/work/train.py']' returned non-zero exit status 1."
+  },
+  "A_product_local_sandbox_flags": {
+    "network_mode": "none",
+    "status": "fehler",
+    "measured": null,
+    "detail": "Smoke run (SMOKE=1) crashed:\nunshare: unshare failed: Operation not permitted\n(exit code 1)"
+  },
+  "B_unshare_permitted_with_hook": {
+    "network_mode": "none",
+    "status": "ok",
+    "measured": 0.370261673561698,
+    "detail": null
+  },
+  "C_unshare_permitted_without_hook": {
+    "network_mode": "none",
+    "status": "ungueltig",
+    "measured": null,
+    "detail": " return self.do_open(http.client.HTTPSConnection, req,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 1364, in do_open\n    raise URLError(err)\nurllib.error.URLError: <urlopen error [Errno -3] Temporary failure in name resolution>\n"
+  }
+}

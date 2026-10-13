@@ -1,0 +1,136 @@
+{
+  "base_commit": "e945e01c2e02ddf60635bf44b31698f859bb9cf9",
+  "network_disabled": true,
+  "product_files_unchanged": true,
+  "results": [
+    {
+      "probe": "repo_diff_adopts_unchecked_code",
+      "confirmed": true,
+      "observed": {
+        "repo_diff_result": "adopted",
+        "reason_text": "Fehler-Check, Ablation und Validierung bestanden",
+        "val_old": 0.8,
+        "val_new": 0.95,
+        "final_chosen_hashes": [
+          "4371e22bd084"
+        ],
+        "new_hash_static_val_use": "training",
+        "val_label_checked_hashes": [
+          "7cae74c953e7",
+          "9f79469e426b",
+          "b6c7c6996a26"
+        ],
+        "masked_run_for_new_code": false,
+        "ablation_before_adoption": false,
+        "verdict": "reproduziert"
+      }
+    },
+    {
+      "probe": "crash_repair_keeps_stale_spec_score",
+      "confirmed": true,
+      "observed": {
+        "selected_hash": "de63e5588594",
+        "selection_reason": "spec (1) + val",
+        "scored_hashes": [
+          "6357e7f7c5ce",
+          "7d0a983eef14"
+        ],
+        "selected_code_actual_score": [
+          0,
+          1
+        ],
+        "repair_trigger": "smoke crash in _run_seed (not quality loop)"
+      }
+    },
+    {
+      "probe": "clamped_visible_labels_win_selection",
+      "confirmed": true,
+      "observed": {
+        "static_verdict": "none",
+        "val_full": 1.0,
+        "val_masked": 0.14,
+        "chosen": 0
+      }
+    },
+    {
+      "probe": "ett_trainval_fit_wins_selection",
+      "confirmed": true,
+      "observed": {
+        "train_only": {
+          "val_mse": 0.905833029166238,
+          "test_mse": 0.9262410335489408
+        },
+        "train_plus_val": {
+          "val_mse": 0.8635587403855147,
+          "test_mse": 0.9150884743487745
+        },
+        "selected": "train_plus_val",
+        "val_advantage": 0.04227428878072326,
+        "test_advantage": 0.011152559200166334,
+        "note": "val advantage exceeds test advantage: validation is no longer an independent selection signal"
+      }
+    },
+    {
+      "probe": "real_script_defaults_and_rates",
+      "confirmed": true,
+      "observed": {
+        "dropped_defaults": [
+          "time_aware_weight"
+        ],
+        "etth1_96_call_sets_time_aware_weight": false,
+        "lr_in_raw_items": false,
+        "etth1_96_lr_in_script": "0.001",
+        "stored_live_event": "spec.dropped_defaults of job 175724ef contains time_aware_weight and learning_rate"
+      }
+    },
+    {
+      "probe": "config_variants_undetected",
+      "confirmed": true,
+      "observed": {
+        "augassign": {
+          "score": [
+            1,
+            1
+          ],
+          "effective_lr": 1.0
+        },
+        "dict_merge": {
+          "score": [
+            1,
+            1
+          ],
+          "effective_lr": 1.0
+        },
+        "setitem_call": {
+          "score": [
+            1,
+            1
+          ],
+          "effective_lr": 1.0
+        }
+      }
+    },
+    {
+      "probe": "guard_variants",
+      "confirmed": true,
+      "observed": {
+        "zero_times_input_placeholder_detected": false,
+        "dict_comprehension_alias_detected": false,
+        "docstring_word_rejected": [
+          "Netzwerk-Modul: 'socket' in Zeile 1"
+        ]
+      }
+    },
+    {
+      "probe": "duplicate_last_wins",
+      "confirmed": true,
+      "observed": {
+        "accepted": {
+          "5": "2",
+          "6": "0"
+        },
+        "rows": 3
+      }
+    }
+  ]
+}
