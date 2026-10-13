@@ -156,3 +156,35 @@ Restgrenzen (keine Blocker):
 
 Belege: `docs/audits/opus_b1b2_probe_20261013.{py,json}`, `opus_binder_edge_probe_final_20261013.json`,
 `opus_catalog_binding_probe_final_20261013.json`.
+
+## Nachtrag 2: Gespeicherte LaTeX-Quelle nach FITS-Liveabbruch `2d8719b4…`
+
+Stand **2026-10-13, 16:31 UTC**, ceo `261c0ca` plus uncommittete Aenderungen (Diff `55a8985d…`): Quellcache
+`logs/paper_sources`, Reserve `benchmark/source_reserves/2307.03756v3.json.gz`, zweiter Endpunkt `arxiv.org/src`,
+`ArxivSourceText`, `source_version` aus `candidate.source_evidence`. Scratch-Kopie, Downloads in den Proben ersetzt,
+keine Calls. 110 fokussierte Tests passed. Probe: `docs/audits/opus_source_cache_probe_20261013.{py,json}`.
+
+**Kein Blocker.** Die Identitaetspruefung haelt in allen Negativfaellen:
+
+| Fall | Ergebnis |
+| --- | --- |
+| Reserve fuer v3 (Hash `9022b12b…`, Text 127032 Zeichen) | genutzt, `from_cache=True` |
+| andere angeforderte Version (v4) | Stopp |
+| Dateiname v3, Inhalt v2 / andere Paper-ID / Art `pdf` | Stopp |
+| Text veraendert, Hash nicht passend / abgeschnittenes oder kaputtes JSON | Stopp |
+| frischer Download mit neuem Text | Download gewinnt, Cache ersetzt ihn nie |
+| HTML-Fehlerseite, PDF-Bytes | nicht als LaTeX dekodiert |
+| gespeicherte Datei nach Download | echte Antwort-URL, `from_cache=false`, Version v3 |
+
+Grenzen und kleine Nacharbeit:
+1. **Hash nur selbstkonsistent.** Ein Cache-Eintrag derselben Version mit anderem Text und neu berechnetem Hash wird
+   akzeptiert. Der Katalog kennt fuer FITS den erwarteten Hash; fuer Cache-Treffer `paper.sha256 ==
+   discovery_source.sha256` verlangen, wenn vorhanden. Der Binder faengt eine falsche Tabelle trotzdem ab.
+2. **Unbekannte Version waehlt die aelteste.** Ohne Version (API-Fehler, kein `source_version`) nimmt die sortierte
+   Glob-Liste v1 vor v3 und v10. Hoechste numerische Version waehlen und in der Warnung sagen, dass die aktuelle
+   Version unbekannt war. FITS ist nicht betroffen (v3 fest).
+3. **Ursache bleibt offen.** Der Stopp nach 7 s spricht gegen Zeitueberschreitung (30 s) und fuer schnellen
+   Verbindungs-, DNS- oder 4xx-Fehler vom Server-Netz. Die neue Meldung landet nur im Server-Log. Letzten
+   HTTP-Status bzw. Fehlerklasse (ohne URL-Parameter, ohne Geheimnisse) in die Stoppmeldung und das Ereignis
+   uebernehmen. Die Reserve deckt nur FITS ab; andere Papers stoppen bei gleichem Netzfehler weiter.
+4. **Quellenliste.** `_record_source` vermerkt den Cache nicht; nur Warnung und `paper_text.json` tragen `from_cache`.
