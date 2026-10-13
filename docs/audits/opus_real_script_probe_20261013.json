@@ -1,0 +1,4 @@
+{
+ "SparseTSF scripts/SparseTSF/linear/etth1.sh": "BLOCKED: Author launch prediction horizon is unresolved or incompatible; no experiment was started",
+ "SegRNN scripts/SegRNN/etth1.sh": "BLOCKED: Author launch prediction horizon is unresolved or incompatible; no experiment was started"
+}
