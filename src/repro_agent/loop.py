@@ -168,15 +168,18 @@ def select_candidate(vals: list[dict | None]) -> tuple[int, str]:
     return best[0], "val"
 
 
-_TRAILING_TAGS = re.compile(r"(?:\n[ \t]*<\|?/?\|?[A-Za-z_][\w|]*\|?>[ \t]*)+\s*\Z")
+# Schlusszeilen aus Tags (`</output>`, `<|im_end|>`) oder einzelnen Schlusszeichen (`}`, FITS live 2026-10-14)
+_TRAILING_TAGS = re.compile(r"(?:\n[ \t]*(?:<\|?/?\|?[A-Za-z_][\w|]*\|?>|[\]})\"'`]+)[ \t]*)+\s*\Z")
 
 
 def extract_code(text: str, lenient: bool = False) -> str:
     blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", text, flags=re.S)
+    if lenient:   # auch im geschlossenen Block: Schlusszeile vor ``` (Tag oder einzelnes Schlusszeichen) entfernen
+        blocks = [b if _is_python(b) else _TRAILING_TAGS.sub("\n", b) for b in blocks]
     if not blocks and lenient:   # nur Produktpfad (graph_repair): andere Sprachmarke, offener Block, Code ohne Block
         blocks = re.findall(r"```[A-Za-z0-9_+-]*[ \t]*\r?\n(.*?)(?:```|\Z)", text, flags=re.S)
         # Nemotron schliesst den Block manchmal mit einem Tag statt mit ``` (`</|tool_call|>`, `</output>`; SARAF 2026-10-14)
-        blocks = [_TRAILING_TAGS.sub("\n", b) for b in blocks]
+        blocks = [b if _is_python(b) else _TRAILING_TAGS.sub("\n", b) for b in blocks]   # gueltiger Code bleibt unberuehrt
         blocks = [b for b in blocks if _is_python(b)]
         if not blocks and _is_python(text) and re.search(r"^(import|from) ", text, flags=re.M):
             blocks = [text]
@@ -587,6 +590,7 @@ class Orchestrator:
         hoehere Temperatur (gleicher Prompt + gleiche Temperatur gaebe aus dem Cache dieselbe Antwort),
         hoeheres max_tokens und der Hinweis, nur Code zurueckzugeben."""
         last: ValueError | None = None
+        broken: str | None = None
         for i in range(3):
             first_max = CODE_RETRY_MAX_TOKENS if self._active_spec() is not None else None   # Steckbrief: Limit auch beim ersten Aufruf
             # Temperatur gedeckelt; die Versuchsnummer im Hinweis haelt den Cache-Schluessel auch an der Obergrenze verschieden
@@ -599,11 +603,23 @@ class Orchestrator:
             if getattr(resp, "finish_reason", None) == "length":
                 last = ValueError("Antwort abgeschnitten (finish_reason length)")
                 continue
+            lenient = getattr(self, "graph_repair", False)
             try:
-                return extract_code(resp.content, lenient=getattr(self, "graph_repair", False))
+                code = extract_code(resp.content, lenient=lenient)
             except ValueError as exc:
                 last = exc
                 self._emit("code_missing", try_n=i + 1, content_tail=(resp.content or "")[-1500:])   # Diagnose
+                continue
+            if lenient and not _is_python(code):
+                # Produktpfad: Syntaxfehler kostet sonst Sandbox-Lauf, Tavily-Fehlersuche und eine Reparatur (FITS live 2026-10-14);
+                # neu schreiben ist billiger. Bleibt jeder Versuch fehlerhaft, geht der erste wie bisher in die Reparatur.
+                broken = broken or code
+                last = ValueError("Code mit Syntaxfehler")
+                self._emit("code_missing", try_n=i + 1, reason="syntax", content_tail=code[-1500:])
+                continue
+            return code
+        if broken is not None:
+            return broken
         raise last  # type: ignore[misc]
 
     def _product_notes(self, task: Task) -> str:

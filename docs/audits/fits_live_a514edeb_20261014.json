@@ -1,0 +1,2050 @@
+{
+ "scope": "Live product run a514edeb-0751-40b1-968f-390d00faffcf on https://nullius.akca.dev after redeploy of main b4bb239 (quick check, 3 seeds, author code mode). Event stream recorded via SSE; llm_call/code_text/plan_text/tavily_call omitted.",
+ "summary": {
+  "job_id": "a514edeb-0751-40b1-968f-390d00faffcf",
+  "run_id": "disc_2307_03756--20261014-080542",
+  "verdict": {
+   "urteil": "reproduziert",
+   "measured_mean": 0.372031,
+   "measured_std": 5.3e-05,
+   "seeds": 3,
+   "target": 0.372,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "mode": "nachbau_autorencode",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_2307_03756/20261014-080542"
+  },
+  "seeds": [
+   0.3719943631187008,
+   0.37200731015273036,
+   0.3720914549998737
+  ],
+  "cost_net_usd": 0.2606,
+  "cost_gross_usd": 0.3101,
+  "n_events": 209
+ },
+ "events": [
+  {
+   "ts": 1791965141.719314,
+   "type": "queued",
+   "catalog_id": "disc_2307_03756",
+   "quick": true,
+   "entry": {
+    "id": "disc_2307_03756",
+    "arxiv_id": "2307.03756",
+    "title": "FITS: Modeling Time Series with $10k$ Parameters",
+    "dataset": "ETTh1",
+    "task": "ETTh1",
+    "claim": {
+     "method": "FITS",
+     "metric": "mse",
+     "target": 0.372,
+     "horizon": 96,
+     "quote": "FITS 0.372",
+     "input_length": 360
+    },
+    "protocol": "passt",
+    "column_check": null,
+    "github_url": "https://github.com/VEWOXIC/FITS",
+    "source_url": "https://arxiv.org/abs/2307.03756",
+    "origin": "discovery",
+    "benchmark": null,
+    "status": "ungeprueft",
+    "reason": null,
+    "checked_at": null,
+    "cost_gross_usd": null,
+    "verdict": null,
+    "run_id": null,
+    "jury": null
+   },
+   "mode_requested": "nachbau_autorencode"
+  },
+  {
+   "ts": 1791965141.7284954,
+   "type": "started",
+   "catalog_id": "disc_2307_03756"
+  },
+  {
+   "ts": 1791965142.121285,
+   "type": "run_start",
+   "paper_id": "disc_2307_03756",
+   "title": "FITS: Modeling Time Series with $10k$ Parameters",
+   "mode_requested": "nachbau_autorencode",
+   "use_tavily": true,
+   "use_setup_details": true,
+   "paper_only": false,
+   "selection_policy": "validation_only",
+   "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+     "year",
+     "month",
+     "day",
+     "weekday",
+     "hour"
+    ]
+   },
+   "models": {
+    "fast": "nvidia/Nemotron-3_5-Lightning",
+    "code": "nvidia/nemotron-3-super-120b-a12b",
+    "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+   },
+   "seeds": 3,
+   "claims": [
+    "disc_2307_03756_mse"
+   ]
+  },
+  {
+   "ts": 1791965142.1241307,
+   "type": "warning",
+   "text": "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren."
+  },
+  {
+   "ts": 1791965142.1245623,
+   "type": "warning",
+   "text": "Independent candidate selection uses 21 of 117 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs."
+  },
+  {
+   "ts": 1791965142.2973304,
+   "type": "source",
+   "kind": "paper",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "mode": "fixture",
+   "n_chars": 127032,
+   "retrieved_at": "2026-10-14T08:05:42+00:00",
+   "sha256": "9022b12b628fc1807f0ef11bfd7d1266f25b8575c1418afeb7bb90c251a00d64"
+  },
+  {
+   "ts": 1791965142.4139614,
+   "type": "target_check",
+   "claim_id": "disc_2307_03756_mse",
+   "verified_value": 0.372,
+   "configured_value": 0.372,
+   "agrees": true,
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "from_store": false
+  },
+  {
+   "ts": 1791965142.4149022,
+   "type": "target_resolved",
+   "claim_id": "disc_2307_03756_mse",
+   "value": 0.372,
+   "quote": "FITS & \\textbf{0.372} & \\textbf{0.404} & \\textbf{0.427} & \\textbf{0.424} & \\textbf{0.271} & \\textbf{0.331} & \\textbf{0.354} & \\textbf{0.377} & 0.303 & 0.337 & {\\underline{0.366}} & \\textbf{0.415} & \\textbf{0.162} & \\textbf{0.216} & \\textbf{0.268} & \\textbf{0.348}",
+   "table": "tab:FITSett",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "arxiv_version": "v3",
+   "column_check": "ok",
+   "caveat": null,
+   "from_store": false
+  },
+  {
+   "ts": 1791965148.048286,
+   "type": "repo_candidate",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "source": "paper",
+   "verdict": "accepted",
+   "reason": "title 'FITS: Modeling Time Series with $10k$ Parameters' in README",
+   "status": "official",
+   "status_reason": "linked in the paper text",
+   "evidence": "paper",
+   "live": true
+  },
+  {
+   "ts": 1791965148.0519207,
+   "type": "source",
+   "kind": "readme",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "mode": "live",
+   "n_chars": 15455,
+   "retrieved_at": "2026-10-14T08:05:48+00:00",
+   "sha256": "15ac38b43634291d14fe65a5e7ba37723d0f48427de5dd21400e11f0ae1219dc"
+  },
+  {
+   "ts": 1791965269.3959198,
+   "type": "setup_details",
+   "n": 32,
+   "dropped": 3,
+   "by_source": {
+    "repo:scripts/FITS/etth1_best.sh": 15,
+    "repo:run_longExp_F.py": 4,
+    "repo:exp/exp_main_F.py": 2,
+    "repo:README.md": 2,
+    "repo:exp/exp_main.py": 1,
+    "repo:utils/tools.py": 1,
+    "repo:models/FITS.py": 6,
+    "discovery": 1
+   },
+   "repo": {
+    "url": "https://github.com/VEWOXIC/FITS",
+    "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+    "files": [
+     "README.md",
+     "data_provider/data_factory.py",
+     "data_provider/data_loader.py",
+     "exp/exp_basic.py",
+     "exp/exp_main.py",
+     "exp/exp_main_F.py",
+     "layers/utils.py",
+     "models/FITS.py",
+     "models/NLinear.py",
+     "run_longExp_F.py",
+     "scripts/FITS/etth1_best.sh",
+     "utils/augmentations.py",
+     "utils/metrics.py",
+     "utils/timefeatures.py",
+     "utils/tools.py"
+    ],
+    "n_tracked": 1410,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "title 'FITS: Modeling Time Series with $10k$ Parameters' in README"
+   },
+   "details": [
+    {
+     "topic": "input length",
+     "value": "360",
+     "quote": "for seq_len in 360",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning rate",
+     "value": "0.0005",
+     "quote": "--learning_rate 0.0005",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": {
+      "model": "FITS",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "python -u run_longExp_F.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 96 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --train_mode $m \\\n  --H_order $H_order \\\n  --gpu 0 \\\n  --seed $seed \\\n  --patience 20 \\\n  --itr 1 --batch_size $bs --learning_rate 0.0005 | tee logs/FITS_fix/etth1_abl/$m'_'$model_name'_'Etth1_$seq_len'_'96'_H'$H_order'_bs'$bs'_s'$seed.log"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning rate",
+     "value": "0.0001",
+     "quote": "parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "# optimization"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "0.0005",
+     "quote": "python -u run_longExp_F.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 96 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --train_mode $m \\\n  --H_order $H_order \\\n  --gpu 0 \\\n  --seed $seed \\\n  --patience 20 \\\n  --itr 1 --batch_size $bs --learning_rate 0.0005 | tee logs/FITS_fix/etth1_abl/$m'_'$model_name'_'Etth1_$seq_len'_'96'_H'$H_order'_bs'$bs'_s'$seed.log",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": {
+      "model": "FITS",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "python -u run_longExp_F.py \\\n  --is_training 1 \\\n  --root_path ./dataset/ \\\n  --data_path ETTh1.csv \\\n  --model_id ETTh1_$seq_len'_'96 \\\n  --model $model_name \\\n  --data ETTh1 \\\n  --features M \\\n  --seq_len $seq_len \\\n  --pred_len 96 \\\n  --enc_in 7 \\\n  --des 'Exp' \\\n  --train_mode $m \\\n  --H_order $H_order \\\n  --gpu 0 \\\n  --seed $seed \\\n  --patience 20 \\\n  --itr 1 --batch_size $bs --learning_rate 0.0005 | tee logs/FITS_fix/etth1_abl/$m'_'$model_name'_'Etth1_$seq_len'_'96'_H'$H_order'_bs'$bs'_s'$seed.log"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "type3",
+     "quote": "parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "adjust_learning_rate(model_optim, epoch + 1, self.args)",
+     "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)",
+     "source": "repo:exp/exp_main_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "batch size",
+     "value": "128",
+     "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time.~~",
+     "source": "repo:README.md@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time.~~"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "epochs",
+     "value": "50",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "epochs",
+     "value": "self.args.train_epochs",
+     "quote": "for epoch in range(self.args.train_epochs):",
+     "source": "repo:exp/exp_main.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "for epoch in range(self.args.train_epochs):"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "20",
+     "quote": "--patience 20 \\",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "3",
+     "quote": "parser.add_argument('--patience', type=int, default=3, help='early stopping patience')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--patience', type=int, default=3, help='early stopping patience')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "self.args.patience",
+     "quote": "train_steps = len(train_loader)\n        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)\n\n        model_optim = self._select_optimizer()",
+     "source": "repo:exp/exp_main_F.py@d040bb0",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "model_dict = {\n            'Autoformer': Autoformer,\n            'Transformer': Transformer,\n            'Informer': Informer,\n            'DLinear': DLinear,\n            'NLinear': NLinear,\n            'Linear': Linear,\n            'SCINet': SCINet,\n            'Film': Film,\n            'FITS': FITS,\n            'Real_FITS': Real_FITS\n        }\n        model = model_dict[self.args.model].Model(self.args).float()"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "7",
+     "quote": "def __init__(self, patience=7, verbose=False, delta=0):",
+     "source": "repo:utils/tools.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "def __init__(self, patience=7, verbose=False, delta=0):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "seq_len",
+     "quote": "self.seq_len = configs.seq_len",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.seq_len = configs.seq_len"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "pred_len",
+     "quote": "self.pred_len = configs.pred_len",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.pred_len = configs.pred_len"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "individual",
+     "quote": "self.individual = configs.individual",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.individual = configs.individual"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "enc_in (channels)",
+     "quote": "self.channels = configs.enc_in",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.channels = configs.enc_in"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "cut_freq (dominance_freq)",
+     "quote": "self.dominance_freq=configs.cut_freq # 720/24",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.dominance_freq=configs.cut_freq # 720/24"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "length_ratio",
+     "quote": "self.length_ratio = (self.seq_len + self.pred_len)/self.seq_len",
+     "source": "repo:models/FITS.py@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "self.length_ratio = (self.seq_len + self.pred_len)/self.seq_len"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "patience=20",
+     "quote": "--patience 20",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "itr=1",
+     "quote": "--itr 1",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "features=M",
+     "quote": "--features M",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "enc_in=7",
+     "quote": "--enc_in 7",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "des='Exp'",
+     "quote": "--des 'Exp'",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "gpu=0",
+     "quote": "--gpu 0",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "root_path=./dataset/",
+     "quote": "--root_path ./dataset/",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "data_path=ETTh1.csv",
+     "quote": "--data_path ETTh1.csv",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "is_training=1",
+     "quote": "--is_training 1",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "model_name=FITS",
+     "quote": "model_name=FITS",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other_settings",
+     "value": "CUDA_VISIBLE_DEVICES=4",
+     "quote": "export CUDA_VISIBLE_DEVICES=4",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "applies_to": null,
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "batch size of 128",
+     "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time.",
+     "source": "repo:README.md@d040bb0",
+     "applies_to": {
+      "model": "fits",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "- ~~**FITS benefits from large batch size. Our latest version uses batch size of 128.** Some results are not updated due to limited time."
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "input length",
+     "value": "360",
+     "quote": "look-back window of 360",
+     "source": "discovery"
+    }
+   ]
+  },
+  {
+   "ts": 1791965269.4378774,
+   "type": "setup_v2",
+   "family": "forecast",
+   "missing_first": [],
+   "missing": [],
+   "targeted_docs": [],
+   "added": 0,
+   "bodies": [
+    {
+     "function": "adjust_learning_rate",
+     "doc": "repo:utils/tools.py@d040bb0",
+     "topic": "learning-rate schedule",
+     "added": 0
+    },
+    {
+     "function": "_select_optimizer",
+     "doc": "repo:exp/exp_main_F.py@d040bb0",
+     "topic": "patience",
+     "added": 0
+    },
+    {
+     "function": "__init__",
+     "doc": "repo:models/FITS.py@d040bb0",
+     "topic": "patience",
+     "added": 0
+    }
+   ],
+   "literals": 0,
+   "excluded": []
+  },
+  {
+   "ts": 1791965285.9944832,
+   "type": "spec",
+   "model": "FITS",
+   "family": "forecast",
+   "items": [
+    {
+     "key": "lr",
+     "value": "0.0005",
+     "quote": "--learning_rate 0.0005",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 0.0005,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "epochs",
+     "value": "50",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 50,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "batch_size",
+     "value": "128",
+     "quote": "args.batch_size = args.batch_size * 2",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 128,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "patience",
+     "value": "20",
+     "quote": "--patience 20",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 20,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "seq_len",
+     "value": "360",
+     "quote": "for seq_len in 360",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 360,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "cut_freq",
+     "value": "106",
+     "quote": "args.cut_freq = int(args.seq_len // args.base_T + 1) * args.H_order + 10",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 106,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "enc_in",
+     "value": "7",
+     "quote": "--enc_in 7",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "pred_len",
+     "value": "96",
+     "quote": "--pred_len 96",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 96,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "train_mode",
+     "value": "1",
+     "quote": "for m in 1",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 1,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    }
+   ],
+   "dropped": [
+    {
+     "item": {
+      "key": "dropout",
+      "value": "0.05",
+      "quote": "parser.add_argument('--dropout', type=float, default=0.05, help='dropout')",
+      "source": "repo:run_longExp_F.py@d040bb0"
+     },
+     "reason": "Modellcode des Autors enthaelt diesen Mechanismus nicht"
+    }
+   ],
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:exp/exp_main.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:layers/utils.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ],
+   "missing": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "model_code_present": true,
+   "dropped_defaults": [
+    "H_order",
+    "batch_size",
+    "data",
+    "data_path",
+    "des",
+    "enc_in",
+    "features",
+    "gpu",
+    "is_training",
+    "itr",
+    "learning_rate",
+    "model",
+    "model_id",
+    "patience",
+    "pred_len",
+    "root_path",
+    "seed",
+    "seq_len",
+    "train_mode"
+   ],
+   "excerpt_chars": 98814
+  },
+  {
+   "ts": 1791965286.0099227,
+   "type": "mode",
+   "mode": "nachbau_autorencode",
+   "requested": "nachbau_autorencode",
+   "fallback_reason": null,
+   "repo": "https://github.com/VEWOXIC/FITS",
+   "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:exp/exp_main.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:layers/utils.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ]
+  },
+  {
+   "ts": 1791965334.1607296,
+   "type": "claim_start",
+   "claim_id": "disc_2307_03756_mse",
+   "text": "FITS erreicht 0.372 MSE auf ETTh1 (Horizont 96)",
+   "metric": "mse",
+   "target": 0.372,
+   "tolerance": 0.01
+  },
+  {
+   "ts": 1791965367.7343163,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "1169bc5262f3",
+   "candidate": 0
+  },
+  {
+   "ts": 1791965367.750342,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "1169bc5262f3"
+  },
+  {
+   "ts": 1791965383.9551067,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "de18d490e610"
+  },
+  {
+   "ts": 1791965454.6755085,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791965476.372129,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-270acc97",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "de18d490e610",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 92.4,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 0,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791965501.7970614,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "cbb113652ff3",
+   "candidate": 1
+  },
+  {
+   "ts": 1791965501.8128073,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "cbb113652ff3"
+  },
+  {
+   "ts": 1791965522.315734,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "dd883f76b07d"
+  },
+  {
+   "ts": 1791965590.9102654,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791965611.4684837,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-cf59d633",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "dd883f76b07d",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 89.2,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 1,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791965643.3000875,
+   "type": "code_missing",
+   "try_n": 1,
+   "content_tail": "(train_loader.dataset)\n        adjust_learning_rate(optimizer, epoch, CONFIG)\n\n        # Validation\n        model.eval()\n        val_loss = 0.0\n        with torch.no_grad():\n            for batch_x, batch_y in val_loader:\n                batch_x = batch_x.to(device)\n                batch_y = batch_y.to(device)\n                outputs, _ = model(batch_x)\n                forecast = outputs[:, -CONFIG[\"pred_len\"]:, :]\n                loss = criterion(forecast, batch_y)\n                val_loss += loss.item() * batch_x.size(0)\n        val_loss /= len(val_loader.dataset)\n\n        early_stopping(val_loss, model, ckpt_dir)\n        if early_stopping.early_stop:\n            break\n\n    # Load best model\n    best_path = os.path.join(ckpt_dir, \"checkpoint.pth\")\n    model.load_state_dict(torch.load(best_path, map_location=device))\n    model.eval()\n\n    # Predictor closure\n    def predictor(history, *, calendar=None):\n        # history: [720, 7] numpy array\n        hist = history[-CONFIG[\"seq_len\"]:, :]  # crop to seq_len\n        if calendar is not None:\n            cal = calendar[-CONFIG[\"seq_len\"]:, :]  # crop similarly (unused)\n        else:\n            cal = None\n        tensor = torch.from_numpy(hist).float().unsqueeze(0).to(device)  # [1, seq_len, 7]\n        with torch.no_grad():\n            out, _ = model(tensor)          # [1, seq_len+pred_len, 7]\n            fore = out[:, -CONFIG[\"pred_len\"]:, :].squeeze(0).cpu().numpy()  # [pred_len, 7]\n        return fore\n\n    return predictor\n}"
+  },
+  {
+   "ts": 1791965679.594535,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "e0746638cbe9",
+   "candidate": 2
+  },
+  {
+   "ts": 1791965679.6009998,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "round": 0,
+   "score": [
+    0,
+    9
+   ],
+   "fails": [],
+   "code_hash": "e0746638cbe9"
+  },
+  {
+   "ts": 1791965688.6909697,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-db2b1f0a",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "e0746638cbe9",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 9.1,
+   "error": "rror: invalid syntax\n\nForecast worker failed during loading train.py: SyntaxError: invalid syntax (train.py, line 256)\n  raised in <frozen importlib._bootstrap> line 241 in _call_with_frames_removed\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791965690.9032278,
+   "type": "error_search",
+   "claim_id": "disc_2307_03756_mse",
+   "query": "SyntaxError: invalid syntax",
+   "urls": [
+    "https://github.com/oxylabs/python-syntax-errors",
+    "https://stackoverflow.com/questions/24237111/why-do-i-get-syntaxerror-invalid-syntax-on-a-line-with-perfectly-valid-syntax",
+    "https://github.com/pypa/pip/issues/6090"
+   ]
+  },
+  {
+   "ts": 1791965690.9052649,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "e0746638cbe9",
+   "error": "rror: invalid syntax\n\nForecast worker failed during loading train.py: SyntaxError: invalid syntax (train.py, line 256)\n  raised in <frozen importlib._bootstrap> line 241 in _call_with_frames_removed\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791965701.4774897,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "e0746638cbe9",
+   "to_hash": "1ffc47403a2e"
+  },
+  {
+   "ts": 1791965701.9111419,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-b7d2caf7",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "1ffc47403a2e",
+   "status": "ungueltig",
+   "measured": null,
+   "seconds": 0.4,
+   "error": "Statische Pruefung: Configuration contradicts the reproduction spec: train_mode. Restore the reference values before training; later module-level writes must not undo them.",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791965701.9147527,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "1ffc47403a2e",
+   "error": "Statische Pruefung: Configuration contradicts the reproduction spec: train_mode. Restore the reference values before training; later module-level writes must not undo them."
+  },
+  {
+   "ts": 1791965718.1492467,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "1ffc47403a2e",
+   "to_hash": "750cd8aaa2c3"
+  },
+  {
+   "ts": 1791965731.1742752,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 3,
+   "branch_id": "repro-branch-36b6efe1",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "750cd8aaa2c3",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 13.0,
+   "error": "     # output: [B, seq_len+pred_len, 7]\n  at train.py line 69 in forward: low_specxy_ = self.freq_upsampler(\n  raised in linear.py line 134 in forward: return F.linear(input, self.weight, self.bias)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791965733.0967107,
+   "type": "error_search",
+   "claim_id": "disc_2307_03756_mse",
+   "query": "RuntimeError: expected m1 and m2 to have the same dtype, but got: c10::complex<float> != float",
+   "urls": [
+    "https://discuss.pytorch.org/t/runtimeerror-mat1-and-mat2-must-have-the-same-dtype/166759?page=2",
+    "https://discuss.pytorch.org/t/runtimeerror-mat1-and-mat2-must-have-the-same-dtype/166759",
+    "https://github.com/pytorch/pytorch/issues/78168"
+   ]
+  },
+  {
+   "ts": 1791965733.097933,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "750cd8aaa2c3",
+   "error": "     # output: [B, seq_len+pred_len, 7]\n  at train.py line 69 in forward: low_specxy_ = self.freq_upsampler(\n  raised in linear.py line 134 in forward: return F.linear(input, self.weight, self.bias)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791965753.6741517,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "750cd8aaa2c3",
+   "to_hash": "f25cd09cd6f1"
+  },
+  {
+   "ts": 1791965820.5812364,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791965844.1601436,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 4,
+   "branch_id": "repro-branch-cc55dda1",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "f25cd09cd6f1",
+   "status": "stabil",
+   "measured": 0.37215869572280263,
+   "seconds": 90.5,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9045309652745991,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8161377134959112
+   },
+   "candidate": 2,
+   "val": {
+    "metric": "mse",
+    "value": 0.4702577725622623,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791965844.1853893,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "stage": "final_candidate",
+   "code_hash": "f25cd09cd6f1",
+   "score": [
+    9,
+    9
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791965844.2007394,
+   "type": "candidates",
+   "claim_id": "disc_2307_03756_mse",
+   "k": 3,
+   "requested": 3,
+   "chosen": 0,
+   "chosen_hash": "de18d490e610",
+   "reason": "spec (9) + val",
+   "candidates": [
+    {
+     "index": 0,
+     "code_hash": "de18d490e610",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    },
+    {
+     "index": 1,
+     "code_hash": "dd883f76b07d",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    },
+    {
+     "index": 2,
+     "code_hash": "f25cd09cd6f1",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4702577725622623
+     }
+    }
+   ]
+  },
+  {
+   "ts": 1791965844.2030182,
+   "type": "val_label_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "code_hash": "de18d490e610",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791965844.204224,
+   "type": "val_label_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "code_hash": "dd883f76b07d",
+   "static": "selection",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791965844.2054281,
+   "type": "val_label_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 2,
+   "code_hash": "f25cd09cd6f1",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791965856.7974157,
+   "type": "repo_diff",
+   "claim_id": "disc_2307_03756_mse",
+   "result": "incomplete",
+   "deviations": [],
+   "dropped": 0,
+   "truncation": [
+    {
+     "file": "exp/exp_main.py",
+     "kept_chars": 13580,
+     "of_chars": 14181
+    },
+    {
+     "file": "exp/exp_basic.py",
+     "kept_chars": 0,
+     "of_chars": 885
+    },
+    {
+     "file": "data_provider/data_loader.py",
+     "kept_chars": 0,
+     "of_chars": 21813
+    },
+    {
+     "file": "data_provider/data_factory.py",
+     "kept_chars": 0,
+     "of_chars": 1401
+    },
+    {
+     "file": "README.md",
+     "kept_chars": 0,
+     "of_chars": 12608
+    },
+    {
+     "file": "utils/tools.py",
+     "kept_chars": 0,
+     "of_chars": 4024
+    },
+    {
+     "file": "utils/metrics.py",
+     "kept_chars": 0,
+     "of_chars": 951
+    },
+    {
+     "file": "utils/augmentations.py",
+     "kept_chars": 0,
+     "of_chars": 5065
+    },
+    {
+     "file": "utils/timefeatures.py",
+     "kept_chars": 0,
+     "of_chars": 3743
+    }
+   ],
+   "from_hash": "de18d490e610",
+   "method_fidelity": "not_checked",
+   "scope": "selected implementation aspects"
+  },
+  {
+   "ts": 1791965856.8051636,
+   "type": "val_label_check",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "de18d490e610",
+   "stage": "final_admission",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791965929.3601797,
+   "type": "data_identity",
+   "seed": 1,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791965930.8108885,
+   "type": "data_identity",
+   "seed": 2,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791965945.937638,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 1,
+   "n": 1,
+   "branch_id": "repro-branch-d934311d",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "de18d490e610",
+   "status": "stabil",
+   "measured": 0.37200731015273036,
+   "seconds": 89.1,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047041371645836,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162253560533874
+   },
+   "candidate": 0
+  },
+  {
+   "ts": 1791965946.1842802,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 2,
+   "n": 1,
+   "branch_id": "repro-branch-ce53dc5d",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-080542",
+   "code_hash": "de18d490e610",
+   "status": "stabil",
+   "measured": 0.3720914549998737,
+   "seconds": 89.3,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9045934230384426,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8161759662209683
+   },
+   "candidate": 0
+  },
+  {
+   "ts": 1791965946.189218,
+   "type": "measurements_selected",
+   "claim_id": "disc_2307_03756_mse",
+   "attempts": [
+    {
+     "seed": 0,
+     "code_hash": "de18d490e610",
+     "measured": 0.3719943631187008
+    },
+    {
+     "seed": 1,
+     "code_hash": "de18d490e610",
+     "measured": 0.37200731015273036
+    },
+    {
+     "seed": 2,
+     "code_hash": "de18d490e610",
+     "measured": 0.3720914549998737
+    }
+   ]
+  },
+  {
+   "ts": 1791965946.1930382,
+   "type": "verdict",
+   "claim_id": "disc_2307_03756_mse",
+   "urteil": "reproduziert",
+   "methode": "nicht geprueft",
+   "gesamt": "vorlaeufig",
+   "mean": 0.37203104275710164,
+   "std": 5.271750876232656e-05,
+   "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0001. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.372 +/- 0.01, tab:FITSett, arXiv v3 (latex)): Mittel 0.3720. Code-Kandidaten: 3, gewaehlt Kandidat 0 (Code de18d490e610) nach Validierungs-Metrik (0: mse 0.4697, 1: mse 0.4697, 2: mse 0.4703); Repo comparison incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked.; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.; Forecast histories were streamed chronologically to an unprivileged predictor after fitting; each forecast was recorded before the next history was exposed."
+  },
+  {
+   "ts": 1791965946.1984477,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "mode": "cache",
+   "n_chars": 11204,
+   "retrieved_at": "2026-10-13T17:08:14+00:00",
+   "sha256": "1026437df566efc2c401428e5d48dd5ab0708c46e5c5e7de92dcd5cfdaad88fd"
+  },
+  {
+   "ts": 1791965946.200699,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2606.27282v1",
+   "mode": "cache",
+   "n_chars": 51892,
+   "retrieved_at": "2026-10-13T17:08:14+00:00",
+   "sha256": "2dba76aafbd0e8326d3fa3c35d4f464e6bd200d782c52d26cabc54014783044f"
+  },
+  {
+   "ts": 1791965946.2033331,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS/issues/23",
+   "mode": "cache",
+   "n_chars": 3650,
+   "retrieved_at": "2026-10-13T17:08:14+00:00",
+   "sha256": "85d234c6be1b5d3e301cc26753fe7c7425d0a01d661dd08cac02f13c5eff8103"
+  },
+  {
+   "ts": 1791965946.2059233,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/VEWOXIC/FITS/blob/main/AD/runAD.md",
+   "mode": "cache",
+   "n_chars": 1323,
+   "retrieved_at": "2026-10-13T17:08:14+00:00",
+   "sha256": "5008a72f5a1113ca4daf8d72a1e03fd1fbf2a62f3b1a7eb917642c91a9f6c7cb"
+  },
+  {
+   "ts": 1791965946.2096162,
+   "type": "community",
+   "mode": "cache",
+   "n_findings": 3,
+   "dropped": 3,
+   "queries": [
+    {
+     "kind": "search",
+     "title": "FITS: Modeling Time Series with $10k$ Parameters"
+    },
+    {
+     "kind": "method_search",
+     "method": "FITS",
+     "dataset": "ETTh1"
+    },
+    {
+     "kind": "critique_search",
+     "method": "FITS",
+     "dataset": "ETTh1",
+     "queries": [
+      "FITS ETTh1 reproduce results differ",
+      "FITS bug evaluation",
+      "FITS baseline re-evaluation fixed",
+      "we re-run FITS on ETTh1 and compare with the reported numbers"
+     ]
+    },
+    {
+     "kind": "repo_search",
+     "repo": "VEWOXIC/FITS"
+    }
+   ],
+   "reused_discovery": false,
+   "findings": [
+    {
+     "topic": "test set handling",
+     "statement": "The test dataloader uses drop_last=True, which may exclude a significant portion of test data and lead to unfair model comparisons.",
+     "quote": "Specifically, the test dataloader uses drop_last=True, which may exclude a significant portion of test data, particularly with large batch sizes, leading to unfair model comparisons.",
+     "url": "https://github.com/VEWOXIC/FITS",
+     "kind": "protocol note",
+     "repo_check": "widerlegt",
+     "label": "Protocol note",
+     "pass_reason": "page_names_method"
+    },
+    {
+     "topic": "preliminary results",
+     "statement": "The reported results are still preliminary and the authors are rerunning parameter search, ablation studies and multi-runs for final results.",
+     "quote": "This is still preliminary results for FITS. We are rerunning the parameter search, ablation study and multi-runs for the final results.",
+     "url": "https://github.com/VEWOXIC/FITS",
+     "kind": "other",
+     "repo_check": "nicht pruefbar",
+     "label": "Note",
+     "pass_reason": "statement_names_method"
+    },
+    {
+     "topic": "information leakage",
+     "statement": "Comparing FITS to other works may be compromised because those works potentially leak information from the test set when selecting thresholds.",
+     "quote": "we still compare FITS with the results reported in their original paper which may have potential information leakage.",
+     "url": "https://github.com/VEWOXIC/FITS",
+     "kind": "protocol note",
+     "repo_check": "nicht pruefbar",
+     "label": "Protocol note",
+     "pass_reason": "statement_names_method"
+    }
+   ],
+   "hits": [
+    {
+     "url": "https://github.com/MaartenGr/BERTopic/issues/2277",
+     "title": "Reproducibility issue in Guided Topic Modeling \u00b7 Issue #2277 \u00b7 MaartenGr/BERTopic \u00b7 GitHub",
+     "n_chars": 2739
+    },
+    {
+     "url": "https://github.com/deepchem/deepchem/issues/3897",
+     "title": "Reproducibility issue with different splitters. Every time I rerun the splitter I get different train test scores. What can I do to reproduce the results? The differences are significant. \u00b7 Issue #3897 \u00b7 deepchem/deepchem \u00b7 GitHub",
+     "n_chars": 2477
+    },
+    {
+     "url": "https://github.com/facebookresearch/mtrl/issues/33",
+     "title": "Impossible to reproduce results of the paper \u00b7 Issue #33 \u00b7 facebookresearch/mtrl \u00b7 GitHub",
+     "n_chars": 3269
+    },
+    {
+     "url": "https://github.com/theislab/scgen/issues/80",
+     "title": "How to reproduce paper results \u00b7 Issue #80 \u00b7 theislab/scgen \u00b7 GitHub",
+     "n_chars": 2219
+    },
+    {
+     "url": "https://arxiv.org/html/2208.12700v3",
+     "title": "Epistemic Parity: Reproducibility as an Evaluation Metric for Differential Privacy [Experiment, Analysis & Benchmark]",
+     "n_chars": 83635
+    },
+    {
+     "url": "https://arxiv.org/html/2503.07080",
+     "title": "A Framework for Supporting the Reproducibility of Computational Experiments in Multiple Scientific Domains",
+     "n_chars": 82732
+    },
+    {
+     "url": "https://arxiv.org/html/2503.07080v2",
+     "title": "A Framework for Supporting the Reproducibility of Computational Experiments in Multiple Scientific Domains",
+     "n_chars": 82732
+    },
+    {
+     "url": "https://arxiv.org/html/2608.09519v1",
+     "title": "XFeat Revisited: Reproducibility and Evaluation of a Lightweight Image Matcher",
+     "n_chars": 66154
+    },
+    {
+     "url": "https://ar5iv.labs.arxiv.org/html/2207.07048",
+     "title": "[2207.07048] Leakage and the Reproducibility Crisis in ML-based Science",
+     "n_chars": 131357
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "title": "GitHub - VEWOXIC/FITS: FITS: Frequency Interpolation Time Series Analysis Baseline \u00b7 GitHub",
+     "n_chars": 11204
+    },
+    {
+     "url": "https://github.com/amazon-science/chronos-forecasting/issues/209",
+     "title": "Finetuning Chronos on ETTh datasets yields poor performance \u00b7 Issue #209 \u00b7 amazon-science/chronos-forecasting \u00b7 GitHub",
+     "n_chars": 6577
+    },
+    {
+     "url": "https://arxiv.org/html/2505.04163v1",
+     "title": "Retrieval Augmented Time Series Forecasting",
+     "n_chars": 63823
+    },
+    {
+     "url": "https://arxiv.org/html/2508.07697v1",
+     "title": "Semantic-Enhanced Time-Series Forecasting via Large Language Models",
+     "n_chars": 52603
+    },
+    {
+     "url": "https://arxiv.org/html/2510.04134v1",
+     "title": "PhaseFormer: From Patches to Phases for Efficient and Effective Time Series Forecasting",
+     "n_chars": 66571
+    },
+    {
+     "url": "https://arxiv.org/html/2410.18318v1",
+     "title": "Self-Supervised Learning for Time Series A Review & ...",
+     "n_chars": 143
+    },
+    {
+     "url": "https://arxiv.org/html/2502.14704v1",
+     "title": "Not All Data are Good Labels: On the Self-supervised Labeling for Time Series Forecasting",
+     "n_chars": 94079
+    },
+    {
+     "url": "https://github.com/StanLei52/GEBD/issues/2",
+     "title": "[Is it a bug?] Bug in evaluation notebook may undervalue PA \u00b7 Issue #2 \u00b7 StanLei52/GEBD \u00b7 GitHub",
+     "n_chars": 5124
+    },
+    {
+     "url": "https://arxiv.org/html/2604.23361v1",
+     "title": "An Empirical Evaluation of Locally Deployed LLMs for Bug Detection in Python Code",
+     "n_chars": 32634
+    },
+    {
+     "url": "https://arxiv.org/html/2604.23361",
+     "title": "An Empirical Evaluation of Locally Deployed LLMs for Bug Detection in Python Code",
+     "n_chars": 32634
+    },
+    {
+     "url": "https://github.com/opendatalab/OmniDocBench/issues/147",
+     "title": "Bug of Recognition Evaluation Demo \u00b7 Issue #147 \u00b7 opendatalab/OmniDocBench \u00b7 GitHub",
+     "n_chars": 1844
+    },
+    {
+     "url": "https://github.com/All-Hands-AI/OpenHands/issues/10534",
+     "title": "[Bug]: Evaluation metrics are broken \u00b7 Issue #10534 \u00b7 OpenHands/OpenHands \u00b7 GitHub",
+     "n_chars": 2199
+    },
+    {
+     "url": "https://github.com/QwenLM/Qwen3-Embedding/issues/95",
+     "title": "Bug in MTEB Evaluation \u00b7 Issue #95 \u00b7 QwenLM/Qwen3-Embedding \u00b7 GitHub",
+     "n_chars": 1667
+    },
+    {
+     "url": "https://github.com/nextcloud/server/issues/42407",
+     "title": "[Bug]: Sub folder shares were broken on ownership transfer \u00b7 Issue #42407 \u00b7 nextcloud/server \u00b7 GitHub",
+     "n_chars": 5175
+    },
+    {
+     "url": "https://github.com/gbouvignies/ChemEx/issues/570",
+     "title": "Define the ChemEx constraint language and evaluation graph \u00b7 Issue #570 \u00b7 gbouvignies/ChemEx \u00b7 GitHub",
+     "n_chars": 20887
+    },
+    {
+     "url": "https://arxiv.org/html/2609.27607v1",
+     "title": "Can Jev Judge Radiology Reports?Evaluating a System One Model for Clinical Factuality",
+     "n_chars": 61068
+    },
+    {
+     "url": "https://arxiv.org/html/2608.20980v1",
+     "title": "A Critical Audit of Spatiotemporal Forecasting Benchmark Datasets and Baselines",
+     "n_chars": 50401
+    },
+    {
+     "url": "https://arxiv.org/html/2608.20980v2",
+     "title": "A Critical Audit of Spatiotemporal Forecasting Benchmark Datasets and Models",
+     "n_chars": 60801
+    },
+    {
+     "url": "https://arxiv.org/html/2605.28700v3",
+     "title": "The Importance of Being Statistically Earnest:A Critical Re ...",
+     "n_chars": 151
+    },
+    {
+     "url": "https://arxiv.org/html/2609.16625v1",
+     "title": "AURA: Agentic Diagnosis and Refinement for Production Recommender Systems at Scale",
+     "n_chars": 47319
+    },
+    {
+     "url": "https://arxiv.org/html/2609.39075v1",
+     "title": "RAGScope: A Leakage-Controlled, Cost-Aware Evidence-Gating Protocol for RAG Hallucination Triage",
+     "n_chars": 28381
+    },
+    {
+     "url": "https://arxiv.org/html/2410.24087v1",
+     "title": "In-Context Fine-Tuning for Time-Series Foundation Models",
+     "n_chars": 54305
+    },
+    {
+     "url": "https://arxiv.org/html/2610.04925v1",
+     "title": "TSAE: Structured Sparse Autoencoders for Interpreting Time-Series Forecasting Models",
+     "n_chars": 63483
+    },
+    {
+     "url": "https://arxiv.org/html/2408.11306v2",
+     "title": "Are KANs Effective for Multivariate Time Series Forecasting?",
+     "n_chars": 137
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "title": "How Good Can Linear Models Be for Time-Series Forecasting?",
+     "n_chars": 51892
+    },
+    {
+     "url": "https://arxiv.org/html/2605.24381v1",
+     "title": "Assessing the Operational Viability of Foundation Models for Time Series Forecasting",
+     "n_chars": 48392
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "title": "GitHub - VEWOXIC/FITS: FITS: Frequency Interpolation Time Series Analysis Baseline \u00b7 GitHub",
+     "n_chars": 11204
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS/issues/23",
+     "title": "Reversible Instance Normalization \u00b7 Issue #23 \u00b7 VEWOXIC/FITS \u00b7 GitHub",
+     "n_chars": 3650
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS/blob/main/AD/runAD.md",
+     "title": "FITS/AD/runAD.md at main \u00b7 VEWOXIC/FITS \u00b7 GitHub",
+     "n_chars": 1323
+    }
+   ],
+   "not_read": [
+    "https://github.com/MaartenGr/BERTopic/issues/2277",
+    "https://github.com/deepchem/deepchem/issues/3897",
+    "https://github.com/facebookresearch/mtrl/issues/33",
+    "https://github.com/theislab/scgen/issues/80",
+    "https://arxiv.org/html/2208.12700v3",
+    "https://arxiv.org/html/2503.07080",
+    "https://arxiv.org/html/2503.07080v2",
+    "https://arxiv.org/html/2608.09519v1",
+    "https://ar5iv.labs.arxiv.org/html/2207.07048",
+    "https://github.com/amazon-science/chronos-forecasting/issues/209",
+    "https://arxiv.org/html/2505.04163v1",
+    "https://arxiv.org/html/2508.07697v1",
+    "https://arxiv.org/html/2510.04134v1",
+    "https://arxiv.org/html/2410.18318v1",
+    "https://arxiv.org/html/2502.14704v1",
+    "https://github.com/StanLei52/GEBD/issues/2",
+    "https://arxiv.org/html/2604.23361v1",
+    "https://arxiv.org/html/2604.23361",
+    "https://github.com/opendatalab/OmniDocBench/issues/147",
+    "https://github.com/All-Hands-AI/OpenHands/issues/10534",
+    "https://github.com/QwenLM/Qwen3-Embedding/issues/95",
+    "https://github.com/nextcloud/server/issues/42407",
+    "https://github.com/gbouvignies/ChemEx/issues/570",
+    "https://arxiv.org/html/2609.27607v1",
+    "https://arxiv.org/html/2608.20980v1",
+    "https://arxiv.org/html/2608.20980v2",
+    "https://arxiv.org/html/2605.28700v3",
+    "https://arxiv.org/html/2609.16625v1",
+    "https://arxiv.org/html/2609.39075v1",
+    "https://arxiv.org/html/2410.24087v1",
+    "https://arxiv.org/html/2610.04925v1",
+    "https://arxiv.org/html/2408.11306v2",
+    "https://arxiv.org/html/2605.24381v1"
+   ],
+   "not_extracted": [],
+   "dropped_items": [
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "reason": "quote_not_in_page",
+     "topic": "reproduction failure",
+     "statement": "The authors could not reproduce FiLM results due to script flaws and incorrect hyperparameter settings, preventing a fair comparison.",
+     "quote": "We failed to reproduce the FiLM result since it takes over 40GB GPU memory and over 2 hour per epoch on an A800. Further, the provided scripts seems to have flaws, i.e. the 'modes1' parameter is set to 1032 in ETTh1 instead of the '32' in others, the train_epoch is 1 in ETTh2 which may result in a d"
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "reason": "names_neither_method_title_nor_arxiv_id",
+     "topic": "repository version warning",
+     "statement": "Using versions from this repository may lead to unreliable baseline comparisons; users should avoid them for fairness.",
+     "quote": "(Note: Avoid using versions from this repository.)"
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "reason": "names_neither_method_title_nor_arxiv_id",
+     "topic": "evaluation_protocol",
+     "statement": "The paper compares its method to nonlinear baselines using published configurations without jointly retuning preprocessing, potentially biasing results.",
+     "quote": "Nonlinear baselines are quoted from their original publications, so comparisons reflect published configurations rather than a jointly retuned preprocessing protocol (Qiu et al., 2024)."
+    }
+   ],
+   "candidates": [
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "topic": "test set handling",
+     "statement": "The test dataloader uses drop_last=True, which may exclude a significant portion of test data and lead to unfair model comparisons.",
+     "quote": "Specifically, the test dataloader uses drop_last=True, which may exclude a significant portion of test data, particularly with large batch sizes, leading to unfair model comparisons.",
+     "quote_in_page": true,
+     "outcome": "kept_page_names_method"
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "topic": "preliminary results",
+     "statement": "The reported results are still preliminary and the authors are rerunning parameter search, ablation studies and multi-runs for final results.",
+     "quote": "This is still preliminary results for FITS. We are rerunning the parameter search, ablation study and multi-runs for the final results.",
+     "quote_in_page": true,
+     "outcome": "kept_statement_names_method"
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "topic": "repository version warning",
+     "statement": "Using versions from this repository may lead to unreliable baseline comparisons; users should avoid them for fairness.",
+     "quote": "(Note: Avoid using versions from this repository.)",
+     "quote_in_page": true,
+     "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "topic": "reproduction failure",
+     "statement": "The authors could not reproduce FiLM results due to script flaws and incorrect hyperparameter settings, preventing a fair comparison.",
+     "quote": "We failed to reproduce the FiLM result since it takes over 40GB GPU memory and over 2 hour per epoch on an A800. Further, the provided scripts seems to have flaws, i.e. the 'modes1' parameter is set to 1032 in ETTh1 instead of the '32' in others, the train_epoch is 1 in ETTh2 which may result in a d",
+     "quote_in_page": false,
+     "outcome": "dropped_quote_not_in_page"
+    },
+    {
+     "url": "https://github.com/VEWOXIC/FITS",
+     "topic": "information leakage",
+     "statement": "Comparing FITS to other works may be compromised because those works potentially leak information from the test set when selecting thresholds.",
+     "quote": "we still compare FITS with the results reported in their original paper which may have potential information leakage.",
+     "quote_in_page": true,
+     "outcome": "kept_statement_names_method"
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "topic": "evaluation_protocol",
+     "statement": "The paper compares its method to nonlinear baselines using published configurations without jointly retuning preprocessing, potentially biasing results.",
+     "quote": "Nonlinear baselines are quoted from their original publications, so comparisons reflect published configurations rather than a jointly retuned preprocessing protocol (Qiu et al., 2024).",
+     "quote_in_page": true,
+     "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+    }
+   ]
+  },
+  {
+   "ts": 1791965949.9600768,
+   "type": "objection_classified",
+   "id": "obj1",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "protocol_change",
+   "topic": "test set handling",
+   "quote": "Specifically, the test dataloader uses drop_last=True, which may exclude a significant portion of test data, particularly with large batch sizes, leading to unfair model comparisons.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": "drop_last",
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965954.2527018,
+   "type": "objection_classified",
+   "id": "obj2",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "not_measurable",
+   "topic": "preliminary results",
+   "quote": "This is still preliminary results for FITS. We are rerunning the parameter search, ablation study and multi-runs for the final results.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": null,
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965956.7388659,
+   "type": "objection_classified",
+   "id": "obj3",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "not_measurable",
+   "topic": "information leakage",
+   "quote": "we still compare FITS with the results reported in their original paper which may have potential information leakage.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": null,
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965956.7423327,
+   "type": "objection_checked",
+   "id": "obj1",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "protocol_change",
+   "status": "bestaetigt",
+   "rule": "protocol_change (drop_last): no new run and no new code. Our harness recomputes the claim metric from the same agent predictions on the test windows a loader with drop_last=True keeps (batch sizes 32, 64, 128, 256, or only the size named in the quote), for every valid main seed. effect = |truncated mean - full mean| (same seeds). bestaetigt if at least 2 valid seeds and the largest effect >= tolerance / 4; widerlegt if at least 2 valid seeds and all effects < tolerance / 4; offen otherwise.",
+   "measured": {
+    "n": 3,
+    "sizes": {
+     "32": {
+      "full_mean": 0.37203104275710164,
+      "truncated_mean": 0.37199552478616804,
+      "delta": -3.551797093359621e-05,
+      "n": 3,
+      "windows": 2784,
+      "dropped": 1,
+      "distance_to_target": 4.4752138319559265e-06
+     },
+     "64": {
+      "full_mean": 0.37203104275710164,
+      "truncated_mean": 0.37097875929287877,
+      "delta": -0.0010522834642228696,
+      "n": 3,
+      "windows": 2752,
+      "dropped": 33,
+      "distance_to_target": 0.0010212407071212293
+     },
+     "128": {
+      "full_mean": 0.37203104275710164,
+      "truncated_mean": 0.36888512268250345,
+      "delta": -0.0031459200745981852,
+      "n": 3,
+      "windows": 2688,
+      "dropped": 97,
+      "distance_to_target": 0.003114877317496545
+     },
+     "256": {
+      "full_mean": 0.37203104275710164,
+      "truncated_mean": 0.3648000301787445,
+      "delta": -0.007231012578357121,
+      "n": 3,
+      "windows": 2560,
+      "dropped": 225,
+      "distance_to_target": 0.007199969821255481
+     }
+    },
+    "max_effect": 0.007231012578357121,
+    "threshold": 0.0025,
+    "target": 0.372,
+    "full_mean": 0.37203104275710164,
+    "restricted_to": null,
+    "nearest_to_target": "32",
+    "seeds": [
+     0,
+     1,
+     2
+    ],
+    "main_branches": [
+     "repro-branch-270acc97",
+     "repro-branch-d934311d",
+     "repro-branch-ce53dc5d"
+    ]
+   },
+   "quote": "Specifically, the test dataloader uses drop_last=True, which may exclude a significant portion of test data, particularly with large batch sizes, leading to unfair model comparisons.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": "drop_last",
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965956.7501764,
+   "type": "objection_checked",
+   "id": "obj2",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "not_measurable",
+   "status": "nicht pruefbar",
+   "rule": "not_measurable: stays text.",
+   "measured": null,
+   "quote": "This is still preliminary results for FITS. We are rerunning the parameter search, ablation study and multi-runs for the final results.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": null,
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965956.7534807,
+   "type": "objection_checked",
+   "id": "obj3",
+   "claim_id": "disc_2307_03756_mse",
+   "otype": "not_measurable",
+   "status": "nicht pruefbar",
+   "rule": "not_measurable: stays text.",
+   "measured": null,
+   "quote": "we still compare FITS with the results reported in their original paper which may have potential information leakage.",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "param": null,
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791965956.755856,
+   "type": "objection_round_end",
+   "seconds": 10.5,
+   "n_findings": 3,
+   "n_experiments": 0,
+   "quick": true,
+   "cost_net_usd": 0.0015
+  },
+  {
+   "ts": 1791965956.762039,
+   "type": "run_end",
+   "cost_net_usd": 0.2606,
+   "cost_gross_usd": 0.3101
+  },
+  {
+   "ts": 1791965957.0492568,
+   "type": "finished",
+   "run_id": "disc_2307_03756--20261014-080542",
+   "verdict": {
+    "urteil": "reproduziert",
+    "measured_mean": 0.372031,
+    "measured_std": 5.3e-05,
+    "seeds": 3,
+    "target": 0.372,
+    "tolerance": 0.01,
+    "gesamtaussage": "vorlaeufig",
+    "mode": "nachbau_autorencode",
+    "graph_repairs": 0,
+    "fault_repairs": 0,
+    "run_dir": "runs/disc_2307_03756/20261014-080542"
+   },
+   "cost_gross_usd": 0.3101
+  }
+ ]
+}

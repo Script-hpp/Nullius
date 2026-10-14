@@ -87,3 +87,42 @@ def test_complete_script_closed_by_a_tag_instead_of_a_fence_is_kept(closing):
     from repro_agent.loop import extract_code
     text = "Here is the script:\n```python\nimport torch\n\ndef f():\n    return 1\n" + closing
     assert extract_code(text, lenient=True).strip().endswith("return 1")
+
+
+@pytest.mark.parametrize("closing", ["}", "}}", "\"}", "]"])
+def test_complete_script_closed_by_a_stray_bracket_is_kept(closing):
+    # FITS live 2026-10-14: a complete paid script ended with a lone "}" instead of the closing fence
+    from repro_agent.loop import extract_code
+    text = "```python\nimport torch\n\ndef f():\n    return 1\n" + closing
+    assert extract_code(text, lenient=True).strip().endswith("return 1")
+
+
+def test_valid_script_ending_in_a_closing_brace_is_not_trimmed():
+    from repro_agent.loop import extract_code
+    text = "```python\nimport torch\nCONFIG = {\n    \"lr\": 0.1,\n}\n"
+    assert extract_code(text, lenient=True).strip().endswith("}")
+
+
+def _orch_with_replies(replies):
+    from types import SimpleNamespace
+    from repro_agent.loop import Orchestrator
+    o = Orchestrator.__new__(Orchestrator)
+    o.graph_repair = True
+    o._active_spec = lambda: None
+    events, it = [], iter(replies)
+    o._ask = lambda *a, **k: SimpleNamespace(content=next(it), finish_reason="stop")
+    o._emit = lambda t, **k: events.append((t, k))
+    return o, events
+
+
+def test_syntax_error_reply_is_rewritten_before_the_sandbox():
+    # FITS live 2026-10-14: a fenced reply with a syntax error went to the sandbox, a Tavily error search and a repair
+    o, events = _orch_with_replies(["```python\nimport torch\ndef f(:\n```", "```python\nimport torch\nx = 1\n```"])
+    assert o._code_from_llm("s", "u").strip() == "import torch\nx = 1"
+    assert [k.get("reason") for t, k in events if t == "code_missing"] == ["syntax"]
+
+
+def test_only_syntax_errors_still_go_to_repair():
+    bad = "```python\nimport torch\ndef f(:\n```"
+    o, _ = _orch_with_replies(["no code here", bad, bad.replace("f(", "g(")])
+    assert "def f(:" in o._code_from_llm("s", "u")

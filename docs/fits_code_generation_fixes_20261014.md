@@ -159,6 +159,7 @@ scikit-learn), weil Kandidaten Autorencode mit `tqdm` kopierten.
 | --- | --- | --- |
 | FITS | lokal autonom | reproduziert, 0.37203 +/- 0.00005 (Ziel 0.372) |
 | FITS | live 5fdc78fc | Kandidat 0.37199, dann Abbruch an Server-Budgetuntergrenze, kein Urteil |
+| FITS | **live a514edeb** | **reproduziert, 0.37203 +/- 0.00005** (Ziel 0.372), 0.31 $ brutto |
 | SARAF | lokal autonom | teilweise, 0.38366 +/- 0.00094 (Ziel 0.371) |
 
 - **Server-Konfiguration (Nutzer):** `BUDGET_TOTAL_USD`/`BUDGET_SINCE` in Coolify auf den aktuellen
@@ -169,3 +170,32 @@ scikit-learn), weil Kandidaten Autorencode mit `tqdm` kopierten.
 - **Nicht behoben:** echte Abbrueche mitten in Code-Antworten mit `finish_reason stop` (Retry faengt sie);
   SARAF-Abstand 0.013 zum Ziel (Methodenebene, nicht weiter untersucht, kein Tuning).
 - Gesamtkosten dieser Nacht: lokal 1.58 $ brutto (FITS 0.30, SARAF a-d 1.28), live 0.22 $ brutto.
+
+## Live-Abnahme FITS a514edeb (2026-10-14, Vormittag)
+
+Nach manuellem Redeploy von `b4bb239` und neuem Budgetstichtag (`BUDGET_TOTAL_USD=9.50`) lief der autonome
+Produktlauf auf https://nullius.akca.dev vollstaendig durch: Job `a514edeb-0751-40b1-968f-390d00faffcf`,
+Lauf `disc_2307_03756--20261014-080542`. Quelle v3 (Hash 9022...), Ziel 0.372, offizielles Repo `d040bb0`,
+Modus Nachbau aus Paper und Autorencode ohne Rueckfall. Spec 9/9 wie lokal (L360, LR 0.0005, Batch 128,
+50 Epochen, Patience 20, cut_freq 106, train_mode 1). Drei Kandidaten liefen; Kandidat 0 und 1 je 0.37199
+auf Seed 0, Kandidat 2 nach Reparaturen lauffaehig. Auswahl Kandidat 0 (Spec 9 + verborgene Validierung),
+Endzulassung ohne Validierungsleck. Seeds 0/1/2: 0.371994 / 0.372007 / 0.372091, Mittel **0.372031 +/-
+0.000053**, Urteil `reproduziert`, Methodentreue nicht geprueft, Gesamtaussage `vorlaeufig`. Kosten 0.2606 $
+netto / 0.3101 $ brutto. Beleg `docs/audits/fits_live_a514edeb_20261014.json`.
+
+Damit ist der autonome FITS-Lauf auch auf dem Server belegt, nicht nur lokal.
+
+Zwei weitere allgemeine Kostenursachen aus diesem Lauf, lokal behoben (noch nicht deployt):
+
+- **Schlusszeichen statt Codezaun.** Ein vollstaendiges, bezahltes Skript endete mit einer einzelnen `}`
+  statt mit dem schliessenden Codezaun und wurde verworfen. Wie bei Schluss-Tags werden einzelne
+  Schlusszeichen-Zeilen am Ende jetzt entfernt, aber nur wenn der Block sonst nicht parst; gueltiger Code
+  mit `}` am Ende bleibt unveraendert. Gilt auch fuer geschlossene Bloecke.
+- **Syntaxfehler ging in die Sandbox.** Ein Kandidat mit Syntaxfehler lief in die Sandbox, loeste eine
+  nutzlose Tavily-Suche nach `SyntaxError: invalid syntax` und drei Reparaturen aus. Im Produktpfad wird
+  Code, der nicht parst, jetzt sofort neu geschrieben (gleicher Retry wie bei fehlendem Block). Bleiben alle
+  drei Versuche fehlerhaft, geht der erste wie bisher in die Reparatur.
+
+Beobachtet, nicht geaendert: Alle drei Kandidaten lasen `train_mode` zunaechst nicht aus `CONFIG`, weil der
+Forecast-Vertrag die Bedeutung (Loss nur auf den 96 Zukunftsschritten) schon vorschreibt; das kostet je
+Kandidat eine kurze Spec-Runde, aendert aber kein Ergebnis.
