@@ -351,12 +351,54 @@ def _check_dataset_run(text: str, quote: str, value: float, dataset: str, percen
     return _compare(row[i], value, percent, f"Spalte {best[i]}, Position {i + 1} von {len(best)}")
 
 
+def _grid_cell(cell: str) -> str:
+    cell = re.sub(r"\\multirow\{[^{}]*\}\{[^{}]*\}\{(.*)\}\s*$", r"\1", cell.strip(), flags=re.S)
+    cell = re.sub(r"\{\\(?:ul|bf|it|em)\s+([^{}]*)\}", r"\1", cell)
+    cell = re.sub(r"\\(?:cmidrule|cline)(?:\([^)]*\))?\{[^{}]*\}", "", cell)
+    return re.sub(r"[*\u2020\u2021]|\\dagger|\\ddagger", "", cell).strip()
+
+
+def _check_latex_grid(text: str, quote: str, value: float, method: str, dataset: str, percent: bool) -> ColumnCheck | None:
+    """Datasets as rows, methods as columns in a LaTeX tabular, including multirow/multicolumn headers
+    (BANGS 2410.09348 `tab:GCN`: `Dataset | Baselines(6) | BANGS` over two header rows)."""
+    wanted, want_ds = _clean_name(method.split(" (")[0]), _clean_name(dataset)
+    if not wanted or not want_ds:
+        return None
+    anchor = _clean_name(quote)
+    for body in latex_tabulars(text):
+        rows = [[_grid_cell(c) for c in _latex_cells(r)] for r in latex_rows(body)]
+        first = next((i for i, r in enumerate(rows) if sum(_result_number(c) is not None for c in r[1:]) >= 2), None)
+        if not first:
+            continue
+        header = rows[:first]
+        width = max(len(r) for r in rows)
+        labels = [" ".join(h[j] for h in header if j < len(h)) for j in range(width)]
+        cols = [j for j, label in enumerate(labels) if wanted in {_clean_name(w) for w in re.split(r"[\s/()]+", label)}
+                or _clean_name(label) == wanted]
+        data = [r for r in rows[first:] if r and _clean_name(r[0]) == want_ds]
+        if len(cols) != 1 or len(data) != 1:
+            continue
+        raw = latex_rows(body)[first + rows[first:].index(data[0])]
+        if anchor and anchor not in _clean_name(raw):
+            continue   # the quoted fragment must be in this row
+        cell = data[0][cols[0]] if cols[0] < len(data[0]) else ""
+        number = _result_number(cell)
+        if number is None:
+            return ColumnCheck("nicht pruefbar", f"Zelle '{cell}' ohne eindeutige Zahl")
+        result = _compare(number, value, percent, f"Zeile {data[0][0]}, Spalte {labels[cols[0]].strip()}")
+        result.source_row = raw.strip()
+        return result
+    return None
+
+
 def check_columns(
     norm_text: str, norm_quote: str, value: float, method: str, dataset: str, metric: str, percent: bool
 ) -> ColumnCheck:
     """Prueft, ob `value` in der Zeile `norm_quote` an der Stelle steht, die die Kopfzeile fuer
     (method, dataset|metric) vorgibt."""
+    grid = None if re.search(r"\b(?:mse|mae)\b", metric.lower()) else _check_latex_grid(norm_text, norm_quote, value, method, dataset, percent)
     for res in (
+        grid,
         _check_latex_datasets_horizons(norm_text, norm_quote, value, method, dataset, metric, percent),
         _check_latex_methods(norm_text, norm_quote, value, method, dataset, metric, percent),
         _check_methods_as_columns(norm_text, norm_quote, value, method, metric, percent),

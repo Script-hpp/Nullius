@@ -1,0 +1,41 @@
+% Excerpt of arXiv:2410.09348v1 (BANGS) LaTeX source: main Table tab:GCN and appendix Table tab: final acc, verbatim.
+\documentclass{article}
+\begin{document}
+\begin{table}[t]
+\centering
+\caption{Node classification accuracy (\%) with graph self-training strategies on different datasets. Mean, standard deviation, and single-side t-test on our method and second-best methods are demonstrated. Significance levels of 0.10 and 0.05 are indicated by "*" and "**".}
+\label{tab:GCN}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+\multirow{2}{*}{\textbf{Dataset}} & \multicolumn{6}{c}{\textbf{Baselines}}                                                          & \multirow{2}{*}{\textbf{BANGS}} \\ \cmidrule(lr){2-7}
+                                  & \textbf{Raw} & \textbf{M3S} & \textbf{CaGCN} & \textbf{DR-GST} & \textbf{Random} & \textbf{CPL} &                                \\ \midrule
+\textbf{Cora}       & 80.82±0.14 & 81.40±0.29 & 83.06±0.11       & 83.04±0.38 & 83.16±0.10 & {\ul 83.72±0.52} & \textbf{84.23±0.62*}  \\
+\textbf{Citeseer}   & 70.18±0.27 & 72.00±0.21 & 72.84±0.07       & 72.50±0.26 & 73.38±0.13 & {\ul 73.63±0.19} & \textbf{73.96±0.29**}  \\
+\textbf{PubMed}     & 78.40±0.11 & 79.21±0.17 & {\ul 81.16±0.10} & 78.10±0.39 & 79.48±0.32 & 81.00±0.24       & \textbf{81.60±0.34**} \\
+\textbf{LastFM} & 78.07±0.31 & 79.49±0.43 & 79.60±1.02       & 79.31±0.55 & 79.42±0.07 & {\ul 80.69±1.11} & \textbf{83.27±0.48**} \\ 
+\textbf{Flickr} & 49.53±0.11 &  49.73±0.20 &     49.81±0.28    &  49.67±0.10 & {\ul 50.10±0.18}  & 50.02±0.22 & \textbf{50.23±0.25} \\ \bottomrule
+
+\end{tabular}%
+}
+\end{table}
+
+\appendix
+
+\begin{table}[h]
+\centering
+\caption{Node classification accuracy (\%) with graph self-training strategies on different datasets. Baseline methods report final test accuracy, our method reports test accuracy by early stopping.}
+\label{tab: final acc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+\multirow{2}{*}{\textbf{\begin{tabular}[c]{@{}l@{}}Base\\ Model\end{tabular}}} & \multicolumn{6}{c}{\textbf{Baselines}} & \multirow{2}{*}{\textbf{BANGS}} \\ \cmidrule(lr){2-7}
+                    & \textbf{Raw} & \textbf{M3S} & \textbf{CaGCN}      & \textbf{DR-GST} & \textbf{Random} & \textbf{CPL}     &                       \\ \midrule
+\textbf{Cora}       & 80.82±0.14   & 81.38±0.75   & {\ul 83.06±0.11}    & 82.03±0.93      & 82.43±0.21      & 83.00±0.57       & \textbf{83.47±0.54*}  \\
+\textbf{Citeseer}   & 70.18±0.27   & 68.80±0.53   & {\ul 72.84±0.07}    & 71.10±0.88      & 72.50±0.52      & 72.45±0.54       & \textbf{73.23±0.70**} \\
+\textbf{PubMed}     & 78.40±0.11   & 79.10±0.28   & \textbf{81.16±0.10} & 77.42±0.60      & 78.93±0.47      & 79.37±0.63       & {\ul 81.03±0.56}      \\
+\textbf{LastFM} & 78.07±0.31   & 78.32±0.81   & 79.60±1.02          & 79.92±0.44      & 79.13±0.11      & {\ul 80.56±1.22} & \textbf{82.66±0.43**} \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+\end{document}

@@ -366,19 +366,47 @@ class ArxivSourceText(str):
         return obj
 
 
+def _flatten_latex(files: dict[str, str]) -> list[str]:
+    """Hauptdatei mit eingesetzten \\input/\\include-Dateien zuerst, dann alle uebrigen .tex-Dateien wie bisher.
+
+    In Tar-Reihenfolge stand ein Anhang oft vor dem Haupttext; erst die echte Reihenfolge macht `\\appendix`
+    als Grenze zwischen Haupttext und Anhang brauchbar (BANGS 2410.09348, 2026-10-14)."""
+    by_stem = {}
+    for name in files:
+        for key in (name, name[:-4], name.rsplit("/", 1)[-1], name.rsplit("/", 1)[-1][:-4]):
+            by_stem.setdefault(key.lstrip("./"), name)
+    roots = [n for n, t in files.items() if re.search(r"^[^%\n]*\\documentclass", t, re.M)]
+    used: set[str] = set()
+
+    def expand(name: str, depth: int) -> str:
+        used.add(name)
+        def sub(m):
+            target = by_stem.get(m.group(2).strip().lstrip("./"))
+            if target is None or target in used or depth > 8:
+                return m.group(0)
+            return "\n" + expand(target, depth + 1) + "\n"
+        return re.sub(r"\\(input|include)\s*\{([^}]+)\}", sub, files[name])
+
+    out = [expand(min(roots, key=lambda n: (not n.lower().endswith("main.tex"), len(n))), 0)] if roots else []
+    out += [files[n] for n in files if n not in used]
+    return out
+
+
 def _decode_arxiv_source(data: bytes) -> str:
     import tarfile
     import io
     import gzip
     import re
     latex_files = []
+    named: dict[str, str] = {}
     try:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
             for member in tar.getmembers():
                 if member.isfile() and member.name.endswith(".tex"):
                     f = tar.extractfile(member)
                     if f:
-                        latex_files.append(f.read().decode('utf-8', errors='ignore'))
+                        named[member.name] = f.read().decode('utf-8', errors='ignore')
+        latex_files = _flatten_latex(named)
     except tarfile.ReadError:
         try:
             with gzip.open(io.BytesIO(data), 'rt', encoding='utf-8', errors='ignore') as f:

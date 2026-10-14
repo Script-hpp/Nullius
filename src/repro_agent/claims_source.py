@@ -344,12 +344,30 @@ def verify_selected_target(paper: PaperText, method: str, dataset: str, metric: 
     Missing/legacy synthesized quotes retain the independent extraction path. A real
     table anchor must prove every identity field; ambiguity or mismatch fails closed.
     """
-    if (paper.source_kind != "latex" or not quote or percent or
-            not re.fullmatch(r"(?:mse|mae) for prediction length \d+", metric.strip(), re.I)):
+    forecast = re.fullmatch(r"(?:mse|mae) for prediction length \d+", metric.strip(), re.I)
+    # Accuracy claims bind the same way (BANGS 2410.09348, 2026-10-14: a second model read picked the
+    # appendix table's 83.47 instead of the main table's 84.23 and stopped a correct claim).
+    if paper.source_kind != "latex" or not quote or not (forecast and not percent or metric.strip().lower() == "accuracy" and percent):
         return None
     normalized = _norm(quote)
+    if not forecast:
+        # Accuracy: bind only what the table proves (column match or a proven other value);
+        # an unparsed layout keeps the previous independent extraction path.
+        try:
+            return _verify_selected_table(paper, method, dataset, metric, value, quote, percent, normalized, None)
+        except ExtractionInvalid as exc:
+            if "Laut Kopfzeile" in str(exc):
+                raise
+            return None
     if _norm(paper.text).count(normalized) > 1:
         raise ExtractionInvalid("Selected quote identifies multiple source locations; a longer source quote is required")
+    horizon = int(re.search(r"prediction length (\d+)", metric, re.I)[1])
+    return _verify_selected_table(paper, method, dataset, metric, value, quote, percent, normalized, horizon)
+
+
+def _verify_selected_table(paper, method, dataset, metric, value, quote, percent, normalized, horizon):
+    if horizon is None and _norm(paper.text).count(normalized) > 1:
+        raise ExtractionInvalid("Selected quote identifies multiple source locations")
     tables = [m.group() for m in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", paper.text, re.S)
               if any(normalized in _norm(tab) for tab in latex_tabulars(m.group()))]
     if not tables:
@@ -358,8 +376,7 @@ def verify_selected_target(paper: PaperText, method: str, dataset: str, metric: 
         raise ExtractionInvalid("Selected quote identifies multiple results tables; a longer source quote is required")
     body = tables[0]
     result = check_columns(_norm(body), normalized, value, method, dataset, metric, percent)
-    horizon = int(re.search(r"prediction length (\d+)", metric, re.I)[1])
-    if result.status != "ok" or result.horizon != horizon or not result.source_row:
+    if result.status != "ok" or (horizon is not None and result.horizon != horizon) or not result.source_row:
         raise ExtractionInvalid(f"Selected result table: {result.detail}")
     # Recover the entire original row/group, including dataset context for multirows.
     from .forecast_claim import original_source_quote

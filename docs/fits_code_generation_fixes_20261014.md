@@ -291,3 +291,19 @@ einfachen Backslash, dekodiert JSON `\t` als Tab und `\b` als Backspace; das Zit
 in der Quelle steht (an den echten Quellen nachgestellt). Fix: `_verbatim_quote` repariert nur die Serialisierung
 (Steuerzeichen zurueck, Ueber-Escapes) und akzeptiert eine Variante nur, wenn sie vollstaendig woertlich in der Quelle
 steht; gilt auch fuer Protokoll-Zitate. Ein erfundenes Zitat bleibt abgelehnt.
+
+### BANGS-Start gestoppt (Job c60c463a) und Ursachenfix
+
+Discovery waehlte BANGS 84.23 (Cora, GCN-Basis) aus der Haupttabelle `tab:GCN`. Die Zielpruefung beim Start las fuer
+Accuracy-Claims nicht die gewaehlte Tabelle, sondern liess ein Modell neu suchen; es nahm 83.47 aus der Anhangtabelle
+`tab: final acc` (anderer Vergleich: Baselines final, BANGS early stopping) und stoppte den Lauf (0.002 $). Meine erste
+Diagnose hatte die Tabellen vertauscht, weil die Quelle in Archivreihenfolge zusammengesetzt wurde.
+
+Fixes:
+- LaTeX-Quellen werden in Dokumentreihenfolge zusammengesetzt: Hauptdatei mit eingesetzten `\input`/`\include`,
+  danach unreferenzierte Dateien. Damit stehen Haupttext und `\appendix` an der richtigen Stelle.
+- Accuracy-Claims werden wie Forecast-Claims an ihre eigene LaTeX-Tabelle gebunden. Neuer Tabellenleser fuer
+  Datensaetze als Zeilen und Methoden als Spalten mit mehrzeiligen Koepfen (`\multirow`, `\multicolumn`, `{\ul ...}`,
+  Signifikanzsterne). Bestaetigt: BANGS 84.23 in `tab:GCN`; ein Wert aus einer anderen Spalte wird abgelehnt.
+  Kann die Tabelle nicht gelesen werden, bleibt der bisherige Weg (unabhaengige Extraktion); Gegenprobe an allen 14
+  Accuracy-Claims aus Katalog und Live-Funden: nur BANGS neu gebunden, keiner neu gesperrt.
