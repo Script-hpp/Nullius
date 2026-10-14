@@ -1,0 +1,574 @@
+{
+ "scope": "Live server job 5fdc78fc after redeploy of 469fc10",
+ "summary": null,
+ "events": [
+  {
+   "ts": 1791936023.4898283,
+   "type": "run_start",
+   "paper_id": "disc_2307_03756",
+   "title": "FITS: Modeling Time Series with $10k$ Parameters",
+   "mode_requested": "nachbau_autorencode",
+   "use_tavily": true,
+   "use_setup_details": true,
+   "paper_only": false,
+   "selection_policy": "validation_only",
+   "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+     "year",
+     "month",
+     "day",
+     "weekday",
+     "hour"
+    ]
+   },
+   "models": {
+    "fast": "nvidia/Nemotron-3_5-Lightning",
+    "code": "nvidia/nemotron-3-super-120b-a12b",
+    "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+   },
+   "seeds": 3,
+   "claims": [
+    "disc_2307_03756_mse"
+   ]
+  },
+  {
+   "ts": 1791936023.4939232,
+   "type": "warning",
+   "text": "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren."
+  },
+  {
+   "ts": 1791936023.4946022,
+   "type": "warning",
+   "text": "Independent candidate selection uses 21 of 117 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs."
+  },
+  {
+   "ts": 1791936023.6987717,
+   "type": "source",
+   "kind": "paper",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "mode": "fixture",
+   "n_chars": 127032,
+   "retrieved_at": "2026-10-14T00:00:23+00:00",
+   "sha256": "9022b12b628fc1807f0ef11bfd7d1266f25b8575c1418afeb7bb90c251a00d64"
+  },
+  {
+   "ts": 1791936023.833194,
+   "type": "target_check",
+   "claim_id": "disc_2307_03756_mse",
+   "verified_value": 0.372,
+   "configured_value": 0.372,
+   "agrees": true,
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "from_store": false
+  },
+  {
+   "ts": 1791936023.834052,
+   "type": "target_resolved",
+   "claim_id": "disc_2307_03756_mse",
+   "value": 0.372,
+   "quote": "FITS & \\textbf{0.372} & \\textbf{0.404} & \\textbf{0.427} & \\textbf{0.424} & \\textbf{0.271} & \\textbf{0.331} & \\textbf{0.354} & \\textbf{0.377} & 0.303 & 0.337 & {\\underline{0.366}} & \\textbf{0.415} & \\textbf{0.162} & \\textbf{0.216} & \\textbf{0.268} & \\textbf{0.348}",
+   "table": "tab:FITSett",
+   "url": "https://export.arxiv.org/src/2307.03756v3",
+   "arxiv_version": "v3",
+   "column_check": "ok",
+   "caveat": null,
+   "from_store": false
+  },
+  {
+   "ts": 1791936033.3736844,
+   "type": "source",
+   "kind": "readme",
+   "url": "https://github.com/VEWOXIC/FITS",
+   "mode": "live",
+   "n_chars": 15455,
+   "retrieved_at": "2026-10-14T00:00:33+00:00",
+   "sha256": "15ac38b43634291d14fe65a5e7ba37723d0f48427de5dd21400e11f0ae1219dc"
+  },
+  {
+   "ts": 1791936156.180987,
+   "type": "setup_details",
+   "n": 38,
+   "dropped": 1,
+   "by_source": {
+    "paper": 4,
+    "repo:scripts/FITS/etth1_best.sh": 12,
+    "repo:run_longExp_F.py": 4,
+    "repo:exp/exp_main_F.py": 4,
+    "repo:exp/exp_main.py": 3,
+    "repo-readme": 1,
+    "repo:models/FITS.py": 6,
+    "repo:README.md": 3,
+    "discovery": 1
+   },
+   "repo": {
+    "url": "https://github.com/VEWOXIC/FITS",
+    "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+    "files": [
+     "README.md",
+     "data_provider/data_factory.py",
+     "data_provider/data_loader.py",
+     "exp/exp_basic.py",
+     "exp/exp_main.py",
+     "exp/exp_main_F.py",
+     "models/FITS.py",
+     "models/NLinear.py",
+     "run_longExp_F.py",
+     "scripts/FITS/etth1_best.sh",
+     "utils/augmentations.py",
+     "utils/metrics.py",
+     "utils/timefeatures.py",
+     "utils/tools.py"
+    ],
+    "n_tracked": 1410,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "title 'FITS: Modeling Time Series with $10k$ Parameters' in README"
+   }
+  },
+  {
+   "ts": 1791936172.3357282,
+   "type": "spec",
+   "model": "FITS",
+   "family": "forecast",
+   "items": [
+    {
+     "key": "lr",
+     "value": "0.0005",
+     "quote": "--learning_rate 0.0005",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 0.0005,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "epochs",
+     "value": "50",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 50,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "batch_size",
+     "value": "128",
+     "quote": "args.batch_size = args.batch_size * 2",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 128,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "patience",
+     "value": "20",
+     "quote": "--patience 20",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 20,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "seq_len",
+     "value": "360",
+     "quote": "for seq_len in 360",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 360,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "cut_freq",
+     "value": "106",
+     "quote": "args.cut_freq = int(args.seq_len // args.base_T + 1) * args.H_order + 10",
+     "source": "repo:run_longExp_F.py@d040bb0",
+     "rank": "start script",
+     "number": 106,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "enc_in",
+     "value": "7",
+     "quote": "--enc_in 7",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "pred_len",
+     "value": "96",
+     "quote": "--pred_len 96",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 96,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "train_mode",
+     "value": "1",
+     "quote": "for m in 1",
+     "source": "repo:scripts/FITS/etth1_best.sh@d040bb0",
+     "rank": "start script",
+     "number": 1,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    }
+   ],
+   "dropped": [
+    {
+     "item": {
+      "key": "dropout",
+      "value": "0.05",
+      "quote": "parser.add_argument('--dropout', type=float, default=0.05, help='dropout')",
+      "source": "repo:run_longExp_F.py@d040bb0"
+     },
+     "reason": "Modellcode des Autors enthaelt diesen Mechanismus nicht"
+    }
+   ],
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:exp/exp_main.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ],
+   "missing": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "model_code_present": true,
+   "dropped_defaults": [
+    "H_order",
+    "batch_size",
+    "data",
+    "data_path",
+    "des",
+    "enc_in",
+    "features",
+    "gpu",
+    "is_training",
+    "itr",
+    "learning_rate",
+    "model",
+    "model_id",
+    "patience",
+    "pred_len",
+    "root_path",
+    "seed",
+    "seq_len",
+    "train_mode"
+   ],
+   "excerpt_chars": 85279
+  },
+  {
+   "ts": 1791936172.3532276,
+   "type": "mode",
+   "mode": "nachbau_autorencode",
+   "requested": "nachbau_autorencode",
+   "fallback_reason": null,
+   "repo": "https://github.com/VEWOXIC/FITS",
+   "commit": "d040bb015b6299da26d879b90dd19c80fb72c160",
+   "excerpt_docs": [
+    "repo:models/FITS.py@d040bb0",
+    "repo:models/NLinear.py@d040bb0",
+    "repo:scripts/FITS/etth1_best.sh@d040bb0",
+    "repo:run_longExp_F.py@d040bb0",
+    "repo:exp/exp_main_F.py@d040bb0",
+    "repo:data_provider/data_loader.py@d040bb0",
+    "repo:exp/exp_main.py@d040bb0",
+    "repo:data_provider/data_factory.py@d040bb0",
+    "repo:exp/exp_basic.py@d040bb0",
+    "repo:utils/tools.py@d040bb0",
+    "repo:utils/metrics.py@d040bb0",
+    "repo:utils/augmentations.py@d040bb0",
+    "repo:utils/timefeatures.py@d040bb0"
+   ]
+  },
+  {
+   "ts": 1791936248.6160367,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "aba130543c6e",
+   "candidate": 0
+  },
+  {
+   "ts": 1791936248.6301014,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "aba130543c6e"
+  },
+  {
+   "ts": 1791936267.4125068,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 0,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "11b807ca88d5"
+  },
+  {
+   "ts": 1791936358.6099808,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-ba1620fd",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-000023",
+   "code_hash": "11b807ca88d5",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 91.2,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 0,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791936399.9880426,
+   "type": "code_written",
+   "claim_id": "disc_2307_03756_mse",
+   "code_hash": "3270fd4392bc",
+   "candidate": 1
+  },
+  {
+   "ts": 1791936400.0027156,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "round": 0,
+   "score": [
+    8,
+    9
+   ],
+   "fails": [
+    {
+     "key": "train_mode",
+     "kind": "unused"
+    }
+   ],
+   "code_hash": "3270fd4392bc"
+  },
+  {
+   "ts": 1791936429.9890764,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "round": 1,
+   "score": [
+    9,
+    9
+   ],
+   "fails": [],
+   "code_hash": "f3750baf328b"
+  },
+  {
+   "ts": 1791936430.1789744,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-5c1e3d3f",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-000023",
+   "code_hash": "f3750baf328b",
+   "status": "ungueltig",
+   "measured": null,
+   "seconds": 0.2,
+   "error": "Statische Pruefung: Checkpoint in line 199 shares live parameter tensors. Use copy.deepcopy(model.state_dict()) or clone each tensor; otherwise the best epoch is overwritten by later training.",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 1
+  },
+  {
+   "ts": 1791936430.1815581,
+   "type": "repair",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "f3750baf328b",
+   "error": "Statische Pruefung: Checkpoint in line 199 shares live parameter tensors. Use copy.deepcopy(model.state_dict()) or clone each tensor; otherwise the best epoch is overwritten by later training."
+  },
+  {
+   "ts": 1791936446.1514516,
+   "type": "repair_result",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "f3750baf328b",
+   "to_hash": "0404727cccdf"
+  },
+  {
+   "ts": 1791936536.1934705,
+   "type": "attempt",
+   "claim_id": "disc_2307_03756_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-9b07b440",
+   "parent_snapshot": "repro-snapshot-disc-2307-03756-20261014-000023",
+   "code_hash": "0404727cccdf",
+   "status": "stabil",
+   "measured": 0.3719943631187008,
+   "seconds": 90.0,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.9047607731326154,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8162348997901121
+   },
+   "candidate": 1,
+   "val": {
+    "metric": "mse",
+    "value": 0.4697055697294899,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791936536.2198045,
+   "type": "spec_check",
+   "claim_id": "disc_2307_03756_mse",
+   "candidate": 1,
+   "stage": "final_candidate",
+   "code_hash": "0404727cccdf",
+   "score": [
+    9,
+    9
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791936536.2632358,
+   "type": "warning",
+   "text": "Additional candidate generation stopped at the spending limit; selecting only independently validated existing candidates."
+  },
+  {
+   "ts": 1791936536.2644415,
+   "type": "candidates",
+   "claim_id": "disc_2307_03756_mse",
+   "k": 2,
+   "requested": 3,
+   "chosen": 0,
+   "chosen_hash": "11b807ca88d5",
+   "reason": "spec (9) + val",
+   "candidates": [
+    {
+     "index": 0,
+     "code_hash": "11b807ca88d5",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    },
+    {
+     "index": 1,
+     "code_hash": "0404727cccdf",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4697055697294899
+     }
+    }
+   ]
+  },
+  {
+   "ts": 1791936563.2770202,
+   "type": "error",
+   "message": "Abbruch: BudgetExceeded: Live model budget floor reached.",
+   "status": "ungeprueft"
+  }
+ ]
+}

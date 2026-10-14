@@ -123,3 +123,49 @@ Autorenrepo `ShiqiaoZhou/SARAF@7b49aa8` reproduziert (`scripts/review/repo_closu
 - **Geraeteflags:** `run.py` setzt `args.gpu = args.device_ids[0]`; der Startparameter-Waechter meldete `gpu`
   als ungeloesten Modellparameter. Die vorhandene Infrastrukturliste (gpu, devices, use_gpu, seed, ...) gilt
   jetzt auch dort. Offline danach: L720, topm 20, 10 Epochen, Batch 8, LR 0.001 aus `scripts/ETTh_720.sh`. (`36d036b`)
+
+### SARAF-Lauf c: zwei weitere allgemeine Ursachen
+
+- **Ein Flag unter zwei Namen erzwungen:** Der Extraktor ordnete `--n_period` (Anzahl Perioden) dem
+  Schluessel `layers` zu; das Zitat stand woertlich im Repo und wurde akzeptiert. Der Startparameter-Leser
+  liefert `n_period` ohnehin. Beide Eintraege waren erzwungen, der Agent konnte nur einen Namen nutzen,
+  und die Spec-Reparaturen drehten sich bis zum Jobbudget im Kreis (0.36 $ netto ohne Messung). Ein
+  zitiertes Flag, das der Startaufruf schon unter eigenem Namen aufloest, gilt jetzt nicht zusaetzlich
+  als anderer Schluessel (`f1764ff`).
+- **Vollstaendiger Code mit Tag statt Zaun:** Zwei bezahlte, vollstaendige Skripte endeten mit
+  `</|tool_call|>` bzw. `</output>` statt ``` ``` ```. Der tolerante Parser nahm das Tag mit, `ast.parse`
+  scheiterte, die Antwort galt als „kein Code“. Abschliessende Tag-Zeilen werden jetzt entfernt (`f1764ff`).
+  Die frueheren FITS-Abbrueche ohne Tag (mitten in einer Zeile, `finish_reason stop`) bleiben echte Abbrueche.
+
+### SARAF-Lauf d: vollstaendig gemessen
+
+Lokal, `src` = main `f1764ff`: Spec 12 Werte aus `scripts/ETTh_720.sh`/`run.py` (L720, topm 20,
+10 Epochen, Batch 8, LR 0.001). Drei Kandidaten; Kandidat 0 scheiterte an vier Methoden-Codefehlern
+(Retrieval-Formen), Kandidaten 1 und 2 liefen nach Reparaturen. Auswahl ueber verborgene Validierung:
+Kandidat 2. Seeds 0/1/2: 0.38263 / 0.38445 / 0.38391, Mittel **0.38366 +/- 0.00094**, Ziel 0.371,
+Produkturteil `teilweise`, Gesamtaussage `vorlaeufig`. Frueherer Live-Wert 0.4917; die menschliche
+Referenz mit unveraendertem Autorenkern im selben Vertrag lag bei 0.3696. Keine Parameter nach Testwerten
+gewaehlt. Kosten 0.460 $ netto / 0.548 $ brutto, 1453 s. Beleg `docs/audits/saraf_local_autonomous_20261014.json`.
+
+Daraus ein weiterer allgemeiner Fix: Der Lauf brauchte mehr als das Live-Jobbudget von 0.50 $. Die
+Erzeugung weiterer Kandidaten fiel an der Grenze schon auf validierte Kandidaten zurueck, eine Reparatur-
+oder Spec-Runde eines spaeteren Kandidaten beendete aber den ganzen Lauf. Jetzt gilt dieselbe Regel auch
+dort (`229255a`). Zusaetzlich nennt der Forecast-Vertrag die fehlenden Bibliotheken (pandas, tqdm,
+scikit-learn), weil Kandidaten Autorencode mit `tqdm` kopierten.
+
+## Stand und offene Punkte
+
+| Paper | Ort | Ergebnis |
+| --- | --- | --- |
+| FITS | lokal autonom | reproduziert, 0.37203 +/- 0.00005 (Ziel 0.372) |
+| FITS | live 5fdc78fc | Kandidat 0.37199, dann Abbruch an Server-Budgetuntergrenze, kein Urteil |
+| SARAF | lokal autonom | teilweise, 0.38366 +/- 0.00094 (Ziel 0.371) |
+
+- **Server-Konfiguration (Nutzer):** `BUDGET_TOTAL_USD`/`BUDGET_SINCE` in Coolify auf den aktuellen
+  Kontostand setzen; sonst blockiert `LIVE_MIN_BUDGET_USD` jeden weiteren Live-Lauf. Ob `MAX_COST_PER_RUN_USD`
+  fuer SARAF-grosse Repos (~0.55 $) angehoben werden soll, ist eine Budgetentscheidung.
+- **Deployment:** Fixes ab `bd6af43` sind gepusht, aber nur per manuellem Redeploy aktiv; der GitHub-Webhook
+  erreicht Coolify nicht (Payload-URL ist ein Tailnet-Name, letzte Zustellungen `EOF`).
+- **Nicht behoben:** echte Abbrueche mitten in Code-Antworten mit `finish_reason stop` (Retry faengt sie);
+  SARAF-Abstand 0.013 zum Ziel (Methodenebene, nicht weiter untersucht, kein Tuning).
+- Gesamtkosten dieser Nacht: lokal 1.58 $ brutto (FITS 0.30, SARAF a-d 1.28), live 0.22 $ brutto.

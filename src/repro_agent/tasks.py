@@ -129,7 +129,9 @@ class Task:
                 'Keep the trained model in eval mode and use deterministic inference without gradient updates or fitting on supplied histories. '
                 'No full test_inputs is exposed to the factory. Our isolated runner supplies one history only after the preceding forecast is recorded. '
                 'Store temporary checkpoints under /tmp/forecast-agent. /output belongs to the runner and is not writable. '
-                'Do not write these files yourself. The runner writes predictions.csv and val_predictions.csv.'
+                'Do not write these files yourself. The runner writes predictions.csv and val_predictions.csv. '
+                'Only numpy, torch and the Python standard library are installed; do not import pandas, tqdm or scikit-learn '
+                'even where the authors\' code does.'
             )
             desc = re.sub(r'- test_inputs:.*?Output:.*?\nEnvironment:',
                           lambda _: 'Task: multivariate forecasting, horizon 96, input length <=720.\nOutput: ' + forecast_output + '\nEnvironment:',

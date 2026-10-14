@@ -46,3 +46,9 @@ def test_forecast_contract_names_backcast_slicing():
     from repro_agent.tasks import etth1_task
     notes = etth1_task().with_independent_selection().with_io_helper().code_notes
     assert "slice its last 96 steps" in notes
+
+
+def test_forecast_contract_names_missing_author_utilities():
+    from repro_agent.tasks import etth1_task
+    notes = etth1_task().with_independent_selection().with_io_helper().code_notes
+    assert "tqdm" in notes and "pandas" in notes

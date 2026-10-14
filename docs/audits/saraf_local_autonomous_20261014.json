@@ -1,0 +1,987 @@
+{
+ "scope": "Local autonomous product run, SARAF 0.371 claim, src = main f1764ff",
+ "summary": {
+  "status": "geprueft",
+  "reason": null,
+  "run_dir": "/home/onuralp/orca/workspaces/research/analyst/runs/disc_2606_04135_f7b4e6db785fdb63/20261014-024356",
+  "seconds": 1453.4,
+  "spent_net_usd": 0.46013
+ },
+ "events": [
+  {
+   "ts": 1791938636.9617684,
+   "type": "run_start",
+   "paper_id": "disc_2606_04135_f7b4e6db785fdb63",
+   "title": "Stationarity-Aware Retrieval-Augmented Time Series Forecasting",
+   "mode_requested": "nachbau_autorencode",
+   "use_tavily": true,
+   "use_setup_details": true,
+   "paper_only": false,
+   "selection_policy": "validation_only",
+   "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+     "year",
+     "month",
+     "day",
+     "weekday",
+     "hour"
+    ]
+   },
+   "models": {
+    "fast": "nvidia/Nemotron-3_5-Lightning",
+    "code": "nvidia/nemotron-3-super-120b-a12b",
+    "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+   },
+   "seeds": 3,
+   "claims": [
+    "disc_2606_04135_f7b4e6db785fdb63_mse"
+   ]
+  },
+  {
+   "ts": 1791938636.9618754,
+   "type": "warning",
+   "text": "Protokoll im Paper nicht belegt: Der Task wurde angenommen, nicht aus dem Paper belegt. Die Gesamtaussage bleibt hoechstens vorlaeufig."
+  },
+  {
+   "ts": 1791938636.9619167,
+   "type": "warning",
+   "text": "Eingabelaenge im Paper nicht belegt, der Agent waehlt sie frei (bis 720)."
+  },
+  {
+   "ts": 1791938636.9619403,
+   "type": "warning",
+   "text": "Independent candidate selection uses 21 of 117 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs."
+  },
+  {
+   "ts": 1791938637.1135025,
+   "type": "source",
+   "kind": "paper",
+   "url": "https://export.arxiv.org/src/2606.04135v1",
+   "mode": "fixture",
+   "n_chars": 75569,
+   "retrieved_at": "2026-10-14T00:43:57+00:00",
+   "sha256": "04afd512c2e955c14a720f45993de266bca62d6193e94b121ca896e09377e8cc"
+  },
+  {
+   "ts": 1791938637.142365,
+   "type": "target_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "verified_value": 0.371,
+   "configured_value": 0.371,
+   "agrees": true,
+   "url": "https://export.arxiv.org/src/2606.04135v1",
+   "from_store": false
+  },
+  {
+   "ts": 1791938637.1424754,
+   "type": "target_resolved",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "value": 0.371,
+   "quote": "\\midrule\n\\multicolumn{1}{c|}{\\multirow{5}{*}{\\rotatebox{90}{ETTh1}}} & 96 & \\underline{0.371} & \\underline{0.399} & \\textbf{0.366} & \\textbf{0.396} & 0.382 & 0.407 & 0.408 & 0.429 & 0.396 & 0.418 & 0.539 & 0.513 & 0.418 & 0.444 & 0.858 & 0.667 & 0.553 & 0.536 & 0.533 & 0.522",
+   "table": "main_result",
+   "url": "https://export.arxiv.org/src/2606.04135v1",
+   "arxiv_version": "v1",
+   "column_check": "ok",
+   "caveat": null,
+   "from_store": false
+  },
+  {
+   "ts": 1791938645.3467436,
+   "type": "source",
+   "kind": "readme",
+   "url": "https://github.com/ShiqiaoZhou/SARAF",
+   "mode": "live",
+   "n_chars": 7899,
+   "retrieved_at": "2026-10-14T00:44:05+00:00",
+   "sha256": "bbc870487fc7199d3d34c81478e3da5198b9fa1658f3cccb5ae2f93416f4e789"
+  },
+  {
+   "ts": 1791938794.3658884,
+   "type": "setup_details",
+   "n": 40,
+   "dropped": 12,
+   "by_source": {
+    "paper": 3,
+    "repo-readme": 1,
+    "repo:README.md": 2,
+    "repo:scripts/ETTh_720.sh": 3,
+    "repo:exp/exp_long_term_forecasting.py": 10,
+    "repo:run.py": 4,
+    "repo:layers/Retrieval.py": 2,
+    "repo:utils/print_args.py": 8,
+    "repo:utils/tools.py": 5,
+    "repo:data_provider/data_loader.py": 2
+   },
+   "repo": {
+    "url": "https://github.com/ShiqiaoZhou/SARAF",
+    "commit": "7b49aa8aabb38e8fe63adbc3146b1890958bf3ca",
+    "files": [
+     "README.md",
+     "data_provider/data_factory.py",
+     "data_provider/data_loader.py",
+     "exp/exp_basic.py",
+     "exp/exp_long_term_forecasting.py",
+     "layers/Retrieval.py",
+     "models/SARAF.py",
+     "run.py",
+     "scripts/ETTh_720.sh",
+     "utils/augmentation.py",
+     "utils/dtw.py",
+     "utils/dtw_metric.py",
+     "utils/losses.py",
+     "utils/metrics.py",
+     "utils/print_args.py",
+     "utils/timefeatures.py",
+     "utils/tools.py"
+    ],
+    "n_tracked": 32,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "arXiv id 2606.04135 in README"
+   }
+  },
+  {
+   "ts": 1791938818.5762901,
+   "type": "spec",
+   "model": "SARAF",
+   "family": "forecast",
+   "items": [
+    {
+     "key": "lr",
+     "value": "0.001",
+     "quote": "--learning_rate 0.001",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 0.001,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "epochs",
+     "value": "10",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')",
+     "source": "repo:run.py@7b49aa8",
+     "rank": "start script",
+     "number": 10,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "batch_size",
+     "value": "8",
+     "quote": "parser.add_argument('--batch_size', type=int, default=8, help='batch size of train input data')",
+     "source": "repo:run.py@7b49aa8",
+     "rank": "start script",
+     "number": 8,
+     "enforce": true,
+     "alternatives": [
+      {
+       "value": "32",
+       "source": "paper",
+       "rank": "paper",
+       "quote": "For SARAF, we train the model for 10 epochs with a batch size of 32."
+      }
+     ],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "patience",
+     "value": "10",
+     "quote": "parser.add_argument('--patience', type=int, default=10, help='early stopping patience')",
+     "source": "repo:run.py@7b49aa8",
+     "rank": "start script",
+     "number": 10,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "seq_len",
+     "value": "720",
+     "quote": "--seq_len 720",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 720,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "c_out",
+     "value": "7",
+     "quote": "--c_out 7",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "dec_in",
+     "value": "7",
+     "quote": "--dec_in 7",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "enc_in",
+     "value": "7",
+     "quote": "--enc_in 7",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "label_len",
+     "value": "48",
+     "quote": "--label_len 48",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 48,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "n_period",
+     "value": "1",
+     "quote": "parser.add_argument(\n        '--n_period', type=int, default=1,\n        help='Number of Periods'\n    )",
+     "source": "repo:run.py@7b49aa8",
+     "rank": "start script",
+     "number": 1,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "pred_len",
+     "value": "96",
+     "quote": "--pred_len 96",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 96,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    },
+    {
+     "key": "topm",
+     "value": "20",
+     "quote": "--topm 20",
+     "source": "repo:scripts/ETTh_720.sh@7b49aa8",
+     "rank": "start script",
+     "number": 20,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "runtime",
+     "tie": []
+    }
+   ],
+   "dropped": [
+    {
+     "item": {
+      "key": "batch_size",
+      "value": 32,
+      "quote": "We compare the inference-time efficiency of four models under the same setting on ETTh1, using an input length of 720 and a forecasting horizon of 96, with batch size 32.",
+      "source": "paper"
+     },
+     "reason": "Zitat beschreibt Inferenz/Effizienz, nicht das Training"
+    },
+    {
+     "item": {
+      "key": "dropout",
+      "value": "0.1",
+      "quote": "parser.add_argument('--dropout', type=float, default=0.1, help='dropout')",
+      "source": "repo:run.py@7b49aa8"
+     },
+     "reason": "Modellcode des Autors enthaelt diesen Mechanismus nicht"
+    }
+   ],
+   "excerpt_docs": [
+    "repo:models/SARAF.py@7b49aa8",
+    "repo:layers/Retrieval.py@7b49aa8",
+    "repo:exp/exp_long_term_forecasting.py@7b49aa8",
+    "repo:exp/exp_basic.py@7b49aa8",
+    "repo:data_provider/data_loader.py@7b49aa8",
+    "repo:run.py@7b49aa8",
+    "repo:scripts/ETTh_720.sh@7b49aa8",
+    "repo:data_provider/data_factory.py@7b49aa8",
+    "repo:utils/tools.py@7b49aa8",
+    "repo:utils/metrics.py@7b49aa8",
+    "repo:utils/dtw_metric.py@7b49aa8",
+    "repo:utils/augmentation.py@7b49aa8",
+    "repo:utils/timefeatures.py@7b49aa8",
+    "repo:utils/print_args.py@7b49aa8",
+    "repo:utils/dtw.py@7b49aa8"
+   ],
+   "missing": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "model_code_present": true,
+   "dropped_defaults": [
+    "c_out",
+    "data",
+    "data_path",
+    "dec_in",
+    "des",
+    "enc_in",
+    "features",
+    "is_training",
+    "itr",
+    "label_len",
+    "learning_rate",
+    "model",
+    "model_id",
+    "pred_len",
+    "root_path",
+    "seed",
+    "seq_len",
+    "task_name",
+    "topm"
+   ],
+   "excerpt_chars": 141408
+  },
+  {
+   "ts": 1791938818.5765564,
+   "type": "mode",
+   "mode": "nachbau_autorencode",
+   "requested": "nachbau_autorencode",
+   "fallback_reason": null,
+   "repo": "https://github.com/ShiqiaoZhou/SARAF",
+   "commit": "7b49aa8aabb38e8fe63adbc3146b1890958bf3ca",
+   "excerpt_docs": [
+    "repo:models/SARAF.py@7b49aa8",
+    "repo:layers/Retrieval.py@7b49aa8",
+    "repo:exp/exp_long_term_forecasting.py@7b49aa8",
+    "repo:exp/exp_basic.py@7b49aa8",
+    "repo:data_provider/data_loader.py@7b49aa8",
+    "repo:run.py@7b49aa8",
+    "repo:scripts/ETTh_720.sh@7b49aa8",
+    "repo:data_provider/data_factory.py@7b49aa8",
+    "repo:utils/tools.py@7b49aa8",
+    "repo:utils/metrics.py@7b49aa8",
+    "repo:utils/dtw_metric.py@7b49aa8",
+    "repo:utils/augmentation.py@7b49aa8",
+    "repo:utils/timefeatures.py@7b49aa8",
+    "repo:utils/print_args.py@7b49aa8",
+    "repo:utils/dtw.py@7b49aa8"
+   ]
+  },
+  {
+   "ts": 1791938926.9072404,
+   "type": "code_written",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "code_hash": "d7a49f246ff6",
+   "candidate": 0
+  },
+  {
+   "ts": 1791938927.002253,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 0,
+   "round": 0,
+   "score": [
+    12,
+    12
+   ],
+   "fails": [],
+   "code_hash": "d7a49f246ff6"
+  },
+  {
+   "ts": 1791938939.302297,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-a9c1c296",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "d7a49f246ff6",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 12.3,
+   "error": "in_forecaster: model.prepare_dataset(train_dataset, val_dataset, None)\n  at train.py line 356 in prepare_dataset: train_temporal_rt = self.rt.retrieve_all(train_data, train=True, device=self.device)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791938941.2698603,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "d7a49f246ff6",
+   "error": "in_forecaster: model.prepare_dataset(train_dataset, val_dataset, None)\n  at train.py line 356 in prepare_dataset: train_temporal_rt = self.rt.retrieve_all(train_data, train=True, device=self.device)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791938971.0941963,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "d7a49f246ff6",
+   "to_hash": "8be435689460"
+  },
+  {
+   "ts": 1791939004.1209984,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-db29a36d",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "8be435689460",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 33.0,
+   "error": "line 401 in encoder: preds_from_temporal_sims = self.retrieval_pred[0](pr.permute(0, 2, 1)).permute(0, 2, 1)\n  raised in linear.py line 134 in forward: return F.linear(input, self.weight, self.bias)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791939006.6369789,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "8be435689460",
+   "error": "line 401 in encoder: preds_from_temporal_sims = self.retrieval_pred[0](pr.permute(0, 2, 1)).permute(0, 2, 1)\n  raised in linear.py line 134 in forward: return F.linear(input, self.weight, self.bias)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939086.8829758,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "8be435689460",
+   "to_hash": "e92d6e3decad"
+  },
+  {
+   "ts": 1791939118.4435678,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 3,
+   "branch_id": "repro-branch-06e9a088",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "e92d6e3decad",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 31.6,
+   "error": "h_x_mark, index, mode)\n  at train.py line 418 in forecast: return self.encoder(x_enc, batch_x_mark, index, mode)\n  at train.py line 401 in encoder: assert((bsz, self.pred_len, channels) == pr.shape)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791939121.0218465,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "e92d6e3decad",
+   "error": "h_x_mark, index, mode)\n  at train.py line 418 in forecast: return self.encoder(x_enc, batch_x_mark, index, mode)\n  at train.py line 401 in encoder: assert((bsz, self.pred_len, channels) == pr.shape)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939163.9866695,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 0,
+   "from_hash": "e92d6e3decad",
+   "to_hash": "d2b5b58252bb"
+  },
+  {
+   "ts": 1791939194.3413353,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 4,
+   "branch_id": "repro-branch-40be196b",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "d2b5b58252bb",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 30.4,
+   "error": "h_x_mark, index, mode)\n  at train.py line 424 in forecast: return self.encoder(x_enc, batch_x_mark, index, mode)\n  at train.py line 406 in encoder: pr = pr.reshape(bsz, self.pred_len, self.channels)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 0
+  },
+  {
+   "ts": 1791939194.4603558,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 0,
+   "stage": "final_candidate",
+   "code_hash": "d2b5b58252bb",
+   "score": [
+    12,
+    12
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791939266.4600549,
+   "type": "code_written",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "code_hash": "19ebc0ffab44",
+   "candidate": 1
+  },
+  {
+   "ts": 1791939266.503773,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 1,
+   "round": 0,
+   "score": [
+    12,
+    12
+   ],
+   "fails": [],
+   "code_hash": "19ebc0ffab44"
+  },
+  {
+   "ts": 1791939278.916047,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-e7a9e10a",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "19ebc0ffab44",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 12.4,
+   "error": "re_dataset(train_data)\n  at train.py line 105 in prepare_dataset: self.train_data_all_mg, _ = self.decompose_mg(self.train_data_all)\n  at train.py line 183 in decompose_mg: for g in self.period_num:\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 1
+  },
+  {
+   "ts": 1791939282.9111814,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "19ebc0ffab44",
+   "error": "re_dataset(train_data)\n  at train.py line 105 in prepare_dataset: self.train_data_all_mg, _ = self.decompose_mg(self.train_data_all)\n  at train.py line 183 in decompose_mg: for g in self.period_num:\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939328.1608138,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "19ebc0ffab44",
+   "to_hash": "ecf8edf210d2"
+  },
+  {
+   "ts": 1791939358.214447,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-b198790c",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "ecf8edf210d2",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 30.1,
+   "error": "set: test_temporal_rt = self.rt.retrieve_all(test_data, train=False, device=self.device)\n  at train.py line 357 in retrieve_all: preds_from_temporal_sims = torch.cat(preds_from_temporal_sims, dim=1)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 1
+  },
+  {
+   "ts": 1791939358.214969,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "ecf8edf210d2",
+   "error": "set: test_temporal_rt = self.rt.retrieve_all(test_data, train=False, device=self.device)\n  at train.py line 357 in retrieve_all: preds_from_temporal_sims = torch.cat(preds_from_temporal_sims, dim=1)\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939401.021379,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "ecf8edf210d2",
+   "to_hash": "1ac359e03467"
+  },
+  {
+   "ts": 1791939413.386202,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 3,
+   "branch_id": "repro-branch-b61a0aca",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "1ac359e03467",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 12.4,
+   "error": "re_dataset(train_data)\n  at train.py line 112 in prepare_dataset: self.train_data_all_mg, _ = self.decompose_mg(self.train_data_all)\n  at train.py line 192 in decompose_mg: for g in self.period_num:\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 1
+  },
+  {
+   "ts": 1791939413.3867905,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "1ac359e03467",
+   "error": "re_dataset(train_data)\n  at train.py line 112 in prepare_dataset: self.train_data_all_mg, _ = self.decompose_mg(self.train_data_all)\n  at train.py line 192 in decompose_mg: for g in self.period_num:\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939445.379885,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 1,
+   "from_hash": "1ac359e03467",
+   "to_hash": "0f47318e7183"
+  },
+  {
+   "ts": 1791939573.1814716,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 4,
+   "branch_id": "repro-branch-53c3b970",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "0f47318e7183",
+   "status": "abweichung",
+   "measured": 0.38399358490297325,
+   "seconds": 127.8,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8809182372483286,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8090703231256658
+   },
+   "candidate": 1,
+   "val": {
+    "metric": "mse",
+    "value": 0.48161203853064444,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791939573.2456267,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 1,
+   "stage": "final_candidate",
+   "code_hash": "0f47318e7183",
+   "score": [
+    12,
+    12
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791939636.5150123,
+   "type": "code_written",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "code_hash": "02096bb5fd3e",
+   "candidate": 2
+  },
+  {
+   "ts": 1791939636.5583694,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 2,
+   "round": 0,
+   "score": [
+    12,
+    12
+   ],
+   "fails": [],
+   "code_hash": "02096bb5fd3e"
+  },
+  {
+   "ts": 1791939649.7195585,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-0aca9d30",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "02096bb5fd3e",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 13.2,
+   "error": "value of an array with more than one element is ambiguous. Use a.any() or a.all()\n  at train.py line 578 in train_forecaster: val_visible = arr[:val_visible_len] if (arr := val_arr) else val_arr[:0]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791939649.7199905,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "02096bb5fd3e",
+   "error": "value of an array with more than one element is ambiguous. Use a.any() or a.all()\n  at train.py line 578 in train_forecaster: val_visible = arr[:val_visible_len] if (arr := val_arr) else val_arr[:0]\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939697.2243946,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "02096bb5fd3e",
+   "to_hash": "facb9c7cb2ac"
+  },
+  {
+   "ts": 1791939709.0704648,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 2,
+   "branch_id": "repro-branch-2f8a863a",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "facb9c7cb2ac",
+   "status": "fehler",
+   "measured": null,
+   "seconds": 11.8,
+   "error": "qdm\nModuleNotFoundError: No module named 'tqdm'\n\nForecast worker failed during loading train.py: ModuleNotFoundError: No module named 'tqdm'\n  at train.py line 736 in <module>: from tqdm import tqdm\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)",
+   "stdout_tail": null,
+   "diagnostics": null,
+   "candidate": 2
+  },
+  {
+   "ts": 1791939709.070856,
+   "type": "repair",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "facb9c7cb2ac",
+   "error": "qdm\nModuleNotFoundError: No module named 'tqdm'\n\nForecast worker failed during loading train.py: ModuleNotFoundError: No module named 'tqdm'\n  at train.py line 736 in <module>: from tqdm import tqdm\nThe trusted broker stopped while sending val_predictions.csv history 0 because the worker ended with exit code 1. Fix the error above in train.py; the full traceback is earlier in stderr.\n(exit code 1)"
+  },
+  {
+   "ts": 1791939759.4785256,
+   "type": "repair_result",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "candidate": 2,
+   "from_hash": "facb9c7cb2ac",
+   "to_hash": "86b47f8556c1"
+  },
+  {
+   "ts": 1791939895.302492,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 0,
+   "n": 3,
+   "branch_id": "repro-branch-80f5ee27",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "86b47f8556c1",
+   "status": "abweichung",
+   "measured": 0.3826304513769299,
+   "seconds": 135.8,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8760549534033532,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8100583881115488
+   },
+   "candidate": 2,
+   "val": {
+    "metric": "mse",
+    "value": 0.47765962535911344,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791939895.350809,
+   "type": "spec_check",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "candidate": 2,
+   "stage": "final_candidate",
+   "code_hash": "86b47f8556c1",
+   "score": [
+    12,
+    12
+   ],
+   "fails": []
+  },
+  {
+   "ts": 1791939895.381117,
+   "type": "candidates",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "k": 3,
+   "requested": 3,
+   "chosen": 2,
+   "chosen_hash": "86b47f8556c1",
+   "reason": "spec (12) + val",
+   "candidates": [
+    {
+     "index": 0,
+     "code_hash": "d2b5b58252bb",
+     "runnable": false,
+     "val": null
+    },
+    {
+     "index": 1,
+     "code_hash": "0f47318e7183",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.48161203853064444
+     }
+    },
+    {
+     "index": 2,
+     "code_hash": "86b47f8556c1",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.47765962535911344
+     }
+    }
+   ]
+  },
+  {
+   "ts": 1791940046.954768,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 2,
+   "n": 1,
+   "branch_id": "repro-branch-309195dd",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "86b47f8556c1",
+   "status": "abweichung",
+   "measured": 0.3839127721429422,
+   "seconds": 128.4,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8709431912794271,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8095928241189335
+   },
+   "candidate": 2
+  },
+  {
+   "ts": 1791940054.75408,
+   "type": "attempt",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "seed": 1,
+   "n": 1,
+   "branch_id": "repro-branch-6a898b2d",
+   "parent_snapshot": "repro-snapshot-disc-2606-04135-f7b4e6db785fdb63-20261014-024356",
+   "code_hash": "86b47f8556c1",
+   "status": "abweichung",
+   "measured": 0.38445135598478686,
+   "seconds": 136.2,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8717732437434236,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8089052215220532
+   },
+   "candidate": 2
+  },
+  {
+   "ts": 1791940054.7562099,
+   "type": "verdict",
+   "claim_id": "disc_2606_04135_f7b4e6db785fdb63_mse",
+   "urteil": "teilweise",
+   "methode": "nicht geprueft",
+   "gesamt": "vorlaeufig",
+   "mean": 0.38366485983488635,
+   "std": 0.0009354243860905394,
+   "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0009. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.371 +/- 0.01, main_result, arXiv v1 (latex)): Mittel 0.3837. Code-Kandidaten: 3, gewaehlt Kandidat 2 (Code 86b47f8556c1) nach Validierungs-Metrik (0: no val value, 1: mse 0.4816, 2: mse 0.4777); Optional repository repair not run within budget; validated selected code retained.; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.; Forecast histories were streamed chronologically to an unprivileged predictor after fitting; each forecast was recorded before the next history was exposed."
+  },
+  {
+   "ts": 1791940090.3423407,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/ShiqiaoZhou/SARAF",
+   "mode": "live",
+   "n_chars": 7899,
+   "retrieved_at": "2026-10-14T01:07:34+00:00",
+   "sha256": "bbc870487fc7199d3d34c81478e3da5198b9fa1658f3cccb5ae2f93416f4e789"
+  },
+  {
+   "ts": 1791940090.3519633,
+   "type": "run_end",
+   "cost_net_usd": 0.4601,
+   "cost_gross_usd": 0.5475
+  }
+ ]
+}
