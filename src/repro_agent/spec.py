@@ -574,12 +574,36 @@ def verify_entries(raw: list, docs: list[Doc], model: str, family: str, numeric_
             reason = "Zitat beschreibt Inferenz/Effizienz, nicht das Training"
         elif key == 'seq_len' and ambiguous_length_quote(quote):
             reason = "Zitat nennt mehrere Eingabelaengen, keine einzelne Experimentvorgabe"
+        elif source.startswith('repo:') and overridden_signature_default(quote, value, source, docs):
+            reason = "Default der Funktionssignatur; der Aufruf im Repo uebergibt diesen Parameter selbst"
         if reason:
             dropped.append({"item": it, "reason": reason})
             continue
         number = parse_number(key, value) if key in num_keys else None
         kept.append(SpecItem(key, value, quote, source, source_rank(source, quote), number, specific=_is_specific(source, model)))
     return kept, dropped
+
+
+def overridden_signature_default(quote: str, value: str, source: str, docs: list[Doc]) -> bool:
+    """`def __init__(self, patience=7)` is not the run's value when a call site passes `patience=...` itself.
+    RLinear live 2026-10-14: EarlyStopping's signature default 7 outranked the `--patience` default 10 that
+    `EarlyStopping(patience=self.args.patience)` actually receives; the same utils/tools.py is in most LTSF repos."""
+    sig = re.search(r"\bdef\s+(\w+)\s*\(([^)]*)\)?", quote)
+    if not sig:
+        return False
+    params = [p for p, v in re.findall(r"(\w+)\s*=\s*([^,)\s]+)", sig.group(2)) if _number_in_quote(value, v) or v == value]
+    if not params:
+        return False
+    callee = sig.group(1)
+    if callee == '__init__':
+        text = next((d.text for d in docs if d.name == source), '')
+        at = text.find(sig.group())
+        classes = re.findall(r"^\s*class\s+(\w+)", text[:at] if at >= 0 else '', re.M)
+        if not classes:
+            return False
+        callee = classes[-1]
+    calls = [re.compile(rf"(?<![\w.]def ){re.escape(callee)}\s*\((?:[^()]|\([^()]*\))*?\b{re.escape(p)}\s*=") for p in params]
+    return any(c.search(d.text) for d in docs if d.name.startswith('repo:') for c in calls)
 
 
 def ambiguous_length_quote(quote: str) -> bool:

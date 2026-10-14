@@ -219,3 +219,28 @@ Zero-shot-, k-shot- oder In-Context-Setting nennt (Methodennamen in Zahlenzeilen
 Reject zu cachen. Gegenprobe: alle 12 GILT-Tabellen mit Shot-Angabe erkannt, keine der 37 Tabellen aus
 FITS, SARAF, GLinear, SegRNN, SparseTSF und Data-Embeddings betroffen. Der bereits gespeicherte GILT-Fund
 auf dem Server bleibt bis zu einer neuen Discovery nach Deployment startbar; nicht starten.
+
+## Unabhaengiger Live-Test RLinear ba9fa94f (2026-10-14)
+
+Einziger Fund der Discovery, aus dem kein Fix abgeleitet war (frueher Nachlauf-Entwicklungseinheit und recall-cg-v1-Held-out,
+deshalb nicht voellig unabhaengig). Ein Lauf auf dem Server (Stand `362d4bd`), Schnellpruefung, kein Tuning:
+Seeds 0.412463 / 0.389745 / 0.388740, Mittel **0.396983 +/- 0.013415**, Ziel 0.366, Urteil `nicht reproduziert`,
+Gesamtaussage `vorlaeufig`. Kosten 0.1636 $ netto / 0.1947 $ brutto. Beleg `docs/audits/rlinear_live_ba9fa94f_20261014.json`.
+Drei Kandidaten auf Seed 0: 0.4125 / 0.3864 / 0.3894; die verborgene Validierung waehlte Kandidat 0 (keine Testwerte in der Auswahl).
+
+Der Steckbrief hatte zwei falsche Werte, beide aus allgemeinen Ursachen:
+
+- **Eingabelaenge 96 statt 336.** Das Paper nennt die Laenge nur in der Caption der Claim-Tabelle ("The length of the historical
+  horizon is 336"). Discovery hatte `input_length: 336`, aber der Belegabgleich kannte "historical horizon" nicht und las keine
+  Captions; also gewann der argparse-Default `--seq_len 96` aus `run.py`. Fix `8abc8da`: Caption der eigenen Claim-Tabelle
+  (Label oder zitierte Zeile, nie eine andere Tabelle) wird gelesen, "historical/input horizon" zaehlt als Laengenangabe.
+  Gegenprobe mit der echten Quelle: Spec setzt 336 vor dem argparse-Default; Tabelle 1 ("historical and prediction horizon are
+  set as 336") wird nie gebunden.
+- **Patience 7 statt 10.** `def __init__(self, patience=7, ...)` aus `utils/tools.py` (Rang "code") schlug den argparse-Default 10,
+  obwohl `EarlyStopping(patience=self.args.patience)` den Wert uebergibt. Dieselbe `utils/tools.py` steckt in den meisten
+  LTSF-Repos. Fix: Signatur-Defaults fallen weg, wenn eine Aufrufstelle im Repo den Parameter selbst uebergibt.
+
+Nicht geaendert: Die Autoren-Startbefehle stehen in `script.md` (Markdown) mit `--model Linear`, das `exp_main.py` gar nicht
+mehr kennt (nur `RLinear`, `RMLP`, `STD`); veraltete Startdatei, nicht als Startskript gewertet. Die Warnung
+"Eingabelaenge im Paper nicht belegt" beim Start bleibt auch dann stehen, wenn die Caption die Laenge spaeter belegt (kosmetisch).
+Ob der Zielwert mit beiden Fixes erreicht wird, ist ungeprueft.

@@ -343,3 +343,24 @@ def test_caption_of_another_table_is_never_bound():
     paper = {'input_length': 336, 'discovery_quote': r'\textit{RLinear} & \textit{0.420} & \textit{0.423}', 'discovery_source': {}}
     assert catalog.discovery_details(paper, rlinear_source()) == []
     assert catalog.discovery_details({**paper, 'discovery_quote': 'not in any table'}, rlinear_source()) == []
+
+
+TOOLS_PY = ("import numpy as np\n\n\nclass EarlyStopping:\n    def __init__(self, patience=7, verbose=False, delta=0):\n"
+            "        self.patience = patience\n")
+SIGNATURE_DEFAULT = [{'key': 'patience', 'value': '7', 'quote': 'def __init__(self, patience=7, verbose=False, delta=0):',
+                      'source': 'repo:utils/tools.py@0fec001'}]
+
+
+def test_signature_default_is_dropped_when_the_call_site_passes_the_argument():
+    # RLinear live 2026-10-14: EarlyStopping(patience=7) outranked --patience default 10 that the call actually passes
+    exp = "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)\n"
+    kept, dropped = verify_entries(SIGNATURE_DEFAULT, [Doc('repo:utils/tools.py@0fec001', TOOLS_PY),
+                                                       Doc('repo:exp/exp_main.py@0fec001', exp)], 'RLinear', 'forecast', True)
+    assert not kept and 'Aufruf' in dropped[0]['reason']
+
+
+@pytest.mark.parametrize('exp', ["early_stopping = EarlyStopping(verbose=True)\n", ""])
+def test_signature_default_stays_when_no_call_passes_it(exp):
+    kept, _ = verify_entries(SIGNATURE_DEFAULT, [Doc('repo:utils/tools.py@0fec001', TOOLS_PY),
+                                                 Doc('repo:exp/exp_main.py@0fec001', exp)], 'RLinear', 'forecast', True)
+    assert [i.number for i in kept] == [7]

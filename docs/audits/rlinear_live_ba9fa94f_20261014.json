@@ -1,0 +1,2112 @@
+{
+ "scope": "Live product run ba9fa94f-4867-4bf7-bd25-009f748503e2 (RLinear, independent test chosen after discovery 1ec41249) on https://nullius.akca.dev, deployed main 362d4bd. SSE stream; llm_call/code_text/plan_text/tavily_call omitted.",
+ "summary": {
+  "job_id": "ba9fa94f-4867-4bf7-bd25-009f748503e2",
+  "run_id": "disc_2305_10721--20261014-083748",
+  "verdict": {
+   "urteil": "nicht reproduziert",
+   "measured_mean": 0.396983,
+   "measured_std": 0.013415,
+   "seeds": 3,
+   "target": 0.366,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "mode": "nachbau_autorencode",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_2305_10721/20261014-083748"
+  },
+  "seeds": [
+   0.4124625739275656,
+   0.3897449591427064,
+   0.3887403175974249
+  ],
+  "cost_net_usd": 0.1636,
+  "cost_gross_usd": 0.1947,
+  "n_events": 197
+ },
+ "events": [
+  {
+   "ts": 1791967068.3958015,
+   "type": "queued",
+   "catalog_id": "disc_2305_10721",
+   "quick": true,
+   "entry": {
+    "id": "disc_2305_10721",
+    "arxiv_id": "2305.10721",
+    "title": "Revisiting Long-term Time Series Forecasting: An Investigation on Linear Mapping",
+    "dataset": "ETTh1",
+    "task": "ETTh1",
+    "claim": {
+     "method": "RLinear",
+     "metric": "mse",
+     "target": 0.366,
+     "horizon": 96,
+     "quote": "2c|Method 2c|RLinear 2c||RMLP 2c|PatchTST 2c|TimesNet 2cDLinear 2c|Metric MSE MAE MSE MAE MSE MAE MSE MAE MSE MAE 4*90ETTh1 96 0.366 0.391 0.390 0.410 0.381 0.405 0.398 0.418 0.375 0.399",
+     "input_length": 336
+    },
+    "protocol": "passt",
+    "column_check": "unchecked",
+    "github_url": "https://github.com/plumprc/RTSF",
+    "source_url": "https://arxiv.org/pdf/2305.10721",
+    "origin": "discovery",
+    "benchmark": null,
+    "status": "ungeprueft",
+    "reason": null,
+    "checked_at": null,
+    "cost_gross_usd": null,
+    "verdict": null,
+    "run_id": null,
+    "jury": null
+   },
+   "mode_requested": "nachbau_autorencode"
+  },
+  {
+   "ts": 1791967068.3998013,
+   "type": "started",
+   "catalog_id": "disc_2305_10721"
+  },
+  {
+   "ts": 1791967068.7991178,
+   "type": "run_start",
+   "paper_id": "disc_2305_10721",
+   "title": "Revisiting Long-term Time Series Forecasting: An Investigation on Linear Mapping",
+   "mode_requested": "nachbau_autorencode",
+   "use_tavily": true,
+   "use_setup_details": true,
+   "paper_only": false,
+   "selection_policy": "validation_only",
+   "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "windows",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 21,
+    "total_validation_samples": 117,
+    "inference": "causal_stream_v2",
+    "deterministic_rechecks": 8,
+    "calendar_features": [
+     "year",
+     "month",
+     "day",
+     "weekday",
+     "hour"
+    ]
+   },
+   "models": {
+    "fast": "nvidia/Nemotron-3_5-Lightning",
+    "code": "nvidia/nemotron-3-super-120b-a12b",
+    "reasoning": "nvidia/nemotron-3-super-120b-a12b"
+   },
+   "seeds": 3,
+   "claims": [
+    "disc_2305_10721_mse"
+   ]
+  },
+  {
+   "ts": 1791967068.8068237,
+   "type": "warning",
+   "text": "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren."
+  },
+  {
+   "ts": 1791967068.807852,
+   "type": "warning",
+   "text": "Eingabelaenge im Paper nicht belegt, der Agent waehlt sie frei (bis 720)."
+  },
+  {
+   "ts": 1791967068.8088667,
+   "type": "warning",
+   "text": "Independent candidate selection uses 21 of 117 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs."
+  },
+  {
+   "ts": 1791967072.1783788,
+   "type": "source",
+   "kind": "paper",
+   "url": "https://export.arxiv.org/src/2305.10721v2",
+   "mode": "fixture",
+   "n_chars": 63773,
+   "retrieved_at": "2026-10-14T08:37:52+00:00",
+   "sha256": "2d5dfd2e7f493dca8c1e1d4d62441eb9183ca6dd4b6d98bb3df6b9fb360b6bcf"
+  },
+  {
+   "ts": 1791967072.208819,
+   "type": "target_check",
+   "claim_id": "disc_2305_10721_mse",
+   "verified_value": 0.366,
+   "configured_value": 0.366,
+   "agrees": true,
+   "url": "https://export.arxiv.org/src/2305.10721v2",
+   "from_store": false
+  },
+  {
+   "ts": 1791967072.2097096,
+   "type": "target_resolved",
+   "claim_id": "disc_2305_10721_mse",
+   "value": 0.366,
+   "quote": "\\midrule\n    \\multirow{4}{*}{\\rotatebox{90}{ETTh1}}\n     & 96 & \\textbf{0.366} & \\textbf{0.391} & 0.390 & 0.410 & 0.381 & 0.405 & 0.398 & 0.418 & \\underline{0.375} & \\underline{0.399}",
+   "table": "tab:2",
+   "url": "https://export.arxiv.org/src/2305.10721v2",
+   "arxiv_version": "v2",
+   "column_check": "ok",
+   "caveat": null,
+   "from_store": false
+  },
+  {
+   "ts": 1791967078.8514667,
+   "type": "repo_candidate",
+   "url": "https://github.com/plumprc/RTSF",
+   "source": "paper",
+   "verdict": "accepted",
+   "reason": "arXiv id 2305.10721 in README",
+   "status": "official",
+   "status_reason": "linked in the paper text",
+   "evidence": "paper",
+   "live": true
+  },
+  {
+   "ts": 1791967078.855186,
+   "type": "source",
+   "kind": "readme",
+   "url": "https://github.com/plumprc/RTSF",
+   "mode": "live",
+   "n_chars": 8378,
+   "retrieved_at": "2026-10-14T08:37:58+00:00",
+   "sha256": "f4fbe1077ece1fe312449ecc67b4a94c8f6aeac27de9a4d6dbd8dd0bc77efccf"
+  },
+  {
+   "ts": 1791967181.6178977,
+   "type": "setup_details",
+   "n": 44,
+   "dropped": 8,
+   "by_source": {
+    "repo:run.py": 11,
+    "paper": 2,
+    "repo:exp/exp_main.py": 6,
+    "repo:utils/tools.py": 6,
+    "repo:models/RLinear.py": 5,
+    "repo:data_provider/data_loader.py": 5,
+    "repo:data_provider/data_factory.py": 9
+   },
+   "repo": {
+    "url": "https://github.com/plumprc/RTSF",
+    "commit": "0fec00104f754f4fbf795b9b4da5fa2459b32e76",
+    "files": [
+     "README.md",
+     "data_provider/data_factory.py",
+     "data_provider/data_loader.py",
+     "exp/exp_basic.py",
+     "exp/exp_main.py",
+     "layers/Invertible.py",
+     "models/RLinear.py",
+     "run.py",
+     "utils/metrics.py",
+     "utils/timefeatures.py",
+     "utils/tools.py"
+    ],
+    "n_tracked": 25,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "arXiv id 2305.10721 in README"
+   },
+   "details": [
+    {
+     "topic": "input length",
+     "value": "96",
+     "quote": "parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning rate",
+     "value": "0.005",
+     "quote": "Across all benchmarks, we set the initial learning rate to 0.005 and the batch size to 128.",
+     "source": "paper",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "Across all benchmarks, we set the initial learning rate to 0.005 and the batch size to 128."
+     },
+     "source_rank": "paper",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning rate",
+     "value": "0.001",
+     "quote": "parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": null,
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate-schedule",
+     "value": "type1",
+     "quote": "parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "adjusted each epoch via adjust_learning_rate(model_optim, epoch + 1, self.args)",
+     "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "RLinear",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "adjust_learning_rate(model_optim, epoch + 1, self.args)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }",
+     "quote": "elif args.lradj == 'type2':\n        lr_adjust = {\n            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,\n            10: 5e-7, 15: 1e-7, 20: 5e-8\n        }",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "lr_adjust = {epoch: args.learning_rate if epoch < 10 else args.learning_rate*0.1}",
+     "quote": "elif args.lradj == '3':\n        lr_adjust = {epoch: args.learning_rate if epoch < 10 else args.learning_rate*0.1}",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "lr_adjust = {epoch: args.learning_rate if epoch < 15 else args.learning_rate*0.1}",
+     "quote": "elif args.lradj == '4':\n        lr_adjust = {epoch: args.learning_rate if epoch < 15 else args.learning_rate*0.1}",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "lr_adjust = {epoch: args.learning_rate if epoch < 25 else args.learning_rate*0.1}",
+     "quote": "elif args.lradj == '5':\n        lr_adjust = {epoch: args.learning_rate if epoch < 25 else args.learning_rate*0.1}",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "learning-rate schedule",
+     "value": "lr_adjust = {epoch: args.learning_rate if epoch < 5 else args.learning_rate*0.1}",
+     "quote": "elif args.lradj == '6':\n        lr_adjust = {epoch: args.learning_rate if epoch < 5 else args.learning_rate*0.1}",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def adjust_learning_rate(optimizer, epoch, args):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "batch size",
+     "value": "16",
+     "quote": "parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "epochs",
+     "value": "20",
+     "quote": "The training process is early stopped within 20 epochs.",
+     "source": "paper",
+     "applies_to": null,
+     "source_rank": "paper",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "epochs",
+     "value": "15",
+     "quote": "parser.add_argument('--train_epochs', type=int, default=15, help='train epochs')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--train_epochs', type=int, default=15, help='train epochs')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "epochs",
+     "value": "self.args.train_epochs",
+     "quote": "for epoch in range(self.args.train_epochs):",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "RLinear",
+      "dataset": "not stated",
+      "setting": "not stated",
+      "quote": "for epoch in range(self.args.train_epochs):"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "10",
+     "quote": "parser.add_argument('--patience', type=int, default=10, help='early stopping patience')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "print('Args in experiment:')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "self.args.patience",
+     "quote": "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def train(self, setting):\n        train_loader = self._get_data(flag='train')\n        vali_loader = self._get_data(flag='val')\n        test_loader = self._get_data(flag='test')\n\n        path = os.path.join(self.args.checkpoints, setting)\n        if not os.path.exists(path):\n            os.makedirs(path)\n\n        time_now = time.time()\n        train_steps = len(train_loader)\n        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "patience",
+     "value": "7",
+     "quote": "def __init__(self, patience=7, verbose=False, delta=0):",
+     "source": "repo:utils/tools.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "def __init__(self, patience=7, verbose=False, delta=0):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "seq_len",
+     "value": "configs.seq_len",
+     "quote": "nn.Linear(configs.seq_len, configs.pred_len)",
+     "source": "repo:models/RLinear.py@0fec001",
+     "applies_to": {
+      "model": "rlinear",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "nn.Linear(configs.seq_len, configs.pred_len)"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "channel",
+     "value": "configs.channel",
+     "quote": "nn.ModuleList([ nn.Linear(configs.seq_len, configs.pred_len) for _ in range(configs.channel) ]) if configs.individual else nn.Linear(configs.seq_len, configs.pred_len)",
+     "source": "repo:models/RLinear.py@0fec001",
+     "applies_to": {
+      "model": "rlinear",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "nn.ModuleList([ nn.Linear(configs.seq_len, configs.pred_len) for _ in range(configs.channel) ]) if configs.individual else nn.Linear(configs.seq_len, configs.pred_len)"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "drop",
+     "value": "configs.drop",
+     "quote": "self.dropout = nn.Dropout(configs.drop)",
+     "source": "repo:models/RLinear.py@0fec001",
+     "applies_to": {
+      "model": "rlinear",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "self.dropout = nn.Dropout(configs.drop)"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "rev",
+     "value": "configs.rev",
+     "quote": "self.rev = RevIN(configs.channel) if configs.rev else None",
+     "source": "repo:models/RLinear.py@0fec001",
+     "applies_to": {
+      "model": "rlinear",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "self.rev = RevIN(configs.channel) if configs.rev else None"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "individual",
+     "value": "configs.individual",
+     "quote": "self.individual = configs.individual",
+     "source": "repo:models/RLinear.py@0fec001",
+     "applies_to": {
+      "model": "rlinear",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "self.individual = configs.individual"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "fix_seed = 1024",
+     "quote": "fix_seed = 1024",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "fix_seed = 1024"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "random.seed(fix_seed)",
+     "quote": "random.seed(fix_seed)",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "random.seed(fix_seed)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "torch.manual_seed(fix_seed)",
+     "quote": "torch.manual_seed(fix_seed)",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "torch.manual_seed(fix_seed)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "np.random.seed(fix_seed)",
+     "quote": "np.random.seed(fix_seed)",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "np.random.seed(fix_seed)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "use_gpu default=True",
+     "quote": "parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')",
+     "source": "repo:run.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')"
+     },
+     "source_rank": "argparse default",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "learning_rate",
+     "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "use_amp",
+     "quote": "if self.args.use_amp:\n            scaler = torch.cuda.amp.GradScaler()",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "if self.args.use_amp:\n            scaler = torch.cuda.amp.GradScaler()"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "seg",
+     "quote": "if idx % self.args.seg == 0:",
+     "source": "repo:exp/exp_main.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "all",
+      "setting": "not stated",
+      "quote": "if idx % self.args.seg == 0:"
+     },
+     "source_rank": "start script",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "features = 'S'",
+     "quote": "self.features = features",
+     "source": "repo:data_provider/data_loader.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h'):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "target = 'OT'",
+     "quote": "self.target = target",
+     "source": "repo:data_provider/data_loader.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h'):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "scale = True",
+     "quote": "self.scale = scale",
+     "source": "repo:data_provider/data_loader.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h'):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "freq = 'h'",
+     "quote": "self.freq = freq",
+     "source": "repo:data_provider/data_loader.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h'):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "data_path = 'ETTh1.csv' (default)",
+     "quote": "def __init__(self, root_path, flag='train', size=None,\n                 features='S', data_path='ETTh1.csv',\n                 target='OT', scale=True, timeenc=0, freq='h'):",
+     "source": "repo:data_provider/data_loader.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "class Dataset_ETT_hour(Dataset):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "shuffle_flag=False for test",
+     "quote": "shuffle_flag = False",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "drop_last=True for test",
+     "quote": "drop_last = True",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "batch_size=args.batch_size for test",
+     "quote": "batch_size = args.batch_size",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "freq=args.freq for test",
+     "quote": "freq = args.freq",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "shuffle_flag=False for pred",
+     "quote": "elif flag == 'pred':\n        shuffle_flag = False",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "drop_last=False for pred",
+     "quote": "drop_last = False",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "batch_size=1 for pred",
+     "quote": "batch_size = 1",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "Data=Dataset_Pred for pred",
+     "quote": "Data = Dataset_Pred",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    },
+    {
+     "topic": "other settings",
+     "value": "shuffle_flag=True for train/val",
+     "quote": "else:\n        shuffle_flag = True",
+     "source": "repo:data_provider/data_factory.py@0fec001",
+     "applies_to": {
+      "model": "all",
+      "dataset": "ETTh1",
+      "setting": "not stated",
+      "quote": "data_dict = {\n    'ETTh1': Dataset_ETT_hour,\n    'ETTh2': Dataset_ETT_hour,\n    'ETTm1': Dataset_ETT_minute,\n    'ETTm2': Dataset_ETT_minute,\n    'custom': Dataset_Custom,\n}\n\ndef data_provider(args, flag):"
+     },
+     "source_rank": "code",
+     "optional": false,
+     "excluded": ""
+    }
+   ]
+  },
+  {
+   "ts": 1791967181.7147014,
+   "type": "setup_v2",
+   "family": "forecast",
+   "missing_first": [],
+   "missing": [],
+   "targeted_docs": [],
+   "added": 0,
+   "bodies": [
+    {
+     "function": "adjust_learning_rate",
+     "doc": "repo:utils/tools.py@0fec001",
+     "topic": "learning-rate schedule",
+     "added": 0
+    },
+    {
+     "function": "__init__",
+     "doc": "repo:models/RLinear.py@0fec001",
+     "topic": "patience",
+     "added": 0
+    }
+   ],
+   "literals": 0,
+   "excluded": []
+  },
+  {
+   "ts": 1791967196.4129453,
+   "type": "spec",
+   "model": "RLinear",
+   "family": "forecast",
+   "items": [
+    {
+     "key": "lr",
+     "value": "0.005",
+     "quote": "Across all benchmarks, we set the initial learning rate to 0.005 and the batch size to 128.",
+     "source": "paper",
+     "rank": "paper",
+     "number": 0.005,
+     "enforce": true,
+     "alternatives": [
+      {
+       "value": "0.001",
+       "source": "repo:run.py@0fec001",
+       "rank": "argparse default",
+       "quote": "parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')"
+      }
+     ],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    },
+    {
+     "key": "epochs",
+     "value": "20",
+     "quote": "The training process is early stopped within 20 epochs.",
+     "source": "paper",
+     "rank": "paper",
+     "number": 20,
+     "enforce": true,
+     "alternatives": [
+      {
+       "value": "15",
+       "source": "repo:run.py@0fec001",
+       "rank": "argparse default",
+       "quote": "parser.add_argument('--train_epochs', type=int, default=15, help='train epochs')"
+      }
+     ],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    },
+    {
+     "key": "batch_size",
+     "value": "128",
+     "quote": "Across all benchmarks, we set the initial learning rate to 0.005 and the batch size to 128.",
+     "source": "paper",
+     "rank": "paper",
+     "number": 128,
+     "enforce": true,
+     "alternatives": [
+      {
+       "value": "16",
+       "source": "repo:run.py@0fec001",
+       "rank": "argparse default",
+       "quote": "parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')"
+      }
+     ],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    },
+    {
+     "key": "dropout",
+     "value": "0.1",
+     "quote": "parser.add_argument('--drop', type=float, default=0.1, help='dropout ratio')",
+     "source": "repo:run.py@0fec001",
+     "rank": "argparse default",
+     "number": 0.1,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    },
+    {
+     "key": "patience",
+     "value": "7",
+     "quote": "def __init__(self, patience=7, verbose=False, delta=0):",
+     "source": "repo:utils/tools.py@0fec001",
+     "rank": "code",
+     "number": 7,
+     "enforce": true,
+     "alternatives": [
+      {
+       "value": "10",
+       "source": "repo:run.py@0fec001",
+       "rank": "argparse default",
+       "quote": "parser.add_argument('--patience', type=int, default=10, help='early stopping patience')"
+      }
+     ],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    },
+    {
+     "key": "seq_len",
+     "value": "96",
+     "quote": "parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')",
+     "source": "repo:run.py@0fec001",
+     "rank": "argparse default",
+     "number": 96,
+     "enforce": true,
+     "alternatives": [],
+     "note": "",
+     "specific": true,
+     "origin": "model",
+     "tie": []
+    }
+   ],
+   "dropped": [],
+   "excerpt_docs": [
+    "repo:models/RLinear.py@0fec001",
+    "repo:layers/Invertible.py@0fec001",
+    "repo:run.py@0fec001",
+    "repo:exp/exp_main.py@0fec001",
+    "repo:data_provider/data_loader.py@0fec001",
+    "repo:data_provider/data_factory.py@0fec001",
+    "repo:exp/exp_basic.py@0fec001",
+    "repo:utils/tools.py@0fec001",
+    "repo:utils/metrics.py@0fec001",
+    "repo:utils/timefeatures.py@0fec001"
+   ],
+   "missing": [
+    "weight_decay",
+    "hidden",
+    "layers"
+   ],
+   "model_code_present": true,
+   "excerpt_chars": 41207
+  },
+  {
+   "ts": 1791967196.4291506,
+   "type": "mode",
+   "mode": "nachbau_autorencode",
+   "requested": "nachbau_autorencode",
+   "fallback_reason": null,
+   "repo": "https://github.com/plumprc/RTSF",
+   "commit": "0fec00104f754f4fbf795b9b4da5fa2459b32e76",
+   "excerpt_docs": [
+    "repo:models/RLinear.py@0fec001",
+    "repo:layers/Invertible.py@0fec001",
+    "repo:run.py@0fec001",
+    "repo:exp/exp_main.py@0fec001",
+    "repo:data_provider/data_loader.py@0fec001",
+    "repo:data_provider/data_factory.py@0fec001",
+    "repo:exp/exp_basic.py@0fec001",
+    "repo:utils/tools.py@0fec001",
+    "repo:utils/metrics.py@0fec001",
+    "repo:utils/timefeatures.py@0fec001"
+   ]
+  },
+  {
+   "ts": 1791967245.806112,
+   "type": "claim_start",
+   "claim_id": "disc_2305_10721_mse",
+   "text": "RLinear erreicht 0.366 MSE auf ETTh1 (Horizont 96)",
+   "metric": "mse",
+   "target": 0.366,
+   "tolerance": 0.01
+  },
+  {
+   "ts": 1791967270.731779,
+   "type": "code_written",
+   "claim_id": "disc_2305_10721_mse",
+   "code_hash": "684d62e54d33",
+   "candidate": 0
+  },
+  {
+   "ts": 1791967270.7457104,
+   "type": "spec_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 0,
+   "round": 0,
+   "score": [
+    6,
+    6
+   ],
+   "fails": [],
+   "code_hash": "684d62e54d33"
+  },
+  {
+   "ts": 1791967317.4293027,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967340.6590505,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-fad142b7",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "684d62e54d33",
+   "status": "abweichung",
+   "measured": 0.4124625739275656,
+   "seconds": 69.9,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.7920383656210317,
+    "target_std": 1.0527909706034841,
+    "corr": 0.7935932966342752
+   },
+   "candidate": 0,
+   "val": {
+    "metric": "mse",
+    "value": 0.4615029505913393,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791967362.6482322,
+   "type": "code_written",
+   "claim_id": "disc_2305_10721_mse",
+   "code_hash": "27898af34ced",
+   "candidate": 1
+  },
+  {
+   "ts": 1791967362.6653059,
+   "type": "spec_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 1,
+   "round": 0,
+   "score": [
+    6,
+    6
+   ],
+   "fails": [],
+   "code_hash": "27898af34ced"
+  },
+  {
+   "ts": 1791967410.434706,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967438.2686534,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-5ad15e6d",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "27898af34ced",
+   "status": "abweichung",
+   "measured": 0.38640707404800095,
+   "seconds": 75.6,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8372830738625123,
+    "target_std": 1.0527909706034841,
+    "corr": 0.807257766490861
+   },
+   "candidate": 1,
+   "val": {
+    "metric": "mse",
+    "value": 0.476200542593915,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791967458.4038815,
+   "type": "code_written",
+   "claim_id": "disc_2305_10721_mse",
+   "code_hash": "07285a18c13f",
+   "candidate": 2
+  },
+  {
+   "ts": 1791967458.4246066,
+   "type": "spec_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 2,
+   "round": 0,
+   "score": [
+    6,
+    6
+   ],
+   "fails": [],
+   "code_hash": "07285a18c13f"
+  },
+  {
+   "ts": 1791967507.6810598,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967530.5062015,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-74615676",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "07285a18c13f",
+   "status": "abweichung",
+   "measured": 0.3894475673535919,
+   "seconds": 72.1,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.832770982613092,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8056100875616602
+   },
+   "candidate": 2,
+   "val": {
+    "metric": "mse",
+    "value": 0.47735596713476774,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791967530.5245304,
+   "type": "candidates",
+   "claim_id": "disc_2305_10721_mse",
+   "k": 3,
+   "requested": 3,
+   "chosen": 0,
+   "chosen_hash": "684d62e54d33",
+   "reason": "spec (6) + val",
+   "candidates": [
+    {
+     "index": 0,
+     "code_hash": "684d62e54d33",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.4615029505913393
+     }
+    },
+    {
+     "index": 1,
+     "code_hash": "27898af34ced",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.476200542593915
+     }
+    },
+    {
+     "index": 2,
+     "code_hash": "07285a18c13f",
+     "runnable": true,
+     "val": {
+      "metric": "mse",
+      "value": 0.47735596713476774
+     }
+    }
+   ]
+  },
+  {
+   "ts": 1791967530.5264323,
+   "type": "val_label_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 0,
+   "code_hash": "684d62e54d33",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791967530.52754,
+   "type": "val_label_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 1,
+   "code_hash": "27898af34ced",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791967530.528518,
+   "type": "val_label_check",
+   "claim_id": "disc_2305_10721_mse",
+   "candidate": 2,
+   "code_hash": "07285a18c13f",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791967609.0166123,
+   "type": "data_identity",
+   "seed": 0,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967631.2032475,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 0,
+   "n": 1,
+   "branch_id": "repro-branch-2ddf16ae",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "f16f0b5d0182",
+   "status": "abweichung",
+   "measured": 0.4124625739275656,
+   "seconds": 66.7,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.7920383656210317,
+    "target_std": 1.0527909706034841,
+    "corr": 0.7935932966342752
+   },
+   "candidate": 0,
+   "val": {
+    "metric": "mse",
+    "value": 0.4615029505913393,
+    "baselines": {
+     "repeat": 0.8706257279171906,
+     "zero": 0.882098931582407
+    }
+   }
+  },
+  {
+   "ts": 1791967631.228031,
+   "type": "repo_diff",
+   "claim_id": "disc_2305_10721_mse",
+   "result": "adopted",
+   "reason": "Validation and implementation checks passed",
+   "deviations": [
+    {
+     "aspect": "stopping criterion",
+     "file": "exp/exp_main.py",
+     "repo_quote": "early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)",
+     "our_quote": "patience = CONFIG[\"patience\"]",
+     "difference": "The reproducer uses a patience of 7 while the repository uses the args.patience default of 10."
+    },
+    {
+     "aspect": "stopping criterion",
+     "file": "exp/exp_main.py",
+     "repo_quote": "for epoch in range(self.args.train_epochs):",
+     "our_quote": "max_epochs = 1 if smoke else CONFIG[\"epochs\"]",
+     "difference": "The reproducer trains for up to 20 epochs (CONFIG[\"epochs\"]) while the repository uses args.train_epochs default of 15."
+    },
+    {
+     "aspect": "stopping criterion",
+     "file": "exp/exp_main.py",
+     "repo_quote": "best_model_path = path + '/' + 'checkpoint.pth'\n        self.model.load_state_dict(torch.load(best_model_path))",
+     "our_quote": "if best_state is not None:\n        model.load_state_dict(best_state)\n    else:\n        # fallback to last state\n        pass",
+     "difference": "The repository restores the best checkpoint saved by EarlyStopping, whereas the reproducer restores the best state only if validation improved, otherwise falls back to the last epoch's weights."
+    }
+   ],
+   "dropped": 0,
+   "truncation": [],
+   "from_hash": "684d62e54d33",
+   "method_fidelity": "not_checked",
+   "scope": "selected implementation aspects",
+   "val_old": 0.4615029505913393,
+   "val_new": 0.4615029505913393,
+   "to_hash": "f16f0b5d0182"
+  },
+  {
+   "ts": 1791967631.2485998,
+   "type": "val_label_check",
+   "claim_id": "disc_2305_10721_mse",
+   "code_hash": "f16f0b5d0182",
+   "stage": "final_admission",
+   "static": "none",
+   "static_hits": [],
+   "excluded": false,
+   "verdict": "Static validation review only",
+   "scope": "Known validation-use patterns; not a general independence certificate"
+  },
+  {
+   "ts": 1791967681.4825277,
+   "type": "data_identity",
+   "seed": 1,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967682.477233,
+   "type": "data_identity",
+   "seed": 2,
+   "files": {
+    "ETTh1.csv": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066"
+   }
+  },
+  {
+   "ts": 1791967699.3743203,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 1,
+   "n": 1,
+   "branch_id": "repro-branch-4fa2c8b3",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "f16f0b5d0182",
+   "status": "abweichung",
+   "measured": 0.3897449591427064,
+   "seconds": 68.1,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8398790489279364,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8053415930230593
+   },
+   "candidate": 0
+  },
+  {
+   "ts": 1791967699.8621173,
+   "type": "attempt",
+   "claim_id": "disc_2305_10721_mse",
+   "seed": 2,
+   "n": 1,
+   "branch_id": "repro-branch-f460e3e7",
+   "parent_snapshot": "repro-snapshot-disc-2305-10721-20261014-083748",
+   "code_hash": "f16f0b5d0182",
+   "status": "abweichung",
+   "measured": 0.3887403175974249,
+   "seconds": 68.6,
+   "error": null,
+   "stdout_tail": "",
+   "diagnostics": {
+    "pred_std": 0.8417036143097371,
+    "target_std": 1.0527909706034841,
+    "corr": 0.8059151218379953
+   },
+   "candidate": 0
+  },
+  {
+   "ts": 1791967699.866519,
+   "type": "measurements_selected",
+   "claim_id": "disc_2305_10721_mse",
+   "attempts": [
+    {
+     "seed": 0,
+     "code_hash": "f16f0b5d0182",
+     "measured": 0.4124625739275656
+    },
+    {
+     "seed": 1,
+     "code_hash": "f16f0b5d0182",
+     "measured": 0.3897449591427064
+    },
+    {
+     "seed": 2,
+     "code_hash": "f16f0b5d0182",
+     "measured": 0.3887403175974249
+    }
+   ]
+  },
+  {
+   "ts": 1791967699.8699331,
+   "type": "verdict",
+   "claim_id": "disc_2305_10721_mse",
+   "urteil": "nicht reproduziert",
+   "methode": "nicht geprueft",
+   "gesamt": "vorlaeufig",
+   "mean": 0.3969826168892323,
+   "std": 0.013415443659831367,
+   "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0134. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.366 +/- 0.01, tab:2, arXiv v2 (latex)): Mittel 0.3970. Code-Kandidaten: 3, gewaehlt Kandidat 0 (Code 684d62e54d33) nach Validierungs-Metrik (0: mse 0.4615, 1: mse 0.4762, 2: mse 0.4774); Repo-Abgleich: 3 Abweichungen, Code 684d62e54d33 durch f16f0b5d0182 ersetzt; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.; Forecast histories were streamed chronologically to an unprivileged predictor after fitting; each forecast was recorded before the next history was exposed."
+  },
+  {
+   "ts": 1791967741.8591144,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2405.15256v2",
+   "mode": "live",
+   "n_chars": 47760,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "f865107d63f842863923d2be509b8710462c758ff3fa5478c9105211408ea5a8"
+  },
+  {
+   "ts": 1791967741.8614633,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2606.27282v1",
+   "mode": "live",
+   "n_chars": 51892,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "2dba76aafbd0e8326d3fa3c35d4f464e6bd200d782c52d26cabc54014783044f"
+  },
+  {
+   "ts": 1791967741.8631642,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2312.06786v2",
+   "mode": "live",
+   "n_chars": 54772,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "8fa39e3d8d8af2c1a0f43e164a7c6c52d3ff5e01db7520960692f8e1ec8460c5"
+  },
+  {
+   "ts": 1791967741.8650024,
+   "type": "source",
+   "kind": "community",
+   "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+   "mode": "live",
+   "n_chars": 45974,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "9cf4e7df842c3bfd0b34ed12d41310f3317071cacf71e3de937dd0aef57bf058"
+  },
+  {
+   "ts": 1791967741.8665588,
+   "type": "source",
+   "kind": "community",
+   "url": "https://arxiv.org/html/2501.01087v2",
+   "mode": "live",
+   "n_chars": 33362,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "a2e5a21e82cf864dca796a581fb30f9ca177ecc390a302e00526f98f8cb07be2"
+  },
+  {
+   "ts": 1791967741.8692153,
+   "type": "source",
+   "kind": "community",
+   "url": "https://ar5iv.labs.arxiv.org/html/2507.07192",
+   "mode": "live",
+   "n_chars": 57336,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "d573d58dd4fe5d57b8062610004a56b4d8dcb8c9419d1f32222c3a5b01e26992"
+  },
+  {
+   "ts": 1791967741.8707736,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/plumprc/RTSF",
+   "mode": "live",
+   "n_chars": 6049,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "8db49c6318546bc045f4030e34eeb24c920bb7eed640a8becff39eac3d1ae490"
+  },
+  {
+   "ts": 1791967741.8722615,
+   "type": "source",
+   "kind": "community",
+   "url": "https://github.com/plumprc/RTSF/issues/3",
+   "mode": "live",
+   "n_chars": 850,
+   "retrieved_at": "2026-10-14T08:48:19+00:00",
+   "sha256": "c93468200a679b8bff90b1c4b664763c9270a77037063f228623e89c7cdf4810"
+  },
+  {
+   "ts": 1791967741.8733532,
+   "type": "community",
+   "mode": "live",
+   "n_findings": 3,
+   "dropped": 2,
+   "queries": [
+    {
+     "kind": "search",
+     "title": "Revisiting Long-term Time Series Forecasting: An Investigation on Linear Mapping"
+    },
+    {
+     "kind": "method_search",
+     "method": "RLinear",
+     "dataset": "ETTh1"
+    },
+    {
+     "kind": "critique_search",
+     "method": "RLinear",
+     "dataset": "ETTh1",
+     "queries": [
+      "RLinear ETTh1 reproduce results differ",
+      "RLinear bug evaluation",
+      "RLinear baseline re-evaluation fixed",
+      "we re-run RLinear on ETTh1 and compare with the reported numbers"
+     ]
+    },
+    {
+     "kind": "repo_search",
+     "repo": "plumprc/RTSF"
+    },
+    {
+     "kind": "crawl",
+     "url": "https://github.com/plumprc/RTSF/issues"
+    },
+    {
+     "kind": "issue_bodies",
+     "urls": [
+      "https://github.com/cure-lab/LTSF-Linear/issues/117"
+     ]
+    }
+   ],
+   "reused_discovery": false,
+   "findings": [
+    {
+     "topic": "test set handling",
+     "statement": "Some baseline official codes contain a bug that drops the last batch during testing, potentially compromising evaluation fairness.",
+     "quote": "Notably, some official codes of baselines contain a bug that drops the last batch during testing",
+     "url": "https://arxiv.org/html/2405.15256v2",
+     "kind": "protocol note",
+     "repo_check": "nicht pruefbar",
+     "label": "Protocol note",
+     "pass_reason": "page_names_method"
+    },
+    {
+     "topic": "evaluation protocol",
+     "statement": "The paper cautions that very small MSE margins should be treated as ties due to reliance on point-estimate reporting.",
+     "quote": "We follow prior work in reporting point-estimate MSE; very small margins should therefore be treated as ties.",
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "kind": "other",
+     "repo_check": "nicht pruefbar",
+     "label": "Note",
+     "pass_reason": "page_names_method"
+    },
+    {
+     "topic": "hyperparameter bias",
+     "statement": "The authors question whether reported results are affected by bias from hyper\u2011parameter adjustment and training tricks, prompting a reassessment of model performance.",
+     "quote": "Given the marginal improvement compared to a single linear layer, and the potential bias caused by hyper-parameter adjustment and training tricks, we have reassessed the performance of some models on public datasets.",
+     "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+     "kind": "other",
+     "repo_check": "nicht pruefbar",
+     "label": "Note",
+     "pass_reason": "page_names_method"
+    }
+   ],
+   "hits": [
+    {
+     "url": "https://www.arxiv.org/list/cs/new?skip=275&show=2000",
+     "title": "Computer Science",
+     "n_chars": 2846462
+    },
+    {
+     "url": "https://arxiv.org/list/cs.AI/new",
+     "title": "Artificial Intelligence",
+     "n_chars": 697432
+    },
+    {
+     "url": "https://arxiv.org/list/cs.CV/new",
+     "title": "Computer Vision and Pattern Recognition",
+     "n_chars": 353419
+    },
+    {
+     "url": "https://www.arxiv.org/list/cs/new?skip=525&show=500",
+     "title": "Computer Science",
+     "n_chars": 687672
+    },
+    {
+     "url": "https://www.arxiv.org/list/cs.CV/pastweek?skip=7&show=1000",
+     "title": "Computer Vision and Pattern Recognition",
+     "n_chars": 427
+    },
+    {
+     "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+     "title": "REVISITING LONG-TERM TIME SERIES FORECAST",
+     "n_chars": 45974
+    },
+    {
+     "url": "https://arxiv.org/html/2312.06786v2",
+     "title": "Mixture-of-Linear-Experts for Long-term Time Series Forecasting",
+     "n_chars": 54772
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "title": "How Good Can Linear Models Be for Time-Series Forecasting?",
+     "n_chars": 51892
+    },
+    {
+     "url": "https://arxiv.org/html/2601.09237v1",
+     "title": "XLinear: A Lightweight and Accurate MLP-Based Model for Long-Term Time Series Forecasting with Exogenous Inputs",
+     "n_chars": 64324
+    },
+    {
+     "url": "https://github.com/lss-1138/SparseTSF/issues/10",
+     "title": "Model Reproducibility Issue \u00b7 Issue #10 \u00b7 lss-1138/SparseTSF \u00b7 GitHub",
+     "n_chars": 3506
+    },
+    {
+     "url": "https://arxiv.org/html/2501.01087v2",
+     "title": "Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction",
+     "n_chars": 33362
+    },
+    {
+     "url": "https://github.com/leonardokong486/interPDN",
+     "title": "GitHub - leonardokong486/interPDN: [AAAI 2026] Official implementation of \"Time Series Forecasting via Direct Per-Step Probability Distribution Modeling\" \u00b7 GitHub",
+     "n_chars": 3948
+    },
+    {
+     "url": "https://github.com/SalesforceAIResearch/uni2ts/discussions/185",
+     "title": "Reproduce results from the MOIRAI-MoE paper \u00b7 SalesforceAIResearch/uni2ts \u00b7 Discussion #185 \u00b7 GitHub",
+     "n_chars": 2154
+    },
+    {
+     "url": "https://github.com/anthony-wss/tsmixer-reproduce",
+     "title": "GitHub - anthony-wss/tsmixer-reproduce: The repo for reproducing the main results in TSMixer: An all-MLP Architecture for Time Series Forecasting. \u00b7 GitHub",
+     "n_chars": 1612
+    },
+    {
+     "url": "https://github.com/yuqinie98/PatchTST/blob/main/PatchTST_supervised/scripts/PatchTST/etth1.sh",
+     "title": "PatchTST/PatchTST_supervised/scripts/PatchTST/etth1.sh at main \u00b7 yuqinie98/PatchTST \u00b7 GitHub",
+     "n_chars": 1719
+    },
+    {
+     "url": "https://github.com/topics/etth1",
+     "title": "etth1 \u00b7 GitHub Topics \u00b7 GitHub",
+     "n_chars": 1861
+    },
+    {
+     "url": "https://discuss.pytorch.org/t/cannot-reproduce-results-given-by-torchvision-ops-nms/152705",
+     "title": "Cannot reproduce results given by torchvision.ops.nms - vision - PyTorch Forums",
+     "n_chars": 1155
+    },
+    {
+     "url": "https://www.reddit.com/r/Linear/comments/1tne73a/solo_dev_help",
+     "title": "Solo Dev help : r/Linear",
+     "n_chars": 133
+    },
+    {
+     "url": "https://github.com/nhppyqys/product-research-skill/blob/main/docs/examples/full-report.md",
+     "title": "product-research-skill/docs/examples/full-report.md at main \u00b7 nhppyqys/product-research-skill \u00b7 GitHub",
+     "n_chars": 27288
+    },
+    {
+     "url": "https://www.reddit.com/r/startups/comments/1s5chlx/linear_just_announced_issue_tracking_is_dead",
+     "title": "Linear just announced \"Issue Tracking is Dead.\" Their Moat ...",
+     "n_chars": 138
+    },
+    {
+     "url": "https://www.reddit.com/r/UXDesign/comments/1cbcziw/linear_app_built_400m_issue_tracker_with_next_to",
+     "title": "Linear app built $400M issue tracker with next to no marketing \u2014 here's how : r/UXDesign",
+     "n_chars": 15021
+    },
+    {
+     "url": "https://www.reddit.com/r/projectmanagement/comments/1sfmlhe/linears_ceo_just_said_issue_tracking_is_dead_25",
+     "title": "Linear's CEO just said issue tracking is dead - 25% of their ...",
+     "n_chars": 141
+    },
+    {
+     "url": "https://github.com/biobakery/maaslin3",
+     "title": "GitHub - biobakery/maaslin3: MaAsLin3: Microbiome Multivariate Association with Linear Models \u00b7 GitHub",
+     "n_chars": 34296
+    },
+    {
+     "url": "https://arxiv.org/html/2405.15256v2",
+     "title": "FTMixer: Frequency and Time Domain Representations Fusion for Time Series Forecasting",
+     "n_chars": 47760
+    },
+    {
+     "url": "https://www.reddit.com/r/Linear/comments/1s2mf7t/linears_issue_tracking_is_dead_post_makes_me",
+     "title": "Linear's \u201cissue tracking is dead\u201d post makes me think ...",
+     "n_chars": 144
+    },
+    {
+     "url": "https://arxiv.org/html/2606.01339v1",
+     "title": "FreqLite: A Lightweight Frequency-Decomposed Linear Model with Adaptive Reversible Normalization for Robust Long-Term Time-Series Forecasting",
+     "n_chars": 75419
+    },
+    {
+     "url": "https://arxiv.org/html/2411.01419v2",
+     "title": "PSformer: Parameter-efficient Transformer with Segment Attentionfor Time Series Forecasting",
+     "n_chars": 79251
+    },
+    {
+     "url": "https://arxiv.org/html/2410.20772v3",
+     "title": "Introducing Spectral Attention for Long-Range Dependency in Time Series Forecasting",
+     "n_chars": 120194
+    },
+    {
+     "url": "https://arxiv.org/html/2601.09237v1",
+     "title": "XLinear: A Lightweight and Accurate MLP-Based Model for Long-Term Time Series Forecasting with Exogenous Inputs",
+     "n_chars": 64324
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "title": "How Good Can Linear Models Be for Time-Series Forecasting?",
+     "n_chars": 51892
+    },
+    {
+     "url": "https://arxiv.org/html/2502.14045v1",
+     "title": "Position: There are no Champions in Long-Term Time Series Forecasting",
+     "n_chars": 80418
+    },
+    {
+     "url": "https://ar5iv.labs.arxiv.org/html/2507.07192",
+     "title": "[2507.07192] Bridging the Last Mile of Prediction:Enhancing Time Series Forecasting with Conditional Guided Flow Matching",
+     "n_chars": 57336
+    },
+    {
+     "url": "https://github.com/Vicen-te/time-series-benchmark",
+     "title": "GitHub - Vicen-te/time-series-benchmark: Forecasting benchmark on ETTh1 with a naive baseline and a p-value for every gap: nothing beats repeating the last reading 1h out, and Chronos halves its error at 24h. LightGBM, LSTM and Chronos-Bolt zero-shot, with a CI regression gate and drift checks. \u00b7 GitHub",
+     "n_chars": 36601
+    },
+    {
+     "url": "https://github.com/cure-lab/LTSF-Linear/issues/117",
+     "title": "i download you code, and run, find the etth1 96 48 96 mse = 0.426, not in paper 0.386. is it the environment issue? \u00b7 Issue #117 \u00b7 cure-lab/LTSF-Linear \u00b7 GitHub",
+     "n_chars": 1997
+    },
+    {
+     "url": "https://github.com/moment-timeseries-foundation-model/neuralforecast/tree/main/experiments/long_horizon",
+     "title": "neuralforecast/experiments/long_horizon at main \u00b7 moment-timeseries-foundation-model/neuralforecast \u00b7 GitHub",
+     "n_chars": 2391
+    },
+    {
+     "url": "https://github.com/defendend/Claude-ast-index-search/raw/refs/heads/main/docs/benchmarks.md",
+     "title": "Compare new run against the saved baseline",
+     "n_chars": 3461
+    },
+    {
+     "url": "https://github.com/plumprc/RTSF",
+     "title": "GitHub - plumprc/RTSF: Revisiting Long-term Time Series Forecasting: An Investigation on Linear Mapping \u00b7 GitHub",
+     "n_chars": 6049
+    },
+    {
+     "url": "https://github.com/plumprc/RTSF/issues/3",
+     "title": "",
+     "n_chars": 850
+    }
+   ],
+   "not_read": [
+    "https://www.arxiv.org/list/cs/new?skip=275&show=2000",
+    "https://arxiv.org/list/cs.AI/new",
+    "https://arxiv.org/list/cs.CV/new",
+    "https://www.arxiv.org/list/cs/new?skip=525&show=500",
+    "https://www.arxiv.org/list/cs.CV/pastweek?skip=7&show=1000",
+    "https://arxiv.org/html/2601.09237v1",
+    "https://github.com/lss-1138/SparseTSF/issues/10",
+    "https://github.com/leonardokong486/interPDN",
+    "https://github.com/SalesforceAIResearch/uni2ts/discussions/185",
+    "https://github.com/anthony-wss/tsmixer-reproduce",
+    "https://github.com/yuqinie98/PatchTST/blob/main/PatchTST_supervised/scripts/PatchTST/etth1.sh",
+    "https://github.com/topics/etth1",
+    "https://discuss.pytorch.org/t/cannot-reproduce-results-given-by-torchvision-ops-nms/152705",
+    "https://www.reddit.com/r/Linear/comments/1tne73a/solo_dev_help",
+    "https://github.com/nhppyqys/product-research-skill/blob/main/docs/examples/full-report.md",
+    "https://www.reddit.com/r/startups/comments/1s5chlx/linear_just_announced_issue_tracking_is_dead",
+    "https://www.reddit.com/r/UXDesign/comments/1cbcziw/linear_app_built_400m_issue_tracker_with_next_to",
+    "https://www.reddit.com/r/projectmanagement/comments/1sfmlhe/linears_ceo_just_said_issue_tracking_is_dead_25",
+    "https://github.com/biobakery/maaslin3",
+    "https://www.reddit.com/r/Linear/comments/1s2mf7t/linears_issue_tracking_is_dead_post_makes_me",
+    "https://arxiv.org/html/2606.01339v1",
+    "https://arxiv.org/html/2411.01419v2",
+    "https://arxiv.org/html/2410.20772v3",
+    "https://arxiv.org/html/2601.09237v1",
+    "https://arxiv.org/html/2502.14045v1",
+    "https://github.com/Vicen-te/time-series-benchmark",
+    "https://github.com/cure-lab/LTSF-Linear/issues/117",
+    "https://github.com/moment-timeseries-foundation-model/neuralforecast/tree/main/experiments/long_horizon",
+    "https://github.com/defendend/Claude-ast-index-search/raw/refs/heads/main/docs/benchmarks.md"
+   ],
+   "not_extracted": [],
+   "dropped_items": [
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "reason": "names_neither_method_title_nor_arxiv_id",
+     "topic": "baseline comparison",
+     "statement": "The paper criticizes that nonlinear baselines are taken from original publications without jointly retuning preprocessing, potentially biasing comparisons.",
+     "quote": "Nonlinear baselines are quoted from their original publications, so comparisons reflect published configurations rather than a jointly retuned preprocessing protocol (Qiu et al., 2024)."
+    },
+    {
+     "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+     "reason": "names_neither_method_title_nor_arxiv_id",
+     "topic": "unfair comparison due to RevIN",
+     "statement": "They point out that comparing methods that do not use RevIN with those that do may yield unfair results because RevIN substantially improves forecasting accuracy.",
+     "quote": "Thus, comparing one method with others which do not use RevIN may lead to unfair results due to its advantage."
+    }
+   ],
+   "candidates": [
+    {
+     "url": "https://arxiv.org/html/2405.15256v2",
+     "topic": "test set handling",
+     "statement": "Some baseline official codes contain a bug that drops the last batch during testing, potentially compromising evaluation fairness.",
+     "quote": "Notably, some official codes of baselines contain a bug that drops the last batch during testing",
+     "quote_in_page": true,
+     "outcome": "kept_page_names_method"
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "topic": "baseline comparison",
+     "statement": "The paper criticizes that nonlinear baselines are taken from original publications without jointly retuning preprocessing, potentially biasing comparisons.",
+     "quote": "Nonlinear baselines are quoted from their original publications, so comparisons reflect published configurations rather than a jointly retuned preprocessing protocol (Qiu et al., 2024).",
+     "quote_in_page": true,
+     "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+    },
+    {
+     "url": "https://arxiv.org/html/2606.27282v1",
+     "topic": "evaluation protocol",
+     "statement": "The paper cautions that very small MSE margins should be treated as ties due to reliance on point-estimate reporting.",
+     "quote": "We follow prior work in reporting point-estimate MSE; very small margins should therefore be treated as ties.",
+     "quote_in_page": true,
+     "outcome": "kept_page_names_method"
+    },
+    {
+     "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+     "topic": "hyperparameter bias",
+     "statement": "The authors question whether reported results are affected by bias from hyper\u2011parameter adjustment and training tricks, prompting a reassessment of model performance.",
+     "quote": "Given the marginal improvement compared to a single linear layer, and the potential bias caused by hyper-parameter adjustment and training tricks, we have reassessed the performance of some models on public datasets.",
+     "quote_in_page": true,
+     "outcome": "kept_page_names_method"
+    },
+    {
+     "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+     "topic": "unfair comparison due to RevIN",
+     "statement": "They point out that comparing methods that do not use RevIN with those that do may yield unfair results because RevIN substantially improves forecasting accuracy.",
+     "quote": "Thus, comparing one method with others which do not use RevIN may lead to unfair results due to its advantage.",
+     "quote_in_page": true,
+     "outcome": "dropped_names_neither_method_title_nor_arxiv_id"
+    }
+   ]
+  },
+  {
+   "ts": 1791967741.9144535,
+   "type": "explanations",
+   "claim_ids": [
+    "disc_2305_10721_mse"
+   ],
+   "mode": "live",
+   "n_items": 0,
+   "dropped": 0,
+   "items": []
+  },
+  {
+   "ts": 1791967744.4509876,
+   "type": "objection_classified",
+   "id": "obj1",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "protocol_change",
+   "topic": "test set handling",
+   "quote": "Notably, some official codes of baselines contain a bug that drops the last batch during testing",
+   "url": "https://arxiv.org/html/2405.15256v2",
+   "param": "drop_last",
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967746.3370962,
+   "type": "objection_classified",
+   "id": "obj2",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "not_measurable",
+   "topic": "evaluation protocol",
+   "quote": "We follow prior work in reporting point-estimate MSE; very small margins should therefore be treated as ties.",
+   "url": "https://arxiv.org/html/2606.27282v1",
+   "param": null,
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967748.5837293,
+   "type": "objection_classified",
+   "id": "obj3",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "not_measurable",
+   "topic": "hyperparameter bias",
+   "quote": "Given the marginal improvement compared to a single linear layer, and the potential bias caused by hyper-parameter adjustment and training tricks, we have reassessed the performance of some models on public datasets.",
+   "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+   "param": null,
+   "to_value": null,
+   "reported_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967748.587618,
+   "type": "objection_checked",
+   "id": "obj1",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "protocol_change",
+   "status": "bestaetigt",
+   "rule": "protocol_change (drop_last): no new run and no new code. Our harness recomputes the claim metric from the same agent predictions on the test windows a loader with drop_last=True keeps (batch sizes 32, 64, 128, 256, or only the size named in the quote), for every valid main seed. effect = |truncated mean - full mean| (same seeds). bestaetigt if at least 2 valid seeds and the largest effect >= tolerance / 4; widerlegt if at least 2 valid seeds and all effects < tolerance / 4; offen otherwise.",
+   "measured": {
+    "n": 3,
+    "sizes": {
+     "32": {
+      "full_mean": 0.3969826168892323,
+      "truncated_mean": 0.39697660420129294,
+      "delta": -6.012687939371819e-06,
+      "n": 3,
+      "windows": 2784,
+      "dropped": 1,
+      "distance_to_target": 0.030976604201292945
+     },
+     "64": {
+      "full_mean": 0.3969826168892323,
+      "truncated_mean": 0.3969946743230618,
+      "delta": 1.20574338294821e-05,
+      "n": 3,
+      "windows": 2752,
+      "dropped": 33,
+      "distance_to_target": 0.0309946743230618
+     },
+     "128": {
+      "full_mean": 0.3969826168892323,
+      "truncated_mean": 0.3945443593190743,
+      "delta": -0.002438257570158031,
+      "n": 3,
+      "windows": 2688,
+      "dropped": 97,
+      "distance_to_target": 0.028544359319074286
+     },
+     "256": {
+      "full_mean": 0.3969826168892323,
+      "truncated_mean": 0.3939075557571245,
+      "delta": -0.0030750611321078147,
+      "n": 3,
+      "windows": 2560,
+      "dropped": 225,
+      "distance_to_target": 0.027907555757124503
+     }
+    },
+    "max_effect": 0.0030750611321078147,
+    "threshold": 0.0025,
+    "target": 0.366,
+    "full_mean": 0.3969826168892323,
+    "restricted_to": null,
+    "nearest_to_target": "256",
+    "seeds": [
+     0,
+     1,
+     2
+    ],
+    "main_branches": [
+     "repro-branch-2ddf16ae",
+     "repro-branch-4fa2c8b3",
+     "repro-branch-f460e3e7"
+    ]
+   },
+   "quote": "Notably, some official codes of baselines contain a bug that drops the last batch during testing",
+   "url": "https://arxiv.org/html/2405.15256v2",
+   "param": "drop_last",
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967748.5930955,
+   "type": "objection_checked",
+   "id": "obj2",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "not_measurable",
+   "status": "nicht pruefbar",
+   "rule": "not_measurable: stays text.",
+   "measured": null,
+   "quote": "We follow prior work in reporting point-estimate MSE; very small margins should therefore be treated as ties.",
+   "url": "https://arxiv.org/html/2606.27282v1",
+   "param": null,
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967748.596937,
+   "type": "objection_checked",
+   "id": "obj3",
+   "claim_id": "disc_2305_10721_mse",
+   "otype": "not_measurable",
+   "status": "nicht pruefbar",
+   "rule": "not_measurable: stays text.",
+   "measured": null,
+   "quote": "Given the marginal improvement compared to a single linear layer, and the potential bias caused by hyper-parameter adjustment and training tricks, we have reassessed the performance of some models on public datasets.",
+   "url": "https://openreview.net/pdf/e923fc8f27c8030abb10d2f2f259a43faab78923.pdf",
+   "param": null,
+   "to_value": null,
+   "note": null
+  },
+  {
+   "ts": 1791967748.6003184,
+   "type": "objection_round_end",
+   "seconds": 6.7,
+   "n_findings": 3,
+   "n_experiments": 0,
+   "quick": true,
+   "cost_net_usd": 0.0014
+  },
+  {
+   "ts": 1791967748.6129084,
+   "type": "run_end",
+   "cost_net_usd": 0.1636,
+   "cost_gross_usd": 0.1947
+  },
+  {
+   "ts": 1791967748.9032347,
+   "type": "finished",
+   "run_id": "disc_2305_10721--20261014-083748",
+   "verdict": {
+    "urteil": "nicht reproduziert",
+    "measured_mean": 0.396983,
+    "measured_std": 0.013415,
+    "seeds": 3,
+    "target": 0.366,
+    "tolerance": 0.01,
+    "gesamtaussage": "vorlaeufig",
+    "mode": "nachbau_autorencode",
+    "graph_repairs": 0,
+    "fault_repairs": 0,
+    "run_dir": "runs/disc_2305_10721/20261014-083748"
+   },
+   "cost_gross_usd": 0.1947
+  }
+ ]
+}
