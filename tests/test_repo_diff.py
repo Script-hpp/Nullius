@@ -176,3 +176,19 @@ def test_cost_limit_still_propagates(tmp_path):
     o._ask = over
     with pytest.raises(CostLimitExceeded):
         run(o, claim, d, tmp_path)
+
+
+def test_budget_stop_in_optional_repo_repair_keeps_validated_code_and_finishes(tmp_path):
+    """FITS live 5fdc78fc: the spending floor hit the optional A2 repair and the run ended without a verdict."""
+    from repro_agent.costs import BudgetExceeded
+    o, calls, asks, events, claim, d, sb = make({C0: 0.70}, [C1])
+
+    def no_money(*a, **k):
+        raise BudgetExceeded("Live model budget floor reached.")
+
+    o.repair_code = no_money
+    o.allow_test_feedback = False   # product policy: optional steps never end a validated run
+    run(o, claim, d, tmp_path)
+    (ev,) = [kw for t, kw in events if t == "repo_diff"]
+    assert ev["result"] == "kept" and "spending limit" in ev["reason"]
+    assert d.verdicts and d.verdicts[0].measured_mean == pytest.approx(0.80)

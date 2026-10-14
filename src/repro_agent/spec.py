@@ -812,7 +812,9 @@ def runtime_items(docs: list[Doc], names: list[str], model: str, family: str, da
                 if dataset and identity in evidence and _dataset_token(str(values.get(identity, ''))) != _dataset_token(dataset):
                     from .source_context import SourceContextBlocked
                     raise SourceContextBlocked('Author launch dataset is unresolved or incompatible; no experiment was started')
-            unresolved = sorted(name for name in set(evidence) - set(values) if name in active or
+            # Device and run-control flags (gpu = device_ids[0] in SARAF's run.py) never change a CPU measurement;
+            # the seed is set by our harness. They must not block a launch as "model parameters".
+            unresolved = sorted(name for name in set(evidence) - set(values) - infrastructure if name in active or
                                 ALIAS_KEY.get(name.lower(), name) in common - architectural)
             if unresolved:
                 from .source_context import SourceContextBlocked

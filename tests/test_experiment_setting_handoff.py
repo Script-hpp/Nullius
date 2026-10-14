@@ -154,6 +154,19 @@ def test_unresolved_active_model_parameter_prevents_experiment_configuration():
         build_spec(lambda *_:'[]',[],docs,'Toy erreicht MSE 0.4','ETTh1',numeric_only=True)
 
 
+def test_unresolved_device_flag_does_not_block_a_cpu_launch():
+    """SARAF run.py derives args.gpu from device_ids; the model reads configs.gpu. A device choice is not a model setting."""
+    docs=[Doc('paper','Input length 720.'),
+          Doc('repo:models/Toy.py@a','class Model:\n    def __init__(self,configs):\n        self.k=configs.topm\n        self.dev=configs.gpu\n'),
+          Doc('repo:scripts/Toy/etth1.sh@a','python run.py --model Toy --data ETTh1 --pred_len 96 --seq_len 720 --topm 20\n'),
+          Doc('repo:run.py@a','p.add_argument("--gpu",type=int,default=0)\np.add_argument("--topm",type=int,default=5)\n'
+              'p.add_argument("--seq_len",type=int,default=96)\np.add_argument("--pred_len",type=int,default=96)\n'
+              'p.add_argument("--model",default="x")\np.add_argument("--data",default="x")\n'
+              'args=p.parse_args()\nif args.use_multi_gpu:\n    args.gpu=args.device_ids[0]\n')]
+    spec=build_spec(lambda *_:'[]',[],docs,'Toy erreicht MSE 0.4','ETTh1',numeric_only=True)
+    assert spec.get('seq_len').number==720 and spec.get('gpu') is None
+
+
 def test_unknown_identity_and_changed_horizon_cannot_be_silently_used():
     from repro_agent.source_context import SourceContextBlocked
     model=Doc('repo:models/Toy.py@a','class Model:\n    pass\n')

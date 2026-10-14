@@ -1789,6 +1789,16 @@ class Orchestrator:
 
         try:
             new_code = self.repair_code(plan, task, code, repair_message(devs))
+        except (CostLimitExceeded, BudgetExceeded):
+            # Optional wie der Vergleich selbst: die Grenze verhindert weitere Ausgaben, der validierte Code wird weiter gemessen
+            # (FITS live 5fdc78fc: Abbruch ohne Urteil nach gewaehltem Kandidaten 0.37199, Seeds brauchen kein LLM).
+            if getattr(self, 'allow_test_feedback', False):
+                raise
+            budget = spend_guard.current_budget.get()
+            if budget is not None:
+                budget.check()
+            finish("kept", "Optional repair exceeds the spending limit")
+            return v0, code, graph_ab, ['Optional repository repair not run within budget; validated selected code retained.'], discarded
         except ValueError as exc:
             finish("kept", f"Reparatur ohne Code-Block ({exc})")
             return v0, code, graph_ab, [f"Repo-Abgleich: {len(devs)} Abweichungen, Reparatur ohne Code-Block, alter Code bleibt"], discarded

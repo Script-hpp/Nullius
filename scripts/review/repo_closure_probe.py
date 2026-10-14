@@ -59,6 +59,11 @@ for spec in sys.argv[2:]:
     try:
         excerpt, names = author_excerpt(docs, model, "ETTh1", listing=dump.listing)
         res.update(guard="ok", excerpt_chars=len(excerpt), excerpt_docs=len(names))
+        from repro_agent.spec import runtime_items
+        try:
+            res["runtime"] = {i.key: i.value for i in runtime_items(docs, names, model, "forecast", "ETTh1")}
+        except SourceContextBlocked as exc:
+            res["runtime"] = f"BLOCKED: {exc}"
     except SourceContextBlocked as exc:
         res.update(guard=f"BLOCKED: {exc}")
     out[name] = res
