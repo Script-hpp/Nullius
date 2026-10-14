@@ -1,0 +1,89 @@
+% Excerpt of arXiv:2305.10721 (RLinear) LaTeX source: Tables 1 and 2, verbatim, for input-length binding tests.
+\documentclass{article}
+\begin{document}
+\begin{table*}[ht]
+    \centering
+    \caption{Forecasting results on the full ETT benchmarks. The length of the historical and prediction horizon are set as 336. $\dagger$ indicates the temporal feature extractor with frozen random weights.}
+    \label{tab:1}
+    \vskip 0.15in
+    \setlength\tabcolsep{7pt}
+    \begin{small}
+    \begin{tabular}{c|cc|cc|cc|cc}
+    \toprule
+    Dataset & \multicolumn{2}{c|}{ETTh1} & \multicolumn{2}{c|}{ETTm1} & \multicolumn{2}{c|}{ETTh2} & \multicolumn{2}{c}{ETTm2} \\
+    \midrule
+    Method & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE \\
+    \midrule
+    \textit{RLinear} & \textit{0.420} & \textit{0.423} & \textit{0.370} & \textit{0.383} & \textit{0.325} & \textit{0.386} & \textit{0.273} & \textit{0.326} \\
+    \midrule\midrule
+    PatchTST & 0.431 & 0.436 & \textbf{0.366} & 0.392 & 0.331 & \textbf{0.380} & \textbf{0.276} & 0.332 \\[1mm]
+    $\dagger$PatchTST & \textbf{0.429} & \textbf{0.435} & 0.371 & \textbf{0.389} & \textbf{0.328} & 0.384 & 0.280 & \textbf{0.331} \\
+    \midrule\midrule
+    MTS-Mixers & \textbf{0.414} & 0.425 & 0.378 & 0.399 & 0.353 & 0.407 & 0.291 & 0.337 \\[1mm]
+    $\dagger$MTS-Mixers & 0.423 & \textbf{0.424} & \textbf{0.377} & \textbf{0.392} & \textbf{0.351} & \textbf{0.405} & \textbf{0.282} & \textbf{0.334} \\
+    \midrule\midrule
+    TimesNet & 0.493 & 0.468 & 0.406 & 0.418 & 0.358 & 0.420 & \textbf{0.304} & 0.353 \\[1mm]
+    $\dagger$TimesNet & \textbf{0.428} & \textbf{0.439} & \textbf{0.384} & \textbf{0.400} & \textbf{0.342} & \textbf{0.406} & 0.306 & \textbf{0.351} \\
+    \midrule\midrule
+    SCINet & 0.467 & 0.469 & 0.404 & 0.423 & 0.365 & 0.414 & 0.329 & 0.369 \\[1mm]
+    $\dagger$SCINet & \textbf{0.428} & \textbf{0.431} & \textbf{0.386} & \textbf{0.398} & \textbf{0.349} & \textbf{0.403} & \textbf{0.299} & \textbf{0.345} \\
+    \bottomrule
+    \end{tabular}
+    \end{small}
+    % \vskip -0.1in
+\end{table*}
+
+\begin{table*}[htbp]
+    \centering
+    \vskip -0.1in
+    \caption{Time series forecasting results. The length of the historical horizon is 336 and prediction lengths are \{96, 192, 336, 720\}. The best results are in \textbf{bold} and the second one is \underline{underlined}.}
+    \label{tab:2}
+    \vskip 0.15in
+    \setlength\tabcolsep{8pt}
+    \scalebox{0.85}{
+    \begin{tabular}{c|c|cc|cc||cc|cc|cc}
+    \toprule
+    \multicolumn{2}{c|}{Method} & \multicolumn{2}{c|}{RLinear} & \multicolumn{2}{c||}{RMLP} & \multicolumn{2}{c|}{PatchTST} & \multicolumn{2}{c|}{TimesNet} & \multicolumn{2}{c}{DLinear} \\
+    \midrule
+    \multicolumn{2}{c|}{Metric} & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE & MSE & MAE \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{ETTh1}}
+     & 96 & \textbf{0.366} & \textbf{0.391} & 0.390 & 0.410 & 0.381 & 0.405 & 0.398 & 0.418 & \underline{0.375} & \underline{0.399} \\
+    & 192 & \textbf{0.404} & \textbf{0.412} & 0.430 & 0.432 & 0.416 & 0.423 & 0.447 & 0.449 & \underline{0.405} & \underline{0.416} \\
+    & 336 & \textbf{0.420} & \textbf{0.423} & 0.441 & 0.441 & \underline{0.431} & \underline{0.436} & 0.493 & 0.468 & 0.439 & 0.443 \\
+    & 720 & \textbf{0.442} & \textbf{0.456} & 0.506 & 0.495 & \underline{0.450} & \underline{0.466} & 0.518 & 0.504 & 0.472 & 0.490 \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{ETTm1}}
+     & 96 & 0.301 & \textbf{0.342} & \underline{0.298} & \underline{0.345} & \textbf{0.293} & \underline{0.345} & 0.335 & 0.380 & 0.306 & 0.349 \\
+    & 192 & \textbf{0.335} & \textbf{0.363} & 0.344 & 0.375 & \textbf{0.335} & 0.372 & 0.358 & 0.388 & \underline{0.339} & \underline{0.368} \\
+    & 336 & \underline{0.370} & \textbf{0.383} & 0.390 & 0.410 & \textbf{0.366} & 0.392 & 0.406 & 0.418 & 0.374 & \underline{0.390} \\
+    & 720 & \underline{0.425} & \textbf{0.414} & 0.445 & 0.441 & \textbf{0.420} & 0.424 & 0.449 & 0.443 & 0.428 & \underline{0.423} \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{ETTh2}}
+     & 96 & \textbf{0.262} & \textbf{0.331} & 0.288 & 0.352 & \underline{0.276} & \underline{0.337} & 0.348 & 0.392 & 0.289 & 0.353 \\
+    & 192 & \textbf{0.319} & \textbf{0.374} & 0.343 & 0.387 & \underline{0.339} & \underline{0.379} & 0.362 & 0.404 & 0.383 & 0.418 \\
+    & 336 & \textbf{0.325} & \underline{0.386} & 0.353 & 0.402 & \underline{0.331} & \textbf{0.380} & 0.358 & 0.420 & 0.448 & 0.465 \\
+    & 720 & \textbf{0.372} & \textbf{0.421} & 0.410 & 0.440 & \underline{0.379} & \underline{0.422} & 0.442 & 0.463 & 0.605 & 0.551 \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{ETTm2}}
+     & 96 & \textbf{0.164} & \textbf{0.253} & 0.174 & 0.259 & \underline{0.165} & \underline{0.256} & 0.188 & 0.267 & 0.167 & 0.260 \\
+    & 192 & \textbf{0.219} & \textbf{0.290} & 0.236 & \underline{0.303} & 0.238 & 0.305 & 0.252 & 0.308 & \underline{0.224} & \underline{0.303} \\
+    & 336 & \textbf{0.273} & \textbf{0.326} & 0.291 & 0.338 & \underline{0.276} & \underline{0.332} & 0.304 & 0.353 & 0.281 & 0.342 \\
+    & 720 & \textbf{0.366} & \textbf{0.385} & 0.371 & \underline{0.391} & \underline{0.369} & \underline{0.391} & 0.405 & 0.409 & 0.397 & 0.421 \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{Weather}}
+     & 96 & 0.175 & 0.225 & \textbf{0.149} & \textbf{0.202} & 0.155 & 0.205 & 0.172 & 0.220 & 0.176 & 0.237 \\
+    & 192 & 0.218 & 0.260 & \textbf{0.194} & \textbf{0.242} & 0.199 & 0.245 & 0.219 & 0.261 & 0.220 & 0.282 \\
+    & 336 & 0.265 & 0.294 & \textbf{0.243} & \textbf{0.282} & 0.249 & 0.284 & 0.280 & 0.306 & 0.265 & 0.319 \\
+    & 720 & 0.329 & 0.339 & \textbf{0.316} & \textbf{0.333} & 0.319 & 0.335 & 0.365 & 0.359 & 0.326 & 0.363 \\
+    \midrule
+    \multirow{4}{*}{\rotatebox{90}{ECL}}
+     & 96 & 0.140 & 0.235 & \textbf{0.129} & \textbf{0.224} & \underline{0.133} & \underline{0.226} & 0.168 & 0.272 & 0.140 & 0.237 \\
+    & 192 & 0.154 & 0.248 & \textbf{0.147} & \textbf{0.240} & \underline{0.149} & \underline{0.242} & 0.184 & 0.289 & 0.153 & 0.249 \\
+    & 336 & 0.171 & 0.264 & \textbf{0.164} & \textbf{0.257} & \underline{0.167} & \underline{0.260} & 0.198 & 0.300 & 0.169 & 0.267 \\
+    & 720 & 0.209 & 0.297 & \textbf{0.203} & \textbf{0.291} & \underline{0.205} & \underline{0.293} & 0.220 & 0.320 & 0.210 & 0.310 \\
+    \bottomrule
+    \end{tabular}}
+    % \vskip -0.1in
+\end{table*}
+\end{document}

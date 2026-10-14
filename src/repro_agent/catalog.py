@@ -146,14 +146,37 @@ def _fmt(x: float) -> str:
     return f"{x:g}"
 
 
+def _length_expression(length: int) -> str:
+    # "historical horizon" / "input horizon": RLinear 2305.10721 Table 2 ("The length of the historical horizon is 336")
+    return (r"\b(?:input(?: sequence)? length|look[- ]?back(?: window)?(?: length)?|seq_len"
+            r"|(?:historical|history|input) (?:horizon|window)(?: length)?|history length)"
+            rf"\s*(?:for all experiments\s*)?(?:of|is|=|:|is set to|set to)?\s*(?:L\s*=\s*)?{length}\b")
+
+
+def _caption_length_quote(paper: dict, source_text: str) -> str:
+    """Length declaration in the caption of the claim's own LaTeX table (label or quoted row), else ''."""
+    from .claims_source import _norm, clean_latex_quote
+    from .table_check import latex_table_caption
+    length = paper.get("input_length")
+    if isinstance(length, bool) or not isinstance(length, int) or not 1 <= length <= 720 or not source_text:
+        return ""
+    label = (paper.get("discovery_source") or {}).get("table")
+    quote = _norm(clean_latex_quote(paper.get("discovery_quote") or ""))
+    tables = [t.group() for t in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", source_text, re.S)]
+    own = [t for t in tables if (label and f"\\label{{{label}}}" in t) or (quote and quote in _norm(clean_latex_quote(t)))]
+    if len(own) != 1:
+        return ""   # keine oder mehrdeutige Tabelle: nie eine fremde Caption binden
+    match = re.search(_length_expression(length), clean_latex_quote(latex_table_caption(own[0]) or ""), re.I)
+    return match.group() if match else ""
+
+
 def _input_length_quote(claim: dict) -> str:
     """An input-length field alone, or 720 in a horizon header, is not setup evidence."""
     length = claim.get("input_length")
     if isinstance(length, bool) or not isinstance(length, int) or not 1 <= length <= 720:
         return ""
     from .claims_source import clean_latex_quote
-    expression = (r"\b(?:input(?: sequence)? length|look[- ]?back(?: window)?(?: length)?|seq_len)"
-                  rf"\s*(?:for all experiments\s*)?(?:of|is|=|:)?\s*(?:L\s*=\s*)?{length}\b")
+    expression = _length_expression(length)
     for field in ("input_length_quote", "quote", "protocol_quote"):
         quote = str(claim.get(field) or "")
         # Keep the exact length declaration, not a synthesized table row or unrelated numbers.
@@ -230,7 +253,7 @@ def discovery_details(paper: dict, source_text: str | None = None):
     from .setup_details import SetupDetail
 
     from .claims_source import _norm, clean_latex_quote
-    quote = paper.get("input_length_quote", "")
+    quote = paper.get("input_length_quote", "") or _caption_length_quote(paper, source_text or "")
     normalize = lambda text: re.sub(r"\s*([=:])\s*", r"\1", _norm(clean_latex_quote(text)))
     if not paper.get("input_length") or not quote or not source_text or normalize(quote) not in normalize(source_text):
         return []

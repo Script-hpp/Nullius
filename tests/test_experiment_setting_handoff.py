@@ -318,3 +318,28 @@ def test_flag_relabelled_by_extractor_is_not_enforced_twice():
                            'quote':"p.add_argument('--n_period', type=int, default=1, help='Number of Periods')"}])
     spec=build_spec(lambda *_:extractor,[],docs,'Toy erreicht MSE 0.4','ETTh1',numeric_only=True)
     assert spec.get('n_period').number==1 and spec.get('layers') is None
+
+
+def rlinear_source():
+    return (ROOT / 'tests/fixtures/rlinear_tables.tex').read_text()
+
+
+def test_claim_table_caption_binds_input_length_over_argparse_default():
+    # RLinear live 2026-10-14: the only length statement is the claim table caption ("historical horizon is 336");
+    # the spec fell back to run.py's argparse default 96 and measured 0.412 against 0.366.
+    config, _ = catalog.build_paper(catalog.find_entry(catalog.load_catalog(), 'disc_2305_10721'))
+    details = catalog.discovery_details(config, rlinear_source())
+    assert [(d.value, d.quote) for d in details] == [('336', 'historical horizon is 336')]
+    run_py = "parser.add_argument('--seq_len', type=int, default=96, help='input sequence length')\n"
+    default = json.dumps([{'key': 'seq_len', 'value': '96', 'quote': run_py.strip(), 'source': 'repo:run.py@0fec001',
+                           'rank': 'argparse default'}])
+    spec = build_spec(lambda *_: default, details, [Doc('paper', rlinear_source()), Doc('repo:run.py@0fec001', run_py)],
+                      'RLinear erreicht MSE 0.366', 'ETTh1', numeric_only=True)
+    assert spec.get('seq_len').number == 336 and spec.get('seq_len').enforce
+
+
+def test_caption_of_another_table_is_never_bound():
+    # Table 1 says "historical and prediction horizon are set as 336": a different setting, never the claim's length
+    paper = {'input_length': 336, 'discovery_quote': r'\textit{RLinear} & \textit{0.420} & \textit{0.423}', 'discovery_source': {}}
+    assert catalog.discovery_details(paper, rlinear_source()) == []
+    assert catalog.discovery_details({**paper, 'discovery_quote': 'not in any table'}, rlinear_source()) == []
