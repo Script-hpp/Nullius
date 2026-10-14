@@ -1664,13 +1664,8 @@ class Orchestrator:
             try:
                 c = self.write_code(plan, task, temperature=min(0.2 + CANDIDATE_TEMP_STEP * i, CODE_MAX_TEMPERATURE))
             except (CostLimitExceeded, BudgetExceeded):
-                if getattr(self, 'allow_test_feedback', False) or not any(
-                        r['v0'] is not None and r['val'] is not None and not (r['val_check'] or {}).get('excluded') for r in results):
+                if not self._candidates_survive_limit(results):
                     raise
-                budget = spend_guard.current_budget.get()
-                if budget is not None:
-                    budget.check()  # Cancellation/uncertain billing never becomes a fallback.
-                self._warn('Additional candidate generation stopped at the spending limit; selecting only independently validated existing candidates.')
                 break
             except BillingBlocked:
                 raise
@@ -1683,7 +1678,14 @@ class Orchestrator:
             self._announce_code(claim, c)
             self._emit('code_written', claim_id=claim.id, code_hash=h(c), candidate=i)
             if not getattr(self, 'allow_test_feedback', False):
-                results.append(one(len(codes)-1))
+                try:
+                    results.append(one(len(codes)-1))
+                except (CostLimitExceeded, BudgetExceeded):
+                    # Repairs of a later candidate hit the limit: an earlier, independently validated candidate still counts
+                    # (SARAF local 2026-10-14 needed 0.55 $ gross; the live job budget is 0.50 $).
+                    if not self._candidates_survive_limit(results):
+                        raise
+                    break
         if not codes:
             raise RuntimeError(f'Kein Code-Kandidat lieferte Code: {last_exc}')
         if getattr(self, 'allow_test_feedback', False):
@@ -1745,6 +1747,17 @@ class Orchestrator:
         note = (f"Code-Kandidaten: {k}, gewaehlt Kandidat {win['i']} (Code {h(win['code'])}) nach Validierungs-Metrik "
                 f"({parts})" + ("" if reason == "val" or reason.endswith(" + val") else "; Rueckfall ohne Val-Wert"))
         return v0, note0, code, ab, notes, discarded, win["i"], [note]
+
+    def _candidates_survive_limit(self, results: list[dict]) -> bool:
+        """At a spending limit, continue only with independently validated candidates; never in diagnostic test-feedback mode."""
+        if getattr(self, 'allow_test_feedback', False) or not any(
+                r['v0'] is not None and r['val'] is not None and not (r['val_check'] or {}).get('excluded') for r in results):
+            return False
+        budget = spend_guard.current_budget.get()
+        if budget is not None:
+            budget.check()  # Cancellation/uncertain billing never becomes a fallback.
+        self._warn('Additional candidate generation stopped at the spending limit; selecting only independently validated existing candidates.')
+        return True
 
     def _repo_diff_round(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path, plan: str, code: str, v0: float,

@@ -285,3 +285,23 @@ def test_all_candidates_without_code_end_run(tmp_path):
     o.write_code = write_code
     with pytest.raises(RuntimeError, match="Kein Code-Kandidat"):
         run(o, tmp_path)
+
+
+def test_budget_stop_while_repairing_a_later_candidate_keeps_the_validated_one(tmp_path):
+    """Product policy: candidate 0 is validated; candidate 1's repair hits the job budget. The run continues with
+    candidate 0 instead of ending without a verdict (SARAF needed 0.55 $ gross locally, the live job budget is 0.50 $)."""
+    from repro_agent.costs import BudgetExceeded
+    o, sb, temps, events = setup({C0: 0.80, C1: 0.70}, {C0: 0.70, C1: 0.75}, k=2)
+    o.allow_test_feedback = False
+    original = o._run_seed
+
+    def run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seed, cand=None):
+        if code == C1:
+            raise BudgetExceeded("Job budget cannot cover another model request.")
+        return original(claim, task, snapshot, dossier, run_dir, plan, code, seed, cand)
+
+    o._run_seed = run_seed
+    d = run(o, tmp_path)
+    (ev,) = [kw for t, kw in events if t == "candidates"]
+    assert ev["chosen"] == 0 and d.verdicts[0].measured_mean == pytest.approx(0.80)
+    assert any("spending limit" in w for w in d.warnings + [kw.get("text", "") for t, kw in events if t == "warning"])
