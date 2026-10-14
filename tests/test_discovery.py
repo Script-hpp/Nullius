@@ -1577,3 +1577,48 @@ def test_benchmark_must_appear_in_a_result_table_of_the_source():
     named = "\\newcommand{\\dsone}{Cora}\n\\begin{longtable}{lc} \\dsone & 81.5 \\\\ \\end{longtable}"
     assert _benchmark_in_result_table(named, "Cora") is True
     assert _benchmark_in_result_table("# Results\nCora 81.5", "Cora") is None   # no LaTeX tables: unchanged path
+
+
+class SequenceLLM(FakeLLM):
+    """Returns the given replies in order (the last one repeats)."""
+    def __init__(self, replies):
+        super().__init__(replies[0])
+        self.replies, self.calls = list(replies), 0
+    def complete(self, role, messages, temperature=0.0, **kwargs):
+        content = self.replies[min(self.calls, len(self.replies) - 1)]
+        self.calls += 1
+        class Resp:
+            pass
+        Resp.content = content
+        return Resp()
+
+
+INVENTED = FakeLLM().claim_content.replace('"quote": "GraphNet achieves 95% accuracy"', '"quote": "GraphNet reaches 95% accuracy on Cora"')
+
+
+def test_quote_miss_is_retried_once_and_a_verbatim_quote_is_kept(monkeypatch, tmp_path):
+    # Live 2026-10-14: three ETTh1 papers were rejected for an inexact quote that a second call found verbatim
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    llm = SequenceLLM([INVENTED, FakeLLM().claim_content])
+    agent = DiscoveryAgent(llm=llm, tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(tmp_path / "c.json"))
+    result = agent.discover(["Cora"], on_event=lambda e: None)
+    assert len(result) == 1 and result[0].claim["quote"] == "GraphNet achieves 95% accuracy"
+
+
+def test_quote_miss_is_never_cached_as_a_paper_finding(monkeypatch, tmp_path):
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    cache_file = tmp_path / "c.json"
+    agent = DiscoveryAgent(llm=SequenceLLM([INVENTED]), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    events = []
+    assert agent.discover(["Cora"], on_event=events.append) == []
+    assert any(e.get("reason") == "Quote not found in text" for e in events)
+    assert "2101.12345" not in _read_cache(str(cache_file))
+
+
+def test_old_cached_quote_miss_is_read_again(monkeypatch, tmp_path):
+    cache_file = tmp_path / "c.json"
+    cache_file.write_text(json.dumps({"2101.12345": {"status": "rejected", "reason": "Quote not found in text",
+                                                     "cache_version": CACHE_VERSION}}))
+    monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
+    assert len(agent.discover(["Cora"], on_event=lambda e: None)) == 1

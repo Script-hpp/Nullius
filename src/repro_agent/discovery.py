@@ -270,6 +270,7 @@ TASK_KEYWORDS = {
 RETRY_TEMPERATURE = 0.3
 ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
 NO_REPO_REASON = "kein passendes Repo gefunden"
+QUOTE_MISS_REASON = "Quote not found in text"   # Modellfehler: nie als Paper-Befund cachen
 ARXIV_ID_RE = __import__("re").compile(r"arxiv\.org/(?:abs|html|pdf)/(\d{4}\.\d{4,5})")
 
 
@@ -828,7 +829,7 @@ class DiscoveryAgent:
                 cache = {k: v for k, v in loaded.items()
                          if isinstance(v, dict) and v.get("cache_version") == CACHE_VERSION
                          and not _protocol_cache_needs_recheck(v)
-                         and not (v.get("status") == "rejected" and v.get("reason") == NO_REPO_REASON)}   # frueher hart abgelehnt, jetzt markiert
+                         and not (v.get("status") == "rejected" and v.get("reason") in (NO_REPO_REASON, QUOTE_MISS_REASON))}   # frueher hart abgelehnt bzw. Modellfehler gecacht
             except Exception:
                 pass
                 
@@ -997,6 +998,12 @@ class DiscoveryAgent:
                 # claim already supplies the number; empty output needs no retry.
                 if (not claim_data and not source_claim) or claim_data.get("llm_unreadable"):
                     claim_data = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
+                elif claim_data.get("quote") and not _quote_in_text(claim_data["quote"], text):
+                    # Ein ungenaues Zitat ist ein Modellfehler, kein Paper-Befund (Live 2026-10-14: drei ETTh1-Papers
+                    # abgelehnt, deren Zitat ein zweiter Aufruf woertlich fand). Einmal neu fragen, nur ein belegtes Zitat zaehlt.
+                    retry = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
+                    if retry.get("quote") and _quote_in_text(retry["quote"], text):
+                        claim_data = retry
 
                 # LLM-Probleme sind kein Befund ueber das Paper: nicht cachen.
                 if claim_data.get("llm_truncated"):
@@ -1054,10 +1061,8 @@ class DiscoveryAgent:
                     continue
                     
                 if not _quote_in_text(quote, text):
-                    reason = "Quote not found in text"
-                    emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"})
-                    reason_str = {"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"}.get("reason", "")
-                    _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
+                    reason = QUOTE_MISS_REASON
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"})   # nicht cachen: Modellfehler
                     continue
                     
                 try:

@@ -269,3 +269,15 @@ Allgemeine Fixes, ohne Mehrkosten:
 
 Nicht geaendert: Reihenfolge nach Tavily-Relevanz (aeltere Papers wie 2302/2305 konkurrieren mit neuen); Zitatabgleich
 bei Makro-Namen in Tabellen (2403.11004) nicht weiter untersucht.
+
+### Discovery nach Deployment ed48b85 (Job 004a0824)
+
+Fixes wirken: 9 bekannte Papers uebersprungen (3 Cora, 6 ETTh1), ein Paper ohne ETTh1-Tabelle kostenlos verworfen
+(2508.09191). Zwei neue startbare Cora-Funde: Graph Ladling (2306.10466, "Model Soup (2-layer GCN)" 83.47) und
+CLAR (2210.08251, High-Frequency Booster, 82.6), beide Spalte ungeprueft. Kosten ca. 0.06 $ Modell.
+
+ETTh1 fand nichts, weil alle drei bezahlten Plaetze an "Quote not found in text" scheiterten (SRSNet 2510.14510,
+SST 2404.14757, Time-o1 2505.17847). Lokal mit identischer Textauswahl fand derselbe Extraktionsaufruf alle drei Zitate
+woertlich; der Live-Fehler war ein Zufallsfehler des Modells. Er wurde trotzdem als Paper-Befund gecacht, die drei
+Papers waeren nie wieder geprueft worden. Fix: bei ungenauem Zitat genau ein zweiter Aufruf (nur ein woertlich
+belegtes Zitat zaehlt); "Quote not found" wird nie gecacht, alte Eintraege dieser Art werden neu gelesen.
