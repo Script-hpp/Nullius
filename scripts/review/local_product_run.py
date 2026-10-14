@@ -22,8 +22,10 @@ QUIET = {"llm_call", "code_text", "plan_text", "tavily_call"}
 def main() -> int:
     catalog_id, out = sys.argv[1], Path(sys.argv[2])
     out.mkdir(parents=True, exist_ok=True)
-    entry = next((e for e in cat.load_catalog(api.CATALOG_PATH) if e["id"] == catalog_id), None) \
-        or live_catalog.find_entry(catalog_id)
+    entry = next((e for e in cat.load_catalog(api.CATALOG_PATH) if e["id"] == catalog_id), None)
+    dynamic = entry is None
+    if dynamic:
+        entry = live_catalog.find_entry(catalog_id)
     if entry is None:
         print("unknown catalog id", catalog_id)
         return 1
@@ -42,7 +44,7 @@ def main() -> int:
             print(f"{time.time() - t0:7.1f} {evt.get('type')} {json.dumps(evt, default=str)[:240]}", flush=True)
 
     orch.on_event = on_event
-    outcome = cat.run_candidate(orch, entry)
+    outcome = cat.run_candidate(orch, entry, source="live_catalog") if dynamic else cat.run_candidate(orch, entry)
     summary = {"status": outcome.status, "reason": getattr(outcome, "reason", None),
                "run_dir": str(getattr(outcome, "run_dir", "")), "seconds": round(time.time() - t0, 1),
                "spent_net_usd": round(getattr(orch, "spent_usd", 0.0), 5)}

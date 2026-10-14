@@ -1320,6 +1320,11 @@ class Orchestrator:
                                        "No experiment was started.")
         for path, text in dump.files.items():
             docs.append(Doc(f"repo:{path}@{dump.commit[:7]}", text))
+        if getattr(self, "code_grounded", False) and unit:
+            # Gleiche deterministische Vollstaendigkeitspruefung wie spaeter im Steckbrief, aber vor den bezahlten
+            # Extraktionsaufrufen: SARAF (2026-10-14) zahlte 0.12 $ Rolle 4, bevor der Quellenwaechter stoppte.
+            from .source_context import author_excerpt
+            author_excerpt(docs, model_name_of(claim_text), dataset, listing=self._repo_listing)
         info = {"url": url, "commit": dump.commit, "files": sorted(dump.files), "n_tracked": dump.n_tracked}
         if dump.subdir:   # Unterordner eines Sammel-Repos: Issues, Sterne usw. gehoeren zur Wurzel
             info["subdir"], info["root"] = dump.subdir, clone_plan(url)[0]

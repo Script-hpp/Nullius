@@ -490,7 +490,8 @@ def heuristic_files(listing: list[str], model: str, dataset: str) -> list[str]:
     return sorted(score, key=lambda p: (-score[p], len(p)))[:MAX_FILES]
 
 
-IMPORT_CHAR_BUDGET = 120_000   # Steckbrief-Modus: importierte Dateien bis zu diesem Gesamtumfang statt fester Anzahl
+IMPORT_CHAR_BUDGET = 240_000   # Steckbrief-Modus: gelesene Dateien bis zu diesem Gesamtumfang; liegt ueber source_context.MAX_AUTHOR_CHARS,
+                               # damit der Leser nie vor dem Quellenwaechter aufhoert (der Waechter stoppt sichtbar bei zu grossem Ausschnitt)
 
 
 def subdir_listing(ls_tree_out: str) -> list[str]:
@@ -629,7 +630,6 @@ def read_repo(
             if not model_files([Doc(f"repo:{p}", t) for p, t in files.items()], model):
                 read([p for p in heuristic_model_files(listing, model) if p not in files][:2])
         for _ in range(IMPORT_LEVELS):   # E15: Ketten von Trainingshelfern, begrenzt durch das Zeichenbudget
-            budget = IMPORT_CHAR_BUDGET - sum(len(t) for t in files.values())
             nxt = []
             mf = model_file_in_listing(listing, model) if model else None
             core_imports = imported_files({mf: files[mf]}, listing, relative=True) if mf in files else []
@@ -638,13 +638,15 @@ def read_repo(
                 # dependencies of the claimed model. Keep its direct imports.
                 if mf and '/' in mf and p.rsplit('/',1)[0] == mf.rsplit('/',1)[0] and p not in core_imports:
                     continue
-                if budget <= 0:
-                    break
                 nxt.append(p)
-                budget -= MAX_FILE_CHARS // 3   # Schaetzung je Datei vor dem Lesen
             if not nxt:
                 break
-            read(nxt)
+            # Echte Groesse statt Pauschalschaetzung: source_context verlangt spaeter die vollstaendige Importhuelle der
+            # Trainingsdateien. Eine vorzeitig abgebrochene Huelle stoppte SARAF (utils/dtw.py, 7 kB) trotz freiem Budget.
+            for p in nxt:
+                if sum(len(t) for t in files.values()) >= IMPORT_CHAR_BUDGET:
+                    break
+                read([p])
     else:
         read(chosen)
         read(imported_files(files, listing)[:MAX_IMPORTED])
