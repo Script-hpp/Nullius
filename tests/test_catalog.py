@@ -464,3 +464,19 @@ def test_unproven_protocol_caps_gesamtaussage_in_verdict():
     d2 = dossier_with("nicht reproduzierbar (Setup)", ())
     cat.record_result(unclear, cat.CHECKED, dossier=d2)
     assert unclear["verdict"]["gesamtaussage"] == "nicht reproduzierbar (Setup)"   # strengere Aussagen bleiben
+
+
+def test_jury_override_can_only_withdraw_an_entry():
+    from repro_agent.catalog import jury_ready
+    good = {"status": "geprueft", "verdict": {"gesamtaussage": "vorlaeufig"}}
+    assert jury_ready(good)[0]
+    assert jury_ready({**good, "jury_override": {"ready": False, "reason": "CPU limit"}}) == (False, "CPU limit")
+    assert not jury_ready({"status": "ungeprueft", "jury_override": {"ready": True}})[0]   # never grants
+
+
+def test_featured_catalog_is_the_rechecked_set():
+    # 2026-10-14 catalog regression: only entries re-checked with the current pipeline are offered to the jury
+    from repro_agent.catalog import jury_ready, load_catalog
+    ready = {e["id"] for e in load_catalog() if jury_ready(e)[0]}
+    assert ready == {"disc_1609_02907", "disc_2307_03756", "disc_2501_01087"}
+    assert all((e.get("jury") or {}).get("ready", False) == jury_ready(e)[0] for e in load_catalog() if e.get("jury"))

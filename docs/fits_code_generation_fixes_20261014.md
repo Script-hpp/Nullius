@@ -346,3 +346,11 @@ Horizontzeilen) mit woertlichem Zitat, im Steckbrief deterministisch gebunden; S
 Binaer-/Datendateien zaehlen nie als gekuerzte Quelle; nach 2 Timeouts je Kandidat bzw. 3 je Claim Stopp mit Grund
 "CPU-Limit" statt bis zu 12 x 10 min; Vertragsbeispiel mit `import nullius_io as nio`; Hinweis numpy 2 (`np.inf`
 statt `np.Inf`). Regel ab jetzt: nach groesseren Aenderungen zuerst Katalog lokal, dann Deployment.
+
+### Jury-Markierung (2026-10-14)
+
+Nur Eintraege, die mit dem aktuellen Stand nachgerechnet wurden, sind `jury.ready` (Filter "featured"): FITS (live
+a514edeb, Urteil und Kosten aus `docs/audits/fits_live_a514edeb_20261014.json` in `catalog.yaml` uebernommen),
+Kipf GCN auf Cora und GLinear (lokal nachgerechnet). Neues Feld `jury_override` (kann nur sperren, nie freigeben):
+TSMixer (CPU-Limit mit Paper-Settings), SparseTSF (Startskript-Variante), dazu Kipf CiteSeer, Shchur, SL-GCN und SegRNN
+als "nicht mit dem aktuellen Stand nachgerechnet". Ihre alten Urteile bleiben sichtbar.

@@ -284,7 +284,12 @@ NOT_JURY_READY = ("nicht bewertbar (Methode nicht umgesetzt)", "Agenten-Fehler v
 
 
 def jury_ready(entry: dict) -> tuple[bool, str]:
-    """Jury-Katalog: Status geprueft heisst nur "Lauf ohne Absturz"; zusaetzlich zaehlt die Gesamtaussage."""
+    """Jury-Katalog: Status geprueft heisst nur "Lauf ohne Absturz"; zusaetzlich zaehlt die Gesamtaussage.
+    `jury_override` (ready false, reason, checked, evidence): belegte Nachpruefung mit dem aktuellen Stand, die ein aelteres
+    Urteil nicht mehr traegt (Katalog-Regression 2026-10-14: TSMixer, SparseTSF). Sie kann nur sperren, nie freigeben."""
+    override = entry.get("jury_override") or {}
+    if override.get("ready") is False:
+        return False, str(override.get("reason") or "Re-check with the current pipeline failed")
     if entry.get("status") != CHECKED:
         return False, f"Status {entry.get('status')}"
     gesamt = (entry.get("verdict") or {}).get("gesamtaussage")

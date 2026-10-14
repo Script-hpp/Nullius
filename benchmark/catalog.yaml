@@ -87,8 +87,12 @@ candidates:
     fault_repairs: 0
     run_dir: runs/disc_1609_02907_citeseer/20261009-162142
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+  jury_override:
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+    checked: '2026-10-14'
 - id: disc_1811_05868
   arxiv_id: '1811.05868'
   title: Pitfalls of Graph Neural Network Evaluation
@@ -134,8 +138,12 @@ candidates:
     fault_repairs: 0
     run_dir: runs/disc_1811_05868/20261009-163701
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+  jury_override:
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+    checked: '2026-10-14'
 - id: disc_2601_18837
   arxiv_id: '2601.18837'
   title: Time series forecasting with Hahn Kolmogorov-Arnold networks
@@ -373,8 +381,12 @@ candidates:
     fault_repairs: 2
     run_dir: runs/disc_2511_08094/20261009-165248
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+  jury_override:
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+    checked: '2026-10-14'
 - id: disc_2412_03864
   arxiv_id: '2412.03864'
   title: Training MLPs on Graphs without Supervision
@@ -511,8 +523,13 @@ candidates:
     fault_repairs: 0
     run_dir: runs/disc_2303_06053/20261009-201230
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Re-check 2026-10-14 with the current pipeline: with the paper's hyperparameters (6 blocks, hidden size 512, input length 512) every training attempt exceeds the 10-minute CPU limit. The earlier result used smaller code defaults, so it does not show the paper's setting."
+  jury_override:
+    ready: false
+    reason: "Re-check 2026-10-14 with the current pipeline: with the paper's hyperparameters (6 blocks, hidden size 512, input length 512) every training attempt exceeds the 10-minute CPU limit. The earlier result used smaller code defaults, so it does not show the paper's setting."
+    checked: '2026-10-14'
+    evidence: docs/audits/catalog_regression_local_20261014.json
 - id: disc_2202_06491
   arxiv_id: '2202.06491'
   title: Adversarial Graph Contrastive Learning with Information Regularization
@@ -675,12 +692,17 @@ candidates:
     fault_repairs: 0
     run_dir: runs/disc_2405_00946/20261009-220822
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Re-check 2026-10-14 with the current pipeline: the authors' launch script for the linear SparseTSF does not set --model_type, and the code default would run the MLP variant. The check stops instead of guessing the variant."
+  jury_override:
+    ready: false
+    reason: "Re-check 2026-10-14 with the current pipeline: the authors' launch script for the linear SparseTSF does not set --model_type, and the code default would run the MLP variant. The check stops instead of guessing the variant."
+    checked: '2026-10-14'
+    evidence: docs/audits/catalog_regression_local_20261014.json
 - id: disc_2307_03756
   arxiv_id: '2307.03756'
   title: 'FITS: Modeling Time Series with $10k$ Parameters'
-  status: ungeprueft
+  status: geprueft
   imported_from: cache:discovery_cache.json
   candidate:
     dataset: ETTh1
@@ -710,6 +732,24 @@ candidates:
     found_by: arxiv
     reason: Official code
     community: []
+  checked_at: '2026-10-14T08:47:00Z'
+  cost_gross_usd: 0.3101
+  verdict:
+    urteil: reproduziert
+    measured_mean: 0.372031
+    measured_std: 5.3e-05
+    seeds: 3
+    target: 0.372
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2307_03756/20261014-080542
+  jury:
+    ready: true
+    reason: 'Gesamtaussage: vorlaeufig'
+  live_evidence: docs/audits/fits_live_a514edeb_20261014.json
 - id: disc_2308_11200
   arxiv_id: '2308.11200'
   title: 'SegRNN: Segment Recurrent Neural Network for Long-Term Time Series Forecasting'
@@ -797,8 +837,12 @@ candidates:
     fault_repairs: 0
     run_dir: runs/disc_2308_11200/20261009-224634
   jury:
-    ready: true
-    reason: 'Gesamtaussage: vorlaeufig'
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+  jury_override:
+    ready: false
+    reason: "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
+    checked: '2026-10-14'
 - id: disc_2501_01087
   arxiv_id: '2501.01087'
   title: 'Bridging Simplicity and Sophistication using GLinear: A Novel Architecture for Enhanced Time Series Prediction'

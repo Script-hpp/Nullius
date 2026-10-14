@@ -80,7 +80,7 @@ def test_import_never_overwrites_or_duplicates_a_reference(tmp_path):
 
 def test_unchecked_reference_is_not_jury_ready():
     for e in reference_entries().values():
-        fresh = {k: v for k, v in e.items() if k not in ("verdict", "jury")} | {"status": cat.UNCHECKED}
+        fresh = {k: v for k, v in e.items() if k not in ("verdict", "jury", "jury_override")} | {"status": cat.UNCHECKED}
         assert cat.jury_ready(fresh) == (False, "Status ungeprueft")
 
 
