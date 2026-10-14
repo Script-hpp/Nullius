@@ -110,9 +110,13 @@ CODE_MAX_TEMPERATURE = 0.7
 LOWER_IS_BETTER_VAL = ("mse", "mae")
 PRODUCT_LIB_NOTE = (
     " Libraries such as torch_geometric, torch_scatter, torch_sparse, dgl and ogb are NOT installed and are forbidden: "
-    "write every layer in plain PyTorch (dense or torch.sparse operations)."
+    "write every layer in plain PyTorch (dense or torch.sparse operations). "
+    # Authors' utils/tools.py EarlyStopping uses np.Inf in most forecasting repos (GLinear, local catalog check 2026-10-14)
+    "NumPy 2 is installed: np.Inf, np.NaN and np.float no longer exist; write np.inf, np.nan and float even where the authors' code does not."
 )
 TRAIN_TIMEOUT_S = 600
+CANDIDATE_TIMEOUT_LIMIT = 2   # Produktpfad: so viele Timeouts je Kandidat und Seed, dann kein weiterer Versuch
+CLAIM_TIMEOUT_LIMIT = 3       # ueber alle Kandidaten eines Claims
 ABRT_GRACE_S = 15       # F2: `timeout -s ABRT` greift diese Sekunden vor dem harten Sandbox-Timeout (der Branch und seine Dateien sind danach weg)
 SOFT_TIMEOUT_EXIT = 124   # Exit-Code von `timeout`
 AGENT_OUTPUT_TAIL_BYTES = 30000   # je Strom; Nebius kappt stdout/stderr sonst nach 65535 Bytes am KOPF (Ausnahme und Broker-Zusammenfassung stehen am Ende)
@@ -2016,6 +2020,13 @@ class Orchestrator:
                 dossier.graph_repairs[claim.id] = dossier.graph_repairs.get(claim.id, 0) + graph_rounds
         return v0, note0, code, ab, notes, discarded, fault_rounds
 
+    def _claim_timeouts(self, claim_id: str) -> int:
+        return self.__dict__.get("_timeouts", {}).get(claim_id, 0)
+
+    def _cpu_limit_note(self, seed: int) -> str:
+        return (f"Seed {seed}: training exceeded the {self._train_timeout()} s CPU limit repeatedly with the paper's settings; "
+                "stopped instead of repeating it. This is a compute limit of the check, not a finding about the paper.")
+
     def _run_seed(
         self, claim: Claim, task: Task, snapshot: str, dossier: Dossier, run_dir: Path,
         plan: str, code: str, seed: int, candidate: int | None = None,
@@ -2023,7 +2034,10 @@ class Orchestrator:
         """Ein Seed mit Reparaturschleife. Rueckgabe: (Messwert oder None, Hinweis, letzter Code)."""
         summary = None
         timed_out_before = False   # F2 (c): nach einem Timeout haengt jede weitere Reparatur dieses Seeds den Hinweis "schnell bleiben" an
+        timeouts = 0
         for n in range(1, self.settings.max_attempts_per_claim + 1):
+            if getattr(self, "graph_repair", False) and self._claim_timeouts(claim.id) >= CLAIM_TIMEOUT_LIMIT:
+                return None, self._cpu_limit_note(seed), code
             code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
             (run_dir / f"{claim.id}_{code_hash}.py").write_text(code)
             self._announce_code(claim, code)
@@ -2078,6 +2092,14 @@ class Orchestrator:
                     return None, f"Seed {seed}: Timeout, kein Reparaturversuch", code
                 summary = timeout_report(res, code, self._train_timeout())   # Produktpfad: schneller machen (F2: mit Stack und Ausgabe)
                 timed_out_before = True
+                timeouts += 1
+                with self._lock:
+                    counts = self.__dict__.setdefault("_timeouts", {})
+                    counts[claim.id] = counts.get(claim.id, 0) + 1
+                # TSMixer (local catalog check 2026-10-14): with the paper's enforced settings every attempt ran ~10 min into the
+                # limit; eight more attempts would only block the queue. Stop instead of repeating an unchanged configuration.
+                if timeouts >= CANDIDATE_TIMEOUT_LIMIT or self._claim_timeouts(claim.id) >= CLAIM_TIMEOUT_LIMIT:
+                    return None, self._cpu_limit_note(seed), code
             if n < self.settings.max_attempts_per_claim:
                 hints = self._error_hints(claim, summary) if status == "fehler" and product else ""
                 try:

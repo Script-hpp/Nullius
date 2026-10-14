@@ -118,6 +118,7 @@ class Task:
                 'these have REAL targets, never zeros. It returns a dictionary with named keys, not a tuple. '
                 'Its first argument is the integer history length, not a split name; it accepts no split argument. '
                 'Use this API example (length is the paper input length):\n```python\n'
+                'import nullius_io as nio\n'
                 'windows = nio.forecast_data(length)\n'
                 'train_x = windows["train_inputs"]\ntrain_y = windows["train_targets"]\n'
                 'val_x = windows["val_inputs"]\nval_y = windows["val_targets"]\n'

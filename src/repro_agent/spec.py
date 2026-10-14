@@ -779,8 +779,11 @@ def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], na
     horizon = FORECAST_HORIZON if family == "forecast" else None
     raw = raw_items(docs, names, model, family, dataset=dataset, horizon=horizon)
     # Preserve primary-source Discovery settings independently of model recall.
+    # Hyperparameter-table rows read deterministically from the paper bind like Discovery settings, without a model
+    # mapping their columns (TSMixer: dropout 0.9 / hidden 512 / 6 blocks; the extractor kept only the learning rate).
+    table_row = lambda d: d.source == 'paper' and (getattr(d, 'applies_to', None) or {}).get('setting') == 'hyperparameter table'
     discovery_raw = [{'key': k, 'value': d.value, 'quote': d.quote, 'source': d.source}
-                     for d in details if d.source == 'discovery' and not getattr(d, 'excluded', '')
+                     for d in details if (d.source == 'discovery' or table_row(d)) and not getattr(d, 'excluded', '')
                      for k in quote_params(d.topic) if k in {key for key, _ in keys_for(family, True)[0]}]
     discovered, _ = verify_entries(discovery_raw, docs, model, family, True, normalize=True)
     for item in discovered:

@@ -79,6 +79,23 @@ def test_timeout_with_flag_is_repaired_with_speed_hint(tmp_path):
     assert o.calls[0][0] == "repair" and "faster" in o.calls[0][1]
 
 
+def test_repeated_timeouts_stop_the_candidate(tmp_path):
+    # TSMixer local catalog check 2026-10-14: every attempt ran ~10 min into the limit with the enforced paper settings
+    o = _orch(True, [TIMEOUT, TIMEOUT, OK])
+    value, note, _ = _run(o, tmp_path)
+    assert value is None and "CPU limit" in note and len(o.calls) == 1
+
+
+def test_timeouts_across_candidates_stop_the_claim(tmp_path):
+    o = _orch(True, [TIMEOUT, TIMEOUT, TIMEOUT, OK])
+    o._train_timeout = lambda: 600
+    _run(o, tmp_path)                      # first candidate: two timeouts
+    value, note, _ = _run(o, tmp_path)     # next candidate: one more reaches the claim limit
+    assert value is None and "CPU limit" in note
+    value, note, _ = _run(o, tmp_path)     # later candidates do not start another 10-minute attempt
+    assert value is None and "CPU limit" in note
+
+
 def test_missing_code_without_flag_stops(tmp_path):
     o = _orch(False, [CRASH], repair_raises=True)
     value, note, _ = _run(o, tmp_path)

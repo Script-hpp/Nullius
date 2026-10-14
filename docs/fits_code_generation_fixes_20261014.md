@@ -322,3 +322,27 @@ fast jeder Versuch am selben Smoke-Formfehler (`val_predictions.csv`: erwartet d
 2. **Verkuerzter Auswahlvertrag fuer Knoten.** `withheld_validation_v1` ersetzte die vollstaendige Anleitung fuer
    `val_predictions.csv` (Format, Smoke-Teilmenge) durch einen Einzeiler. Im Autorencode-Modus schreibt der Helfer die
    Datei selbst, im Paper-Modus musste der Agent raten. Fix: volle Anleitung, nur `val_idx` -> `selection_idx`.
+
+## Katalog-Regression lokal (2026-10-14, Nachmittag)
+
+Anlass: frisch gefundene Papers scheiterten; Frage, ob der Katalog mit dem heutigen Stand noch laeuft. Server-Tageslimit
+erreicht, daher lokal in Produktkonfiguration (Token Factory + Nebius). Beleg `docs/audits/catalog_regression_local_20261014.json`.
+
+| Paper | Erster Lauf | Ursache | Nach Fix |
+| --- | --- | --- | --- |
+| FITS | live reproduziert 0.37203 | - | - |
+| Kipf GCN | Stopp: Spalte nicht belegt | Spaltenleser kannte "Methoden als Zeilen" in LaTeX nicht; danach Stopp an "gekuerzter" Binaerdatei `gcn/data/ind.cora.allx` | **reproduziert 0.815 +/- 0.0085** (Ziel 0.815, 0.13 $) |
+| GLinear | - | - | **reproduziert 0.3867 +/- 0.0020** (Ziel 0.382, 0.20 $) |
+| TSMixer | 0/3, Reparaturen im Kreis | Hyperparameter-Tabelle in LaTeX nicht gelesen: argparse-Defaults (Dropout 0.05, Hidden 64) gegen Paper (0.9, 512, 6 Bloecke) | Spec korrekt, aber jeder Versuch > 600 s CPU: mit Paper-Settings im CPU-Budget nicht pruefbar |
+| SparseTSF | Stopp: Startmodell passt nicht | Autoren-Startskript fuer die lineare Variante setzt `--model_type` nicht, argparse-Default ist `mlp` | ehrlicher Stopp, offen |
+
+Warum es "auf einmal" nicht mehr lief: Die Erfolge vom 2026-10-09 liefen mit Tavily-HTML-Text und ohne harte Gates.
+Die Umstellung auf LaTeX-Quellen und die strengen Gates (Spaltenbeleg, Startskript-Identitaet, Steckbrief-Pflicht,
+verdeckte Auswahl) vom 12./13.10. wurden einzeln getestet, der Katalog aber nicht neu gerechnet. Der TSMixer-Erfolg
+vom 9.10. lief vermutlich mit den kleinen argparse-Defaults statt der Paper-Settings.
+
+Allgemeine Fixes dieses Abschnitts: LaTeX-Hyperparameter-Tabellen (`\multicolumn`/`\multirow`, Datensatz-Abschnitte,
+Horizontzeilen) mit woertlichem Zitat, im Steckbrief deterministisch gebunden; Spaltenleser auch fuer Methoden-Zeilen;
+Binaer-/Datendateien zaehlen nie als gekuerzte Quelle; nach 2 Timeouts je Kandidat bzw. 3 je Claim Stopp mit Grund
+"CPU-Limit" statt bis zu 12 x 10 min; Vertragsbeispiel mit `import nullius_io as nio`; Hinweis numpy 2 (`np.inf`
+statt `np.Inf`). Regel ab jetzt: nach groesseren Aenderungen zuerst Katalog lokal, dann Deployment.

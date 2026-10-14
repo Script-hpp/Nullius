@@ -47,3 +47,22 @@ def test_latex_inputs_are_inlined_in_document_order():
     text = _decode_arxiv_source(buf.getvalue())
     assert text.index("MAIN TABLE") < text.index("\\appendix") < text.index("APPENDIX TABLE")
     assert text.count("APPENDIX TABLE") == 1
+
+
+KIPF_ROW = r"\textbf{GCN} (this paper) & $\mathbf{70.3}$ (7s) & $\mathbf{81.5}$ (4s) & $\mathbf{79.0}$ (38s) & $\mathbf{66.0}$ (48s)"
+
+
+@pytest.mark.parametrize("dataset,value", [("Cora", 81.5), ("CiteSeer", 70.3)])
+def test_methods_as_rows_and_datasets_as_columns(dataset, value):
+    # Local catalog check 2026-10-14: Kipf GCN 0.815 was confirmed but stopped because no column could be established;
+    # two rows start with GCN ("this paper", "rand. splits"), the quoted row decides
+    from repro_agent.claims_source import _column_status
+    text = (ROOT / "tests/fixtures/kipf_results_table.tex").read_text()
+    assert _column_status(text, KIPF_ROW, value, "GCN", dataset, "accuracy", True)[1] == "ok"
+
+
+def test_methods_as_rows_rejects_the_neighbouring_dataset_column():
+    from repro_agent.claims_source import _column_status
+    text = (ROOT / "tests/fixtures/kipf_results_table.tex").read_text()
+    with pytest.raises(ExtractionInvalid, match="Kopfzeile"):
+        _column_status(text, KIPF_ROW, 70.3, "GCN", "Cora", "accuracy", True)

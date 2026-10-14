@@ -1,0 +1,91 @@
+% Excerpt of arXiv:2303.06053 (TSMixer) LaTeX source: hyperparameter longtable (appendix), verbatim.
+\begin{longtable}{l|c|lllll}
+\caption{Hyerparamter tuning spaces and best configurations for TSMixer and TFT on long-term forecasting benchmarks.} \\
+\hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{ETTh1} \\ \hline
+\endfirsthead
+
+\endhead
+
+\hline
+\endfoot
+
+\endlastfoot
+
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{8, 16, 32, 64} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 6 & 0.9 & 512 & relu \\
+ & 192 & 0.001 & 4 & 0.9 & 256 & relu \\
+ & 336 & 0.001 & 4 & 0.9 & 256 & relu \\
+ & 720 & 0.001 & 2 & 0.9 & 64 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.001 &  & 0.3 &  &  \\
+ & 192 & 0.001 &  & 0.1 &  &  \\
+ & 336 & 0.001 &  & 0.1 &  &  \\
+ & 720 & 0.001 &  & 0.1 &  &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{ETTh2} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{8, 16, 32, 64} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 4 & 0.9 & 8 & relu \\
+ & 192 & 0.001 & 1 & 0.9 & 8 & relu \\
+ & 336 & 0.0001 & 1 & 0.9 & 16 & relu \\
+ & 720 & 0.0001 & 2 & 0.9 & 64 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.0001 &  & 0.9 &  &  \\
+ & 192 & 0.001 &  & 0.9 &  &  \\
+ & 336 & 0.001 &  & 0.7 &  &  \\
+ & 720 & 0.001 &  & 0.7 &  &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{ETTm1} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{8, 16, 32, 64} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 6 & 0.9 & 16 & relu \\
+ & 192 & 0.0001 & 4 & 0.9 & 32 & relu \\
+ & 336 & 0.0001 & 4 & 0.9 & 64 & relu \\
+ & 720 & 0.0001 & 4 & 0.9 & 16 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.001 &  & 0.5 &  &  \\
+ & 192 & 0.001 &  & 0.3 &  &  \\
+ & 336 & 0.001 &  & 0.3 &  &  \\
+ & 720 & 0.001 &  & 0.9 &  &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{ETTm2} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{8, 16, 32, 64} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.001 & 8 & 0.9 & 256 & relu \\
+ & 192 & 0.0001 & 1 & 0.9 & 256 & relu \\
+ & 336 & 0.0001 & 8 & 0.9 & 512 & relu \\
+ & 720 & 0.0001 & 8 & 0.1 & 256 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.0001 &  & 0.7 & 512 &  \\
+ & 192 & 0.0001 &  & 0.3 & 256 &  \\
+ & 336 & 0.0001 &  & 0.3 & 128 &  \\
+ & 720 & 0.0001 &  & 0.1 & 512 &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{Weather} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{8, 16, 32, 64} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 4 & 0.3 & 64 & relu \\
+ & 192 & 0.0001 & 8 & 0.7 & 32 & relu \\
+ & 336 & 0.0001 & 2 & 0.7 & 8 & relu \\
+ & 720 & 0.0001 & 8 & 0.7 & 16 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.001 & 2 & 0.9 & 64 &  \\
+ & 192 & 0.001 & 1 & 0.1 & 32 &  \\
+ & 336 & 0.001 & 1 & 0.1 & 32 &  \\
+ & 720 & 0.001 & 2 & 0.7 & 64 &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{Electricity} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{64, 128, 256, 512} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 6 & 0.7 & 32 & relu \\
+ & 192 & 0.0001 & 8 & 0.7 & 16 & relu \\
+ & 336 & 0.0001 & 6 & 0.7 & 64 & relu \\
+ & 720 & 0.001 & 6 & 0.7 & 64 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.0001 & 4 & 0.5 & 32 &  \\
+ & 192 & 0.0001 & 6 & 0.9 & 8 &  \\
+ & 336 & 0.0001 & 4 & 0.1 & 8 &  \\
+ & 720 & 0.001 & 4 & 0.3 & 64 &  \\ \hline
+ & \multicolumn{1}{l|}{} & \multicolumn{5}{c}{Traffic} \\ \hline
+Search space & \multicolumn{1}{l|}{} & \multicolumn{1}{c}{Learing rate} & \multicolumn{1}{c}{Blocks} & \multicolumn{1}{c}{Dropout} & \multicolumn{1}{c}{Hidden size} & \multicolumn{1}{c}{Heads} \\ \hline
+Model & $T$ & \multicolumn{1}{c}{0.001, 0.0001} & \multicolumn{1}{c}{1, 2, 4, 6, 8} & \multicolumn{1}{c}{0.1, 0.3, 0.5, 0.7, 0.9} & \multicolumn{1}{c}{64, 128, 256, 512} & \multicolumn{1}{c}{4, 8} \\ \hline
+\multirow{4}{*}{TSMixer} & 96 & 0.0001 & 8 & 0.7 & 256 & relu \\
+ & 192 & 0.0001 & 8 & 0.7 & 256 & relu \\
+ & 336 & 0.0001 & 6 & 0.7 & 512 & relu \\
+ & 720 & 0.0001 & 2 & 0.9 & 256 & relu \\ \hline
+\multirow{4}{*}{TFT} & 96 & 0.001 & 4 & 0.3 & 64 &  \\
+ & 192 & 0.001 & 4 & 0.9 & 64 &  \\
+ & 336 & 0.001 & 6 & 0.7 & 128 &  \\
+ & 720 & 0.0001 & 8 & 0.1 & 256 &  \\ \hline
+\end{longtable}

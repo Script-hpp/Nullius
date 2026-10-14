@@ -605,12 +605,12 @@ def read_repo(
                 full = sandbox.get_file(branch, f"/repo/{path}").decode(errors="replace")
                 limit = IMPORT_CHAR_BUDGET if unit_key else MAX_FILE_CHARS
                 text = full[:limit]
-                if len(full) > limit:
-                    cuts.append({"file": path, "kept_chars": limit, "of_chars": len(full)})
             except (OSError, UnicodeDecodeError):
                 continue
             if unit_key and not is_source_text(path, text):
-                continue
+                continue   # binary/data file: skipped, so its size never counts as a truncated source (Kipf gcn/data/ind.cora.allx)
+            if len(full) > limit:
+                cuts.append({"file": path, "kept_chars": limit, "of_chars": len(full)})
             files[path] = text
     if unit_key:
         if model:

@@ -36,3 +36,17 @@ def test_repository_reader_records_extreme_truncation(tmp_path, monkeypatch):
     dump=rs.read_repo(sb,None,'https://github.com/example/new','NewForecast','ETTh1',fixture_dir=tmp_path,
                       unit_key='unit',model='NewForecast',mode='live')
     assert dump.truncation and dump.truncation[0]['of_chars']>dump.truncation[0]['kept_chars']
+
+
+def test_large_binary_data_file_is_skipped_without_counting_as_truncated(tmp_path, monkeypatch):
+    # Local catalog check 2026-10-14: Kipf's gcn/data/ind.cora.allx (pickle) blocked author-code mode as a "truncated source"
+    class DataSandbox(Sandbox):
+        def get_file(self, b, path):
+            if path.endswith('ind.cora.allx'):
+                return b'\x80\x02cnumpy\x00' * (rs.IMPORT_CHAR_BUDGET // 8 + 10)
+            return super().get_file(b, path)
+    sb = DataSandbox('class Model:\n    pass\n')
+    monkeypatch.setattr(rs, 'select_files', lambda *_: ['models/NewForecast.py', 'gcn/data/ind.cora.allx'])
+    dump = rs.read_repo(sb, None, 'https://github.com/example/new', 'NewForecast', 'ETTh1', fixture_dir=tmp_path,
+                        unit_key='unit', model='NewForecast', mode='live')
+    assert 'gcn/data/ind.cora.allx' not in dump.files and dump.truncation == []

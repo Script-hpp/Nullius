@@ -107,6 +107,62 @@ def _fragment(text: str, lo: int, hi: int) -> str:
     return text[lo:hi].strip()
 
 
+def _latex_bodies(text: str) -> list[str]:
+    from .table_check import latex_tabulars
+    return latex_tabulars(text) + [m.group(1) for m in re.finditer(r"\\begin\{longtable\}(?:\{[^}]*\})?(.*?)\\end\{longtable\}", text, re.S)]
+
+
+def _latex_table_details(text: str, model: str, dataset: str, horizon: int | None) -> list[SetupDetailV2]:
+    """Hyperparameter tables in LaTeX source (`&` cells, \\multicolumn/\\multirow headers). Since the LaTeX switch the pipe
+    reader above found nothing there; TSMixer's ETTh1 row (lr 0.0001, 6 blocks, dropout 0.9, hidden 512) fell back to
+    argparse defaults and the spec repairs looped (local catalog check 2026-10-14). Quotes are verbatim source rows."""
+    from .table_check import _grid_cell, _latex_cells, latex_rows
+    norm_text = _norm(text)
+    want_ds = re.sub(r"[^a-z0-9]", "", dataset.lower())
+    for body in _latex_bodies(text):
+        raws = latex_rows(body)
+        rows = [[_grid_cell(c) for c in _latex_cells(r)] for r in raws]
+        if want_ds not in re.sub(r"[^a-z0-9]", "", body.lower()):
+            continue
+        section_ok = None   # None: no dataset sections in this table
+        header, header_raw, in_model = None, "", False
+        for raw, cells in zip(raws, rows):
+            filled = [c for c in cells if c]
+            names = {re.sub(r"[^a-z0-9]", "", c.lower()) for c in filled}
+            if filled and len(names) == 1 and not any(NUMBER_RE.match(c) for c in filled) and not COLUMN_RE.fullmatch(filled[0]):
+                section_ok = want_ds in names            # a row naming only one dataset opens its section
+                header, in_model = None, False
+                continue
+            cols = {j: COLUMNS[int(m.lastgroup[1:])][0] for j, c in enumerate(cells)
+                    if (m := COLUMN_RE.fullmatch(c.strip()))}
+            if len(cols) >= MIN_HEADER_COLUMNS:
+                header, in_model = cols, False
+                header_raw = re.sub(r"^(?:\s*\\[A-Za-z]+(?:\{[^{}&]*\})?)+\s*", "", raw).strip()   # \hline, \endhead ...
+                continue
+            if header is None or section_ok is False:
+                continue
+            if cells and cells[0]:
+                in_model = _word_eq(cells[0], model)
+            if not in_model:
+                continue
+            horizons = [int(c) for c in cells[1:min(header) if header else 1] if c.isdigit() and int(c) in HORIZONS]
+            if horizon is not None and horizons and horizon not in horizons:
+                continue
+            out = []
+            for j, topic in header.items():
+                val = cells[j] if j < len(cells) else ""
+                if not NUMBER_RE.match(val):
+                    continue   # text value under a number column ("relu" under Heads): never guess
+                quote = f"{header_raw} ... {raw.strip()}"
+                if quote_in_text(quote, norm_text):
+                    out.append(SetupDetailV2(topic=topic, value=val, quote=quote, source="paper",
+                                             applies_to={"model": model, "dataset": dataset, "setting": "hyperparameter table",
+                                                         "quote": quote}, source_rank="paper", optional=False))
+            if out:
+                return out
+    return []
+
+
 def table_details(docs: list[Doc], model: str, dataset: str, horizon: int | None = None) -> list[SetupDetailV2]:
     """Angaben aus Hyperparameter-Tabellen des Papers fuer `model` auf `dataset` (bei Horizont-Tabellen die Zeile des Horizonts `horizon`).
     Nur Paper-Dokumente (Name "paper"). Leere Liste, wenn Kopf, Datensatz, Modellzeile oder Spaltenzahl nicht eindeutig passen."""
@@ -150,4 +206,6 @@ def table_details(docs: list[Doc], model: str, dataset: str, horizon: int | None
                                          applies_to={"model": model, "dataset": dataset, "setting": "not stated", "quote": quote},
                                          source_rank="paper", optional=False))
             break   # erster passender Block dieses Datensatzes
+        if not out and "\\begin{" in text:
+            out.extend(_latex_table_details(text, model, dataset, horizon))
     return out

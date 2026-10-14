@@ -1,0 +1,289 @@
+{
+ "scope": "Local catalog regression 2026-10-14 in product configuration (Token Factory + Nebius, scripts/review/local_product_run.py), after the day's fixes; FITS was checked live (docs/audits/fits_live_a514edeb_20261014.json).",
+ "runs": {
+  "disc_1609_02907": {
+   "summary": {
+    "status": "geprueft",
+    "reason": null,
+    "run_dir": "/home/onuralp/orca/workspaces/research/analyst/runs/disc_1609_02907/20261014-154108",
+    "seconds": 821.4,
+    "spent_net_usd": 0.13084
+   },
+   "verdict": {
+    "urteil": "reproduziert",
+    "mean": 0.815,
+    "std": 0.008544003745317481,
+    "gesamt": "vorlaeufig"
+   },
+   "seeds": [
+    0.806,
+    0.816,
+    0.823
+   ],
+   "spec": [],
+   "attempts": [
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.806,
+     "seconds": 60.2
+    },
+    {
+     "candidate": 1,
+     "seed": 0,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.806,
+     "seconds": 74.1
+    },
+    {
+     "candidate": 2,
+     "seed": 0,
+     "n": 1,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 11.6
+    },
+    {
+     "candidate": 2,
+     "seed": 0,
+     "n": 2,
+     "status": "stabil",
+     "measured": 0.806,
+     "seconds": 72.7
+    },
+    {
+     "candidate": 1,
+     "seed": 2,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.823,
+     "seconds": 52.7
+    },
+    {
+     "candidate": 1,
+     "seed": 1,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.816,
+     "seconds": 57.8
+    }
+   ]
+  },
+  "disc_2501_01087": {
+   "summary": {
+    "status": "geprueft",
+    "reason": null,
+    "run_dir": "/home/onuralp/orca/workspaces/research/analyst/runs/disc_2501_01087/20261014-135857",
+    "seconds": 1006.2,
+    "spent_net_usd": 0.19595
+   },
+   "verdict": {
+    "urteil": "reproduziert",
+    "mean": 0.386674132957293,
+    "std": 0.0020100797141226925,
+    "gesamt": "vorlaeufig"
+   },
+   "seeds": [
+    0.384665973798938,
+    0.388686127737846,
+    0.3866702973350951
+   ],
+   "spec": [
+    [
+     "seq_len",
+     "336",
+     "paper"
+    ]
+   ],
+   "attempts": [
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 1,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 14.7
+    },
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 2,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 15.4
+    },
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 3,
+     "status": "stabil",
+     "measured": 0.384665973798938,
+     "seconds": 89.4
+    },
+    {
+     "candidate": 1,
+     "seed": 0,
+     "n": 1,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 17.0
+    },
+    {
+     "candidate": 1,
+     "seed": 0,
+     "n": 2,
+     "status": "stabil",
+     "measured": 0.384665973798938,
+     "seconds": 82.4
+    },
+    {
+     "candidate": 2,
+     "seed": 0,
+     "n": 1,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 14.2
+    },
+    {
+     "candidate": 2,
+     "seed": 0,
+     "n": 2,
+     "status": "fehler",
+     "measured": null,
+     "seconds": 18.2
+    },
+    {
+     "candidate": 2,
+     "seed": 0,
+     "n": 3,
+     "status": "stabil",
+     "measured": 0.3829814347731863,
+     "seconds": 88.2
+    },
+    {
+     "candidate": 0,
+     "seed": 2,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.3866702973350951,
+     "seconds": 85.2
+    },
+    {
+     "candidate": 0,
+     "seed": 1,
+     "n": 1,
+     "status": "stabil",
+     "measured": 0.388686127737846,
+     "seconds": 179.1
+    }
+   ]
+  },
+  "disc_2303_06053": {
+   "summary": {
+    "status": "stopped by us after repeated 600 s timeouts"
+   },
+   "verdict": null,
+   "seeds": null,
+   "spec": [
+    [
+     "lr",
+     "0.0001",
+     "paper"
+    ],
+    [
+     "epochs",
+     "100",
+     "argparse default"
+    ],
+    [
+     "batch_size",
+     "32",
+     "argparse default"
+    ],
+    [
+     "dropout",
+     "0.9",
+     "paper"
+    ],
+    [
+     "hidden",
+     "512",
+     "paper"
+    ],
+    [
+     "layers",
+     "6",
+     "paper"
+    ],
+    [
+     "patience",
+     "5",
+     "paper"
+    ],
+    [
+     "seq_len",
+     "512",
+     "start script"
+    ]
+   ],
+   "attempts": [
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 1,
+     "status": "timeout",
+     "measured": null,
+     "seconds": 622.1
+    },
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 2,
+     "status": "timeout",
+     "measured": null,
+     "seconds": 619.2
+    },
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 3,
+     "status": "timeout",
+     "measured": null,
+     "seconds": 608.9
+    },
+    {
+     "candidate": 0,
+     "seed": 0,
+     "n": 4,
+     "status": "timeout",
+     "measured": null,
+     "seconds": 618.4
+    },
+    {
+     "candidate": 1,
+     "seed": 0,
+     "n": 1,
+     "status": "timeout",
+     "measured": null,
+     "seconds": 613.4
+    }
+   ]
+  },
+  "disc_2405_00946": {
+   "summary": {
+    "status": "ungeprueft",
+    "reason": "Author launch model does not match the selected method; no experiment was started",
+    "run_dir": "/home/onuralp/orca/workspaces/research/analyst/runs/disc_2405_00946/20261014-135529",
+    "seconds": 207.1,
+    "spent_net_usd": 0.12143
+   },
+   "verdict": null,
+   "seeds": null,
+   "spec": null,
+   "attempts": []
+  }
+ }
+}

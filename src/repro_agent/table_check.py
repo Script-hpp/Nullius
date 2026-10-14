@@ -373,12 +373,21 @@ def _check_latex_grid(text: str, quote: str, value: float, method: str, dataset:
         header = rows[:first]
         width = max(len(r) for r in rows)
         labels = [" ".join(h[j] for h in header if j < len(h)) for j in range(width)]
+        raws = latex_rows(body)
+        def anchored(candidates):   # several rows named alike (GCN, GCN rand. splits): the quoted row decides
+            if len(candidates) > 1 and anchor:
+                candidates = [r for r in candidates if anchor in _clean_name(raws[rows.index(r)])]
+            return candidates
+        # A: datasets as rows, methods as columns (BANGS). B: methods as rows, datasets as columns (Kipf GCN).
         cols = [j for j, label in enumerate(labels) if wanted in {_clean_name(w) for w in re.split(r"[\s/()]+", label)}
                 or _clean_name(label) == wanted]
-        data = [r for r in rows[first:] if r and _clean_name(r[0]) == want_ds]
+        data = anchored([r for r in rows[first:] if r and _clean_name(r[0]) == want_ds])
+        if len(cols) != 1 or len(data) != 1:
+            cols = [j for j, label in enumerate(labels) if j and _clean_name(label) == want_ds]
+            data = anchored([r for r in rows[first:] if r and _clean_name(re.split(r"\s\(|\s\[", r[0])[0]) == wanted])
         if len(cols) != 1 or len(data) != 1:
             continue
-        raw = latex_rows(body)[first + rows[first:].index(data[0])]
+        raw = raws[rows.index(data[0])]
         if anchor and anchor not in _clean_name(raw):
             continue   # the quoted fragment must be in this row
         cell = data[0][cols[0]] if cols[0] < len(data[0]) else ""
