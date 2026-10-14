@@ -281,3 +281,13 @@ SST 2404.14757, Time-o1 2505.17847). Lokal mit identischer Textauswahl fand ders
 woertlich; der Live-Fehler war ein Zufallsfehler des Modells. Er wurde trotzdem als Paper-Befund gecacht, die drei
 Papers waeren nie wieder geprueft worden. Fix: bei ungenauem Zitat genau ein zweiter Aufruf (nur ein woertlich
 belegtes Zitat zaehlt); "Quote not found" wird nie gecacht, alte Eintraege dieser Art werden neu gelesen.
+
+### Discovery nach Deployment 9bef7a9 (Job 7bd13d84)
+
+Neue Funde: BANGS (2410.09348, Cora 84.23) und SST (2404.14757, ETTh1 0.381, Laenge 672, Protokoll unklar). Trotz
+Wiederholung wieder "Quote not found" bei Time-o1, SRSNet und GraphSHA: kein Zufall, sondern systematisch. Die Zitate
+enthalten LaTeX-Befehle, die mit b/f/n/r/t beginnen (`\textbf`, `\textcolor`, `\bst`). Schreibt das Modell im JSON einen
+einfachen Backslash, dekodiert JSON `\t` als Tab und `\b` als Backspace; das Zitat passt nicht mehr, obwohl es woertlich
+in der Quelle steht (an den echten Quellen nachgestellt). Fix: `_verbatim_quote` repariert nur die Serialisierung
+(Steuerzeichen zurueck, Ueber-Escapes) und akzeptiert eine Variante nur, wenn sie vollstaendig woertlich in der Quelle
+steht; gilt auch fuer Protokoll-Zitate. Ein erfundenes Zitat bleibt abgelehnt.

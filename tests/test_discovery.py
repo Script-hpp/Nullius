@@ -1622,3 +1622,22 @@ def test_old_cached_quote_miss_is_read_again(monkeypatch, tmp_path):
     monkeypatch.setattr("httpx.get", lambda url, *a, **k: FakeResponse(ATOM_ONE))
     agent = DiscoveryAgent(llm=FakeLLM(), tavily=TavilyFinder(repos=["https://github.com/foo/bar"]), cache_path=str(cache_file))
     assert len(agent.discover(["Cora"], on_event=lambda e: None)) == 1
+
+
+@pytest.mark.parametrize("raw", [
+    '{"quote": "96 & $\\\\textcolor{red}{\\\\textbf{0.366}}$"}',      # correctly escaped
+    '{"quote": "96 & $\\textcolor{red}{\\textbf{0.366}}$"}',          # single backslash: \t decodes to a tab
+    '{"quote": "96 & $\\\\\\\\textcolor{red}{\\\\\\\\textbf{0.366}}$"}',  # over-escaped
+])
+def test_json_escape_damage_is_repaired_only_to_the_verbatim_source(raw):
+    # Live 2026-10-14: SRSNet, Time-o1 and GraphSHA quotes were in the source but decoded with tab/backspace characters
+    from repro_agent.discovery import _verbatim_quote
+    text = r"\begin{tabular}{lc} ETTh1 & 96 & $\textcolor{red}{\textbf{0.366}}$ \\ \end{tabular}"
+    assert _verbatim_quote(json.loads(raw)["quote"], text) == r"96 & $\textcolor{red}{\textbf{0.366}}$"
+
+
+def test_backspace_and_invented_quotes():
+    from repro_agent.discovery import _verbatim_quote
+    text = r"\scalea{96} & \bst{\scalea{0.368}} & 0.4"
+    assert _verbatim_quote(json.loads('{"q": "\\\\scalea{96} & \\bst{\\\\scalea{0.368}}"}')["q"], text) == r"\scalea{96} & \bst{\scalea{0.368}}"
+    assert _verbatim_quote(r"\scalea{96} & \bst{\scalea{0.361}}", text) is None

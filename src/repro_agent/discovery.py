@@ -93,6 +93,25 @@ def _quote_lines(quote: str) -> list[str]:
     return [n for n in (_norm_quote(l) for l in quote.split("\n")) if n]
 
 
+_JSON_CONTROL = {"\x08": "\\b", "\x0c": "\\f", "\t": "\\t", "\r": "\\r"}
+
+
+def _verbatim_quote(quote: str, text: str) -> str | None:
+    """Das Zitat in der Schreibweise, die woertlich im Text steht, sonst None.
+
+    Nur JSON-Serialisierung wird repariert, nie der Inhalt: ein einfacher Backslash vor b/f/n/r/t im Modell-JSON wird
+    beim Dekodieren zum Steuerzeichen (`\\textbf` -> Tab + `extbf`, `\\bst` -> Backspace + `st`; Live 2026-10-14 SRSNet,
+    Time-o1, GraphSHA), ein doppelter bleibt doppelt. Jede Variante zaehlt nur, wenn sie vollstaendig im Text steht."""
+    if not isinstance(quote, str) or not quote.strip():
+        return None
+    control = "".join(_JSON_CONTROL.get(c, c) for c in quote)
+    letters = re.sub(r"\n(?=[A-Za-z])", r"\\n", control)   # \newline, \nabla: Zeilenumbruch + Buchstabe war ein Befehl
+    for variant in dict.fromkeys([quote, control, letters, _repair_protocol_escapes(quote), _repair_protocol_escapes(letters)]):
+        if _quote_in_text(variant, text):
+            return variant
+    return None
+
+
 def _quote_in_text(quote: str, text: str) -> bool:
     """Zeilenweise: jede nicht-leere Zeile des Zitats muss fuer sich im Text stehen (Kopfzeile darf weiter vorn stehen).
     Einzeilige Zitate wie bisher; kein Fuzzy-Match."""
@@ -582,7 +601,7 @@ class DiscoveryAgent:
         pq = claim_data.get("protocol_quote")
         quote_ok = isinstance(pq, str) and bool(pq.strip()) and norm_ws(pq) in norm_ws(text)
         if not quote_ok and isinstance(pq, str):
-            repaired = _repair_protocol_escapes(pq)
+            repaired = _verbatim_quote(pq, text) or pq   # Ueber- und Unter-Escapes aus dem Modell-JSON
             if repaired != pq and norm_ws(repaired) in norm_ws(text):
                 # Repair serialization only when the complete quote actually
                 # occurs in the source. Never infer setup from an invented quote.
@@ -998,11 +1017,11 @@ class DiscoveryAgent:
                 # claim already supplies the number; empty output needs no retry.
                 if (not claim_data and not source_claim) or claim_data.get("llm_unreadable"):
                     claim_data = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
-                elif claim_data.get("quote") and not _quote_in_text(claim_data["quote"], text):
+                elif claim_data.get("quote") and not _verbatim_quote(claim_data["quote"], text):
                     # Ein ungenaues Zitat ist ein Modellfehler, kein Paper-Befund (Live 2026-10-14: drei ETTh1-Papers
                     # abgelehnt, deren Zitat ein zweiter Aufruf woertlich fand). Einmal neu fragen, nur ein belegtes Zitat zaehlt.
                     retry = self._extract_claim(text, ds, emit_func=emit, temperature=RETRY_TEMPERATURE) or {}
-                    if retry.get("quote") and _quote_in_text(retry["quote"], text):
+                    if _verbatim_quote(retry.get("quote"), text):
                         claim_data = retry
 
                 # LLM-Probleme sind kein Befund ueber das Paper: nicht cachen.
@@ -1060,7 +1079,10 @@ class DiscoveryAgent:
                     _update_cache(cache_key, {"status": "rejected", "reason": reason_str})
                     continue
                     
-                if not _quote_in_text(quote, text):
+                verbatim = _verbatim_quote(quote, text)
+                if verbatim:
+                    claim_data["quote"] = quote = verbatim
+                else:
                     reason = QUOTE_MISS_REASON
                     emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "quote"})   # nicht cachen: Modellfehler
                     continue
