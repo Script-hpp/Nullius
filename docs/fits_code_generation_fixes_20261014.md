@@ -89,3 +89,37 @@ Damit funktioniert der autonome Nachbau fuer FITS lokal. Der Live-Nachweis auf d
 Eine Code-Antwort brach erneut mitten im Skript ab, `finish_reason stop`, 4193 Completion-Tokens
 (davon 1586 Reasoning) bei Limit 24000. Kein Ausgabelimit; der Wiederholungsversuch lieferte Code.
 Ursache auf Provider-/Modellseite nicht weiter eingrenzbar.
+
+## Live-Lauf 5fdc78fc nach Redeploy (Server, `469fc10`)
+
+[Live-Verlauf](https://nullius.akca.dev/#/live/5fdc78fc-6b99-450a-a9d9-9fd599a9bea9). Listing-, Setting- und
+Helfer-Fixes sind auf dem Server wirksam: gelesen `etth1_best.sh`, `run_longExp_F.py`, Spec 9/9 mit LR 0.0005
+aus dem Startskript. Kandidat 0 lief **im ersten Versuch** mit Test-MSE 0.3719944, Kandidat 1 nach einer
+statischen Checkpoint-Reparatur mit demselben Wert. Danach endete der Lauf **ohne Urteil**:
+`BudgetExceeded: Live model budget floor reached`. Modellkosten des Jobs 0.182 $ netto.
+
+Zwei Ursachen:
+
+1. **Server-Budgetkonfiguration:** Die Untergrenze `LIVE_MIN_BUDGET_USD` (3 $) wird gegen
+   `BUDGET_TOTAL_USD` minus geloggte Ausgaben seit `BUDGET_SINCE` geprueft. Auf dem Server war dieser Rest
+   knapp ueber 3 $; die konservativen Reservierungen (max_tokens x Preis) haben ihn waehrend des Laufs
+   unterschritten. Laut Nutzer liegen auf dem Konto rund 11 $. Abhilfe ist eine Konfigurationsaenderung in
+   Coolify (aktueller Kontostand und Zeitpunkt eintragen), kein Code.
+2. **Allgemeiner Codefehler:** Die Grenze traf die optionale Reparatur des Repo-Abgleichs (A2). Der Abgleich
+   selbst fing `BudgetExceeded` schon ab, die nachfolgende Reparatur nicht. Damit beendete eine optionale
+   Verbesserung einen Lauf mit validiertem Code, obwohl die restlichen Seeds kein Modell brauchen. Jetzt
+   bleibt der validierte Code und wird weiter gemessen (`36d036b`, Regressionstest in `tests/test_repo_diff.py`).
+
+## Zweites Paper lokal: SARAF (Allgemeinheit)
+
+Zwei weitere allgemeine Blocker vor jedem Experiment gefunden und behoben, beide offline am echten
+Autorenrepo `ShiqiaoZhou/SARAF@7b49aa8` reproduziert (`scripts/review/repo_closure_probe.py`):
+
+- **Importhuelle:** Der Repo-Leser hoerte nach geschaetzten 120k Zeichen (pauschal 10k je Datei) auf; der
+  Quellenwaechter verlangt aber die vollstaendige Importhuelle der Trainingsdateien (hier `utils/dtw.py`,
+  7 kB, lazy in `utils/augmentation.py`). Der Leser zaehlt jetzt echte Groessen bis 240k, oberhalb der
+  Waechtergrenze 160k. Zusaetzlich laeuft der deterministische Waechter direkt nach dem Lesen, vor der
+  bezahlten Rolle-4-Extraktion (SARAF hatte 0.12 $ vor dem Stopp bezahlt). (`03e0e3b`)
+- **Geraeteflags:** `run.py` setzt `args.gpu = args.device_ids[0]`; der Startparameter-Waechter meldete `gpu`
+  als ungeloesten Modellparameter. Die vorhandene Infrastrukturliste (gpu, devices, use_gpu, seed, ...) gilt
+  jetzt auch dort. Offline danach: L720, topm 20, 10 Epochen, Batch 8, LR 0.001 aus `scripts/ETTh_720.sh`. (`36d036b`)

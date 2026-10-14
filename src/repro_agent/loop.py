@@ -168,10 +168,15 @@ def select_candidate(vals: list[dict | None]) -> tuple[int, str]:
     return best[0], "val"
 
 
+_TRAILING_TAGS = re.compile(r"(?:\n[ \t]*<\|?/?\|?[A-Za-z_][\w|]*\|?>[ \t]*)+\s*\Z")
+
+
 def extract_code(text: str, lenient: bool = False) -> str:
     blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", text, flags=re.S)
     if not blocks and lenient:   # nur Produktpfad (graph_repair): andere Sprachmarke, offener Block, Code ohne Block
         blocks = re.findall(r"```[A-Za-z0-9_+-]*[ \t]*\r?\n(.*?)(?:```|\Z)", text, flags=re.S)
+        # Nemotron schliesst den Block manchmal mit einem Tag statt mit ``` (`</|tool_call|>`, `</output>`; SARAF 2026-10-14)
+        blocks = [_TRAILING_TAGS.sub("\n", b) for b in blocks]
         blocks = [b for b in blocks if _is_python(b)]
         if not blocks and _is_python(text) and re.search(r"^(import|from) ", text, flags=re.M):
             blocks = [text]

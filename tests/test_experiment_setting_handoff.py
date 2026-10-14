@@ -304,3 +304,17 @@ def test_equal_rank_author_presets_stop_instead_of_silently_ignoring_settings():
         Doc(f'repo:scripts/Toy/etth1_{length}.sh@a',f'python run.py --model Toy --data ETTh1 --pred_len 96 --seq_len {length}\n') for length in (360,720)]
     with pytest.raises(SourceContextBlocked,match='ambiguous'):
         build_spec(lambda *_:'[]',[],docs,'Toy erreicht MSE 0.4','ETTh1',numeric_only=True)
+
+
+def test_flag_relabelled_by_extractor_is_not_enforced_twice():
+    """SARAF: the extractor mapped --n_period to 'layers'; the launch already resolves n_period."""
+    docs=[Doc('paper','Input length 720.'),
+          Doc('repo:models/Toy.py@a','class Model:\n    def __init__(self,configs):\n        self.p=configs.n_period\n'),
+          Doc('repo:scripts/Toy/etth1.sh@a','python run.py --model Toy --data ETTh1 --pred_len 96 --seq_len 720\n'),
+          Doc('repo:run.py@a',"p.add_argument('--n_period', type=int, default=1, help='Number of Periods')\n"
+              'p.add_argument("--seq_len",type=int,default=96)\np.add_argument("--pred_len",type=int,default=96)\n'
+              'p.add_argument("--model",default="x")\np.add_argument("--data",default="x")\nargs=p.parse_args()\n')]
+    extractor=json.dumps([{'key':'layers','value':'1','source':'repo:run.py@a',
+                           'quote':"p.add_argument('--n_period', type=int, default=1, help='Number of Periods')"}])
+    spec=build_spec(lambda *_:extractor,[],docs,'Toy erreicht MSE 0.4','ETTh1',numeric_only=True)
+    assert spec.get('n_period').number==1 and spec.get('layers') is None

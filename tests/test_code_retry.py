@@ -79,3 +79,11 @@ def test_code_temperature_is_capped_and_retry_prompts_stay_distinct():
         o._code_from_llm("s", "u", temperature=0.7)
     assert all(t <= 0.7 for t, _ in calls)
     assert len({(t, u) for t, u in calls}) == 3   # sonst lieferte der Cache dreimal dieselbe Antwort
+
+
+@pytest.mark.parametrize("closing", ["</|tool_call|>", "</output>", "<|im_end|>"])
+def test_complete_script_closed_by_a_tag_instead_of_a_fence_is_kept(closing):
+    # SARAF 2026-10-14: two paid, complete scripts were discarded because the block ended with a tag
+    from repro_agent.loop import extract_code
+    text = "Here is the script:\n```python\nimport torch\n\ndef f():\n    return 1\n" + closing
+    assert extract_code(text, lenient=True).strip().endswith("return 1")

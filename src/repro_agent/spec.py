@@ -740,7 +740,7 @@ def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], na
     runtime = runtime_items(docs, names, model, family, dataset, next(iter(lengths)) if len(lengths) == 1 else None)
     runtime_keys = {i.key for i in runtime}
     raw = [i for i in raw if i.key not in runtime_keys]
-    kept = [i for i in kept if not (i.source.startswith('repo:') and i.key in runtime_keys)]
+    kept = [i for i in kept if not (i.source.startswith('repo:') and (i.key in runtime_keys or _relabelled_flag(i, runtime_keys)))]
     for item in discovered:
         if item.key == 'seq_len':
             conflicts = [r for r in runtime if r.key == item.key and r.number != item.number]
@@ -755,6 +755,14 @@ def _assemble(model: str, family: str, kept: list[SpecItem], docs: list[Doc], na
                                    '. No experiment was started')
     items, inactive = inactive_mechanisms(items, docs, model)
     return items, missing, inactive
+
+
+def _relabelled_flag(item: SpecItem, runtime_keys: set[str]) -> bool:
+    """A quoted CLI flag that the launch already resolves under its own name cannot also count as another setting.
+    SARAF (2026-10-14): the extractor labelled `--n_period` as `layers`; both were enforced for one flag, the agent
+    could satisfy only one, and the spec repairs looped until the job budget ran out."""
+    flags = {ALIAS_KEY.get(_flag(f), _flag(f)) for f in re.findall(r"--([A-Za-z_][\w-]*)", item.quote)}
+    return bool(flags & runtime_keys) and item.key not in flags
 
 
 def runtime_items(docs: list[Doc], names: list[str], model: str, family: str, dataset: str | None, selected_length=None) -> list[SpecItem]:
