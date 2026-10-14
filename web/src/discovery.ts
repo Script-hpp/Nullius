@@ -262,7 +262,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
 
   // Found = unique arXiv ids of the paper searches only (repo and community searches excluded); older recordings: all ids seen.
   const found = Math.max(foundIds.size, seen.size)
-  // Examined = papers actually read (capped at 3 per benchmark); prefilter rejects are only a note, not a funnel drop.
+  // Examined = papers whose source was read (up to 3 model reads per benchmark); prefilter rejects are only a note, not a funnel drop.
   const examined = extractingCount + cachedCandidates
   const withClaim = Math.max(examined - rejects.extract - rejects.quote - rejects.number, 0)
   const unclear = [...papers.values()].filter(
@@ -270,7 +270,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
   const confirmed = Math.max(withClaim - rejects.protocol - unclear, 0)
   const funnel = [
     { label: 'Found by Tavily', value: found },
-    { label: 'Examined (limit 3 per benchmark)', value: examined,
+    { label: 'Examined', value: examined,
       note: rejects.prefilter ? `${rejects.prefilter} dropped by the benchmark filter` : undefined },
     { label: 'Claim with quote', value: withClaim },
     { label: 'Protocol confirmed', value: confirmed, note: unclear ? `${unclear} kept as candidate, protocol not stated` : undefined },

@@ -45,7 +45,7 @@ def test_start_without_access_code_works(monkeypatch):
     started = []
 
     class FakeAgent:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             started.append(datasets)
 
     monkeypatch.setattr(api, "DiscoveryAgent", FakeAgent)
@@ -161,7 +161,7 @@ def test_discovery_timeout_stops_stream_but_holds_worker_slot(monkeypatch):
     entered, finish = threading.Event(), threading.Event()
     scopes = []
     class FakeAgent:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             scopes.append(spend_guard.current_budget.get())
             entered.set()
             assert finish.wait(3)
@@ -217,7 +217,7 @@ def test_discovery_success_sends_explicit_completion(monkeypatch):
     import json
 
     class FakeAgent:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             on_event({'type': 'pending', 'ts': 123.0, 'dataset': datasets[0]})
 
     monkeypatch.setattr(api, 'DiscoveryAgent', FakeAgent)
@@ -227,3 +227,14 @@ def test_discovery_success_sends_explicit_completion(monkeypatch):
     events = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]
     assert any(event['type'] == 'pending' for event in events)
     assert events[-1]['type'] == 'done'
+
+
+def test_discovery_skips_papers_already_in_the_catalog_or_saved_finds(monkeypatch, tmp_path):
+    # 2026-10-14: two of three ETTh1 reading slots went to SARAF and RLinear, both already known
+    import json
+    from repro_agent import api, live_catalog
+    monkeypatch.setattr(api, "CATALOG_PATH", api.cat.CATALOG_YAML)
+    monkeypatch.setattr(live_catalog, "PATH", tmp_path / "live.json")
+    (tmp_path / "live.json").write_text(json.dumps([{"id": "disc_x", "arxiv_id": "2606.04135v1"}]))
+    known = api._known_arxiv_ids()
+    assert {"2305.10721", "2307.03756", "2606.04135"} <= known

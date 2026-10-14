@@ -236,6 +236,7 @@ DISCOVERY_QUERIES = {
 MAX_SEARCHES_PER_DATASET = 5
 SEARCH_START_DATE = "2023-01-01"   # Jahre 2023-2026 (tavily_tools.curate_papers)
 MAX_EXTRACTS_PER_DATASET = 3
+MAX_SOURCE_READS_PER_DATASET = 10   # kostenlose arXiv-Quellen je Benchmark (Hoeflichkeit gegenueber arXiv, Laufzeit)
 MAX_CANDIDATES_PER_DATASET = int(os.environ.get("DISCOVERY_MAX_CANDIDATES", "2"))   # Demo: 2 (Tavily-Kontingent); eigene Kuratier-Runden duerfen hoeher setzen
 CODE_HINT_RE = __import__("re").compile(r"github\.com|code (?:is |are )?(?:publicly )?available|open[- ]source|our code|official (?:code|implementation)", __import__("re").I)
 INFEASIBLE_REASON = "not CPU-feasible: pretraining/foundation model/external data"
@@ -284,6 +285,25 @@ def _few_shot_setting(table: str) -> str | None:
         head.append(line)
     m = _FEW_SHOT.search("\n".join(head))
     return m.group().lower() if m else None
+
+
+_TABLE_ENV = re.compile(r"\\begin\{(table\*?|longtable\*?|wraptable|sidewaystable|tabular[x*]?|supertabular)\}(.*?)\\end\{\1\}", re.S)
+
+
+def _benchmark_in_result_table(text: str, dataset: str) -> bool | None:
+    """True/False: steht der Benchmark in einer Tabelle der LaTeX-Quelle (auch ueber ein Makro wie \\planetoidCora)?
+    None: keine Tabellen erkennbar (kein LaTeX), dann entscheidet wie bisher der Rest der Pruefung."""
+    tables = [m.group(2) for m in _TABLE_ENV.finditer(text)]
+    if not tables:
+        return None
+    name = re.sub(r"[^a-z0-9]", "", dataset.lower())
+    macros = {m.group(1) for m in re.finditer(r"\\(?:newcommand|renewcommand|def)\s*\{?\\(\w+)\}?(?:\[\d\])?\s*\{([^\n]*)", text)
+              if name in re.sub(r"[^a-z0-9]", "", m.group(2).lower())}
+    for t in tables:
+        flat = re.sub(r"[^a-z0-9]", "", t.lower())
+        if name in flat or any(re.search(rf"\\{re.escape(m)}(?![A-Za-z])", t) for m in macros):
+            return True
+    return False
 
 
 def _parse_atom(xml_text: str) -> list[dict]:
@@ -771,11 +791,14 @@ class DiscoveryAgent:
         return papers
 
     def discover(self, datasets: list[str], max_papers: int = 10, on_event=None,
-                 seed_ids: list[str] | None = None) -> list[CandidatePaper]:
+                 seed_ids: list[str] | None = None, known_ids: set[str] | None = None) -> list[CandidatePaper]:
         """Run the full discovery pipeline for the given datasets.
 
         seed_ids: arXiv ids given by the user. They replace the search step only (found_by="seeded");
         text extract, claim, protocol, feasibility and repo checks are the same as for searched papers.
+        known_ids: arXiv ids already in the catalog or saved live finds. A search skips them before any read,
+        so they never take one of the few paid reading slots (2026-10-14: two of three ETTh1 slots went to
+        SARAF and RLinear, both already known).
         """
         import time
         seq = 0
@@ -866,11 +889,16 @@ class DiscoveryAgent:
             max_cand = len(papers) if seeded else MAX_CANDIDATES_PER_DATASET   # explicit seed list: no search caps
             max_extracts = len(papers) if seeded else MAX_EXTRACTS_PER_DATASET
             dataset_candidates = 0
-            extracts_count = 0
+            extracts_count = 0   # bezahlte Leseschritte (LLM-Extraktion oder Tavily-Extract), nicht kostenlose arXiv-Quellen
+            source_reads = 0
+            known_skipped = []
             for p in papers:
                 if dataset_candidates >= max_cand:
                     break
                 cache_key = p["arxiv_id"]
+                if not seeded and known_ids and cache_key in known_ids:
+                    known_skipped.append(cache_key)
+                    continue
                 if cache_key in cache:
                     cached_data = cache[cache_key]
                     if cached_data.get("status") == "rejected": continue
@@ -909,10 +937,21 @@ class DiscoveryAgent:
                 if extracts_count >= max_extracts:
                     emit({"type": "warning", "dataset": ds, "message": f"Max {max_extracts} Tavily extracts reached."})
                     break
-                    
+                if not seeded and source_reads >= MAX_SOURCE_READS_PER_DATASET:
+                    emit({"type": "warning", "dataset": ds, "message": f"Max {MAX_SOURCE_READS_PER_DATASET} paper sources read."})
+                    break
+
                 emit({"type": "extracting", "arxiv_id": cache_key, "title": p["title"], "dataset": ds})
-                extracts_count += 1
+                source_reads += 1
                 text = _fetch_arxiv_source(cache_key)
+                if not seeded and len(text) >= MIN_FULLTEXT_CHARS and _benchmark_in_result_table(str(text), ds) is False:
+                    # Kostenlos vor jedem Modellaufruf: der Benchmark steht in keiner Ergebnistabelle der Quelle
+                    # (2302.11640 nennt Cora einmal im Text und verbrauchte zwei Extraktionen).
+                    reason = "Benchmark not in any result table of the source"
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": reason, "stage": "extract"})   # gelesen, kein Claim
+                    _update_cache(cache_key, {"status": "rejected", "reason": reason})
+                    continue
+                extracts_count += 1   # Tavily-Ersatz oder LLM-Extraktion folgt: bezahlter Schritt
                 source_url = getattr(text, "url", None) or f"https://export.arxiv.org/e-print/{cache_key}"
                 source_kind = "latex"
                 if len(text) < MIN_FULLTEXT_CHARS:
@@ -1168,6 +1207,9 @@ class DiscoveryAgent:
                 candidates.append(paper)
                 _update_cache(cache_key, paper.to_dict())
                 dataset_candidates += 1
+            if known_skipped:
+                emit({"type": "warning", "dataset": ds, "known_ids": known_skipped,
+                      "message": f"{len(known_skipped)} papers already in the catalog or saved finds were skipped."})
 
         return candidates
 

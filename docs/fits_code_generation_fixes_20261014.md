@@ -244,3 +244,28 @@ Nicht geaendert: Die Autoren-Startbefehle stehen in `script.md` (Markdown) mit `
 mehr kennt (nur `RLinear`, `RMLP`, `STD`); veraltete Startdatei, nicht als Startskript gewertet. Die Warnung
 "Eingabelaenge im Paper nicht belegt" beim Start bleibt auch dann stehen, wenn die Caption die Laenge spaeter belegt (kosmetisch).
 Ob der Zielwert mit beiden Fixes erreicht wird, ist ungeprueft.
+
+## Warum die Discovery kein neues Paper fand (2026-10-14)
+
+Discovery `1ec41249` (Cora, ETTh1): Tavily lieferte je Benchmark rund 40 arXiv-IDs, gelesen wurden aber nur drei je
+Benchmark (`MAX_EXTRACTS_PER_DATASET`), in Suchreihenfolge.
+
+- **ETTh1:** Zwei der drei Plaetze gingen an SARAF und RLinear, beide schon im Katalog bzw. gespeichert. Der dritte
+  (2609.33566) hat zu Recht keinen Claim: nur normalisierte MSE je Seed und Konfiguration auf einem anderen Benchmark-Setup.
+- **Cora:** GILT (Few-shot, siehe oben), 2302.11640 (Kritik-Paper zu Heterophilie, Cora steht nur einmal im Text und in
+  keiner Tabelle; kostete zwei Modellaufrufe) und 2403.11004 (viele Methoden-/Layer-Spalten, Zitat nicht gefunden).
+
+Allgemeine Fixes, ohne Mehrkosten:
+
+1. Eine Suche ueberspringt Papers, die schon im Katalog oder unter den gespeicherten Live-Funden stehen, bevor sie
+   gelesen werden (API uebergibt `known_ids`); die UI zeigt einen Hinweis mit der Zahl. Seed-Listen des Nutzers bleiben
+   ungefiltert.
+2. Kostenlose Vorpruefung der LaTeX-Quelle: steht der Benchmark in keiner Tabelle (auch nicht ueber ein Makro wie
+   `\planetoidCora`), wird das Paper ohne Modellaufruf verworfen. Gegenprobe an 16 echten Quellen: nur 2302.11640
+   verworfen, alle 13 bekannten guten Papers (FITS, SARAF, RLinear, GCN, SL-GCN, GLinear, SparseTSF, SegRNN, TSMixer,
+   GNN-Diff, HaKAN, MoHETS) sowie GILT, 2403.11004 und 2609.33566 behalten.
+3. Das Limit 3 zaehlt nur noch bezahlte Leseschritte (Modell-Extraktion oder Tavily-Extract), kostenlose arXiv-Quellen
+   sind auf 10 je Benchmark begrenzt. Verworfene Papers ohne Tabellenbeleg verbrauchen keinen Platz mehr.
+
+Nicht geaendert: Reihenfolge nach Tavily-Relevanz (aeltere Papers wie 2302/2305 konkurrieren mit neuen); Zitatabgleich
+bei Makro-Namen in Tabellen (2403.11004) nicht weiter untersucht.

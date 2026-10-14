@@ -4,6 +4,7 @@ import gzip
 import logging
 import math
 import os
+import re
 import threading
 import time
 import uuid
@@ -131,6 +132,15 @@ jobs: Dict[str, asyncio.Queue] = {}
 background_tasks = set()
 logger = logging.getLogger(__name__)
 
+def _known_arxiv_ids() -> set[str]:
+    """Papers in the catalog or saved live finds; a fresh search skips them instead of reading them again."""
+    try:
+        entries = cat.load_catalog(CATALOG_PATH) + live_catalog.load_entries()
+    except (OSError, ValueError):
+        return set()
+    return {re.sub(r"v\d+$", "", str(e["arxiv_id"])) for e in entries if e.get("arxiv_id")}
+
+
 class DiscoverRequest(BaseModel):
     datasets: list[str] = Field(["Cora", "ETTh1"], max_length=8)
 
@@ -201,7 +211,7 @@ async def start_discovery(req: DiscoverRequest, request: Request):
 
         try:
             agent = DiscoveryAgent()   # im try: ein Fehler im Konstruktor darf die Sperre nie dauerhaft halten
-            agent.discover(datasets, on_event=on_event)
+            agent.discover(datasets, on_event=on_event, known_ids=_known_arxiv_ids())
         except Exception as e:
             message = sanitize_text(f"{type(e).__name__}: {e}", 300)
             logger.error("Discovery job %s failed: %s", job_id, message)

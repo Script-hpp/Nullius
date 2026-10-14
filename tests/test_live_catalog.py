@@ -38,7 +38,7 @@ def test_live_discovery_stream_saves_before_publishing_and_can_start_the_same_cl
     monkeypatch.setenv("MAX_DAILY_DISCOVER_PER_IP", "100")
 
     class Discovery:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             on_event({**cand(), "ts": 10, "community": [{"url": "https://example.com", "title": "Note", "snippet": "Source"}]})
 
     monkeypatch.setattr(api, "DiscoveryAgent", Discovery)
@@ -162,7 +162,7 @@ def test_replay_storage_failure_does_not_hide_completion_or_hold_worker_slot(env
     monkeypatch.setenv("MAX_DAILY_DISCOVER_PER_IP", "100")
 
     class Discovery:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             on_event({"type": "pending", "ts": 100})
 
     def fail(events):

@@ -121,7 +121,7 @@ def test_discovery_datasets_are_deduplicated_and_capped(monkeypatch):
     seen = []
 
     class Agent:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             seen.append(datasets)
     monkeypatch.setattr(api, "DiscoveryAgent", Agent)
     with TestClient(api.app) as c:
@@ -195,7 +195,7 @@ def test_counters_survive_restart(gate, monkeypatch):
 
 def test_started_jobs_are_logged(gate, monkeypatch):
     class Agent:
-        def discover(self, datasets, on_event):
+        def discover(self, datasets, on_event, **_):
             pass
     monkeypatch.setattr(api, "DiscoveryAgent", Agent)
     with TestClient(api.app) as c:

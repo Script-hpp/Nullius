@@ -1552,3 +1552,28 @@ def test_few_shot_detection_reads_caption_and_header_only():
     supervised = ("\\begin{table}\n\\caption{Node classification accuracy on the public split.}\n\\begin{tabular}{lc}\n"
                   "Method & Cora \\\\\nGCN & 81.5 \\\\\nZero-shot LLM baseline & 60.1 \\\\\n\\end{tabular}\n\\end{table}")
     assert _few_shot_setting(supervised) is None
+
+
+def test_known_papers_are_skipped_before_any_read(monkeypatch, tmp_path):
+    # 2026-10-14: SARAF and RLinear, both already known, took two of three ETTh1 reading slots
+    monkeypatch.setattr("httpx.get", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no network")))
+    agent = DiscoveryAgent(llm=FakeLLM(), tavily=FakeTavily(), cache_path=str(tmp_path / "c.json"))
+    agent._search_arxiv = lambda ds, max_results=30: [{"arxiv_id": "2305.10721", "title": "RLinear", "abstract": "Cora", "authors": []}]
+    events = []
+    assert agent.discover(["Cora"], on_event=events.append, known_ids={"2305.10721"}) == []
+    assert not [e for e in events if e.get("type") in ("extracting", "llm_call", "candidate")]
+    assert [e["known_ids"] for e in events if e.get("known_ids")] == [["2305.10721"]]
+
+
+def test_benchmark_must_appear_in_a_result_table_of_the_source():
+    from pathlib import Path
+    from repro_agent.discovery import _benchmark_in_result_table
+    assert _benchmark_in_result_table(Path("tests/fixtures/saraf_main_results.tex").read_text(), "ETTh1") is True
+    text_only = "\\section{Intro} Prior work evaluates on Cora.\n\\begin{table}\\begin{tabular}{lc} Roman-empire & 80.1 \\\\ \\end{tabular}\\end{table}"
+    assert _benchmark_in_result_table(text_only, "Cora") is False
+    macro = ("\\newcommand{\\planetoidCora}{\\textsc{Planetoid-Cora}\\xspace}\n"
+             "\\begin{table}\\begin{tabular}{lc} \\planetoidCora & 81.5 \\\\ \\end{tabular}\\end{table}")
+    assert _benchmark_in_result_table(macro, "Cora") is True
+    named = "\\newcommand{\\dsone}{Cora}\n\\begin{longtable}{lc} \\dsone & 81.5 \\\\ \\end{longtable}"
+    assert _benchmark_in_result_table(named, "Cora") is True
+    assert _benchmark_in_result_table("# Results\nCora 81.5", "Cora") is None   # no LaTeX tables: unchanged path
