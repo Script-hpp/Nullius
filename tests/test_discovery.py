@@ -1527,3 +1527,28 @@ def test_parse_abs_page():
             '<meta property="og:description" content="Abstract text." />')
     p = _parse_abs_page("2101.00001", html)
     assert p["title"] == "My & Paper" and p["authors"] == ["John Doe"] and p["abstract"] == "Abstract text."
+
+
+def test_few_shot_table_claim_is_rejected(monkeypatch, tmp_path):
+    import re
+    # GILT 2510.04567 (live discovery 2026-10-14): a 5-shot in-context number on Cora was offered as runnable
+    from pathlib import Path
+    text = Path("tests/fixtures/saraf_main_results.tex").read_text()
+    text = re.sub(r"\\caption\{", r"\\caption{Few-shot forecasting, 5-shot support set. ", text, count=1)
+    result, events, cache_file = _run_claim(monkeypatch, tmp_path, text, method="SARAF", target=.371,
+                                            quote=r"\underline{0.371} & \underline{0.399}", horizon=96, protocol_quote="SARAF (ours)")
+    assert result == []
+    assert any(e.get("stage") == "protocol" and "shot" in e["reason"] for e in events)
+    assert "2101.12345" not in _read_cache(cache_file)
+
+
+def test_few_shot_detection_reads_caption_and_header_only():
+    from repro_agent.discovery import _few_shot_setting
+    gilt = ("\\begin{table*}\n\\caption{\\textbf{Few-shot Node Classification Performance.} We report 1-shot and 5-shot accuracy.}\n"
+            "\\begin{tabular}{lcc}\nMethod & Cora & CiteSeer \\\\\nGILT & 56.36 & 73.22 \\\\\n\\end{tabular}\n\\end{table*}")
+    assert _few_shot_setting(gilt) == "few-shot"
+    below = "\\begin{table}\n\\begin{tabular}{lc}\nMethod & 1-shot \\\\\nA & 0.5 \\\\\n\\end{tabular}\n\\caption{Results.}\n\\end{table}"
+    assert _few_shot_setting(below) == "1-shot"
+    supervised = ("\\begin{table}\n\\caption{Node classification accuracy on the public split.}\n\\begin{tabular}{lc}\n"
+                  "Method & Cora \\\\\nGCN & 81.5 \\\\\nZero-shot LLM baseline & 60.1 \\\\\n\\end{tabular}\n\\end{table}")
+    assert _few_shot_setting(supervised) is None

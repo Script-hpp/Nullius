@@ -199,3 +199,23 @@ Zwei weitere allgemeine Kostenursachen aus diesem Lauf, lokal behoben (noch nich
 Beobachtet, nicht geaendert: Alle drei Kandidaten lasen `train_mode` zunaechst nicht aus `CONFIG`, weil der
 Forecast-Vertrag die Bedeutung (Loss nur auf den 96 Zukunftsschritten) schon vorschreibt; das kostet je
 Kandidat eine kurze Spec-Runde, aendert aber kein Ergebnis.
+
+## Unabhaengiger Test: Live-Discovery (2026-10-14)
+
+Vorab festgelegte Regel: erster startbarer Fund einer frischen Live-Discovery (Cora, ETTh1), dessen arXiv-ID
+weder im Katalog noch unter den bereits gespeicherten Live-Funden steht; genau ein Lauf, kein Tuning.
+Discovery-Job `1ec41249`: drei Kandidaten in dieser Reihenfolge, GILT (2510.04567, Cora 73.22), SARAF
+(bekannt), RLinear (2305.10721, im Katalog, nie gelaufen).
+
+GILT war ein Discovery-Fehlgriff, vor jedem Lauf an der LaTeX-Quelle belegt: `tab:node_classification` hat
+die Caption "Few-shot Node Classification Performance ... 1-shot and 5-shot accuracy"; GILT ist ein
+vortrainiertes Graph-Foundation-Modell fuer In-Context-Learning. Unser Cora-Task trainiert ueberwacht auf dem
+Planetoid-Split, die Zahl misst also etwas anderes. Die Protokollpruefung akzeptierte den allgemeinen Satz
+"official public data splits where available", die Spalte blieb ungeprueft (die angezeigte Streuung +-4.18
+gehoert zur Nachbarspalte).
+
+Allgemeiner Fix: Discovery verwirft Claims, deren Quelltabelle in Caption oder Kopfzeilen ein Few-shot-,
+Zero-shot-, k-shot- oder In-Context-Setting nennt (Methodennamen in Zahlenzeilen zaehlen nicht), ohne den
+Reject zu cachen. Gegenprobe: alle 12 GILT-Tabellen mit Shot-Angabe erkannt, keine der 37 Tabellen aus
+FITS, SARAF, GLinear, SegRNN, SparseTSF und Data-Embeddings betroffen. Der bereits gespeicherte GILT-Fund
+auf dem Server bleibt bis zu einer neuen Discovery nach Deployment startbar; nicht starten.

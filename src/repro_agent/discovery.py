@@ -13,7 +13,7 @@ from .costs import BudgetExceeded
 from .llm import BillingBlocked, LLMClient
 from .claims_source import _norm as _table_norm
 from .repo_source import find_repo_links, parse_github_url, repo_evidence, repo_status
-from .table_check import check_columns
+from .table_check import check_columns, latex_table_caption
 from .forecast_claim import original_source_quote, proposed_method, requires_external_weights, select_source_claim
 from .tavily_tools import TavilyTools
 
@@ -270,6 +270,20 @@ RETRY_TEMPERATURE = 0.3
 ETTH1_HORIZON = 96   # tasks.py: der Task misst nur Horizont 96
 NO_REPO_REASON = "kein passendes Repo gefunden"
 ARXIV_ID_RE = __import__("re").compile(r"arxiv\.org/(?:abs|html|pdf)/(\d{4}\.\d{4,5})")
+
+
+_FEW_SHOT = re.compile(r"\b(few|zero|one|\d+)[- ]shot\b|\bin[- ]context learning\b", re.I)
+
+
+def _few_shot_setting(table: str) -> str | None:
+    """Few-/Zero-shot- oder In-Context-Angabe in Caption oder Kopfzeilen einer LaTeX-Tabelle (nicht in Zahlenzeilen)."""
+    head = [latex_table_caption(table) or ""]   # Caption darf auch unter der Tabelle stehen
+    for line in table.splitlines():
+        if re.search(r"\d\.\d", line):
+            break   # erste Zahlenzeile: Kopf zu Ende, Methodennamen wie "Zero-shot baseline" weiter unten zaehlen nicht
+        head.append(line)
+    m = _FEW_SHOT.search("\n".join(head))
+    return m.group().lower() if m else None
 
 
 def _parse_atom(xml_text: str) -> list[dict]:
@@ -1096,9 +1110,17 @@ class DiscoveryAgent:
                         if source_quote:
                             claim_data["quote"] = source_quote
                 claim_data["column_check"] = "ok" if col.status == "ok" else "unchecked"
-                labels = [re.findall(r"\\label\{([^}]+)\}", match.group()) for match in
-                          re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", full_text, re.S)
+                tables = [match.group() for match in re.finditer(r"\\begin\{table\*?\}.*?\\end\{table\*?\}", full_text, re.S)
                           if _table_norm(claim_data["quote"]) in _table_norm(match.group())]
+                shot = next((m for m in map(_few_shot_setting, tables) if m), None)
+                if shot:
+                    # Unsere Tasks trainieren ueberwacht auf dem festen Split; eine Few-/Zero-shot- oder In-Context-Zahl
+                    # (vortrainiertes Modell, wenige Beispiele) misst etwas anderes (GILT 2510.04567, 2026-10-14).
+                    # Nicht gecacht: eine spaetere Extraktion kann eine ueberwachte Tabelle desselben Papers treffen.
+                    emit({"type": "reject", "arxiv_id": cache_key, "reason": f"Claim table reports a {shot} setting, not supervised training",
+                          "stage": "protocol"})
+                    continue
+                labels = [re.findall(r"\\label\{([^}]+)\}", t) for t in tables]
                 claim_data["source_evidence"] = {
                     "source_kind": source_kind, "sha256": hashlib.sha256(full_text.encode()).hexdigest(),
                     "url": source_url if source_kind == "latex" else html_url,
