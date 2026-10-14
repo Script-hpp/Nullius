@@ -627,7 +627,7 @@ def read_repo(
             from .setup_details import Doc
             from .spec import model_files
 
-            if not model_files([Doc(f"repo:{p}", t) for p, t in files.items()], model):
+            if not model_files([Doc(f"repo:{p}", t) for p, t in files.items()], model, entry_fallback=False):
                 read([p for p in heuristic_model_files(listing, model) if p not in files][:2])
         for _ in range(IMPORT_LEVELS):   # E15: Ketten von Trainingshelfern, begrenzt durch das Zeichenbudget
             nxt = []

@@ -109,12 +109,37 @@ def _stem(path: str) -> str:
     return path.rsplit("/", 1)[-1].rsplit(".", 1)[0].lower()
 
 
-def model_files(docs: list[Doc], model: str) -> list[Doc]:
-    """Repo-Dateien, die die Klasse des Claim-Modells definieren oder so heissen (models/NLinear.py, models/dgi.py)."""
+def model_files(docs: list[Doc], model: str, entry_fallback: bool = True) -> list[Doc]:
+    """Repo-Dateien, die die Klasse des Claim-Modells definieren oder so heissen (models/NLinear.py, models/dgi.py).
+
+    entry_fallback: Ist die Methode keine Modellklasse (Trainingsverfahren wie BANGS 2410.09348: Self-Training mit
+    Knotenauswahl, kein `class BANGS`), gilt das Einstiegsskript, das die Startbefehle der Autoren am haeufigsten
+    aufrufen, als Kern; seine lokalen Importe folgen wie beim Modell. Das Repo ist immer das gepruefte offizielle."""
     m = model.lower()
     cls = re.compile(rf"^\s*class\s+{re.escape(model)}\b", re.M | re.I)
     out = [d for d in docs if d.name.startswith("repo:") and _path(d).endswith(".py") and (_stem(_path(d)) == m or cls.search(d.text))]
+    if not out and entry_fallback:
+        return method_entry_files(docs)
     return sorted(out, key=lambda d: (_stem(_path(d)) != m, not re.search(r'(^|/)models?/', _path(d), re.I), len(d.text)))
+
+
+def method_entry_files(docs: list[Doc]) -> list[Doc]:
+    """Das Python-Skript, das Startbefehle in Skripten/README am haeufigsten aufrufen (auch auskommentierte Beispiele);
+    bei Gleichstand keines, damit nie geraten wird."""
+    py = {_path(d): d for d in docs if d.name.startswith("repo:") and _path(d).endswith(".py")}
+    counts: dict[str, int] = {}
+    for d in docs:
+        if not (d.name.startswith("repo:") and re.search(r"\.(sh|md|txt|rst)$", _path(d), re.I) or d.name == "repo-readme"):
+            continue
+        for m in re.finditer(r"\bpython(?:3(?:\.\d+)?)?\b[^\n]*?\s\.?/?([\w./-]+\.py)\b", d.text):   # auch `-W ignore`
+            if m.group(1) in py:
+                counts[m.group(1)] = counts.get(m.group(1), 0) + 1
+    if not counts:
+        return []
+    ranked = sorted(counts.items(), key=lambda kv: -kv[1])
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        return []
+    return [py[ranked[0][0]]]
 
 
 def _imported_docs(src: list[Doc], docs: list[Doc]) -> list[Doc]:

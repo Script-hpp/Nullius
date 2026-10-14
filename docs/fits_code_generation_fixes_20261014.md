@@ -307,3 +307,18 @@ Fixes:
   Signifikanzsterne). Bestaetigt: BANGS 84.23 in `tab:GCN`; ein Wert aus einer anderen Spalte wird abgelehnt.
   Kann die Tabelle nicht gelesen werden, bleibt der bisherige Weg (unabhaengige Extraktion); Gegenprobe an allen 14
   Accuracy-Claims aus Katalog und Live-Funden: nur BANGS neu gebunden, keiner neu gesperrt.
+
+### BANGS Live-Lauf ee4e7333 und zwei weitere allgemeine Ursachen
+
+Zielpruefung nach `a5d9ea5` korrekt (0.8423 bestaetigt). Lauf trotzdem ohne Urteil: 0 von 3 Seeds, drei Kandidaten,
+fast jeder Versuch am selben Smoke-Formfehler (`val_predictions.csv`: erwartet die ersten 20 IDs von sorted
+`selection_idx` ab 540, geschrieben andere IDs ab 460). Ursachen:
+
+1. **Rueckfall in den Paper-Modus.** BANGS ist ein Trainingsverfahren (Self-Training mit Banzhaf-Knotenauswahl), keine
+   Modellklasse; keine Datei und keine Klasse heisst BANGS, also galt "no model code found", obwohl das offizielle Repo
+   vollstaendig gelesen war. Fix: ohne Modelldatei gilt das Skript, das die Startbefehle der Autoren am haeufigsten
+   aufrufen (auch auskommentierte Beispiele; bei Gleichstand keines), samt lokaler Importe als Kern (`main_node.py` +
+   `ST_src/*`, 135 583 Zeichen, innerhalb der Grenze). Repo-Leser und Warnung nutzen weiter nur echte Modelldateien.
+2. **Verkuerzter Auswahlvertrag fuer Knoten.** `withheld_validation_v1` ersetzte die vollstaendige Anleitung fuer
+   `val_predictions.csv` (Format, Smoke-Teilmenge) durch einen Einzeiler. Im Autorencode-Modus schreibt der Helfer die
+   Datei selbst, im Paper-Modus musste der Agent raten. Fix: volle Anleitung, nur `val_idx` -> `selection_idx`.

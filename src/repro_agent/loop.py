@@ -1330,7 +1330,7 @@ class Orchestrator:
         except SandboxSetupError as exc:   # toter Link oder Klon scheitert: ohne Repo weiter (README und Paper bleiben), kein Abbruch
             self._warn(f"Repo nicht gelesen (Klon in der Sandbox fehlgeschlagen): {str(exc).splitlines()[0]}")
             return docs, None
-        if unit and not model_files([Doc(f"repo:{p}", t) for p, t in dump.files.items()], model_name_of(claim_text)):
+        if unit and not model_files([Doc(f"repo:{p}", t) for p, t in dump.files.items()], model_name_of(claim_text), entry_fallback=False):
             self._emit("model_file_missing", model=model_name_of(claim_text), url=url, files=sorted(dump.files))   # S4: nie still ignorieren
             self._warn(f"Steckbrief: Datei des Modells {model_name_of(claim_text)} nicht im Repo-Ausschnitt")
         self._repo_files = dict(dump.files)   # fuer den Abgleich A2 (nur Produktpfad); Reihenfolge wie im Dump

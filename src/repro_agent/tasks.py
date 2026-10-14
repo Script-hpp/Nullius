@@ -98,7 +98,11 @@ class Task:
         if cfg['kind'] == 'nodes':
             changes.update(data_description=self.data_description + notes +
                            'selection_idx names the hidden selection nodes; their labels are -1. val_idx contains only visible checkpoint nodes.',
-                           val_notes='Write val_predictions.csv for selection_idx, not val_idx. ' + notes,
+                           # Keep the full file contract (format, smoke subset) and only rename the id set: the short form
+                           # lost both, and every paper-mode BANGS candidate guessed the ids (live 2026-10-14).
+                           val_notes=(self.val_notes.replace('val_idx', 'selection_idx') +
+                                      ' Use selection_idx for this file, never val_idx. ' + notes) if self.val_notes
+                           else 'Write val_predictions.csv for selection_idx, not val_idx. ' + notes,
                            io_val_notes='nullius_io writes selection predictions from the whole-graph output. ' + notes,
                            val_smoke_ids_cmd=self.val_smoke_ids_cmd.replace("['val_idx']", "['selection_idx']"))
         else:
