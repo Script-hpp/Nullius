@@ -32,7 +32,10 @@ class FakeOrch:
         self.spent_gross_usd = 0.0123
         FakeOrch.instances.append(self)
 
-    def run(self, paper_id, source="benchmark"):
+    def preflight(self, paper_id, source="live_catalog", save_path=None):
+        return {"ready": True, "stage": "ready", "reason": None, "cost_gross_usd": 0.0}
+
+    def run(self, paper_id, source="benchmark", prepared_path=None):
         assert source in ("catalog", "live_catalog")
         run_dir = self.root / "runs" / paper_id / "20261001-120000"
         run_dir.mkdir(parents=True)

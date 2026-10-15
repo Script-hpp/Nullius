@@ -260,7 +260,11 @@ function PaperCard({ p, active, entry, check }: { p: DPaper; active: boolean; en
         </div>
       )}
       {p.state === 'candidate' && check && <div className="mt-4 border-t border-line/60 pt-3">
-        {check.eligibility?.runnable === false ? <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Check unavailable: {translateReason(check.eligibility.reason ?? '')}</p>
+        {p.readiness?.state === 'checking' ? <p role="status" className="m-0 flex items-start gap-2 text-[12px] leading-relaxed text-muted">
+            <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+            <span>Preparing the experiment: checking the target in the paper's table, reading the authors' code and the setup. A claim is offered for a check only when all of this holds.</span></p>
+          : p.readiness?.state === 'blocked' || check.eligibility?.runnable === false ? <p className="m-0 text-[12px] leading-relaxed text-muted">
+            <span className="font-medium text-fg-3">Not offered for a one-click check.</span> {translateReason((p.readiness?.state === 'blocked' ? p.readiness.reason : check.eligibility?.reason) ?? '')}</p>
           : <>
             <button onClick={check.onRun} disabled={check.disabled || check.starting} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               {check.starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}Check this claim

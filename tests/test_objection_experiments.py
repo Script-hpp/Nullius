@@ -357,7 +357,7 @@ def test_round_failure_warns_and_billing_passes(monkeypatch):
 def test_switch_defaults_off_and_run_order():
     sig = inspect.signature(Orchestrator.__init__)
     assert sig.parameters["objection_experiments"].default is False and sig.parameters["objection_quick"].default is False
-    src = inspect.getsource(Orchestrator.run)
+    src = inspect.getsource(Orchestrator._execute)
     assert src.index("self._community_round(") < src.index("self._objection_round(") < src.index("dossier.save(")
     for name in ("plan", "write_code", "repair_code", "_run_seed", "_verdict"):
         assert "objection" not in inspect.getsource(getattr(Orchestrator, name))

@@ -263,7 +263,7 @@ def test_verdicts_unchanged_and_run_hooks_only_after_verdicts():
     orch(tools, FakeLLM([ISSUE, ERRATUM[:60]]))._community_round(paper(), d)
     assert dataclasses.asdict(d.verdicts[0]) == before and d.verdicts[0].gesamtaussage == Verdict(**before).gesamtaussage
     # Einbindung: genau ein Aufruf in run(), nach der Claim-Schleife; sonst kommt `community` im Loop nirgends vor
-    run_src = inspect.getsource(Orchestrator.run)
+    run_src = inspect.getsource(Orchestrator._execute)
     assert run_src.index("self.run_claim(") < run_src.index("self._community_round(") < run_src.index("dossier.save(")
     loop_src = inspect.getsource(inspect.getmodule(Orchestrator))
     outside = loop_src.replace(inspect.getsource(Orchestrator._community_round), "")

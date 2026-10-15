@@ -96,3 +96,14 @@ test('different saved claims from the same paper retain separate start IDs and t
   assert.deepEqual(view.papers.map((paper) => paper.catalogId).sort(), ['disc_2505_20716_A', 'disc_2505_20716_B'])
   assert.deepEqual(view.papers.map((paper) => paper.claim?.target).sort(), [.366, .378])
 })
+
+test('a found claim shows its readiness check and the saved result of a finished one', () => {
+  const found = { type: 'candidate', ts: 1, arxiv_id: '2410.09348', catalog_id: 'c1', title: 'BANGS', runnable: true } as DEvent
+  const checking = deriveView([found, { type: 'readiness', ts: 2, catalog_id: 'c1', state: 'checking' } as DEvent])
+  assert.equal(checking.papers.find((p) => p.catalogId === 'c1')?.readiness?.state, 'checking')
+  const blocked = deriveView([found, { type: 'readiness', ts: 2, catalog_id: 'c1', state: 'checking' } as DEvent,
+    { type: 'readiness', ts: 3, catalog_id: 'c1', state: 'blocked', stage: "authors' code", reason: 'no repository' } as DEvent])
+  assert.deepEqual(blocked.papers.find((p) => p.catalogId === 'c1')?.readiness, { state: 'blocked', reason: 'no repository', stage: "authors' code" })
+  const saved = deriveView([{ ...found, readiness: { ready: true, stage: 'ready', reason: null } } as DEvent])
+  assert.equal(saved.papers.find((p) => p.catalogId === 'c1')?.readiness?.state, 'ready')
+})

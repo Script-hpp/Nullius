@@ -44,7 +44,7 @@ job_semaphore = asyncio.Semaphore(1)
 daily_limit = {"date": None, "count": 0}
 MAX_DAILY_JOBS = int(os.environ.get("MAX_DAILY_JOBS", 5))
 JOB_TIMEOUT_S = 2700            # Stream reports timeout; slot stays held until the worker exits
-DISCOVERY_TIMEOUT_S = 900
+DISCOVERY_TIMEOUT_S = 1800            # search (~2 min) plus a readiness check per found claim (~3 min each)
 STREAM_MAX_S = 3600             # laengste Dauer einer SSE-Verbindung (Reconnect mit from=<n> liefert den Rest)
 _held: set[str] = set()         # Job-IDs, die den Semaphor halten (genau einmal freigeben, auch bei Watchdog + Worker-Ende)
 _budgets: dict[str, spend_guard.JobBudget] = {}
@@ -218,11 +218,14 @@ async def start_discovery(req: DiscoverRequest, request: Request):
             # A closed browser tab does not stop the search: its result is saved and the stream can be reopened.
             if evt.get("type") == "candidate":
                 evt = live_catalog.save_candidate(evt)
+                found.append(evt)
             emit(evt)
 
+        found: list[dict] = []
         try:
             agent = DiscoveryAgent()   # im try: ein Fehler im Konstruktor darf die Sperre nie dauerhaft halten
             agent.discover(datasets, on_event=on_event, known_ids=_known_arxiv_ids())
+            _preflight_found(found, emit, budget)
         except Exception as e:
             message = sanitize_text(f"{type(e).__name__}: {e}", 300)
             logger.error("Discovery job %s failed: %s", job_id, message)
@@ -248,6 +251,52 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     task.add_done_callback(background_tasks.discard)
 
     return {"job_id": job_id}
+
+
+PREFLIGHT_UNFINISHED = "The readiness check could not finish, so this claim is not offered for a one-click check."
+
+
+def make_preflight_orchestrator():
+    """Same configuration as a quick live check, so the check's saved state can start that run. Tests replace this."""
+    return make_orchestrator(True)
+
+
+def preflight_claim(cid: str) -> dict:
+    """One readiness check of a saved discovery claim under its own spending limit; stores and returns the result."""
+    result = {"ready": False, "stage": "infrastructure", "reason": PREFLIGHT_UNFINISHED}
+    orch = None
+    token = None
+    try:
+        limit = spend_guard.number("MAX_COST_PER_PREFLIGHT_USD", .20)
+        token = spend_guard.current_budget.set(spend_guard.JobBudget(limit, live=True))
+        orch = make_preflight_orchestrator()
+        result = orch.preflight(cid, "live_catalog", save_path=live_catalog.preflight_path(cid))
+    except Exception as exc:   # budget, provider, sandbox: not a finding about the paper
+        logger.error("Readiness check for %s failed: %s", cid, sanitize_text(f"{type(exc).__name__}: {exc}", 300))
+    finally:
+        if token is not None:
+            spend_guard.current_budget.reset(token)
+        close = getattr(orch, "close", None)
+        if close:
+            close()
+    return live_catalog.save_readiness(cid, result)
+
+
+def _preflight_found(found: list[dict], emit, search_budget) -> None:
+    """Run every step a check takes before its first paid code generation for each new runnable claim. Only claims
+    that pass get a start button; the others show why. Each check has its own spending limit."""
+    for event in found:
+        cid = event.get("catalog_id")
+        if not cid or not event.get("runnable"):
+            continue
+        if search_budget.cancelled.is_set():
+            emit({"type": "readiness", "catalog_id": cid, "state": "blocked", "stage": "time", "reason": PREFLIGHT_UNFINISHED})
+            continue
+        emit({"type": "readiness", "catalog_id": cid, "state": "checking"})
+        readiness = preflight_claim(cid)
+        emit({"type": "readiness", "catalog_id": cid, "state": "ready" if readiness["ready"] else "blocked",
+              "stage": readiness["stage"], "reason": sanitize_text(readiness["reason"] or "", 300) or None,
+              "cost_gross_usd": readiness["cost_gross_usd"]})
 
 
 def _arm_watchdog(job_id: str, seconds: float, on_timeout) -> None:
@@ -460,8 +509,9 @@ async def latest_discovery_replay():
 @app.get("/api/reproduce/eligibility")
 async def reproduction_eligibility():
     try:
-        entries = cat.load_catalog(CATALOG_PATH) + live_catalog.load_entries()
-        return sanitize({entry["id"]: live_catalog.eligibility(entry) for entry in entries})
+        result = {entry["id"]: live_catalog.eligibility(entry) for entry in cat.load_catalog(CATALOG_PATH)}
+        result.update({entry["id"]: live_catalog.offer(entry) for entry in live_catalog.load_entries()})
+        return sanitize(result)
     except (OSError, ValueError):
         raise HTTPException(503, detail="Check eligibility is unavailable.")
 
@@ -488,7 +538,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             raise HTTPException(503, detail="Saved discovery claims are unavailable.")
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown catalog entry")
-    eligible = live_catalog.eligibility(entry)
+    eligible = live_catalog.offer(entry) if dynamic else live_catalog.eligibility(entry)
     if not eligible["runnable"]:
         raise HTTPException(status_code=400, detail=f"Not runnable: {sanitize_text(eligible['reason'], 300)}")
 
@@ -523,7 +573,10 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             job.add({"ts": time.time(), "type": "started", "catalog_id": entry["id"]})
             orch = make_orchestrator(req.quick, req.author_code)
             orch.on_event = lambda evt: job.add(sanitize(evt))
-            outcome = cat.run_candidate(orch, entry, source="live_catalog") if dynamic else cat.run_candidate(orch, entry)
+            prepared = live_catalog.preflight_path(entry["id"]) if dynamic else None
+            outcome = (cat.run_candidate(orch, entry, source="live_catalog",
+                                         prepared_path=prepared if prepared and prepared.exists() else None)
+                       if dynamic else cat.run_candidate(orch, entry))
             budget.check()
             if dynamic:
                 live_catalog.save_outcome(entry, outcome)

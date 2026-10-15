@@ -351,7 +351,7 @@ class CandidateOutcome:
     abort: bool = False         # BillingBlocked/BudgetExceeded: weitere Kandidaten nicht starten
 
 
-def run_candidate(orch, entry: dict, source: str = "catalog") -> CandidateOutcome:
+def run_candidate(orch, entry: dict, source: str = "catalog", prepared_path: Path | None = None) -> CandidateOutcome:
     """Ein Kandidat durch den Loop (gemeinsam fuer scripts/curate_catalog.py und die API). Schreibt nichts in catalog.yaml."""
     from .costs import BudgetExceeded
     from .llm import BillingBlocked
@@ -363,7 +363,8 @@ def run_candidate(orch, entry: dict, source: str = "catalog") -> CandidateOutcom
     except NotRunnable as exc:
         return CandidateOutcome(NOT_RUNNABLE, reason=str(exc))
     try:
-        dossier = orch.run(entry["id"], source=source)
+        dossier = (orch.run(entry["id"], source=source, prepared_path=prepared_path) if prepared_path
+                   else orch.run(entry["id"], source=source))
     except (TargetVerificationBlocked, MethodImplementationBlocked) as exc:
         return CandidateOutcome(UNCHECKED, reason=str(exc)[:300], run_dir=getattr(orch, "last_run_dir", None),
                                 cost_gross_usd=getattr(orch, "spent_gross_usd", 0.0))

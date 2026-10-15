@@ -41,6 +41,19 @@ export type DPaper = {
   catalogId?: string
   runnable?: boolean
   runReason?: string | null
+  /** Readiness check after discovery: target table, authors' code and setup, before any experiment is offered. */
+  readiness?: Readiness
+}
+
+export type Readiness = { state: 'checking' | 'ready' | 'blocked'; reason?: string | null; stage?: string | null }
+
+function readinessOf(value: unknown): Readiness | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const r = value as Record<string, unknown>
+  const state = r.state === 'checking' || r.state === 'ready' || r.state === 'blocked' ? r.state
+    : typeof r.ready === 'boolean' ? (r.ready ? 'ready' : 'blocked') : undefined
+  if (!state) return undefined
+  return { state, reason: typeof r.reason === 'string' ? r.reason : null, stage: typeof r.stage === 'string' ? r.stage : null }
 }
 
 export type FeedCall = {
@@ -232,6 +245,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       p.catalogId = typeof e.catalog_id === 'string' ? e.catalog_id : undefined
       p.runnable = typeof e.runnable === 'boolean' ? e.runnable : undefined
       p.runReason = typeof e.run_reason === 'string' ? e.run_reason : null
+      p.readiness = readinessOf(e.readiness)
       p.cached = !!e.cached
       if ('github_url' in e) p.githubUrl = e.github_url
       p.state = 'candidate'
@@ -240,6 +254,9 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       p.protocol = e.protocol
       p.foundBy = e.found_by
       if (activeId === e.arxiv_id) activeId = null
+    } else if (e.type === 'readiness') {
+      const target = [...papers.values()].find((x) => x.catalogId === e.catalog_id)
+      if (target) target.readiness = readinessOf(e)
     } else if (e.type === 'reject') {
       const stage = String(e.stage ?? '')
       if (stage in rejects) rejects[stage]++

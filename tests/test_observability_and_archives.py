@@ -37,7 +37,7 @@ def test_completed_error_stream_survives_registry_pruning_and_restart(monkeypatc
     class Request:
         async def is_disconnected(self): return False
     async def read():
-        return [chunk async for chunk in api._repro_events(restored, Request(), 0, api.time.monotonic())]
+        return [chunk async for chunk in api._buffered_events(restored, Request(), 0, api.time.monotonic())]
     assert 'budget exceeded' in ''.join(asyncio.run(read()))
 
 

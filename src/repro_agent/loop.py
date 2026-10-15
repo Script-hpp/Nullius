@@ -17,6 +17,8 @@ import dataclasses
 import hashlib
 import io
 import json
+import pickle
+import shutil
 import math
 import re
 import shlex
@@ -151,6 +153,33 @@ ISOLATION = [
     "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
     "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch",
 ]
+
+
+# Orchestrator state that prepare() builds and the experiment reads. A saved readiness check restores exactly this.
+PREFLIGHT_STATE = ("paper_text", "_sources", "_repo_files", "_repo_listing", "details", "spec", "_setup_missing", "_warnings",
+                   "mode", "_paper_title", "code_grounded", "io_helper", "spec_mode", "_repo_fallback_reason", "_claim_ctx",
+                   "_paper_id")
+
+
+def code_version() -> str:
+    """Hash of the agent's own source: a readiness check saved by other code is never reused."""
+    h = hashlib.sha256()
+    for path in sorted(Path(__file__).parent.rglob("*.py")):
+        h.update(path.relative_to(Path(__file__).parent).as_posix().encode() + b"\0" + path.read_bytes())
+    return h.hexdigest()[:16]
+
+
+@dataclasses.dataclass
+class Prepared:
+    """A claim after every step before its first sandbox branch (Orchestrator.prepare)."""
+    paper_id: str
+    paper: dict
+    claims: list
+    task: object
+    ts: str
+    run_dir: Path
+    dossier: Dossier
+    fallback_reason: str = ""
 
 
 class CostLimitExceeded(RuntimeError):
@@ -2152,29 +2181,121 @@ class Orchestrator:
         )
 
     # ---- Einstieg -----------------------------------------------------------
-    def run(self, paper_id: str, source: str = "benchmark") -> Dossier:
-        """Load a benchmark, curated catalog entry, or persisted server-owned live claim."""
+    def run(self, paper_id: str, source: str = "benchmark", prepared_path: Path | None = None) -> Dossier:
+        """Load a benchmark, curated catalog entry, or persisted server-owned live claim. With prepared_path, a saved
+        readiness check of the same claim and code continues instead of reading sources and repository again."""
+        prepared = self._resume_prepared(prepared_path, paper_id, source) if prepared_path else None
+        return self._execute(prepared or self.prepare(paper_id, source))
+
+    def _prepare_key(self) -> dict:
+        return {"version": code_version(), "use_tavily": self.use_tavily, "setup_details": self.use_setup_details,
+                "paper_only": self.paper_only, "tavily_mode": self.tavily_mode, "base_modes": getattr(self, "_base_modes", None),
+                "setup_v2": getattr(self, "setup_v2", False), "selection": getattr(self, "independent_selection", False),
+                "claim_ids": sorted(self.claim_ids or [])}
+
+    def save_prepared(self, prepared: "Prepared", path: Path) -> None:
+        events = [json.loads(line) for line in (prepared.run_dir / "events.jsonl").read_text().splitlines() if line.strip()]
+        bundle = {"key": self._prepare_key(), "paper": prepared.paper, "prepared": dataclasses.replace(prepared, task=None),
+                  "events": events,
+                  "state": {name: getattr(self, name) for name in PREFLIGHT_STATE if hasattr(self, name)}}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_bytes(pickle.dumps(bundle))
+        tmp.replace(path)
+
+    def _task_for(self, paper: dict) -> Task:
+        task = TASKS[paper["dataset"]]()
+        return task.with_independent_selection() if getattr(self, 'independent_selection', False) else task
+
+    def _load_paper(self, paper_id: str, source: str) -> tuple[dict, list]:
         if source == "catalog":
-            paper, claims = load_catalog_claims(paper_id)
-        elif source == "live_catalog":
+            return load_catalog_claims(paper_id)
+        if source == "live_catalog":
             from . import live_catalog
             from .catalog import build_paper
             entry = live_catalog.find_entry(paper_id)
             if entry is None:
                 raise ValueError("Saved discovery claim not found")
-            paper, claims = build_paper(entry)
-        elif source == "benchmark":
-            paper, claims = load_claims(paper_id)
+            return build_paper(entry)
+        if source == "benchmark":
+            return load_claims(paper_id)
+        raise ValueError(f"Unknown paper source: {source!r}")
+
+    def _resume_prepared(self, path: Path, paper_id: str, source: str) -> "Prepared | None":
+        """The saved readiness check, if it belongs to this claim, this configuration and this code; otherwise None."""
+        try:
+            bundle = pickle.loads(Path(path).read_bytes())
+            paper, _ = self._load_paper(paper_id, source)
+            usable = (bundle["key"] == self._prepare_key() and bundle["paper"] == paper
+                      and bundle["prepared"].paper_id == paper_id)
+        except Exception as exc:   # missing, unreadable or from other code: the run repeats every step itself
+            print(f"Readiness check not reused ({type(exc).__name__}): repeating it.", flush=True)
+            return None
+        if not usable:
+            print("Readiness check belongs to another claim, configuration or code version: repeating it.", flush=True)
+            return None
+        old: Prepared = bundle["prepared"]
+        while True:   # never share the readiness check's own directory, even within the same second
+            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            run_dir = REPO_ROOT / "runs" / paper_id / ts
+            if not run_dir.exists():
+                break
+            time.sleep(0.25)
+        run_dir.mkdir(parents=True)
+        for name, value in bundle["state"].items():
+            setattr(self, name, value)
+        self.last_run_dir = self._run_dir = run_dir
+        self._code_sent, self._smoke_ok = set(), set()
+        self.events = EventLog(run_dir / "events.jsonl")
+        if (old.run_dir / "paper_text.json").exists():
+            shutil.copy(old.run_dir / "paper_text.json", run_dir / "paper_text.json")
+        start = next((e for e in bundle["events"] if e["type"] == "run_start"), {})
+        self._emit("run_start", **{k: v for k, v in start.items() if k not in ("ts", "type")}, preflight_dir=str(old.run_dir))
+        for event in bundle["events"]:   # the checked target, sources, setup and spec, in their original order
+            if event["type"] not in ("run_start", "preflight"):
+                self._emit(event["type"], **{k: v for k, v in event.items() if k not in ("ts", "type")}, from_preflight=True)
+        self._cost_base = self.llm.total_cost_usd
+        if hasattr(self.llm, "begin_run"):
+            self.llm.begin_run()
+        dossier = old.dossier
+        dossier.warnings = list(self._warnings)
+        return Prepared(paper_id=paper_id, paper=old.paper, claims=old.claims, task=self._task_for(old.paper), ts=ts, run_dir=run_dir,
+                        dossier=dossier, fallback_reason=old.fallback_reason)
+
+    def preflight(self, paper_id: str, source: str = "live_catalog", save_path: Path | None = None) -> dict:
+        """Every step a run takes before its first paid code generation and sandbox branch: source and target check,
+        authors' repository, setup details, spec and mode. A claim a run would stop on, or would run without the
+        authors' code, is not offered for a one-click check."""
+        start = self.spent_gross_usd
+        result = {"ready": False, "stage": "target", "reason": None, "mode": None, "repo": None, "run_dir": None}
+        try:
+            prepared = self.prepare(paper_id, source)
+        except (TargetVerificationBlocked, ExtractionInvalid) as exc:
+            result["reason"] = str(exc)
+        except MethodImplementationBlocked as exc:
+            result.update(stage="authors' code", reason=str(exc))
         else:
-            raise ValueError(f"Unknown paper source: {source!r}")
+            result.update(mode=prepared.dossier.mode, repo=(prepared.dossier.repo or {}).get("url"))
+            if prepared.dossier.mode != MODE_AUTHOR_CODE:
+                result.update(stage="authors' code", reason=f"The authors' code is not available ({prepared.fallback_reason}).")
+            else:
+                result.update(ready=True, stage="ready")
+                if save_path is not None:
+                    self.save_prepared(prepared, save_path)
+        result["run_dir"] = str(self.last_run_dir) if getattr(self, "last_run_dir", None) else None
+        result["cost_gross_usd"] = round(self.spent_gross_usd - start, 4)
+        self._emit("preflight", **result)
+        return result
+
+    def prepare(self, paper_id: str, source: str = "benchmark") -> "Prepared":
+        """Load the claim and run every step before the first sandbox branch. Raises when the run must stop."""
+        paper, claims = self._load_paper(paper_id, source)
         self._paper_id = paper_id   # S4: Fixture-Schluessel je Einheit (Steckbrief-Modus)
         self._warnings = list(paper.get("warnings", []))
         self.details = []   # pro Lauf neu, sonst erbt ein Paper ohne Rolle 4 die Details des vorigen
         if self.claim_ids:
             claims = [c for c in claims if c.id in self.claim_ids]
-        task = TASKS[paper["dataset"]]()
-        if getattr(self, 'independent_selection', False):
-            task = task.with_independent_selection()
+        task = self._task_for(paper)
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         contract = task.selection_info()
         if contract:
@@ -2267,7 +2388,12 @@ class Orchestrator:
             selection_policy='test_feedback_diagnostic' if getattr(self, 'allow_test_feedback', False) else 'validation_only',
             selection_contract=task.selection_info(),
         )
+        return Prepared(paper_id=paper_id, paper=paper, claims=claims, task=task, ts=ts, run_dir=run_dir, dossier=dossier,
+                        fallback_reason=fallback_reason or "")
 
+    def _execute(self, prepared: "Prepared") -> Dossier:
+        paper_id, paper, claims, task = prepared.paper_id, prepared.paper, prepared.claims, prepared.task
+        ts, run_dir, dossier = prepared.ts, prepared.run_dir, prepared.dossier
         label = re.sub(r"[^a-z0-9-]", "-", f"{paper_id}-{ts}".lower())
         print(f"Basis-Snapshot bauen ({label}) ...")
         contract_key = hashlib.sha256(json.dumps([task.image, task.setup_cmds, task.selection_contract], sort_keys=True).encode()).hexdigest()[:12]

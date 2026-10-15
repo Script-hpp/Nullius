@@ -15,6 +15,7 @@ from test_catalog import cand, cora_entry, evidence, tavily_orch
 @pytest.fixture(autouse=True)
 def isolated_store(tmp_path, monkeypatch):
     monkeypatch.setattr(live_catalog, "PATH", tmp_path / "logs" / "live_candidates.json")
+    monkeypatch.setattr(live_catalog, "PREFLIGHT_DIR", tmp_path / "logs" / "preflight")
 
 
 def test_exact_claims_survive_store_reload_without_collisions_or_curated_mutations(env):
