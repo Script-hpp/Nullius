@@ -74,6 +74,37 @@ def _used_keys(tree: ast.Module, cfg: ast.Assign) -> set[str]:
     return used
 
 
+def _missing_reads(tree: ast.Module, cfg: ast.Assign, present: set) -> list[str]:
+    """CONFIG["k"] reads of a key the CONFIG block never defines and no later statement adds: a certain KeyError at run time
+    (SST 2026-10-15: CONFIG["padding_patch"], a string setting the numeric spec leaves out, cost a sandbox run and a repair)."""
+    added, dynamic = set(), False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "CONFIG" and isinstance(node.ctx, ast.Store):
+            k = _literal(node.slice)
+            if isinstance(k, str):
+                added.add(k)
+            else:
+                dynamic = True
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            if node.func.value.id == "CONFIG" and node.func.attr in ("update", "setdefault", "__setitem__"):
+                dynamic = True
+        elif isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "CONFIG" for t in node.targets) and node is not cfg:
+            dynamic = True
+        elif isinstance(node, ast.Global) or (isinstance(node, ast.Name) and node.id == "CONFIG" and isinstance(node.ctx, ast.Store) and node not in ast.walk(cfg)):
+            dynamic = True
+    if dynamic:
+        return []
+    inside = {id(n) for n in ast.walk(cfg)}
+    reads = set()
+    for node in ast.walk(tree):
+        if (id(node) not in inside and isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Load)
+                and isinstance(node.value, ast.Name) and node.value.id == "CONFIG"):
+            k = _literal(node.slice)
+            if isinstance(k, str):
+                reads.add(k)
+    return sorted(reads - present - added)
+
+
 DROPOUT_CALLEE_RE = re.compile(r"dropout", re.I)   # nn.Dropout, Dropout2d, AlphaDropout, F.dropout
 
 
@@ -221,6 +252,9 @@ def _config_mutations(tree: ast.Module, cfg: ast.Assign, spec: Spec) -> list[dic
     return out
 
 
+CONDITIONAL_KEYS = {"heads"}
+
+
 def config_check(code: str, spec: Spec) -> tuple[str, dict]:
     """S2. Rueckgabe (Code mit Override-Zeilen, Bericht). Bericht: has_config, overrides [{key, old, new}], unused, conflicts, error."""
     report: dict = {"has_config": False, "overrides": [], "unused": [], "conflicts": [], "error": ""}
@@ -249,8 +283,11 @@ def config_check(code: str, spec: Spec) -> tuple[str, dict]:
             lines.append(f"CONFIG[{item.key!r}] = {item.number!r}  # spec override ({item.rank})")
             report["overrides"].append({"key": item.key, "old": old if old != "<missing>" else None, "new": item.number})
     used = _used_keys(tree, cfg)
-    report["unused"] = [i.key for i in enf if i.key not in used]
+    # "heads" applies only to attention models (spec KEYS: "if the model has attention"); a value from a launch default of an
+    # attention branch must not force a GCN backbone to read it (BANGS 2026-10-15: `_ = CONFIG["heads"]` workarounds).
+    report["unused"] = [i.key for i in enf if i.key not in used and i.key not in CONDITIONAL_KEYS]
     report["conflicts"] = _keyword_conflicts(tree, spec) + _config_mutations(tree, cfg, spec)
+    report["missing"] = _missing_reads(tree, cfg, set(present))
     if lines:
         src = code.splitlines(keepends=True)
         end = cfg.end_lineno or cfg.lineno
@@ -328,6 +365,7 @@ def failures(config: dict, items: list[dict]) -> list[dict]:
         out.append({"key": "CONFIG", "kind": "no_config"})
     else:
         out += [{"key": k, "kind": "unused"} for k in config.get("unused", [])]
+    out += [{"key": k, "kind": "missing"} for k in config.get("missing", [])]
     out += [{"key": c["key"], "kind": "overwrite" if c.get("kind") == "config_overwrite" else "literal", "literal": c["literal"],
              "line": c["line"]} for c in config.get("conflicts", [])]
     out += [{"key": r["key"], "kind": "item", "reason": r["reason"]} for r in items if not r["ok"]]
@@ -342,8 +380,8 @@ def score(spec: Spec, config: dict, items: list[dict]) -> tuple[int, int]:
     return ok_cfg + sum(1 for r in items if r["ok"]), len(enf) + len(items)
 
 
-def repair_message(fails: list[dict], spec: Spec) -> str:
-    """Gezielte Reparatur nur fuer die Befunde; Steckbrief-Eintrag mit Quelle. Keine Zahlen aus Messungen."""
+def failure_lines(fails: list[dict], spec: Spec) -> list[str]:
+    """One instruction per finding, with the spec value and its source."""
     lines = []
     for f in fails:
         item = spec.get(f["key"])
@@ -352,8 +390,16 @@ def repair_message(fails: list[dict], spec: Spec) -> str:
             keys = ", ".join(f"\"{i.key}\": {i.number!r}" for i in spec.enforced())
             lines.append(f"- The script has no literal CONFIG dict. Add CONFIG = {{{keys}}} right after the imports and read these "
                          "hyperparameters only from it.")
+        elif f["kind"] == "value":
+            shown = "missing" if f.get("old") is None else repr(f["old"])
+            lines.append(f"- CONFIG[\"{f['key']}\"] is {shown} in the CONFIG block; the spec requires {f['new']!r}{src}. "
+                         "Set it there and do not store this setting under another key.")
+        elif f["kind"] == "missing":
+            lines.append(f"- The script reads CONFIG[\"{f['key']}\"], but the CONFIG block has no such key (KeyError at run time). "
+                         "Add it to CONFIG with the authors' value, or use the authors' value directly where it is applied.")
         elif f["kind"] == "unused":
-            lines.append(f"- CONFIG[\"{f['key']}\"] is never read. Use CONFIG[\"{f['key']}\"] where {f['key']} is applied{src}.")
+            lines.append(f"- CONFIG[\"{f['key']}\"] is never read. Use CONFIG[\"{f['key']}\"] where {f['key']} is applied{src}; "
+                         "do not replace it with another key or a literal (other loops, such as outer rounds, need their own keys).")
         elif f["kind"] == "overwrite":
             lines.append(f"- Line {f['line']} changes CONFIG[\"{f['key']}\"] after the CONFIG block ({f['literal']}). Remove this write; "
                          f"the reference value must reach training unchanged{src}.")
@@ -361,6 +407,12 @@ def repair_message(fails: list[dict], spec: Spec) -> str:
             lines.append(f"- Line {f['line']} hard-codes {f['key']} = {f['literal']!r}. Use CONFIG[\"{f['key']}\"] instead{src}.")
         else:
             lines.append(f"- {f['key']} must be: {item.value if item else '?'}{src}. Current script: {f.get('reason', 'not implemented')}.")
+    return lines
+
+
+def repair_message(fails: list[dict], spec: Spec) -> str:
+    """Gezielte Reparatur nur fuer die Befunde; Steckbrief-Eintrag mit Quelle. Keine Zahlen aus Messungen."""
+    lines = failure_lines(fails, spec)
     return (
         "Your script runs, but it does not follow the reproduction spec in these points:\n" + "\n".join(lines) + "\n"
         "Fix exactly these points and keep everything else (data loading, output format, other settings) unchanged. "

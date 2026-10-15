@@ -833,7 +833,7 @@ def runtime_items(docs: list[Doc], names: list[str], model: str, family: str, da
                       isinstance(n.value, ast.Name) and n.value.id in ('configs', 'config', 'args', 'cfg'))
     common = {k for k, _ in keys_for(family, True)[0]}
     architectural = {'hidden', 'layers', 'heads', 'dropout'}
-    infrastructure = {'seed', 'gpu', 'devices', 'use_gpu', 'use_multi_gpu', 'num_workers', 'itr', 'is_training'}
+    infrastructure = {'seed', 'random_seed', 'gpu', 'devices', 'use_gpu', 'use_multi_gpu', 'num_workers', 'itr', 'is_training'}
     out = []
     incompatible_lengths = False
     for doc in docs:

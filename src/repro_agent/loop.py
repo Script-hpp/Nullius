@@ -972,11 +972,19 @@ class Orchestrator:
         spec = self._active_spec()
         if spec is not None and not getattr(self, 'allow_test_feedback', False):
             _, config = spec_check.config_check(code, spec)
+            if config.get('missing'):
+                violations.append('\n'.join(spec_check.failure_lines([{"key": k, "kind": "missing"} for k in config['missing']], spec)))
             if config['overrides'] or config['conflicts'] or (getattr(self, 'independent_selection', False) and config['unused']):
                 keys = sorted({item['key'] for item in config['overrides'] + config['conflicts']})
                 keys = sorted(set(keys) | (set(config['unused']) if getattr(self, 'independent_selection', False) else set()))
+                # Name each finding and what to do (BANGS 2026-10-15: "contradicts ... epochs" alone made three repairs
+                # move the value to CONFIG["max_epochs"] and back instead of reading CONFIG["epochs"]).
+                fails = ([{"key": o["key"], "kind": "value", "old": o["old"], "new": o["new"]} for o in config['overrides']]
+                         + spec_check.failures({**config, "overrides": [], "missing": [], "unused": config['unused']
+                                                if getattr(self, 'independent_selection', False) else []}, []))
                 violations.append('Configuration contradicts the reproduction spec: ' + ', '.join(keys) +
-                                  '. Restore the reference values before training; later module-level writes must not undo them.')
+                                  '. Restore the reference values before training; later module-level writes must not undo them.\n'
+                                  + '\n'.join(spec_check.failure_lines(fails, spec)))
         if violations:
             return {"status": "ungueltig", "detail": "Statische Pruefung: " + "; ".join(violations),
                     "static": True}
@@ -1687,6 +1695,14 @@ class Orchestrator:
             i = idx[j]
             code = codes[j]
             code, spec_score, disc = self._spec_conform(claim, i, plan, task, code)
+            blocking = self._static_spec_blockers(code)
+            if blocking:
+                # The spec rounds already sent these findings; repeating them as run repairs only spent the job budget
+                # (SST 2026-10-15: 17 unread keys, four more repairs, then the budget was gone). A fresh candidate is cheaper.
+                self._emit('candidate_skipped', claim_id=claim.id, candidate=i, code_hash=h(code), reason='spec', keys=blocking)
+                return {"i": i, "v0": None, "note0": f"candidate {i}: spec not satisfied after the spec rounds ({', '.join(blocking)})",
+                        "code": code, "ab": None, "notes": [], "discarded": disc, "faults": 0, "val": None, "val_check": None,
+                        **({"spec_score": spec_score} if spec_score is not None else {})}
 
             v0, note0, code = self._run_seed(claim, task, snapshot, dossier, run_dir, plan, code, seed, i)
             res = {"i": i, "v0": v0, "note0": note0, "code": code, "ab": None, "notes": [], "discarded": disc, "faults": 0}
@@ -1796,6 +1812,16 @@ class Orchestrator:
         note = (f"Code-Kandidaten: {k}, gewaehlt Kandidat {win['i']} (Code {h(win['code'])}) nach Validierungs-Metrik "
                 f"({parts})" + ("" if reason == "val" or reason.endswith(" + val") else "; Rueckfall ohne Val-Wert"))
         return v0, note0, code, ab, notes, discarded, win["i"], [note]
+
+    def _static_spec_blockers(self, code: str) -> list[str]:
+        """Spec keys the static check in _run_and_eval would reject this code for (product path, independent selection)."""
+        spec = self._active_spec()
+        if spec is None or getattr(self, 'allow_test_feedback', False) or not getattr(self, 'independent_selection', False):
+            return []
+        _, config = spec_check.config_check(code, spec)
+        if config.get('error'):
+            return []
+        return sorted({o['key'] for o in config['overrides'] + config['conflicts']} | set(config['unused']) | set(config.get('missing', [])))
 
     def _candidates_survive_limit(self, results: list[dict]) -> bool:
         """At a spending limit, continue only with independently validated candidates; never in diagnostic test-feedback mode."""

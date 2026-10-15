@@ -54,5 +54,27 @@
   "disc_2404_14757_80c8559b5dd0e50f": "First check stopped on seq_len=$(($label_len*2)) in scripts/etth1.sh (shell arithmetic not read). After the fix: ready, spec seq_len 672 from the authors' script.",
   "disc_2210_08251_f201f4b0b9e898b7": "Correct stop: discovery quote is a single bold cell (82.6, tab:ag_acc); the runtime check found other tables where CLAR has GCN/GAT/SAGE variants. No experiment offered.",
   "disc_2410_09348_d8991277dd33d43f": "Ready; 0.1945 USD close to the old 0.20 limit, default raised to 0.35."
+ },
+ "full_runs_1": {
+  "disc_2410_09348_d8991277dd33d43f": {
+   "status": "ungeprueft",
+   "reason": "Only 0 of 3 planned seeds produced valid measurements with the selected code. The check stopped without a paper verdict. Seed 0: kein gueltiger Lauf nach 4 Versuchen (letzter Fehler: (exit code 1)); Code-Kandidaten: 3, gewaehlt Kandidat 0 (Code 0d546b0370b2) nach Validierungs-Metrik (0: no val value",
+   "seconds": 780.7,
+   "run_gross_usd": 0.3825,
+   "preflight_gross_usd": 0.1957,
+   "verdict": null
+  },
+  "disc_2404_14757_80c8559b5dd0e50f": {
+   "status": "ungeprueft",
+   "reason": "Abbruch: BudgetExceeded: Job budget cannot cover another model request.",
+   "seconds": 1079.3,
+   "run_gross_usd": 0.0,
+   "preflight_gross_usd": 0.1661,
+   "verdict": null
+  }
+ },
+ "full_runs_1_causes": {
+  "BANGS": "heads=8 (GAT launch default) required to be read by a GCN backbone; static message only named keys, so repairs moved epochs to CONFIG['max_epochs'] and back. 0/3 seeds.",
+  "SST": "Candidate 0: 17 unread spec keys after 3 spec rounds, then 4 more repairs on the same finding; candidate 1 met 32/32 but raised KeyError CONFIG['padding_patch']; job budget 0.50 USD exhausted. random_seed was enforced although the harness sets seeds."
  }
 }
