@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle, History } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle, History, Info } from 'lucide-react'
 import { Badge, CARD, Chevron, ExtArrow, GoLink, ICON_MD, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -58,7 +58,14 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
       {e.recorded && (
         <div className="mt-3 space-y-1" data-testid="recorded-note">
           <Badge tone="gray" icon={<History className="h-4 w-4 shrink-0" />} title="A finished check we ran earlier. It is shown as it was recorded; there is no new check to start.">Recorded {recordedDate(e.recorded.date)}</Badge>
-          <p className="m-0 text-[12px] leading-relaxed text-muted">{e.recorded.note}</p>
+          <details className="group text-[12px] leading-relaxed text-muted">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+              <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{e.recorded.summary ?? e.recorded.note}</span>
+              <span className="shrink-0 text-fg-3 underline underline-offset-2 group-open:hidden">Details</span>
+            </summary>
+            <p className="m-0 mt-1 pl-5">{e.recorded.note}</p>
+          </details>
         </div>
       )}
       <div className="relative z-10"><PaperHead head={head} compact /></div>

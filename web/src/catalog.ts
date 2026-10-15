@@ -37,7 +37,7 @@ export type CatalogEntry = {
   run_id: string | null
   jury: { ready: boolean; reason: string } | null
   // curated by catalog.yaml: a result that is shown with its date and a plain note, but not offered for a new check
-  recorded?: { date: string; note: string } | null
+  recorded?: { date: string; summary?: string; note: string } | null
   // compact paper head copied from the run's dossier.summary at export time (fallback when summaries.json has no entry)
   head?: { text?: string; authors?: string[]; authors_source?: string; year?: number | null; venue?: { name: string; quote: string }; institutions?: { name: string; quote: string }[]; institutions_source?: string; source?: string; generated_by?: string }
 }

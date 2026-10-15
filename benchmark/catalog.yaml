@@ -532,6 +532,7 @@ candidates:
     evidence: docs/audits/catalog_regression_local_20261014.json
   recorded:
     date: '2026-10-09'
+    summary: "Recorded with a smaller model than the paper."
     note: "Target reached in the recorded run, with a reduced model: 1 mixer block and hidden size 128 instead of the paper's 6 blocks and 512. This shows the target number can be reached, not that the full-size model was reproduced."
 - id: disc_2202_06491
   arxiv_id: '2202.06491'
@@ -704,6 +705,7 @@ candidates:
     evidence: docs/audits/catalog_regression_local_20261014.json
   recorded:
     date: '2026-10-09'
+    summary: "Recorded with one model variant; a new check is not offered."
     note: "Target reached in the recorded run, which used the linear variant of the model and an input length of 720. A new check would have to guess the variant, so it is locked."
 - id: disc_2307_03756
   arxiv_id: '2307.03756'
@@ -952,4 +954,5 @@ candidates:
     checked: '2026-10-15'
   recorded:
     date: '2026-10-15'
+    summary: "Partial match; a new check would take about 80 minutes."
     note: "Recorded run: 81.9% measured against the paper's 84.2%, a partial match with 3 seeds. A full check took about 80 minutes on CPU, so no new live check is offered."
