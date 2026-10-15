@@ -238,3 +238,26 @@ def test_discovery_skips_papers_already_in_the_catalog_or_saved_finds(monkeypatc
     (tmp_path / "live.json").write_text(json.dumps([{"id": "disc_x", "arxiv_id": "2606.04135v1"}]))
     known = api._known_arxiv_ids()
     assert {"2305.10721", "2307.03756", "2606.04135"} <= known
+
+
+def test_discovery_stream_resumes_after_a_dropped_connection(monkeypatch):
+    # 2026-10-15: the proxy drops long SSE connections; the old queue lost read events, deleted the job
+    # on disconnect and aborted the search, so the page showed "Failed" for a search that was fine.
+    import json
+
+    class FakeAgent:
+        def discover(self, datasets, on_event, **_):
+            for i in range(3):
+                on_event({'type': 'pending', 'ts': 1.0 + i, 'dataset': datasets[0], 'n': i})
+
+    monkeypatch.setattr(api, 'DiscoveryAgent', FakeAgent)
+    with TestClient(api.app) as c:
+        job = c.post('/api/discover', json={'datasets': ['Cora']}).json()['job_id']
+        first = c.get(f'/api/discover/{job}/stream')
+        again = c.get(f'/api/discover/{job}/stream?from=2')
+        resumed = c.get(f'/api/discover/{job}/stream', headers={'Last-Event-ID': '2'})
+    parse = lambda r: [json.loads(line[6:]) for line in r.text.splitlines() if line.startswith('data: ')]
+    events = parse(first)
+    assert [e['type'] for e in events] == ['discovery_start', 'pending', 'pending', 'pending', 'done']
+    assert parse(again) == events[2:] and parse(resumed) == events[3:]
+    assert 'id: 4' in first.text

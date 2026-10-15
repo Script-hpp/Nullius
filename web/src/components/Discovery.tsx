@@ -414,32 +414,45 @@ export function Discovery() {
       return
     }
     const { job_id } = await res.json()
-    const es = new EventSource(`/api/discover/${job_id}/stream`)
+    // A proxy or network drop closes the stream while the search keeps running: reconnect from the last received event.
     let failed = false
-    let completed = false
-    stop.current = () => es.close()
-    es.onmessage = (m) => {
-      const e = parseLiveEvent(m.data)
-      if (!e) return
-      if (e.type === 'done') {
-        completed = true
-        es.close()
+    let closed = false
+    let received = 0
+    let tries = 0
+    let es: EventSource | null = null
+    let timer: number | undefined
+    stop.current = () => { closed = true; es?.close(); window.clearTimeout(timer) }
+    const connect = () => {
+      if (closed) return
+      es = new EventSource(`/api/discover/${encodeURIComponent(job_id)}/stream?from=${received}`)
+      es.onmessage = (m) => {
+        tries = 0
+        const e = parseLiveEvent(m.data)
+        received++
+        if (!e) return
+        if (e.type === 'done') {
+          closed = true
+          es?.close()
+          setEvents((x) => [...x, e])
+          setMode(failed ? 'failed' : 'done')
+          refreshStatus()
+          refreshEligibility()
+          return
+        }
+        if (e.type === 'error') { failed = true; setError(String(e.message || 'The discovery failed.')) }
         setEvents((x) => [...x, e])
-        setMode(failed ? 'failed' : 'done')
-        refreshStatus()
-        refreshEligibility()
-        return
       }
-      if (e.type === 'error') { failed = true; setError(String(e.message || 'The discovery failed.')) }
-      setEvents((x) => [...x, e])
+      es.onerror = () => {
+        es?.close()
+        if (closed) return
+        if (++tries <= 6) { timer = window.setTimeout(connect, 1500); return }
+        closed = true
+        setError((previous) => previous ?? 'The live stream ended before completion was confirmed. The search may still be running; check its status before retrying.')
+        setMode('failed')
+        refreshStatus()
+      }
     }
-    es.onerror = () => {
-      es.close()
-      if (completed) return
-      setError((previous) => previous ?? 'The live stream ended before completion was confirmed. The search may still be running; check its status before retrying.')
-      setMode('failed')
-      refreshStatus()
-    }
+    connect()
   }
 
   // No API here (static mirror) or live search paused: open on the last stored run instead of an empty page.

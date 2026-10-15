@@ -128,7 +128,21 @@ class StreamSlots:
 stream_slots = StreamSlots()
 
 # In-memory registry for jobs and their queues
-jobs: Dict[str, asyncio.Queue] = {}
+@dataclass
+class DiscoveryJob:
+    """All events since start. A dropped connection (proxy, network) reconnects with from=<n>; the search keeps running."""
+    events: list = field(default_factory=list)
+    done: bool = False
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def add(self, evt: dict) -> None:
+        with self.lock:
+            self.events.append(evt)
+            if evt.get("type") == "done":
+                self.done = True
+
+
+jobs: Dict[str, DiscoveryJob] = {}
 background_tasks = set()
 logger = logging.getLogger(__name__)
 
@@ -166,10 +180,10 @@ async def start_discovery(req: DiscoverRequest, request: Request):
     ip_limits.add("discovery", ip)
 
     job_id = str(uuid.uuid4())
-    queue = asyncio.Queue()
-    jobs[job_id] = queue
+    job = DiscoveryJob()
+    jobs[job_id] = job
     start_event = {"type": "discovery_start", "ts": time.time(), "datasets": datasets}
-    queue.put_nowait(start_event)
+    job.add(start_event)
     recording = [start_event]
     recording_lock = threading.Lock()
     recording_closed = False
@@ -189,22 +203,19 @@ async def start_discovery(req: DiscoverRequest, request: Request):
                         live_catalog.save_replay(recording)
                     except OSError:
                         logger.error("Discovery job %s replay could not be saved", job_id)
-                        loop.call_soon_threadsafe(queue.put_nowait, {"type": "warning", "ts": time.time(),
-                            "message": "The search ended, but its replay could not be saved."})
-        def publish():
-            if worker_finished:
-                _release_lock(job_id)
-            queue.put_nowait(event)
-        loop.call_soon_threadsafe(publish)
+                        job.add({"type": "warning", "ts": time.time(),
+                                 "message": "The search ended, but its replay could not be saved."})
+            if not job.done:   # after the watchdog's end, late worker events only free the slot
+                job.add(event)
+        if worker_finished:
+            loop.call_soon_threadsafe(_release_lock, job_id)
 
     # Run the discovery loop in a background thread or task.
     # We use asyncio.to_thread because the DiscoveryAgent uses synchronous httpx/Tavily calls.
     def discovery_worker():
         def on_event(evt):
             budget.check()
-            # Put the event into the queue in a thread-safe manner
-            if job_id not in jobs:
-                raise RuntimeError("Client disconnected, aborting discovery loop.")
+            # A closed browser tab does not stop the search: its result is saved and the stream can be reopened.
             if evt.get("type") == "candidate":
                 evt = live_catalog.save_candidate(evt)
             emit(evt)
@@ -253,41 +264,26 @@ def _arm_watchdog(job_id: str, seconds: float, on_timeout) -> None:
 
 
 @app.get("/api/discover/{job_id}/stream")
-async def stream_discovery(job_id: str, request: Request):
-    if job_id not in jobs:
+async def stream_discovery(job_id: str, request: Request, start: int = Query(0, alias="from")):
+    """SSE from index `start` (or Last-Event-ID + 1); a reconnect after a dropped connection gets the remaining events."""
+    job = jobs.get(job_id)
+    if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-        
+    last = request.headers.get("last-event-id")
+    first = int(last) + 1 if last and last.isascii() and last.isdigit() and len(last) < 9 else max(0, start)
     slot = stream_slots.acquire(live_gate.client_ip(request))
     if slot is None:
         raise HTTPException(status_code=429, detail="Too many open streams.")
-    queue = jobs[job_id]
-    started = time.monotonic()
 
     async def event_generator():
         try:
-            while True:
-                # Disconnect if client leaves
-                if await request.is_disconnected() or time.monotonic() - started > STREAM_MAX_S:
-                    break
-
-                try:
-                    # Wait for an event with a 15-second timeout for keepalive
-                    evt = await asyncio.wait_for(queue.get(), timeout=15.0)
-                    
-                    yield f"data: {json.dumps(evt)}\n\n"
-                    if evt.get("type") == "done":
-                        break
-                    
-                except asyncio.TimeoutError:
-                    # Emit keepalive to prevent proxy disconnects
-                    yield ": keepalive\n\n"
+            async for chunk in _buffered_events(job, request, first, time.monotonic()):
+                yield chunk
         finally:
-            # Cleanup when the stream is closed
             stream_slots.release(slot)
-            if job_id in jobs:
-                del jobs[job_id]
-                
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
 
 # ---- Live-Reproduktion eines Katalogeintrags ------------------------------------------------------
@@ -578,7 +574,7 @@ async def stream_reproduction(job_id: str, request: Request, start: int = Query(
 
     async def event_generator():
         try:
-            async for chunk in _repro_events(job, request, first, time.monotonic()):
+            async for chunk in _buffered_events(job, request, first, time.monotonic()):
                 yield chunk
         finally:
             stream_slots.release(slot)
@@ -587,7 +583,7 @@ async def stream_reproduction(job_id: str, request: Request, start: int = Query(
                              headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
 
-async def _repro_events(job: ReproJob, request: Request, i: int, started: float):
+async def _buffered_events(job: "ReproJob | DiscoveryJob", request: Request, i: int, started: float):
     idle = 0.0
     while True:
         if await request.is_disconnected() or time.monotonic() - started > STREAM_MAX_S:
