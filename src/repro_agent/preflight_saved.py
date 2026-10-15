@@ -8,7 +8,7 @@ the claims saved earlier. Run it where the server's logs/ volume is mounted (ins
     python -m repro_agent.preflight_saved --run           # check all of them (paid: model, Tavily, sandbox)
     python -m repro_agent.preflight_saved --run <id> ...  # check only these claims
 
-Each check has its own spending limit (MAX_COST_PER_PREFLIGHT_USD, default 0.20 $ gross).
+Each check has its own spending limit (MAX_COST_PER_PREFLIGHT_USD, default 0.35 $ gross).
 """
 
 import sys

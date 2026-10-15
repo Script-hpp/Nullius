@@ -73,6 +73,8 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "ip_limits", live_gate.IpLimits())
     e = entry(cand())
     etth = entry(cand("2601.21866", "ETTh1", claim={"method": "M", "metric": "mse", "target": 0.35, "horizon": 192, "protocol": "unklar"}, protocol="unklar"))
+    for featured in (e, etth):   # live checks are offered for featured entries only (live_catalog.curated_offer)
+        featured.update(status=cat.CHECKED, verdict={"gesamtaussage": "vorlaeufig"})
     f = tmp_path / "catalog.yaml"
     cat.save_catalog([e, etth], f)
     monkeypatch.setattr(api, "CATALOG_PATH", f)

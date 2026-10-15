@@ -30,6 +30,58 @@ def active_paper_text(text: str) -> str:
     return ''.join(lines)
 
 
+_ARITH = re.compile(r'\$\(\((.+)\)\)')
+_INT_OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Mod: operator.mod}
+
+
+def shell_arithmetic(value: str, bindings: dict[str, str]) -> str | None:
+    """`$(( $label_len * 2 ))` with singleton integer bindings -> "672"; anything else -> None (stays unresolved).
+    Bash integer arithmetic only: + - * / % and parentheses; division truncates toward zero."""
+    match = _ARITH.fullmatch(value.strip().strip('"'))
+    if not match:
+        return None
+    unresolved = False
+
+    def bound(m):
+        nonlocal unresolved
+        name = m[1] or m[2] or m[3]
+        if not re.fullmatch(r'-?\d+', bindings.get(name, '')):
+            unresolved = True
+            return '0'
+        return f'({bindings[name]})'
+    expr = re.sub(r'\$\{([A-Za-z_]\w*)\}|\$([A-Za-z_]\w*)|\b([A-Za-z_]\w*)\b', bound, match[1])
+    if unresolved or not re.fullmatch(r'[\d\s()+\-*/%]+', expr):
+        return None
+
+    def ev(node):
+        if isinstance(node, ast.Expression):
+            return ev(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, int) and not isinstance(node.value, bool):
+            return node.value
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+            v = ev(node.operand)
+            return -v if isinstance(node.op, ast.USub) else v
+        if isinstance(node, ast.BinOp):
+            a, b = ev(node.left), ev(node.right)
+            if isinstance(node.op, (ast.Div, ast.FloorDiv)):
+                if b == 0:
+                    raise ArithmeticError
+                return int(a / b)
+            if isinstance(node.op, ast.Mod):
+                if b == 0:
+                    raise ArithmeticError
+                return a - b * int(a / b)   # bash keeps the dividend's sign
+            op = _INT_OPS.get(type(node.op))
+            if op:
+                return op(a, b)
+        raise ValueError('unsupported shell arithmetic')
+    try:
+        result = ev(ast.parse(expr.strip(), mode='eval'))
+    except (SyntaxError, ValueError, ArithmeticError, RecursionError):
+        return None
+    return str(result) if abs(result) < 1e9 else None
+
+
 def shell_calls(text: str, identities: dict | None = None) -> list[tuple[str, str, dict[str, str]]]:
     """(original invocation, safely expanded invocation, singleton bindings)."""
     bindings: dict[str, str] = {}
@@ -60,7 +112,7 @@ def shell_calls(text: str, identities: dict | None = None) -> list[tuple[str, st
             assignments = tokens[1:] if tokens[0] == 'export' else tokens
             if len(assignments) == 1 and re.fullmatch(r'[A-Za-z_]\w*=.+', assignments[0]):
                 name, value = assignments[0].split('=', 1)
-                vals = [value]
+                vals = [shell_arithmetic(value, bindings) or value]
         if name:
             choices = set(vals)
             options[name] = choices if not conditional else set()

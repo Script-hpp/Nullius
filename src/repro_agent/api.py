@@ -267,7 +267,7 @@ def preflight_claim(cid: str) -> dict:
     orch = None
     token = None
     try:
-        limit = spend_guard.number("MAX_COST_PER_PREFLIGHT_USD", .20)
+        limit = spend_guard.number("MAX_COST_PER_PREFLIGHT_USD", .35)
         token = spend_guard.current_budget.set(spend_guard.JobBudget(limit, live=True))
         orch = make_preflight_orchestrator()
         result = orch.preflight(cid, "live_catalog", save_path=live_catalog.preflight_path(cid))
@@ -509,7 +509,7 @@ async def latest_discovery_replay():
 @app.get("/api/reproduce/eligibility")
 async def reproduction_eligibility():
     try:
-        result = {entry["id"]: live_catalog.eligibility(entry) for entry in cat.load_catalog(CATALOG_PATH)}
+        result = {entry["id"]: live_catalog.curated_offer(entry) for entry in cat.load_catalog(CATALOG_PATH)}
         result.update({entry["id"]: live_catalog.offer(entry) for entry in live_catalog.load_entries()})
         return sanitize(result)
     except (OSError, ValueError):
@@ -538,7 +538,7 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             raise HTTPException(503, detail="Saved discovery claims are unavailable.")
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown catalog entry")
-    eligible = live_catalog.offer(entry) if dynamic else live_catalog.eligibility(entry)
+    eligible = live_catalog.offer(entry) if dynamic else live_catalog.curated_offer(entry)
     if not eligible["runnable"]:
         raise HTTPException(status_code=400, detail=f"Not runnable: {sanitize_text(eligible['reason'], 300)}")
 

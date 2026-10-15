@@ -146,3 +146,14 @@ def test_saved_claims_without_a_check_are_listed_and_checked_only_on_request(mon
     assert calls == [] and "old" in capsys.readouterr().out
     preflight_saved.main(["--run"])
     assert calls == ["old"]
+
+
+def test_curated_live_checks_only_for_featured_entries_of_the_real_catalog():
+    from repro_agent import catalog as cat
+    offers = {e["id"]: live_catalog.curated_offer(e) for e in cat.load_catalog()}
+    offered = {i for i, o in offers.items() if o["runnable"]}
+    assert offered == {"disc_1609_02907", "disc_2307_03756", "disc_2501_01087"}
+    assert "10-minute CPU limit" in offers["disc_2303_06053"]["reason"]          # TSMixer: recorded result stays, no live re-run
+    assert "--model_type" in offers["disc_2405_00946"]["reason"]                 # SparseTSF
+    unchecked = next(i for i, e in ((e["id"], e) for e in cat.load_catalog()) if e.get("status") == cat.UNCHECKED and offers[i]["reason"] == live_catalog.CURATED_NOT_OFFERED)
+    assert unchecked

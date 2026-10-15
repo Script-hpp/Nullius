@@ -1,0 +1,58 @@
+{
+ "scope": "Real readiness checks 2026-10-15, local, product configuration (Token Factory + Nebius), on saved server discovery finds. Run with scripts in scratchpad mirroring api.preflight_claim; resume_ok = saved state loads into a fresh orchestrator of the run configuration (no paid calls).",
+ "results": {
+  "disc_2410_09348_d8991277dd33d43f": [
+   {
+    "log": "run.log",
+    "ready": true,
+    "stage": "ready",
+    "reason": null,
+    "mode": "nachbau_autorencode",
+    "repo": "https://github.com/fangxin-wang/BANGS",
+    "cost_gross_usd": 0.1945,
+    "seconds": 194.3,
+    "resume_ok": true
+   }
+  ],
+  "disc_2404_14757_80c8559b5dd0e50f": [
+   {
+    "log": "run.log",
+    "ready": false,
+    "stage": "authors' code",
+    "reason": "Author launch has unresolved model parameters: seq_len. No experiment was started",
+    "mode": null,
+    "repo": null,
+    "cost_gross_usd": 0.1521,
+    "seconds": 178.0
+   },
+   {
+    "log": "run_sst2.log",
+    "ready": true,
+    "stage": "ready",
+    "reason": null,
+    "mode": "nachbau_autorencode",
+    "repo": "https://github.com/XiongxiaoXu/SST",
+    "cost_gross_usd": 0.1545,
+    "seconds": 170.9,
+    "resume_ok": true
+   }
+  ],
+  "disc_2210_08251_f201f4b0b9e898b7": [
+   {
+    "log": "run.log",
+    "ready": false,
+    "stage": "target",
+    "reason": "Claim verification stopped: the target could not be verified (Spaltenpruefung: Laut Kopfzeile muesste an Stelle Spalte cora, Position 2 von 7 die Zahl 87.87 stehen, das Modell waehlte 88.6). No experiment was started.",
+    "mode": null,
+    "repo": null,
+    "cost_gross_usd": 0.0097,
+    "seconds": 144.6
+   }
+  ]
+ },
+ "notes": {
+  "disc_2404_14757_80c8559b5dd0e50f": "First check stopped on seq_len=$(($label_len*2)) in scripts/etth1.sh (shell arithmetic not read). After the fix: ready, spec seq_len 672 from the authors' script.",
+  "disc_2210_08251_f201f4b0b9e898b7": "Correct stop: discovery quote is a single bold cell (82.6, tab:ag_acc); the runtime check found other tables where CLAR has GCN/GAT/SAGE variants. No experiment offered.",
+  "disc_2410_09348_d8991277dd33d43f": "Ready; 0.1945 USD close to the old 0.20 limit, default raised to 0.35."
+ }
+}

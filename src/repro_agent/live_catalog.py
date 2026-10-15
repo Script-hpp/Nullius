@@ -59,6 +59,23 @@ def offer(entry: dict) -> dict:
     return {**eligible, "readiness": readiness}
 
 
+CURATED_NOT_OFFERED = ("Live checks are offered for the featured entries, which were re-checked with the current pipeline. "
+                       "This entry shows its recorded result.")
+
+
+def curated_offer(entry: dict) -> dict:
+    """A curated catalog entry gets a live check only when it is featured (catalog.jury_ready): re-checked with the current
+    pipeline and passed. A withdrawn or never re-checked entry keeps its recorded result but no start button."""
+    eligible = eligibility(entry)
+    if not eligible["runnable"]:
+        return eligible
+    ready, _ = cat.jury_ready(entry)
+    if not ready:
+        override = (entry.get("jury_override") or {}).get("reason")
+        return {"runnable": False, "reason": override or CURATED_NOT_OFFERED, "warnings": []}
+    return eligible
+
+
 def preflight_path(candidate_id: str) -> Path:
     return PREFLIGHT_DIR / (re.sub(r"[^A-Za-z0-9_.-]", "_", candidate_id) + ".pkl")
 

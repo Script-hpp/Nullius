@@ -71,7 +71,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
       {/* Stats and run controls move as one block, centered in the space left above the footer. */}
       <div className="flex flex-1 flex-col justify-center gap-3 py-5">
         {e.status === 'ungeprueft' && e.reason && <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Last check stopped: {translateReason(e.reason)}</p>}
-        {live.eligibility?.runnable === false && <p className="m-0 text-[12px] leading-relaxed text-tone-amber">Check unavailable: {translateReason(live.eligibility.reason ?? '')}</p>}
+        {live.eligibility?.runnable === false && <p className="m-0 text-[12px] leading-relaxed text-muted"><span className="font-medium text-fg-3">No live check for this entry.</span> {translateReason(live.eligibility.reason ?? '')}</p>}
         {v && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-muted">
             <span>Seeds <span className="font-mono text-fg-3">{v.seeds}</span></span>
