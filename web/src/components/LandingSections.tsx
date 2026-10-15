@@ -10,6 +10,7 @@ import { statusFor } from '../livestatus'
 import { Matrix } from './TwoModes'
 import { Badge, Chevron, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
 import { Hint } from './Hint'
+import { ProofLoop } from './ProofLoop'
 import { measuredAttempts } from '../measurements'
 import { formatSpread } from '../metricFormat'
 
@@ -139,6 +140,7 @@ export function Proof() {
           <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">reproduced verdicts agree with the reference (post hoc)</p>
         </div>
       </div>
+      <ProofLoop />
       <div className="mt-10"><Matrix short /></div>
       <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
         Method fidelity not checked. <GoLink href="#benchmark">Full benchmark</GoLink>

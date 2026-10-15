@@ -7,6 +7,7 @@ import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, Lesson, Tavil
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 import { RecentChecks } from './RecentChecks'
+import { FilmButton } from './FilmModal'
 
 // Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke (under a second), above one sentence, one button and one quiet link.
 // Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
@@ -30,6 +31,7 @@ function Hero() {
           <Play className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" aria-hidden />Watch a check in 30 seconds
         </a>
         <span className="text-[12px] text-muted">Recorded run · real code, sources and measurements · no sign-in</span>
+        <FilmButton />
         <GoLink href="#catalog" className="mt-1 text-sm text-fg-4 underline underline-offset-4 hover:text-fg">Explore checked papers</GoLink>
       </div>
       <div className="mt-12 flex flex-col items-center gap-3 sm:mt-14">

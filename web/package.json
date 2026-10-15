@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test src/whatif.test.ts src/latex.test.ts src/film.test.ts src/paperhead.test.ts src/repairStory.test.ts src/droplast.test.ts src/badge.test.ts src/group.test.ts src/eta.test.ts src/referenceBench.test.ts src/livestatus.test.ts src/objections.test.ts src/mode.test.ts src/data/benchmark.test.ts src/runtabs.test.ts src/tavilysummary.test.ts src/sectionScroll.test.ts src/countUp.test.ts src/loaded.test.ts src/runclock.test.ts src/measurements.test.ts src/runPhases.test.ts src/metricFormat.test.ts src/catalogFilter.test.ts src/targetSource.test.ts src/runNavigation.test.ts src/discovery.test.ts"
+    "test": "node --test src/whatif.test.ts src/latex.test.ts src/film.test.ts src/paperhead.test.ts src/repairStory.test.ts src/droplast.test.ts src/badge.test.ts src/group.test.ts src/eta.test.ts src/referenceBench.test.ts src/livestatus.test.ts src/objections.test.ts src/mode.test.ts src/data/benchmark.test.ts src/runtabs.test.ts src/tavilysummary.test.ts src/sectionScroll.test.ts src/countUp.test.ts src/loaded.test.ts src/runclock.test.ts src/measurements.test.ts src/runPhases.test.ts src/metricFormat.test.ts src/catalogFilter.test.ts src/targetSource.test.ts src/runNavigation.test.ts src/discovery.test.ts src/media.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",

@@ -309,3 +309,7 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 /* KaTeX in running text: its default is larger than the surrounding font; colour follows currentColor. */
 .katex { font-size: 1.04em; }
 .katex-display { margin: 0.15em 0; }
+
+/* Film frames: the film has a light cream ground; in dark mode the picture is dimmed so it does not glare as a light box. */
+.film-frame video, .film-frame img { filter: brightness(0.82); }
+:root[data-theme='light'] .film-frame video, :root[data-theme='light'] .film-frame img { filter: none; }
