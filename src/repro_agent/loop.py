@@ -64,7 +64,7 @@ from .setup_details import (
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 from . import spec_check
-from .method_guard import MethodImplementationBlocked, gpu_kernel_imports, placeholder_issues
+from .method_guard import GpuKernelBlocked, MethodImplementationBlocked, gpu_kernel_imports, placeholder_issues
 from .spec import (
     Spec, as_dict as spec_as_dict, build_spec, config_note, format_code_grounded, format_spec, model_files, model_name_of)
 
@@ -1386,7 +1386,13 @@ class Orchestrator:
             # Gleiche deterministische Vollstaendigkeitspruefung wie spaeter im Steckbrief, aber vor den bezahlten
             # Extraktionsaufrufen: SARAF (2026-10-14) zahlte 0.12 $ Rolle 4, bevor der Quellenwaechter stoppte.
             from .source_context import author_excerpt
-            author_excerpt(docs, model_name_of(claim_text), dataset, listing=self._repo_listing)
+            _, chain = author_excerpt(docs, model_name_of(claim_text), dataset, listing=self._repo_listing)
+            if chain and getattr(self, "_block_gpu_kernels_early", False):
+                # The claimed model's import chain is known here, before paid setup details and spec. Files outside
+                # it (other models of a multi-model repo) never block. Without a chain this line is not reached.
+                kernels = self._kernels_in(self._repo_files, chain)
+                if kernels:
+                    raise GpuKernelBlocked(self._kernel_reason(kernels))
         info = {"url": url, "commit": dump.commit, "files": sorted(dump.files), "n_tracked": dump.n_tracked}
         if dump.subdir:   # Unterordner eines Sammel-Repos: Issues, Sterne usw. gehoeren zur Wurzel
             info["subdir"], info["root"] = dump.subdir, clone_plan(url)[0]
@@ -2294,6 +2300,7 @@ class Orchestrator:
         authors' code, is not offered for a one-click check."""
         start = self.spent_gross_usd
         result = {"ready": False, "stage": "target", "reason": None, "mode": None, "repo": None, "run_dir": None}
+        self._block_gpu_kernels_early = True
         try:
             prepared = self.prepare(paper_id, source)
         except (TargetVerificationBlocked, ExtractionInvalid) as exc:
@@ -2302,17 +2309,19 @@ class Orchestrator:
             result.update(stage="authors' code", reason=str(exc))
         else:
             result.update(mode=prepared.dossier.mode, repo=(prepared.dossier.repo or {}).get("url"))
+            if getattr(self, "spec", None) is not None:   # lets the offer list pick the better of two finds of one claim
+                result.update(spec_enforced=len(self.spec.enforced()), spec_missing=len(self.spec.missing))
             kernels = self._gpu_kernel_needs()
             if prepared.dossier.mode != MODE_AUTHOR_CODE:
                 result.update(stage="authors' code", reason=f"The authors' code is not available ({prepared.fallback_reason}).")
             elif kernels:
-                used = "; ".join(f"{lib} ({', '.join(paths)})" for lib, paths in kernels.items())
-                result.update(stage="authors' code", reason=f"The authors' model needs a GPU-only kernel library: {used}. "
-                              "The CPU sandbox cannot run it, so no experiment was started.")
+                result.update(stage="authors' code", reason=self._kernel_reason(kernels))
             else:
                 result.update(ready=True, stage="ready")
                 if save_path is not None:
                     self.save_prepared(prepared, save_path)
+        finally:
+            self._block_gpu_kernels_early = False
         result["run_dir"] = str(self.last_run_dir) if getattr(self, "last_run_dir", None) else None
         result["cost_gross_usd"] = round(self.spent_gross_usd - start, 4)
         self._emit("preflight", **result)
@@ -2320,10 +2329,19 @@ class Orchestrator:
 
     def _gpu_kernel_needs(self) -> dict[str, list[str]]:
         """GPU-only libraries the authors' files in the code prompt import (all read files when there is no spec)."""
-        files = getattr(self, "_repo_files", None) or {}
         spec = getattr(self, "spec", None)
-        excerpt = {re.sub(r"^repo:|@[0-9a-f]+$", "", name) for name in (spec.excerpt_docs if spec is not None else [])}
+        return self._kernels_in(getattr(self, "_repo_files", None) or {}, spec.excerpt_docs if spec is not None else [])
+
+    @staticmethod
+    def _kernels_in(files: dict[str, str], doc_names: list[str]) -> dict[str, list[str]]:
+        excerpt = {re.sub(r"^repo:|@[0-9a-f]+$", "", name) for name in doc_names}
         return gpu_kernel_imports({path: text for path, text in files.items() if not excerpt or path in excerpt})
+
+    @staticmethod
+    def _kernel_reason(kernels: dict[str, list[str]]) -> str:
+        used = "; ".join(f"{lib} ({', '.join(paths)})" for lib, paths in kernels.items())
+        return (f"The authors' model needs a GPU-only kernel library: {used}. "
+                "The CPU sandbox cannot run it, so no experiment was started.")
 
     def prepare(self, paper_id: str, source: str = "benchmark") -> "Prepared":
         """Load the claim and run every step before the first sandbox branch. Raises when the run must stop."""

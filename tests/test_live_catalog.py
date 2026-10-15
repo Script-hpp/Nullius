@@ -177,3 +177,82 @@ def test_replay_storage_failure_does_not_hide_completion_or_hold_worker_slot(env
     assert events[-1]["type"] == "done"
     assert any(event["type"] == "warning" and "replay" in event["message"] for event in events)
     assert not api.job_semaphore.locked()
+
+
+# ---- one offer per claim (SARAF found three times, 2026-10-16) -------------------------------------------------------
+def saraf(link, target=.371, **over):
+    claim = {"method": "SARAF", "metric": "mse", "target": target, "horizon": 96, "matched_task": "ETTh1",
+             "column_check": "ok", "quote": f"SARAF {target}"}
+    return live_catalog.save_candidate(cand("2606.04135v1", "ETTh1", claim=claim, protocol="unklar",
+                                            github_url=link, **{"ts": 10, **over}))
+
+
+def readiness(cid, ready=True, enforced=None, missing=None):
+    live_catalog.save_readiness(cid, {"ready": ready, "stage": "ready" if ready else "authors' code",
+                                      "reason": None if ready else "no repository",
+                                      "spec_enforced": enforced, "spec_missing": missing})
+
+
+def test_same_claim_found_again_is_one_offer_and_other_targets_are_not_duplicates(env):
+    a, b, c = (saraf(f"https://github.com/x/{n}") for n in "abc")
+    other = saraf("https://github.com/x/a", target=.366)
+    assert len({e["catalog_id"] for e in (a, b, c, other)}) == 4
+    readiness(a["catalog_id"], True, 14, 1)
+    readiness(b["catalog_id"], True, 12, 4)
+    readiness(c["catalog_id"], False)
+    readiness(other["catalog_id"], True, 20, 0)
+    hidden = live_catalog.duplicates()
+    assert hidden == {b["catalog_id"]: a["catalog_id"], c["catalog_id"]: a["catalog_id"]}   # ready, then more enforced
+    shown = {e["catalog_id"] for e in env.client.get("/api/discover/candidates").json()}
+    assert shown == {a["catalog_id"], other["catalog_id"]}
+    assert len(live_catalog.load_entries()) == 4 and live_catalog.find_entry(b["catalog_id"])["readiness"]["ready"] is True  # on disk, untouched
+    eligible = env.client.get("/api/reproduce/eligibility").json()
+    assert eligible[a["catalog_id"]]["runnable"] is True and eligible[other["catalog_id"]]["runnable"] is True
+    assert eligible[b["catalog_id"]]["runnable"] is False and eligible[b["catalog_id"]]["duplicate_of"] == a["catalog_id"]
+
+
+def test_representative_rule_prefers_ready_then_enforced_then_fewer_missing_then_newest(env):
+    a, b = saraf("https://github.com/x/a", ts=1), saraf("https://github.com/x/b", ts=2)
+    ida, idb = a["catalog_id"], b["catalog_id"]
+    assert live_catalog.duplicates() == {ida: idb}                       # nothing known: newest
+    readiness(ida, True, 12, 4); readiness(idb, True, 12, 1)
+    assert live_catalog.duplicates() == {ida: idb}                       # fewer missing
+    readiness(ida, True, 14, 4)
+    assert live_catalog.duplicates() == {idb: ida}                       # more enforced
+    readiness(ida, False, 20, 0)
+    assert live_catalog.duplicates() == {ida: idb}                       # ready beats everything
+    live_catalog.save_readiness(ida, {"ready": True, "stage": "ready"})  # ready, counts unknown: ranks below known counts
+    assert live_catalog.duplicates() == {ida: idb}
+
+
+def test_hidden_duplicate_cannot_be_started_and_costs_nothing(env):
+    a, b = saraf("https://github.com/x/a"), saraf("https://github.com/x/b")
+    readiness(a["catalog_id"], True, 14, 1)
+    readiness(b["catalog_id"], True, 12, 4)
+    refused = start(env, catalog_id=b["catalog_id"])
+    assert refused.status_code == 409 and a["catalog_id"] in refused.json()["detail"]
+    assert FakeOrch.instances == [] and api.repro_daily["count"] == 0
+    assert start(env, catalog_id=a["catalog_id"]).status_code == 200
+
+
+def test_replay_and_export_show_the_claim_once_and_keep_checked_evidence(env):
+    a, b = saraf("https://github.com/x/a"), saraf("https://github.com/x/b")
+    readiness(a["catalog_id"], True, 14, 1)
+    readiness(b["catalog_id"], True, 12, 4)
+    live_catalog.save_replay([{"type": "candidate", **b}, {"type": "readiness", "catalog_id": b["catalog_id"], "state": "ready"},
+                              {"type": "done"}])
+    replay = env.client.get("/api/discover/replay").json()
+    assert [e.get("catalog_id") for e in replay if e["type"] == "candidate"] == [a["catalog_id"]]
+    assert not any(e["type"] == "readiness" for e in replay)
+    from repro_agent import site_export
+    site_export.write_catalog(env.cat, env.tmp / "data", live_catalog.offered_entries())
+    rows = json.loads((env.tmp / "data" / "catalog.json").read_text())
+    assert [r["id"] for r in rows if r["id"].startswith("disc_2606_04135")] == [a["catalog_id"]]
+    # A find with a recorded outcome is never hidden, even when another find ranks higher.
+    stored = live_catalog.find_entry(b["catalog_id"])
+    stored["status"] = cat.CHECKED
+    live_catalog.write_json_atomic(live_catalog.PATH, [live_catalog.find_entry(a["catalog_id"]), stored])
+    assert live_catalog.duplicates() == {a["catalog_id"]: b["catalog_id"]}
+    stored_a = live_catalog.find_entry(a["catalog_id"]); stored_a["status"] = cat.CHECKED
+    live_catalog.write_json_atomic(live_catalog.PATH, [stored_a, stored])
+    assert live_catalog.duplicates() == {}   # two recorded outcomes: both stay

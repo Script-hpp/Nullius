@@ -107,3 +107,14 @@ test('a found claim shows its readiness check and the saved result of a finished
   const saved = deriveView([{ ...found, readiness: { ready: true, stage: 'ready', reason: null } } as DEvent])
   assert.equal(saved.papers.find((p) => p.catalogId === 'c1')?.readiness?.state, 'ready')
 })
+
+test('a candidate marked as a duplicate of an earlier find gets no second card', () => {
+  const base = { type: 'candidate', ts: 10, arxiv_id: '2606.04135', title: 'SARAF', dataset: 'ETTh1', runnable: true }
+  const view = deriveView([
+    { ...base, type: 'reading' } as DEvent,
+    { ...base, catalog_id: 'disc_2606_04135_A', claim: { method: 'SARAF', metric: 'mse', target: .371, horizon: 96 } } as DEvent,
+    { ...base, catalog_id: 'disc_2606_04135_B', duplicate_of: 'disc_2606_04135_A', runnable: false,
+      claim: { method: 'SARAF', metric: 'mse', target: .371, horizon: 96 } } as DEvent,
+  ])
+  assert.deepEqual(view.papers.map((paper) => paper.catalogId), ['disc_2606_04135_A'])
+})

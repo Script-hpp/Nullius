@@ -218,7 +218,12 @@ async def start_discovery(req: DiscoverRequest, request: Request):
             # A closed browser tab does not stop the search: its result is saved and the stream can be reopened.
             if evt.get("type") == "candidate":
                 evt = live_catalog.save_candidate(evt)
-                found.append(evt)
+                representative = live_catalog.duplicates().get(evt.get("catalog_id"))
+                if representative:   # same claim as an earlier saved find: no second card, no paid readiness check
+                    evt = {**evt, "duplicate_of": representative, "runnable": False,
+                           "run_reason": live_catalog.duplicate_reason(representative)}
+                else:
+                    found.append(evt)
             emit(evt)
 
         found: list[dict] = []
@@ -511,8 +516,12 @@ async def reproduction_eligibility():
     try:
         result = {entry["id"]: live_catalog.curated_offer(entry) for entry in cat.load_catalog(CATALOG_PATH)}
         # A saved live find with a curated entry of the same id is judged by the curated entry (its lock stays).
-        result.update({entry["id"]: live_catalog.offer(entry) for entry in live_catalog.load_entries()
-                       if entry["id"] not in result})
+        entries = live_catalog.load_entries()
+        hidden = live_catalog.duplicates(entries)
+        result.update({entry["id"]: ({"runnable": False, "reason": live_catalog.duplicate_reason(hidden[entry["id"]]),
+                                      "warnings": [], "duplicate_of": hidden[entry["id"]]}
+                                     if entry["id"] in hidden else live_catalog.offer(entry))
+                       for entry in entries if entry["id"] not in result})
         return sanitize(result)
     except (OSError, ValueError):
         raise HTTPException(503, detail="Check eligibility is unavailable.")
@@ -540,6 +549,13 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             raise HTTPException(503, detail="Saved discovery claims are unavailable.")
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown catalog entry")
+    if dynamic:
+        try:
+            representative = live_catalog.duplicates().get(entry["id"])
+        except (OSError, ValueError):
+            raise HTTPException(503, detail="Saved discovery claims are unavailable.")
+        if representative:
+            raise HTTPException(status_code=409, detail=live_catalog.duplicate_reason(representative))
     eligible = live_catalog.offer(entry) if dynamic else live_catalog.curated_offer(entry)
     if not eligible["runnable"]:
         raise HTTPException(status_code=400, detail=f"Not runnable: {sanitize_text(eligible['reason'], 300)}")
@@ -582,12 +598,12 @@ async def start_reproduction(req: ReproduceRequest, request: Request):
             budget.check()
             if dynamic:
                 live_catalog.save_outcome(entry, outcome)
-                site_export.write_catalog(CATALOG_PATH, site_export.OUT, live_catalog.load_entries())
+                site_export.write_catalog(CATALOG_PATH, site_export.OUT, live_catalog.offered_entries())
             if outcome.status == cat.CHECKED and outcome.dossier is not None and outcome.dossier.verdicts:
                 seeds = getattr(orch, "seeds", None) or cat.build_paper(entry)[0]["seeds"]
                 note = f"live quick check, {seeds} seeds" if req.quick else f"live run, {seeds} seeds"
                 ref = site_export.export_live_run(outcome.run_dir, CATALOG_PATH, site_export.OUT, note, seeds,
-                                                  extra_entries=live_catalog.load_entries())
+                                                  extra_entries=live_catalog.offered_entries())
                 job.add({"ts": time.time(), "type": "finished", "run_id": ref["id"],
                          "verdict": sanitize(cat.verdict_dict(entry, outcome.dossier, outcome.run_dir)),
                          "cost_gross_usd": round(outcome.cost_gross_usd, 4)})

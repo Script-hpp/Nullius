@@ -83,6 +83,7 @@ def preflight_path(candidate_id: str) -> Path:
 def save_readiness(candidate_id: str, result: dict) -> dict:
     readiness = {"ready": bool(result.get("ready")), "stage": result.get("stage"), "reason": result.get("reason"),
                  "mode": result.get("mode"), "repo": result.get("repo"), "cost_gross_usd": result.get("cost_gross_usd"),
+                 "spec_enforced": result.get("spec_enforced"), "spec_missing": result.get("spec_missing"),
                  "checked_at": time.time()}
     with _lock:
         entries = load_entries()
@@ -125,8 +126,94 @@ def save_outcome(entry: dict, outcome: cat.CandidateOutcome) -> None:
         write_json_atomic(PATH, entries)
 
 
+# ---- one offer per claim -------------------------------------------------------------------------------------------
+# A paper can be found several times (different quote, repository link or protocol note give different ids). Saved finds
+# with the same paper (arXiv id without version), dataset/task, metric, target and horizon are ONE claim for offering:
+# one card, one start button. The others stay on disk with their readiness state untouched; they are only hidden.
+# Different targets of one paper (0.366 vs 0.371) are different claims.
+_spec_cache: dict[tuple[str, float], tuple[int, int] | None] = {}
+
+
+def claim_key(entry: dict) -> tuple | None:
+    cand = entry.get("candidate") or {}
+    claim = cand.get("claim") or {}
+    metric = str(claim.get("metric") or "").lower()
+    metric = "accuracy" if metric == "acc" else metric
+    try:
+        target = float(claim.get("target"))
+    except (TypeError, ValueError):
+        return None   # no exact target: never grouped
+    if metric == "accuracy" and target > 1:
+        target /= 100
+    arxiv = re.sub(r"v\d+$", "", str(entry.get("arxiv_id") or ""))
+    task = claim.get("matched_task") or cand.get("dataset")
+    if not arxiv or not task or not metric:
+        return None
+    return (arxiv, str(cand.get("dataset")).lower(), str(task).lower(), metric, round(target, 9), claim.get("horizon"))
+
+
+def _spec_counts(entry: dict) -> tuple[int, int] | None:
+    """(enforced spec values, missing values) of the readiness check; older checks are read from their saved state."""
+    readiness = entry.get("readiness") or {}
+    if readiness.get("spec_enforced") is not None:
+        return int(readiness["spec_enforced"]), int(readiness.get("spec_missing") or 0)
+    path = preflight_path(entry["id"])
+    try:
+        stamp = path.stat().st_mtime
+    except OSError:
+        return None
+    key = (str(path), stamp)
+    if key not in _spec_cache:
+        try:
+            import pickle   # own file on the logs volume, the same trust as the run that resumes from it
+            spec = pickle.loads(path.read_bytes())["state"].get("spec")
+            _spec_cache[key] = (len(spec.enforced()), len(spec.missing)) if spec is not None else None
+        except Exception:
+            _spec_cache[key] = None
+    return _spec_cache[key]
+
+
+def _rank(entry: dict) -> tuple:
+    """Representative of one claim, deterministic: a ready find beats a not-ready one; then more enforced spec values,
+    then fewer missing values, then the newest find, then the id. A find with a recorded outcome ranks first and is
+    never hidden: its evidence stays in the catalog export."""
+    enforced, missing = _spec_counts(entry) or (-1, 0)
+    ts = (entry.get("discovery_event") or {}).get("ts") or 0
+    return (entry.get("status") != cat.UNCHECKED, bool((entry.get("readiness") or {}).get("ready")),
+            enforced, -missing, ts, entry["id"])
+
+
+def duplicates(entries: list[dict] | None = None) -> dict[str, str]:
+    """{hidden id: representative id} over the saved finds."""
+    entries = load_entries() if entries is None else entries
+    groups: dict[tuple, list[dict]] = {}
+    for entry in entries:
+        key = claim_key(entry)
+        if key is not None:
+            groups.setdefault(key, []).append(entry)
+    hidden: dict[str, str] = {}
+    for group in groups.values():
+        if len(group) > 1:
+            best = max(group, key=_rank)
+            hidden.update({e["id"]: best["id"] for e in group
+                           if e is not best and e.get("status") == cat.UNCHECKED})
+    return hidden
+
+
+def offered_entries(entries: list[dict] | None = None) -> list[dict]:
+    entries = load_entries() if entries is None else entries
+    hidden = duplicates(entries)
+    return [e for e in entries if e["id"] not in hidden]
+
+
+def duplicate_reason(representative_id: str) -> str:
+    return (f"This claim was found more than once. The check is offered on the earlier find {representative_id}; "
+            "start it there.")
+
+
 def candidate_events() -> list[dict]:
-    return sorted((e["discovery_event"] for e in load_entries()), key=lambda e: e.get("ts", 0))[-30:]
+    entries = offered_entries()
+    return sorted((e["discovery_event"] for e in entries), key=lambda e: e.get("ts", 0))[-30:]
 
 
 def import_existing_cache() -> None:
@@ -148,4 +235,18 @@ def save_replay(events: list[dict]) -> None:
 
 
 def latest_replay() -> list[dict]:
-    return json.loads(REPLAY_PATH.read_text()) if REPLAY_PATH.exists() else []
+    """Recorded events; cards and readiness of a hidden duplicate are left out, so the replay shows no double offer."""
+    events = json.loads(REPLAY_PATH.read_text()) if REPLAY_PATH.exists() else []
+    hidden = duplicates()
+    seen = {e.get("catalog_id") for e in events if isinstance(e, dict) and e.get("type") == "candidate"}
+    out = []
+    for e in events:
+        rep = hidden.get(e.get("catalog_id")) if isinstance(e, dict) and e.get("type") in ("candidate", "readiness") else None
+        if rep is None:
+            out.append(e)
+        elif e["type"] == "candidate" and rep not in seen:   # the card of the same claim is the representative's
+            stored = find_entry(rep)
+            if stored is not None:
+                seen.add(rep)
+                out.append({**stored["discovery_event"], "ts": e.get("ts", stored["discovery_event"].get("ts"))})
+    return out

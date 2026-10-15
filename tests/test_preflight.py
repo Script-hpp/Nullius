@@ -103,6 +103,53 @@ def test_gpu_kernel_imports_ignore_fallbacks_relative_imports_and_files_outside_
     assert o.preflight(e["id"], "catalog")["ready"]
 
 
+def count_paid_steps(monkeypatch):
+    """Fake the two paid steps after repository reading (setup-detail extraction, spec) and count their calls."""
+    n = {"details": 0, "spec": 0}
+    real_spec = loop_mod.build_spec
+
+    def details(llm, docs, text, ds):
+        n["details"] += 1
+        return [], 0
+
+    def spec(*a, **k):
+        n["spec"] += 1
+        return real_spec(*a, **k)
+    monkeypatch.setattr(loop_mod, "extract_setup_details", details)
+    monkeypatch.setattr(loop_mod, "build_spec", spec)
+    return n
+
+
+def test_gpu_only_chain_blocks_before_paid_setup_details_and_spec(tmp_path, monkeypatch):
+    o, e, _ = cg_orch(tmp_path, monkeypatch)
+    with_repo(monkeypatch, {"models/SL-GCN.py": "import torch\nfrom mamba_ssm import Mamba\nclass GCN: pass\n"})
+    n = count_paid_steps(monkeypatch)
+    result = o.preflight(e["id"], "catalog")
+    assert not result["ready"] and result["stage"] == "authors' code" and "mamba_ssm (models/SL-GCN.py)" in result["reason"]
+    assert n == {"details": 0, "spec": 0}   # both paid steps skipped; the late check alone would have paid for them
+
+
+def test_gpu_file_outside_the_claimed_model_chain_never_blocks_early(tmp_path, monkeypatch):
+    # Time-Series-Library style: many models in one repo, an unrelated one imports mamba_ssm.
+    o, e, _ = cg_orch(tmp_path, monkeypatch)
+    with_repo(monkeypatch, {"models/SL-GCN.py": "import torch\nclass GCN: pass\n",
+                            "models/Mamba.py": "from mamba_ssm import Mamba\nclass M: pass\n",
+                            "layers/flash.py": "import flash_attn\n"})
+    n = count_paid_steps(monkeypatch)
+    result = o.preflight(e["id"], "catalog")
+    assert result["ready"] and n == {"details": 1, "spec": 1}
+
+
+def test_unknown_chain_does_not_block_early_but_the_late_check_still_does(tmp_path, monkeypatch):
+    # No file defines the claimed model (SL-GCN): the chain is unknown, so nothing blocks before the paid steps.
+    o, e, _ = cg_orch(tmp_path, monkeypatch)
+    with_repo(monkeypatch, {"models/gcn.py": "from mamba_ssm import Mamba\nclass Other: pass\n"})
+    n = count_paid_steps(monkeypatch)
+    result = o.preflight(e["id"], "catalog")
+    assert n == {"details": 1, "spec": 1}
+    assert not result["ready"] and "mamba_ssm (models/gcn.py)" in result["reason"]   # late safety net
+
+
 # ---- live catalog and API ----------------------------------------------------------------------------------------------------
 def test_found_claim_is_offered_only_after_a_passed_readiness_check(tmp_path, monkeypatch):
     monkeypatch.setattr(live_catalog, "PATH", tmp_path / "live.json")

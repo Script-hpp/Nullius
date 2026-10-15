@@ -13,6 +13,10 @@ class MethodImplementationBlocked(RuntimeError):
     """Known incomplete generated method; no numeric paper verdict may be issued."""
 
 
+class GpuKernelBlocked(MethodImplementationBlocked):
+    """The claimed model's import chain needs a GPU-only kernel library the CPU sandbox cannot run."""
+
+
 ZERO_CALLS = ("zeros", "zeros_like", "new_zeros")
 FULL_CALLS = ("full", "full_like", "new_full")
 HELPER_PREFIXES = ("__init__", "init", "reset", "clear", "zero", "empty", "pad", "mask", "default")

@@ -231,6 +231,11 @@ export function deriveView(events: DEvent[]): DiscoveryView {
       p.state = 'searching'
       p.claim = parseClaim(e.claim?.text)
       activeId = e.arxiv_id
+    } else if (e.type === 'candidate' && typeof e.duplicate_of === 'string') {
+      // The same claim was found before: one card, one start button. The earlier find is the offer.
+      const open = papers.get(e.arxiv_id as string)
+      if (open && open.state !== 'candidate') papers.delete(e.arxiv_id as string)
+      if (activeId === e.arxiv_id) activeId = null
     } else if (e.type === 'candidate') {
       candidates++
       if (e.cached) { cachedCandidates++; seen.add(e.arxiv_id) }
