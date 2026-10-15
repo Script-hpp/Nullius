@@ -158,5 +158,17 @@
   "mode": "nachbau_autorencode",
   "catalog_id": "disc_2501_01087",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2307_03756--20261014-080542",
+  "paper_id": "disc_2307_03756",
+  "title": "FITS: Modeling Time Series with $10k$ Parameters",
+  "timestamp": "20261014-080542",
+  "mode": "nachbau_autorencode",
+  "note": "live quick check, 3 seeds",
+  "live": true,
+  "seeds": 3,
+  "catalog_id": "disc_2307_03756",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

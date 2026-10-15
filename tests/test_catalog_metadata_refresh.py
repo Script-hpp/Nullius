@@ -9,7 +9,7 @@ def test_redeploy_corrects_fits_setup_preserves_outcomes_and_live_only_rows(tmp_
     out.mkdir()
     old = {"id": "disc_2307_03756", "title": "FITS", "claim": {"target": .372, "input_length": 720},
            "status": "geprueft", "verdict": {"measured_mean": .374}, "run_id": "fits--timestamp",
-           "cost_gross_usd": .12, "checked_at": "2026-10-13", "head": {"text": "saved summary"}}
+           "cost_gross_usd": .12, "checked_at": "2099-01-01", "head": {"text": "saved summary"}}
     live = {"id": "live-candidate", "status": "geprueft", "verdict": {"measured_mean": .38}}
     (out / "catalog.json").write_text(json.dumps([old, live]))
     index = b'[{"id":"finished-run"}]'
@@ -24,6 +24,23 @@ def test_redeploy_corrects_fits_setup_preserves_outcomes_and_live_only_rows(tmp_
     before = (out / "catalog.json").read_bytes()
     site_export.refresh_catalog_metadata(catalog.CATALOG_YAML, out)
     assert (out / "catalog.json").read_bytes() == before
+
+
+def test_redeploy_applies_newer_curated_check_and_jury_flags(tmp_path):
+    out = tmp_path / "data"
+    out.mkdir()
+    stale = [{"id": "disc_2307_03756", "status": "ungeprueft", "verdict": None, "run_id": None,
+              "checked_at": None, "jury": None},
+             {"id": "disc_1609_02907_citeseer", "jury": {"ready": True, "reason": "Gesamtaussage: vorlaeufig"}}]
+    (out / "catalog.json").write_text(json.dumps(stale))
+    site_export.refresh_catalog_metadata(catalog.CATALOG_YAML, out)
+    rows = {row["id"]: row for row in json.loads((out / "catalog.json").read_text())}
+    fits = rows["disc_2307_03756"]
+    assert fits["status"] == "geprueft" and fits["run_id"] == "disc_2307_03756--20261014-080542"
+    assert fits["verdict"]["measured_mean"] and fits["jury"]["ready"] is True
+    assert rows["disc_1609_02907_citeseer"]["jury"]["ready"] is False
+    featured = {i for i, row in rows.items() if (row.get("jury") or {}).get("ready") and row.get("run_id")}
+    assert featured == {"disc_1609_02907", "disc_2307_03756", "disc_2501_01087"}
 
 
 def test_new_export_contains_current_catalog_definitions(tmp_path):

@@ -136,9 +136,18 @@ def refresh_catalog_metadata(catalog_yaml: Path, out: Path) -> None:
     definitions = catalog_json(catalog_entries(catalog_yaml), read_benchmark(out), out)
     metadata = ("arxiv_id", "title", "dataset", "task", "claim", "protocol", "column_check",
                 "github_url", "source_url", "origin", "benchmark")
+    outcome = ("status", "reason", "checked_at", "cost_gross_usd", "verdict", "run_id")
     for entry in definitions:
         if entry["id"] in by_id:
-            by_id[entry["id"]].update({key: entry[key] for key in metadata})
+            row = by_id[entry["id"]]
+            row.update({key: entry[key] for key in metadata})
+            # A curated check newer than the stored one replaces it; an older catalog never erases newer evidence.
+            if entry.get("verdict") and (entry.get("checked_at") or "") > (row.get("checked_at") or ""):
+                row.update({key: entry[key] for key in outcome})
+                if "head" in entry:
+                    row["head"] = entry["head"]
+            # The jury flag is a curation decision of catalog.yaml, never a run outcome.
+            row["jury"] = entry["jury"]
         else:
             stored.append(entry)
             by_id[entry["id"]] = entry
