@@ -134,3 +134,57 @@ def placeholder_issues(code: str, repo_files: dict[str, str]) -> list[str]:
                 issues.append(f"{node.name}.{function.name} returns constant zeros for its input although the repository implements a "
                               "retrieval mechanism. Implement the retrieval; a placeholder cannot assess the paper.")
     return issues
+
+
+# Libraries whose layers exist only as custom GPU kernels. The sandbox is CPU-only and has no network, so an
+# authors' model built on one of them cannot run there. SST (2026-10-15) imported mamba_ssm; the run spent its
+# whole budget rewriting the selective scan by hand and produced no measurement.
+GPU_KERNEL_PACKAGES = frozenset({"mamba_ssm", "causal_conv1d", "selective_scan_cuda", "flash_attn", "xformers", "triton",
+                                 "apex", "bitsandbytes"})
+IMPORT_ERRORS = {"ImportError", "ModuleNotFoundError", "Exception", "BaseException"}
+
+
+def _guarded(handlers: list[ast.ExceptHandler]) -> bool:
+    """A try block whose handler catches a failed import: the authors ship a fallback."""
+    for handler in handlers:
+        caught = handler.type
+        names = caught.elts if isinstance(caught, ast.Tuple) else [caught]
+        if caught is None or any(isinstance(n, ast.Name) and n.id in IMPORT_ERRORS for n in names):
+            return True
+    return False
+
+
+def _imported_roots(text: str) -> set[str]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return set(re.findall(r"^(?:from|import)\s+(\w+)", text, re.M))
+    roots: set[str] = set()
+
+    def visit(node: ast.AST, guarded: bool) -> None:
+        if isinstance(node, ast.Import) and not guarded:
+            roots.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and not guarded and not node.level and node.module:
+            roots.add(node.module.split(".")[0])
+        if isinstance(node, ast.Try):
+            for child in node.body:
+                visit(child, guarded or _guarded(node.handlers))
+            for child in [*node.handlers, *node.orelse, *node.finalbody]:
+                visit(child, guarded)
+            return
+        for child in ast.iter_child_nodes(node):
+            visit(child, guarded)
+
+    visit(tree, False)
+    return roots
+
+
+def gpu_kernel_imports(files: dict[str, str]) -> dict[str, list[str]]:
+    """GPU-only kernel library -> the Python files that import it without a fallback."""
+    found: dict[str, list[str]] = {}
+    for path, text in files.items():
+        if not path.endswith(".py"):
+            continue
+        for root in sorted(_imported_roots(text) & GPU_KERNEL_PACKAGES):
+            found.setdefault(root, []).append(path)
+    return found

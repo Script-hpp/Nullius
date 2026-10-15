@@ -64,7 +64,7 @@ from .setup_details import (
     format_for_prompt_v2)
 from .tasks import HARNESS_DIR, SANDBOX_HARNESS_DIR, TASKS, Task
 from . import spec_check
-from .method_guard import MethodImplementationBlocked, placeholder_issues
+from .method_guard import MethodImplementationBlocked, gpu_kernel_imports, placeholder_issues
 from .spec import (
     Spec, as_dict as spec_as_dict, build_spec, config_note, format_code_grounded, format_spec, model_files, model_name_of)
 
@@ -2302,8 +2302,13 @@ class Orchestrator:
             result.update(stage="authors' code", reason=str(exc))
         else:
             result.update(mode=prepared.dossier.mode, repo=(prepared.dossier.repo or {}).get("url"))
+            kernels = self._gpu_kernel_needs()
             if prepared.dossier.mode != MODE_AUTHOR_CODE:
                 result.update(stage="authors' code", reason=f"The authors' code is not available ({prepared.fallback_reason}).")
+            elif kernels:
+                used = "; ".join(f"{lib} ({', '.join(paths)})" for lib, paths in kernels.items())
+                result.update(stage="authors' code", reason=f"The authors' model needs a GPU-only kernel library: {used}. "
+                              "The CPU sandbox cannot run it, so no experiment was started.")
             else:
                 result.update(ready=True, stage="ready")
                 if save_path is not None:
@@ -2312,6 +2317,13 @@ class Orchestrator:
         result["cost_gross_usd"] = round(self.spent_gross_usd - start, 4)
         self._emit("preflight", **result)
         return result
+
+    def _gpu_kernel_needs(self) -> dict[str, list[str]]:
+        """GPU-only libraries the authors' files in the code prompt import (all read files when there is no spec)."""
+        files = getattr(self, "_repo_files", None) or {}
+        spec = getattr(self, "spec", None)
+        excerpt = {re.sub(r"^repo:|@[0-9a-f]+$", "", name) for name in (spec.excerpt_docs if spec is not None else [])}
+        return gpu_kernel_imports({path: text for path, text in files.items() if not excerpt or path in excerpt})
 
     def prepare(self, paper_id: str, source: str = "benchmark") -> "Prepared":
         """Load the claim and run every step before the first sandbox branch. Raises when the run must stop."""

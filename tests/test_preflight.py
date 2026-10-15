@@ -13,11 +13,12 @@ from test_author_code_mode import cg_orch
 from test_catalog import evidence, tavily_orch
 
 
-def with_repo(monkeypatch):
+def with_repo(monkeypatch, files=None):
+    files = files or {"models/gcn.py": "class GCN: pass"}
     monkeypatch.setattr(loop_mod, "find_repo_url", lambda t: "https://github.com/x/y")
     monkeypatch.setattr(loop_mod, "fetch_readme", lambda *a, **k: "")
     monkeypatch.setattr(loop_mod, "read_repo", lambda *a, **k: RepoDump(url="https://github.com/x/y", commit="abc1234567",
-                                                                       files={"models/gcn.py": "class GCN: pass"}, n_tracked=1))
+                                                                       files=files, n_tracked=len(files)))
     spec = Spec(model="GCN", family="graph", items=[SpecItem("lr", "0.01", "lr 0.01", "paper", "paper text", 0.01, enforce=True)],
                 excerpt="=== repo:models/gcn.py@abc1234 ===\nclass GCN: pass\n", excerpt_docs=["repo:models/gcn.py@abc1234"])
     monkeypatch.setattr(loop_mod, "build_spec", lambda *a, **k: spec)
@@ -77,6 +78,29 @@ def test_claim_whose_target_cannot_be_verified_is_not_ready(tmp_path, monkeypatc
     o = tavily_orch(tmp_path, monkeypatch, [e], evidence(0.75))
     result = o.preflight(e["id"], "catalog")
     assert not result["ready"] and result["stage"] == "target" and "stopped" in result["reason"]
+
+
+def test_authors_model_on_a_gpu_only_kernel_is_not_ready(tmp_path, monkeypatch):
+    # SST (2026-10-15) imported mamba_ssm; the CPU sandbox cannot run it and the run spent its budget without a measurement.
+    o, e, _ = cg_orch(tmp_path, monkeypatch)
+    with_repo(monkeypatch, {"models/gcn.py": "import torch\nfrom mamba_ssm import Mamba\nclass GCN: pass\n"})
+    saved = tmp_path / "x.pkl"
+    result = o.preflight(e["id"], "catalog", save_path=saved)
+    assert not result["ready"] and result["stage"] == "authors' code"
+    assert "mamba_ssm (models/gcn.py)" in result["reason"] and "GPU-only" in result["reason"]
+    assert not saved.exists()
+
+
+def test_gpu_kernel_imports_ignore_fallbacks_relative_imports_and_files_outside_the_code_prompt(tmp_path, monkeypatch):
+    from repro_agent.method_guard import gpu_kernel_imports
+    guarded = "try:\n    from flash_attn import flash_attn_func\nexcept ImportError:\n    flash_attn_func = None\n"
+    files = {"a.py": guarded, "b.py": "from .triton import kernel\nimport torch_geometric, dgl\n", "c.sh": "import triton",
+             "d.py": "def f(:\nimport causal_conv1d.cuda\n", "e.py": "import xformers.ops as xops\n"}
+    assert gpu_kernel_imports(files) == {"causal_conv1d": ["d.py"], "xformers": ["e.py"]}
+    # Only the authors' files that go into the code prompt count when a spec names them.
+    o, e, _ = cg_orch(tmp_path, monkeypatch)
+    with_repo(monkeypatch, {"models/gcn.py": "class GCN: pass", "tools/profile.py": "import triton\n"})
+    assert o.preflight(e["id"], "catalog")["ready"]
 
 
 # ---- live catalog and API ----------------------------------------------------------------------------------------------------

@@ -76,5 +76,28 @@
  "full_runs_1_causes": {
   "BANGS": "heads=8 (GAT launch default) required to be read by a GCN backbone; static message only named keys, so repairs moved epochs to CONFIG['max_epochs'] and back. 0/3 seeds.",
   "SST": "Candidate 0: 17 unread spec keys after 3 spec rounds, then 4 more repairs on the same finding; candidate 1 met 32/32 but raised KeyError CONFIG['padding_patch']; job budget 0.50 USD exhausted. random_seed was enforced although the harness sets seeds."
+ },
+ "full_runs_2": {
+  "code": "71afca2 (spec findings actionable, skip candidates the spec rounds could not fix, missing CONFIG keys, random_seed not a spec value)",
+  "disc_2410_09348_d8991277dd33d43f (BANGS, Cora 0.8423)": {
+   "result": "verdict: partially reproduced (teilweise), 0.8193 +/- 0.0065 over 3 seeds, target 0.8423, tolerance 0.01, overall provisional",
+   "cost_gross_usd": {
+    "preflight": 0.1955,
+    "run": 0.2453
+   },
+   "seconds_run": 4707,
+   "path": "candidate 0 measured 0.572 on validation selection; candidate 1 stopped after repairs; candidate 2 selected (0.819); seeds 1/2 0.813/0.826",
+   "note": "Each training takes 540-620 s on the CPU sandbox, so a jury click on BANGS waits about 80 minutes for the verdict."
+  },
+  "disc_2404_14757_80c8559b5dd0e50f (SST, ETTh1 0.381)": {
+   "result": "stopped: job budget 0.50 USD exhausted before any seed measured (status unchecked, explained reason)",
+   "cost_gross_usd": {
+    "preflight": 0.1523,
+    "run": "about 0.50 (job budget)"
+   },
+   "seconds_run": 1108,
+   "cause": "models/SST.py and layers/Long_encoder.py import mamba_ssm (Mamba selective-scan CUDA kernel). The CPU sandbox has no such package; every candidate either raised the missing import or rewrote the scan by hand and crashed on shapes.",
+   "fix": "Readiness check blocks claims whose authors' files in the code prompt import a GPU-only kernel library (mamba_ssm, causal_conv1d, selective_scan_cuda, flash_attn, xformers, triton, apex, bitsandbytes) without an import fallback. Verified on the saved states: SST blocked, BANGS still ready."
+  }
  }
 }
