@@ -114,6 +114,7 @@ def catalog_json(entries: list[dict], benchmark: dict | None = None, out_dir: Pa
             "status": e.get("status"), "reason": e.get("reason"), "checked_at": e.get("checked_at"),
             "cost_gross_usd": e.get("cost_gross_usd"),
             "verdict": verdict, "run_id": run_id, "jury": e.get("jury"),
+            "recorded": e.get("recorded"),   # {date, note}: curated note for a result that is shown but not offered for a new check
         }
         head = head_of(run_id, out_dir)
         if head:
@@ -123,7 +124,10 @@ def catalog_json(entries: list[dict], benchmark: dict | None = None, out_dir: Pa
 
 
 def write_catalog(catalog_yaml: Path, out: Path, extra_entries: list[dict] | None = None) -> int:
-    data = catalog_json(catalog_entries(catalog_yaml) + (extra_entries or []), read_benchmark(out), out)
+    curated = catalog_entries(catalog_yaml)
+    known = {e["id"] for e in curated}
+    # A curated entry wins over a saved live find with the same id (its recorded result and lock are curation decisions).
+    data = catalog_json(curated + [e for e in (extra_entries or []) if e["id"] not in known], read_benchmark(out), out)
     write_json_atomic(out / "catalog.json", data)
     return len(data)
 
@@ -148,6 +152,7 @@ def refresh_catalog_metadata(catalog_yaml: Path, out: Path) -> None:
                     row["head"] = entry["head"]
             # The jury flag is a curation decision of catalog.yaml, never a run outcome.
             row["jury"] = entry["jury"]
+            row["recorded"] = entry["recorded"]
         else:
             stored.append(entry)
             by_id[entry["id"]] = entry

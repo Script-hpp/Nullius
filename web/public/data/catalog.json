@@ -47,7 +47,8 @@
   "jury": {
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_1609_02907_citeseer",
@@ -90,7 +91,8 @@
   "jury": {
    "ready": false,
    "reason": "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_1811_05868",
@@ -140,7 +142,8 @@
   "jury": {
    "ready": false,
    "reason": "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_2601_18837",
@@ -183,7 +186,8 @@
   "jury": {
    "ready": false,
    "reason": "Gesamtaussage: nicht reproduzierbar (Setup)"
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_2601_21866",
@@ -224,7 +228,8 @@
   "jury": {
    "ready": false,
    "reason": "Gesamtaussage: Agenten-Fehler vermutet"
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_2609_30894",
@@ -252,7 +257,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2511_08094",
@@ -295,7 +301,8 @@
   "jury": {
    "ready": false,
    "reason": "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_2412_03864",
@@ -323,7 +330,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2603_13702",
@@ -351,7 +359,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2303_06053",
@@ -393,7 +402,11 @@
   "run_id": "disc_2303_06053--20261009-201230",
   "jury": {
    "ready": false,
-   "reason": "Re-check 2026-10-14 with the current pipeline: with the paper's hyperparameters (6 blocks, hidden size 512, input length 512) every training attempt exceeds the 10-minute CPU limit. The earlier result used smaller code defaults, so it does not show the paper's setting."
+   "reason": "A new live check is locked: with the paper's full model size (6 blocks, hidden size 512) every training run exceeds the 10-minute CPU limit, so the check cannot finish here."
+  },
+  "recorded": {
+   "date": "2026-10-09",
+   "note": "Target reached in the recorded run, with a reduced model: 1 mixer block and hidden size 128 instead of the paper's 6 blocks and 512. This shows the target number can be reached, not that the full-size model was reproduced."
   },
   "head": {
    "text": "The paper suggests using repeated simple calculations across time and different variables to predict future values. It uses hourly electricity readings from a transformer station over many days. Its predictions differ from actual values by about 0.36 on average, indicating good accuracy.",
@@ -447,7 +460,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2305_10721",
@@ -475,7 +489,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2410_05697",
@@ -503,7 +518,8 @@
   "cost_gross_usd": null,
   "verdict": null,
   "run_id": null,
-  "jury": null
+  "jury": null,
+  "recorded": null
  },
  {
   "id": "disc_2405_00946",
@@ -545,7 +561,11 @@
   "run_id": "disc_2405_00946--20261009-220822",
   "jury": {
    "ready": false,
-   "reason": "Re-check 2026-10-14 with the current pipeline: the authors' launch script for the linear SparseTSF does not set --model_type, and the code default would run the MLP variant. The check stops instead of guessing the variant."
+   "reason": "A new live check is locked: the authors' launch script does not name the model variant (linear or MLP), so the check stops instead of guessing."
+  },
+  "recorded": {
+   "date": "2026-10-09",
+   "note": "Target reached in the recorded run, which used the linear variant of the model and an input length of 720. A new check would have to guess the variant, so it is locked."
   },
   "head": {
    "text": "The paper suggests a very simple method that looks at patterns repeating over time to predict future values using only about one thousand adjustable settings. The data consists of hourly electricity‑usage readings from a transformer, collected over many days. A reported average forecast error of 0.359 means its predictions are, on average, quite close to the actual numbers.",
@@ -618,6 +638,20 @@
   "jury": {
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
+  },
+  "recorded": null,
+  "head": {
+   "text": "FITS proposes a compact model that forecasts hourly electricity transformer data, claiming an average prediction error of roughly 0.37.",
+   "authors": [
+    "Zhijian Xu",
+    "Ailing Zeng",
+    "Qiang Xu"
+   ],
+   "authors_source": "arXiv abstract page (2307.03756)",
+   "year": 2023,
+   "institutions_source": "arXiv text v3, read with Tavily Extract",
+   "source": "arXiv abstract (2307.03756) and the claim of the check",
+   "generated_by": "Nemotron Super (Token Factory)"
   }
  },
  {
@@ -661,7 +695,8 @@
   "jury": {
    "ready": false,
    "reason": "Not re-checked with the current pipeline (2026-10-14 catalog regression covered FITS, Kipf GCN on Cora, GLinear, TSMixer and SparseTSF); the result shown is from an earlier pipeline version."
-  }
+  },
+  "recorded": null
  },
  {
   "id": "disc_2501_01087",
@@ -705,6 +740,7 @@
    "ready": true,
    "reason": "Gesamtaussage: vorlaeufig"
   },
+  "recorded": null,
   "head": {
    "text": "The paper introduces GLinear, which reportedly yields a low error value on the ETTh1 electricity transformer dataset.",
    "authors": [
@@ -766,6 +802,67 @@
    ],
    "institutions_source": "arXiv text v1, read with Tavily Extract",
    "source": "arXiv abstract (2501.01087) and the claim of the check",
+   "generated_by": "Nemotron Super (Token Factory)"
+  }
+ },
+ {
+  "id": "disc_2410_09348_d8991277dd33d43f",
+  "arxiv_id": "2410.09348",
+  "title": "BANGS: Game-Theoretic Node Selection for Graph Self-Training",
+  "dataset": "Cora",
+  "task": "Cora",
+  "claim": {
+   "method": "BANGS",
+   "metric": "accuracy",
+   "target": 84.23,
+   "horizon": null,
+   "quote": "Cora 80.82±0.14 81.40±0.29 83.06±0.11 83.04±0.38 83.16±0.10 83.72±0.52 84.23±0.62*",
+   "input_length": null
+  },
+  "protocol": "passt",
+  "column_check": "ok",
+  "github_url": "https://github.com/fangxin-wang/BANGS",
+  "source_url": "https://arxiv.org/abs/2410.09348",
+  "origin": "discovery",
+  "benchmark": null,
+  "status": "geprueft",
+  "reason": null,
+  "checked_at": "2026-10-15T14:49:00Z",
+  "cost_gross_usd": 0.2453,
+  "verdict": {
+   "urteil": "teilweise",
+   "measured_mean": 0.819333,
+   "measured_std": 0.006506,
+   "seeds": 3,
+   "target": 0.8423,
+   "tolerance": 0.01,
+   "gesamtaussage": "vorlaeufig",
+   "mode": "nachbau_autorencode",
+   "graph_repairs": 0,
+   "fault_repairs": 0,
+   "run_dir": "runs/disc_2410_09348_d8991277dd33d43f/20261015-153350"
+  },
+  "run_id": "disc_2410_09348_d8991277dd33d43f--20261015-153350",
+  "jury": {
+   "ready": false,
+   "reason": "A full check takes about 80 minutes on CPU (each training run takes about 10 minutes), too long for a live check."
+  },
+  "recorded": {
+   "date": "2026-10-15",
+   "note": "Recorded run: 81.9% measured against the paper's 84.2%, a partial match with 3 seeds. A full check took about 80 minutes on CPU, so no new live check is offered."
+  },
+  "head": {
+   "text": "The paper suggests repeatedly choosing batches of unlabeled scientific articles together, using game‑theory ideas, to improve how the system labels them. The data is Cora, a collection of scientific articles that cite each other. It claims the method correctly labels about 84 out of every 100 articles.",
+   "authors": [
+    "Fangxin Wang",
+    "Kay Liu",
+    "Sourav Medya",
+    "Philip S. Yu"
+   ],
+   "authors_source": "arXiv abstract page (2410.09348)",
+   "year": 2024,
+   "institutions_source": "arXiv text v1, read with Tavily Extract",
+   "source": "arXiv abstract (2410.09348) and the claim of the check",
    "generated_by": "Nemotron Super (Token Factory)"
   }
  }

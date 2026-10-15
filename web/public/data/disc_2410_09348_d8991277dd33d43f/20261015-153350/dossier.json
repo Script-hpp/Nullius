@@ -1,0 +1,1608 @@
+{
+  "paper_id": "disc_2410_09348_d8991277dd33d43f",
+  "claims": [
+    {
+      "id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "text": "BANGS erreicht 84.23 % Accuracy auf Cora (Standard-Split)",
+      "metric": "accuracy",
+      "target": 0.8423,
+      "tolerance": 0.01,
+      "source": "tab:GCN, arXiv v1 (latex)",
+      "origin": "paper",
+      "evidence_urls": [
+        "https://export.arxiv.org/src/2410.09348v1"
+      ],
+      "target_evidence": {
+        "value": 0.8423,
+        "quote": "\\midrule\n\\textbf{Cora}       & 80.82±0.14 & 81.40±0.29 & 83.06±0.11       & 83.04±0.38 & 83.16±0.10 & {\\ul 83.72±0.52} & \\textbf{84.23±0.62*}",
+        "table": "tab:GCN",
+        "url": "https://export.arxiv.org/src/2410.09348v1",
+        "source_kind": "latex",
+        "retrieved_at": "2026-10-15T13:30:33+00:00",
+        "sha256": "73fbc25999bd47164ce6772390d7822559e862319449f809aa60019809db59d2",
+        "arxiv_version": "v1",
+        "caveat": null,
+        "column_check": "ok",
+        "from_store": false
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-b2be429b",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "d96952f65370",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) exceeded 90s: the script ignores SMOKE=1. With SMOKE=1 use the tiny subset and 1 epoch as described.",
+      "tavily_queries": [],
+      "cost_usd": 0.028294800000000002,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-f39ed0b6",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "140eb95a6802",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "48.)\n  adj = torch.sparse_coo_tensor(\n/work/train.py:45: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)\n  tmp = torch.sparse.mm(D_inv_sqrt, adj_sp)\nTraceback (most recent call last):\n  File \"/work/train.py\", line 565, in <module>\n    main()\n  File \"/work/train.py\", line 547, in main\n    model, best_val_acc, test_logits = self_training_inner(\n                                       ^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 518, in self_training_inner\n    pl_idx = get_IGP_idx_game(None, logits, labels, train_mask,\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 296, in get_IGP_idx_game\n    Values = IGP_sample_banzhaf(g, output, labels, idx_train,\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 277, in IGP_sample_banzhaf\n    Utilities[n] = entropy_utility_efficient(y_probs, idx_sampled, idx_train,\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 203, in entropy_utility_efficient\n    train_prob_prop = torch.sparse.mm(influence_submatrix_train,\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: mat1 and mat2 shapes cannot be multiplied (7x140 and 237x140)\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.0472866,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-9beb5688",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "8835854bfaeb",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.572,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.06345239999999999,
+      "metrics": {
+        "accuracy": 0.572
+      },
+      "coverage": {
+        "executed": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          21,
+          26,
+          27,
+          28,
+          29,
+          32,
+          33,
+          34,
+          37,
+          39,
+          40,
+          44,
+          45,
+          46,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          56,
+          58,
+          59,
+          60,
+          61,
+          62,
+          65,
+          66,
+          69,
+          71,
+          73,
+          74,
+          75,
+          77,
+          78,
+          79,
+          80,
+          81,
+          82,
+          83,
+          85,
+          86,
+          87,
+          88,
+          89,
+          91,
+          92,
+          93,
+          94,
+          96,
+          97,
+          98,
+          101,
+          102,
+          103,
+          106,
+          115,
+          116,
+          117,
+          118,
+          119,
+          120,
+          121,
+          124,
+          125,
+          126,
+          127,
+          128,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          139,
+          140,
+          143,
+          144,
+          145,
+          148,
+          149,
+          150,
+          151,
+          153,
+          156,
+          157,
+          160,
+          167,
+          168,
+          169,
+          170,
+          171,
+          174,
+          175,
+          176,
+          180,
+          183,
+          185,
+          186,
+          187,
+          188,
+          192,
+          193,
+          198,
+          199,
+          200,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          211,
+          214,
+          221,
+          228,
+          229,
+          231,
+          234,
+          235,
+          236,
+          237,
+          238,
+          239,
+          242,
+          243,
+          244,
+          245,
+          247,
+          248,
+          251,
+          252,
+          253,
+          254,
+          255,
+          258,
+          265,
+          266,
+          267,
+          270,
+          273,
+          275,
+          276
+        ],
+        "missing": [
+          64,
+          178,
+          189,
+          194,
+          195,
+          196
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 0,
+      "chosen": false,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.54,
+        "baselines": {
+          "majority": 0.1
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-df6ed19b",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "c1304114414a",
+      "seed": 0,
+      "status": "ungueltig",
+      "measured": null,
+      "error_summary": "Statische Pruefung: Dataset-Bibliothek: 'dgl' in Zeile 15",
+      "tavily_queries": [],
+      "cost_usd": 0.07568699999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-0d63809e",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "64c90d2e1a93",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 186, in <module>\n    main()\n  File \"/work/train.py\", line 142, in main\n    adj_norm = normalize_adj(adj_sp)\n               ^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 32, in normalize_adj\n    d_mat_inv_sqrt = sp.diags(d_inv_sqrt)\n                     ^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/scipy/sparse/_construct.py\", line 543, in diags\n    A = diags_array(diagonals, offsets=offsets, shape=shape, dtype=dtype)\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.11/site-packages/scipy/sparse/_construct.py\", line 370, in diags_array\n    raise ValueError(\"Different number of diagonals and offsets.\")\nValueError: Different number of diagonals and offsets.\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.08893169999999999,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-63fe721c",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "07084979c302",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 171, in <module>\n    main()\n  File \"/work/train.py\", line 133, in main\n    class Args:\n  File \"/work/train.py\", line 149, in Args\n    device = device\n             ^^^^^^\nNameError: name 'device' is not defined\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.10365209999999998,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-97097bab",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "35bab0931014",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\nTraceback (most recent call last):\n  File \"/work/train.py\", line 171, in <module>\n    main()\n  File \"/work/train.py\", line 133, in main\n    class Args:\n  File \"/work/train.py\", line 149, in Args\n    device = device\n             ^^^^^^\nNameError: name 'device' is not defined\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.11784389999999997,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 1,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-5bae7ae5",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "effccea45488",
+      "seed": 0,
+      "status": "fehler",
+      "measured": null,
+      "error_summary": "Smoke run (SMOKE=1) crashed:\n/work/train.py:36: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /__w/pytorch/pytorch/aten/src/ATen/Context.cpp:848.)\n  adj = torch.sparse_coo_tensor(idx_all, vals, (N, N)).coalesce()\nTraceback (most recent call last):\n  File \"/work/train.py\", line 210, in <module>\n    preds = self_training_loop(features, adj_norm, labels, train_idx, val_idx, test_idx,\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/train.py\", line 133, in self_training_loop\n    model = GCN(Nfeat=features.shape[1], nhid=hidden_dim,\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: GCN.__init__() got an unexpected keyword argument 'Nfeat'\n(exit code 1)",
+      "tavily_queries": [],
+      "cost_usd": 0.13206749999999998,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-5b977a6d",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "5421377cb61e",
+      "seed": 0,
+      "status": "timeout",
+      "measured": null,
+      "error_summary": "Training > 600s",
+      "tavily_queries": [],
+      "cost_usd": 0.17400689999999996,
+      "metrics": null,
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": false,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-cd496bc0",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "02e0ab745121",
+      "seed": 0,
+      "status": "abweichung",
+      "measured": 0.819,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.19039319999999996,
+      "metrics": {
+        "accuracy": 0.819
+      },
+      "coverage": {
+        "executed": [
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          28,
+          30,
+          31,
+          32,
+          33,
+          35,
+          36,
+          37,
+          38,
+          39,
+          41,
+          42,
+          43,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          52,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          61,
+          63,
+          64,
+          65,
+          66,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          74,
+          76,
+          77,
+          78,
+          79,
+          80,
+          82,
+          83,
+          84,
+          85,
+          87,
+          88,
+          89,
+          91,
+          92,
+          93,
+          95,
+          97,
+          98,
+          100,
+          101,
+          103,
+          104,
+          105,
+          107,
+          108,
+          109,
+          110,
+          111,
+          112,
+          113,
+          114,
+          115,
+          117,
+          118,
+          120,
+          121,
+          123,
+          129,
+          130,
+          131,
+          133,
+          134,
+          135,
+          136,
+          137,
+          139,
+          140,
+          141,
+          142,
+          143,
+          145,
+          146,
+          148,
+          149,
+          151,
+          154,
+          155,
+          157,
+          158,
+          160,
+          164,
+          165,
+          166,
+          167,
+          168,
+          170,
+          171,
+          172,
+          174,
+          175,
+          177,
+          180,
+          182,
+          183
+        ],
+        "missing": [
+          152,
+          162
+        ]
+      },
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": {
+        "metric": "accuracy",
+        "value": 0.77,
+        "baselines": {
+          "majority": 0.1
+        }
+      }
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-0f3cb24d",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "02e0ab745121",
+      "seed": 2,
+      "status": "abweichung",
+      "measured": 0.813,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.20565629999999996,
+      "metrics": {
+        "accuracy": 0.813
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    },
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "branch_id": "repro-branch-206339d0",
+      "parent_snapshot": "repro-snapshot-disc-2410-09348-d8991277dd33d43f-20261015-153350",
+      "code_hash": "02e0ab745121",
+      "seed": 1,
+      "status": "abweichung",
+      "measured": 0.826,
+      "error_summary": null,
+      "tavily_queries": [],
+      "cost_usd": 0.20565629999999996,
+      "metrics": {
+        "accuracy": 0.826
+      },
+      "coverage": null,
+      "diagnostics": null,
+      "metrics_droplast": null,
+      "candidate": 2,
+      "chosen": true,
+      "val": null
+    }
+  ],
+  "verdicts": [
+    {
+      "claim_id": "disc_2410_09348_d8991277dd33d43f_accuracy",
+      "urteil": "teilweise",
+      "measured_mean": 0.8193333333333332,
+      "measured_std": 0.006506407098647717,
+      "explanation": "Urteil beruht auf dem Mittelwert ueber die Seeds, Streuung (std) 0.0065. Mit unserem Setup gemessen (3 von 3 Seeds, Zielwert 0.8423 +/- 0.01, tab:GCN, arXiv v1 (latex)): Mittel 0.8193. Code-Kandidaten: 3, gewaehlt Kandidat 2 (Code 02e0ab745121) nach Validierungs-Metrik (0: accuracy 0.5400, 1: no val value, 2: accuracy 0.7700); Repo comparison incomplete: files were truncated or findings could not be verified. Method fidelity remains unchecked.; Independent selection used the final 20% of validation observations, withheld from fitting; checkpoint selection used the remaining visible validation data. Original train/test splits unchanged.",
+      "sources": [
+        "https://export.arxiv.org/src/2410.09348v1"
+      ],
+      "methode": "nicht geprueft"
+    }
+  ],
+  "isolation": [
+    "Trainingslauf ohne Netz (unshare -n); Setup vorher im Basis-Snapshot",
+    "Statische Codepruefung auf Netz/Download/Prozess (harness/code_check.py)",
+    "Testlabels dem Agenten vorenthalten, Harness laedt sie frisch"
+  ],
+  "setup_details": [
+    {
+      "topic": "feature_normalisation",
+      "value": "NormalizeFeatures transform applied to dataset",
+      "quote": "transform = NormalizeFeatures()\n    if name in ['Cora', 'Citeseer', 'Pubmed']:\n        dataset = Planetoid(root='./data/', name=name, transform=transform)",
+      "source": "repo:calib_src/data/data_utils.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "transform = NormalizeFeatures()\n    if name in ['Cora', 'Citeseer', 'Pubmed']:\n        dataset = Planetoid(root='./data/', name=name, transform=transform)"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency_normalisation",
+      "value": "normalized adjacency matrix with added self-loop",
+      "quote": "With ${\\sV^p_r}'$ selected, the student model $f_{r}$ logit estimation $\\hat{\\mH}({\\sV^p_r}') = \\alpha (\\mI - (1-\\alpha) \\Tilde{\\mA} )^{-1} \\hat{\\mX}$, where $\\alpha \\in (0,1]$ is a teleportation probability, and $\\Tilde{\\mA} \\in \\mathbb{R}^{N \\times N}$ is the normalized adjacency matrix with added self-loop.",
+      "source": "paper",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "Experimental results validate the effectiveness of \\ourmodel across various datasets and base models."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency_normalisation",
+      "value": "add self-loop to adjacency matrix",
+      "quote": "g = dgl.add_self_loop(g)",
+      "source": "repo:ST_src/data.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "if dataset == 'Cora':\n        data = CoraGraphDataset()"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "adjacency_norm",
+      "value": "influence_matrix = torch.transpose(influence_matrix, 0, 1)  # Let rows of influence_matrix sum up to 1",
+      "quote": "# Let rows of influence_matrix sum up to 1\n# print( 'row',torch.sum(influence_matrix,dim=0), ' col',torch.sum(influence_matrix,dim=1))\ninfluence_matrix = torch.transpose(influence_matrix, 0, 1)",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "# Let rows of influence_matrix sum up to 1\n# print( 'row',torch.sum(influence_matrix,dim=0), ' col',torch.sum(influence_matrix,dim=1))\ninfluence_matrix = torch.transpose(influence_matrix, 0, 1)"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "learning rate",
+      "value": "args.lr",
+      "quote": "optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)",
+      "source": "repo:ST_src/train_test.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "not stated",
+        "setting": "not stated",
+        "quote": "optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "learning rate",
+      "value": "0.001",
+      "quote": "parser.add_argument('--lr', type=float, default=0.001, help='Initial learning rate.')",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--dataset', type=str, default=\"Cora\", help='dataset for training')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "weight decay",
+      "value": "5e-4",
+      "quote": "parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 loss on parameters).')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "hidden size",
+      "value": "128",
+      "quote": "parser.add_argument('--hidden', type=int, default=128, help='Number of hidden units.')",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--model', type=str, default='GCN')\nparser.add_argument('--dataset', type=str, default=\"Cora\", help='dataset for training')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "hidden size",
+      "value": "32",
+      "quote": "parser.add_argument(\"--hid_dim_1\", type=int, default=32, help=\"Hidden layer dimension\")",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--model', type=str, default='GCN')\nparser.add_argument('--dataset', type=str, default=\"Cora\", help='dataset for training')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "heads",
+      "value": "8",
+      "quote": "parser.add_argument('--nb_heads', type=int, default=8)",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--model', type=str, default='GCN')\nparser.add_argument('--dataset', type=str, default=\"Cora\", help='dataset for training')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "heads",
+      "value": "8",
+      "quote": "parser.add_argument('--nb_out_heads', type=int, default=8)",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--model', type=str, default='GCN')\nparser.add_argument('--dataset', type=str, default=\"Cora\", help='dataset for training')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "epochs",
+      "value": "args.epochs",
+      "quote": "if not FT:\n        epochs = args.epochs",
+      "source": "repo:ST_src/train_test.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "if not FT:\n        epochs = args.epochs"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "epochs",
+      "value": "args.epochs_ft",
+      "quote": "else:\n        state_dict = torch.load('./save_model/tmp.pth')\n        model.load_state_dict(state_dict)\n        epochs = args.epochs_ft",
+      "source": "repo:ST_src/train_test.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "else:\n        state_dict = torch.load('./save_model/tmp.pth')\n        model.load_state_dict(state_dict)\n        epochs = args.epochs_ft"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping_rule",
+      "value": "max iteration number = 40, early stopping using validation data",
+      "quote": "We set the max iteration number as 40, and use validation data to early stop.",
+      "source": "paper",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "We set the max iteration number as 40, and use validation data to early stop."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping_rule",
+      "value": "test accuracy obtained by early stopping using validation data",
+      "quote": "For our method, we present the test accuracy obtained by early stopping using validation data.",
+      "source": "paper",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "For our method, we present the test accuracy obtained by early stopping using validation data."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early_stopping_rule",
+      "value": "our method reports test accuracy by early stopping (while baselines report final test accuracy)",
+      "quote": "baseline methods report final test accuracy, our method reports test accuracy by early stopping.",
+      "source": "paper",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "baseline methods report final test accuracy, our method reports test accuracy by early stopping."
+      },
+      "source_rank": "paper",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "Training stops if validation accuracy does not improve for args.patience consecutive epochs.",
+      "quote": "if bad_counter == args.patience:\n            # print('early stop')\n            break",
+      "source": "repo:ST_src/train_test.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "if bad_counter == args.patience:\n            # print('early stop')\n            break"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "--patience 500 (default)",
+      "quote": "parser.add_argument('--patience', type=int, default=500)",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "parser.add_argument('--patience', type=int, default=500)"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "early stopping rule",
+      "value": "Early stopping based on validation accuracy (select best test accuracy where validation accuracy is max)",
+      "quote": "logger.info('Best Acc Early Stopped by Valid Acc: {:.5f}'.format(test_acc_l[np.argmax(val_acc_l)]))",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "transductive",
+        "quote": "logger.info('Best Acc Early Stopped by Valid Acc: {:.5f}'.format(test_acc_l[np.argmax(val_acc_l)]))"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "sampling_probability",
+      "value": "0.5",
+      "quote": "torch.rand(len(indices)) < 0.5",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "torch.rand(len(indices)) < 0.5"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "APPNP_alpha",
+      "value": "0.15",
+      "quote": "alpha=0.15",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "alpha=0.15"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "entropy_epsilon",
+      "value": "1e-9",
+      "quote": "torch.log(class_prob + 1e-9)",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "torch.log(class_prob + 1e-9)"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "loss_reduction",
+      "value": "mean",
+      "quote": "reduction='mean'",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "reduction='mean'"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "loss_reduction",
+      "value": "sum",
+      "quote": "reduction='sum'",
+      "source": "repo:ST_src/banzhaf.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "reduction='sum'"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": "other model (file name banzhaf.py)"
+    },
+    {
+      "topic": "other",
+      "value": "samples_in_one_fold=5, k_fold=3, test_samples_per_class=85",
+      "quote": "# Run at console -> python -c 'from calib_src.data.data_utils import *; split_data(\"Cora\", 5, 3, 85)'",
+      "source": "repo:calib_src/data/data_utils.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "# Run at console -> python -c 'from calib_src.data.data_utils import *; split_data(\"Cora\", 5, 3, 85)'"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "split_type=5_3f_85",
+      "quote": "# Run at console -> python -c 'from calib_src.data.data_utils import *; generate_node_to_nearest_training(\"Cora\", \"5_3f_85\")'",
+      "source": "repo:calib_src/data/data_utils.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "# Run at console -> python -c 'from calib_src.data.data_utils import *; generate_node_to_nearest_training(\"Cora\", \"5_3f_85\")'"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "other",
+      "value": "bfs_depth=10",
+      "quote": "def generate_node_to_nearest_training(name: str, split_type: str, bfs_depth=10):",
+      "source": "repo:calib_src/data/data_utils.py@5ca22d2",
+      "applies_to": {
+        "model": "bangs",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "# Run at console -> python -c 'from calib_src.data.data_utils import *; generate_node_to_nearest_training(\"Cora\", \"5_3f_85\")'"
+      },
+      "source_rank": "code",
+      "optional": false,
+      "excluded": ""
+    },
+    {
+      "topic": "dropout",
+      "value": "0.3",
+      "quote": "parser.add_argument(\"--dropout\", type=float, default=0.3, help=\"Dropout rate in training\")",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument(\"--dropout\", type=float, default=0.3, help=\"Dropout rate in training\")"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "input dropout",
+      "value": "0.5",
+      "quote": "parser.add_argument('--input_droprate', type=float, default=0.5, help='dropout rate of input layer')",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--input_droprate', type=float, default=0.5, help='dropout rate of input layer')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "hidden dropout",
+      "value": "0.5",
+      "quote": "parser.add_argument('--hidden_droprate', type=float, default=0.5, help='dropout rate of hidden layer')",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "all",
+        "dataset": "all",
+        "setting": "not stated",
+        "quote": "parser.add_argument('--hidden_droprate', type=float, default=0.5, help='dropout rate of hidden layer')"
+      },
+      "source_rank": "argparse default",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "weight_decay",
+      "value": "5e-3",
+      "quote": "cal_wdecay = 5e-3",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "BANGS",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "cal_wdecay = 5e-3"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    },
+    {
+      "topic": "heads",
+      "value": "2",
+      "quote": "heads, bias = 2, 1",
+      "source": "repo:main_node.py@5ca22d2",
+      "applies_to": {
+        "model": "BANGS",
+        "dataset": "Cora",
+        "setting": "transductive",
+        "quote": "heads, bias = 2, 1"
+      },
+      "source_rank": "start script",
+      "optional": false,
+      "excluded": "other model (file name main_node.py)"
+    }
+  ],
+  "repo": {
+    "url": "https://github.com/fangxin-wang/BANGS",
+    "commit": "5ca22d2c9f6e93314cd09843c6f764846c6bbf00",
+    "files": [
+      "ST_src/GRAND.py",
+      "ST_src/_test.py",
+      "ST_src/banzhaf.py",
+      "ST_src/data.py",
+      "ST_src/models.py",
+      "ST_src/train_test.py",
+      "ST_src/utils.py",
+      "ST_src/utils_new.py",
+      "calib_src/calibrator/attention_ts.py",
+      "calib_src/calibrator/calibrator.py",
+      "calib_src/data/data_utils.py",
+      "calib_src/data/split.py",
+      "calib_src/model/model.py",
+      "main_node.py",
+      "run.sh"
+    ],
+    "n_tracked": 33,
+    "status": "official",
+    "status_reason": "linked in the paper text",
+    "source": "paper",
+    "evidence": "model name BANGS in README or path"
+  },
+  "baselines": {
+    "majority": {
+      "accuracy": 0.319
+    },
+    "no_graph": {
+      "accuracy": 0.506
+    }
+  },
+  "sources": [
+    {
+      "kind": "paper",
+      "url": "https://export.arxiv.org/src/2410.09348v1",
+      "mode": "fixture",
+      "n_chars": 115531,
+      "retrieved_at": "2026-10-15T13:30:33+00:00",
+      "sha256": "73fbc25999bd47164ce6772390d7822559e862319449f809aa60019809db59d2"
+    },
+    {
+      "kind": "readme",
+      "url": "https://github.com/fangxin-wang/BANGS",
+      "mode": "live",
+      "n_chars": 3376,
+      "retrieved_at": "2026-10-15T13:30:41+00:00",
+      "sha256": "0d951d8a130b6d0f11aeddc3c0e0d7c250f650924e0c0c82808dffe7e5166486"
+    },
+    {
+      "kind": "community",
+      "url": "https://github.com/fangxin-wang/BANGS/issues",
+      "mode": "live",
+      "n_chars": 643,
+      "retrieved_at": "2026-10-15T14:48:20+00:00",
+      "sha256": "72c2a02b2af961d0efb807ec3b252664816016d9ff02e8fca790a6f12276c322"
+    }
+  ],
+  "ablations": {
+    "disc_2410_09348_d8991277dd33d43f_accuracy": {
+      "accuracy_full": 0.819,
+      "accuracy_ablated": 0.635,
+      "verdict": "Graph genutzt",
+      "detail": null
+    }
+  },
+  "mode": "nachbau_autorencode",
+  "selection_policy": "validation_only",
+  "selection_contract": {
+    "version": "withheld_validation_v1",
+    "heldout_fraction": 0.2,
+    "kind": "nodes",
+    "checkpoint_validation": "visible validation only",
+    "train_test_split": "unchanged",
+    "selection_samples": 100,
+    "total_validation_samples": 500
+  },
+  "graph_repairs": {},
+  "fault_repairs": {},
+  "droplast_notes": {},
+  "community": {
+    "findings": [],
+    "dropped": 0,
+    "pages": [
+      {
+        "url": "https://github.com/fangxin-wang/BANGS/issues",
+        "n_chars": 643,
+        "sha256": "72c2a02b2af961d0efb807ec3b252664816016d9ff02e8fca790a6f12276c322"
+      }
+    ],
+    "queries": [
+      {
+        "kind": "discovery_hits",
+        "urls": [
+          "https://openreview.net/forum?id=h51mpl8Tyx"
+        ]
+      },
+      {
+        "kind": "method_search",
+        "method": "BANGS",
+        "dataset": "Cora"
+      },
+      {
+        "kind": "critique_search",
+        "method": "BANGS",
+        "dataset": "Cora",
+        "queries": [
+          "BANGS Cora reproduce results differ",
+          "BANGS bug evaluation",
+          "BANGS baseline re-evaluation fixed",
+          "we re-run BANGS on Cora and compare with the reported numbers"
+        ]
+      },
+      {
+        "kind": "repo_search",
+        "repo": "fangxin-wang/BANGS"
+      },
+      {
+        "kind": "crawl",
+        "url": "https://github.com/fangxin-wang/BANGS/issues"
+      }
+    ],
+    "reused_discovery": true,
+    "calls": [
+      "extract",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "search",
+      "crawl"
+    ],
+    "hits": [
+      {
+        "url": "https://openreview.net/pdf?id=h51mpl8Tyx",
+        "title": "BANGS: GAME-THEORETIC NODE SELECTION FOR ...",
+        "n_chars": 184
+      },
+      {
+        "url": "https://arxiv.org/html/2209.02299v6",
+        "title": "A Survey of Machine Unlearning",
+        "n_chars": 141297
+      },
+      {
+        "url": "https://arxiv.org/pdf/2608.21476",
+        "title": "Protocol-Guided AI Auditing of Website Redundancy",
+        "n_chars": 146
+      },
+      {
+        "url": "https://arxiv.org/html/2008.01816v2",
+        "title": "Protoclusters at 𝐳=5.7: A view from the MultiDark galaxies",
+        "n_chars": 132
+      },
+      {
+        "url": "https://arxiv.org/pdf/2402.06981",
+        "title": "Structures vibration control via Tuned Mass Dampers using ...",
+        "n_chars": 194
+      },
+      {
+        "url": "https://openreview.net/pdf/80c96beab588349b4662fc2d433458339d19f072.pdf",
+        "title": "The Underappreciated Power of Vision Models for Graph ...",
+        "n_chars": 185339
+      },
+      {
+        "url": "https://arxiv.org/html/1807.10562v1",
+        "title": "Abstract",
+        "n_chars": 151
+      },
+      {
+        "url": "https://arxiv.org/html/2511.01019v2",
+        "title": "OceanAI: A Conversational Platform for Accurate, Transparent, Near-Real-Time Oceanographic Insights",
+        "n_chars": 33054
+      },
+      {
+        "url": "https://arxiv.org/html/2603.15736v2",
+        "title": "Halo assembly bias in the early Universe: a clustering probe of the origin of the Little Red Dots",
+        "n_chars": 72667
+      },
+      {
+        "url": "https://arxiv.org/html/2505.08263v3",
+        "title": "LLM-Based Detection of Tangled Code Changes for Higher-Quality Method-Level Bug Datasets",
+        "n_chars": 61122
+      },
+      {
+        "url": "https://arxiv.org/html/2312.10448v1",
+        "title": "Resolving Crash Bugs via Large Language Models: An Empirical Study",
+        "n_chars": 58404
+      },
+      {
+        "url": "https://arxiv.org/html/2605.24137v1",
+        "title": "Empirical Analysis and Detection of Hallucinations in LLM-Generated Bug Report Summaries",
+        "n_chars": 55622
+      },
+      {
+        "url": "https://arxiv.org/html/2510.11997v3",
+        "title": "SAGE: A Top-Down Bottom-Up Knowledge-Grounded User Simulator for Multi-turn AGent Evaluation",
+        "n_chars": 59352
+      },
+      {
+        "url": "https://arxiv.org/html/2510.08005v3",
+        "title": "Past, Present, and Future of Bug Tracking in the Generative AI Era",
+        "n_chars": 146969
+      },
+      {
+        "url": "https://arxiv.org/html/2304.00385v2",
+        "title": "Keep the Conversation Going: Fixing 162 out of 337 bugs for $0.42 each using ChatGPT",
+        "n_chars": 68607
+      },
+      {
+        "url": "https://arxiv.org/html/2308.14460v1",
+        "title": "STEAM: Simulating the InTeractive BEhavior of ProgrAMmers for Automatic Bug Fixing",
+        "n_chars": 47302
+      },
+      {
+        "url": "https://arxiv.org/html/2504.18804v1",
+        "title": "Can We Enhance Bug Report Quality Using LLMs?: An Empirical Study of LLM-Based Bug Report Generation",
+        "n_chars": 40626
+      },
+      {
+        "url": "https://ar5iv.labs.arxiv.org/html/2607.14004",
+        "title": "[2607.14004] Do Agent Optimizers Compound?A Continual-Learning Evaluation on Terminal-Bench 2.0",
+        "n_chars": 54018
+      },
+      {
+        "url": "https://www.reddit.com/r/SCCM/comments/17wzfuw/single_workstation_issue_cant_run_a_baseline",
+        "title": "Single Workstation Issue - Can't run a Baseline Evaluation due to Parsing Error : r/SCCM",
+        "n_chars": 2342
+      },
+      {
+        "url": "https://github.com/gyauney/max-random-baseline",
+        "title": "GitHub - gyauney/max-random-baseline: A simple random baseline for classification tasks that accounts for evaluation set reuse. · GitHub",
+        "n_chars": 2316
+      },
+      {
+        "url": "https://github.com/wzhouad/RE_improved_baseline",
+        "title": "GitHub - wzhouad/RE_improved_baseline: Code for paper \"An Improved Baseline for Sentence-level Relation Extraction\", AACL-IJCNLP 2022 · GitHub",
+        "n_chars": 2772
+      },
+      {
+        "url": "https://github.com/Jakel21/vehicle-ReID-baseline",
+        "title": "GitHub - Jakel21/vehicle-ReID-baseline: vehicle re-identification baseline for veri and vehicleID dataset · GitHub",
+        "n_chars": 3520
+      },
+      {
+        "url": "https://github.com/camilochs/fixed-budget-llm-judge-rag",
+        "title": "GitHub - camilochs/fixed-budget-llm-judge-rag: A fixed-budget, cluster-aware evaluation framework for LLM-as-a-judge comparisons in multi-hop RAG, with GADMEC as a stress-test evidence selector. · GitHub",
+        "n_chars": 4912
+      },
+      {
+        "url": "https://github.com/layumi/Person_reID_baseline_pytorch",
+        "title": "GitHub - layumi/Person_reID_baseline_pytorch: :bouncing_ball_person: Pytorch ReID: A tiny, friendly, strong pytorch implement of person re-id / vehicle re-id baseline. Tutorial 👉https://github.com/layumi/Person_reID_baseline_pytorch/tree/master/tutorial · GitHub",
+        "n_chars": 25549
+      },
+      {
+        "url": "https://github.com/liangzheng06/PRW-baseline",
+        "title": "GitHub - liangzheng06/PRW-baseline: This repository provides the baseline codes for the PRW (Person Re-identification in the Wild) dataset. · GitHub",
+        "n_chars": 2089
+      },
+      {
+        "url": "https://github.com/DBO-DKFZ/CORA",
+        "title": "GitHub - DBO-DKFZ/CORA · GitHub",
+        "n_chars": 23108
+      },
+      {
+        "url": "https://ar5iv.labs.arxiv.org/html/2110.10067",
+        "title": "[2110.10067] CORA: Benchmarks, Baselines, and Metricsas a Platform forContinual Reinforcement Learning Agents",
+        "n_chars": 134230
+      },
+      {
+        "url": "https://arxiv.org/html/2110.10067v2",
+        "title": "CORA: Benchmarks, Baselines, and Metricsas a Platform forContinual Reinforcement Learning Agents",
+        "n_chars": 117097
+      },
+      {
+        "url": "https://github.com/tkipf/keras-gcn/issues/24",
+        "title": "Differences on the Cora dataset · Issue #24 · tkipf/keras-gcn · GitHub",
+        "n_chars": 5892
+      },
+      {
+        "url": "https://github.com/NOAA-CO-OPS/CORA-Coastal-Ocean-Reanalysis-CORA",
+        "title": "GitHub - NOAA-CO-OPS/CORA-Coastal-Ocean-Reanalysis-CORA: Notebooks to demonstrate working with NOAA's Coastal Ocean Reanalysis · GitHub",
+        "n_chars": 8322
+      },
+      {
+        "url": "https://github.com/zmwangx/ddg-bangs",
+        "title": "GitHub - zmwangx/ddg-bangs: DuckDuckGo bangs scraper and registry · GitHub",
+        "n_chars": 2545
+      },
+      {
+        "url": "https://github.com/defendend/Claude-ast-index-search/raw/refs/heads/main/docs/benchmarks.md",
+        "title": "Compare new run against the saved baseline",
+        "n_chars": 3461
+      },
+      {
+        "url": "https://github.com/Cora-Protocol/cora-simulation-engine",
+        "title": "GitHub - Cora-Protocol/cora-simulation-engine: Cora Simulation Engine · GitHub",
+        "n_chars": 4182
+      },
+      {
+        "url": "https://github.com/fangxin-wang/BANGS",
+        "title": "",
+        "n_chars": 3376
+      },
+      {
+        "url": "https://github.com/fangxin-wang/BANGS/issues",
+        "title": "",
+        "n_chars": 643
+      },
+      {
+        "url": "https://github.com/fangxin-wang/BANGS/issues/views",
+        "title": "",
+        "n_chars": 0
+      }
+    ],
+    "not_read": [
+      "https://openreview.net/pdf?id=h51mpl8Tyx",
+      "https://arxiv.org/html/2209.02299v6",
+      "https://arxiv.org/pdf/2608.21476",
+      "https://arxiv.org/html/2008.01816v2",
+      "https://arxiv.org/pdf/2402.06981",
+      "https://openreview.net/pdf/80c96beab588349b4662fc2d433458339d19f072.pdf",
+      "https://arxiv.org/html/1807.10562v1",
+      "https://arxiv.org/html/2511.01019v2",
+      "https://arxiv.org/html/2603.15736v2",
+      "https://arxiv.org/html/2505.08263v3",
+      "https://arxiv.org/html/2312.10448v1",
+      "https://arxiv.org/html/2605.24137v1",
+      "https://arxiv.org/html/2510.11997v3",
+      "https://arxiv.org/html/2510.08005v3",
+      "https://arxiv.org/html/2304.00385v2",
+      "https://arxiv.org/html/2308.14460v1",
+      "https://arxiv.org/html/2504.18804v1",
+      "https://ar5iv.labs.arxiv.org/html/2607.14004",
+      "https://www.reddit.com/r/SCCM/comments/17wzfuw/single_workstation_issue_cant_run_a_baseline",
+      "https://github.com/gyauney/max-random-baseline",
+      "https://github.com/wzhouad/RE_improved_baseline",
+      "https://github.com/Jakel21/vehicle-ReID-baseline",
+      "https://github.com/camilochs/fixed-budget-llm-judge-rag",
+      "https://github.com/layumi/Person_reID_baseline_pytorch",
+      "https://github.com/liangzheng06/PRW-baseline",
+      "https://github.com/DBO-DKFZ/CORA",
+      "https://ar5iv.labs.arxiv.org/html/2110.10067",
+      "https://arxiv.org/html/2110.10067v2",
+      "https://github.com/tkipf/keras-gcn/issues/24",
+      "https://github.com/NOAA-CO-OPS/CORA-Coastal-Ocean-Reanalysis-CORA",
+      "https://github.com/zmwangx/ddg-bangs",
+      "https://github.com/defendend/Claude-ast-index-search/raw/refs/heads/main/docs/benchmarks.md",
+      "https://github.com/Cora-Protocol/cora-simulation-engine",
+      "https://github.com/fangxin-wang/BANGS",
+      "https://github.com/fangxin-wang/BANGS/issues/views"
+    ],
+    "not_extracted": [],
+    "dropped_items": [],
+    "candidates": [],
+    "mode": "live",
+    "queried_at": "2026-10-15T14:48:20+00:00"
+  },
+  "summary": {
+    "text": "The paper suggests repeatedly choosing batches of unlabeled scientific articles together, using game‑theory ideas, to improve how the system labels them. The data is Cora, a collection of scientific articles that cite each other. It claims the method correctly labels about 84 out of every 100 articles.",
+    "source": "arXiv abstract (2410.09348) and the claim of the check",
+    "generated_by": "Nemotron Super (Token Factory)",
+    "authors": [
+      "Fangxin Wang",
+      "Kay Liu",
+      "Sourav Medya",
+      "Philip S. Yu"
+    ],
+    "year": 2024,
+    "authors_source": "arXiv abstract page (2410.09348)",
+    "institutions": [],
+    "institutions_source": "arXiv text v1, read with Tavily Extract"
+  },
+  "explanations": {
+    "disc_2410_09348_d8991277dd33d43f_accuracy": {
+      "items": [],
+      "dropped": 0,
+      "mode": "live"
+    }
+  },
+  "setup_missing": [
+    "weight decay",
+    "dropout",
+    "hidden size / heads"
+  ],
+  "val_label_check": {
+    "disc_2410_09348_d8991277dd33d43f_accuracy": {
+      "0": {
+        "code_hash": "8835854bfaeb",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.54,
+        "val_masked": 0.41,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "2": {
+        "code_hash": "02e0ab745121",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.77,
+        "val_masked": 0.35,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      },
+      "02e0ab745121": {
+        "code_hash": "02e0ab745121",
+        "verdict": "Validierungslabels genutzt",
+        "val_full": 0.77,
+        "val_masked": 0.35,
+        "static": "selection",
+        "static_hits": [],
+        "excluded": false,
+        "detail": null
+      }
+    }
+  },
+  "edge_direction": {},
+  "repo_diff": {
+    "disc_2410_09348_d8991277dd33d43f_accuracy": {
+      "deviations": [],
+      "dropped": 1,
+      "truncation": [
+        {
+          "file": "main_node.py",
+          "kept_chars": 13136,
+          "of_chars": 21548
+        },
+        {
+          "file": "run.sh",
+          "kept_chars": 0,
+          "of_chars": 1260
+        },
+        {
+          "file": "ST_src/utils.py",
+          "kept_chars": 0,
+          "of_chars": 12874
+        },
+        {
+          "file": "ST_src/utils_new.py",
+          "kept_chars": 0,
+          "of_chars": 17028
+        },
+        {
+          "file": "ST_src/_test.py",
+          "kept_chars": 0,
+          "of_chars": 3062
+        },
+        {
+          "file": "calib_src/model/model.py",
+          "kept_chars": 0,
+          "of_chars": 2889
+        },
+        {
+          "file": "ST_src/GRAND.py",
+          "kept_chars": 0,
+          "of_chars": 4720
+        },
+        {
+          "file": "calib_src/calibrator/calibrator.py",
+          "kept_chars": 0,
+          "of_chars": 9808
+        },
+        {
+          "file": "calib_src/data/data_utils.py",
+          "kept_chars": 0,
+          "of_chars": 8754
+        },
+        {
+          "file": "calib_src/calibrator/attention_ts.py",
+          "kept_chars": 0,
+          "of_chars": 4694
+        },
+        {
+          "file": "calib_src/data/split.py",
+          "kept_chars": 0,
+          "of_chars": 5030
+        }
+      ],
+      "from_hash": "02e0ab745121",
+      "method_fidelity": "not_checked",
+      "scope": "selected implementation aspects",
+      "result": "incomplete"
+    }
+  },
+  "warnings": [
+    "Tabellenspalte nicht geprueft, Zahl koennte zu einer Vergleichsmethode gehoeren.",
+    "Info: Das Paper nennt Streuung +-0.62 (ueber Splits/Laeufe, nicht Toleranz des Mittelwerts); die Toleranz +-0.01 bleibt fest.",
+    "Independent candidate selection uses 100 of 500 validation windows/nodes with hidden answers. Checkpoints use the remaining visible validation data. Training/test splits are unchanged; this selection protocol differs from older runs.",
+    "Steckbrief: Datei des Modells BANGS nicht im Repo-Ausschnitt"
+  ],
+  "nachlauf": {},
+  "objection_checks": [],
+  "spec": {
+    "model": "BANGS",
+    "family": "graph",
+    "items": [],
+    "dropped": [],
+    "excerpt_docs": [
+      "repo:main_node.py@5ca22d2",
+      "repo:ST_src/banzhaf.py@5ca22d2",
+      "repo:ST_src/data.py@5ca22d2",
+      "repo:ST_src/models.py@5ca22d2",
+      "repo:ST_src/utils.py@5ca22d2",
+      "repo:ST_src/utils_new.py@5ca22d2",
+      "repo:ST_src/train_test.py@5ca22d2",
+      "repo:calib_src/calibrator/calibrator.py@5ca22d2",
+      "repo:calib_src/data/data_utils.py@5ca22d2",
+      "repo:ST_src/GRAND.py@5ca22d2",
+      "repo:calib_src/calibrator/attention_ts.py@5ca22d2",
+      "repo:calib_src/data/split.py@5ca22d2",
+      "repo:run.sh@5ca22d2"
+    ],
+    "missing": [
+      "lr",
+      "weight_decay",
+      "epochs",
+      "batch_size",
+      "dropout",
+      "hidden",
+      "layers",
+      "patience",
+      "heads"
+    ],
+    "model_code_present": true,
+    "excerpt_chars": 133145
+  }
+}

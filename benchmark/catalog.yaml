@@ -524,12 +524,15 @@ candidates:
     run_dir: runs/disc_2303_06053/20261009-201230
   jury:
     ready: false
-    reason: "Re-check 2026-10-14 with the current pipeline: with the paper's hyperparameters (6 blocks, hidden size 512, input length 512) every training attempt exceeds the 10-minute CPU limit. The earlier result used smaller code defaults, so it does not show the paper's setting."
+    reason: "A new live check is locked: with the paper's full model size (6 blocks, hidden size 512) every training run exceeds the 10-minute CPU limit, so the check cannot finish here."
   jury_override:
     ready: false
-    reason: "Re-check 2026-10-14 with the current pipeline: with the paper's hyperparameters (6 blocks, hidden size 512, input length 512) every training attempt exceeds the 10-minute CPU limit. The earlier result used smaller code defaults, so it does not show the paper's setting."
+    reason: "A new live check is locked: with the paper's full model size (6 blocks, hidden size 512) every training run exceeds the 10-minute CPU limit, so the check cannot finish here."
     checked: '2026-10-14'
     evidence: docs/audits/catalog_regression_local_20261014.json
+  recorded:
+    date: '2026-10-09'
+    note: "Target reached in the recorded run, with a reduced model: 1 mixer block and hidden size 128 instead of the paper's 6 blocks and 512. This shows the target number can be reached, not that the full-size model was reproduced."
 - id: disc_2202_06491
   arxiv_id: '2202.06491'
   title: Adversarial Graph Contrastive Learning with Information Regularization
@@ -693,12 +696,15 @@ candidates:
     run_dir: runs/disc_2405_00946/20261009-220822
   jury:
     ready: false
-    reason: "Re-check 2026-10-14 with the current pipeline: the authors' launch script for the linear SparseTSF does not set --model_type, and the code default would run the MLP variant. The check stops instead of guessing the variant."
+    reason: "A new live check is locked: the authors' launch script does not name the model variant (linear or MLP), so the check stops instead of guessing."
   jury_override:
     ready: false
-    reason: "Re-check 2026-10-14 with the current pipeline: the authors' launch script for the linear SparseTSF does not set --model_type, and the code default would run the MLP variant. The check stops instead of guessing the variant."
+    reason: "A new live check is locked: the authors' launch script does not name the model variant (linear or MLP), so the check stops instead of guessing."
     checked: '2026-10-14'
     evidence: docs/audits/catalog_regression_local_20261014.json
+  recorded:
+    date: '2026-10-09'
+    note: "Target reached in the recorded run, which used the linear variant of the model and an input length of 720. A new check would have to guess the variant, so it is locked."
 - id: disc_2307_03756
   arxiv_id: '2307.03756'
   title: 'FITS: Modeling Time Series with $10k$ Parameters'
@@ -898,3 +904,52 @@ candidates:
   jury:
     ready: true
     reason: 'Gesamtaussage: vorlaeufig'
+- id: disc_2410_09348_d8991277dd33d43f
+  arxiv_id: '2410.09348'
+  title: 'BANGS: Game-Theoretic Node Selection for Graph Self-Training'
+  status: geprueft
+  imported_from: live discovery 2026-10-14 (server find, local full run 2026-10-15)
+  candidate:
+    dataset: Cora
+    claim:
+      method: BANGS
+      quote: '\midrule
+
+        \textbf{Cora}       & 80.82±0.14 & 81.40±0.29 & 83.06±0.11       & 83.04±0.38 & 83.16±0.10 & {\ul 83.72±0.52} & \textbf{84.23±0.62*}'
+      metric: accuracy
+      target: 84.23
+      protocol: passt
+      matched_task: Cora
+      column_check: ok
+    github_url: https://github.com/fangxin-wang/BANGS
+    repo_status: official
+    feasibility: ok
+    source_url: https://arxiv.org/abs/2410.09348
+    protocol: passt
+    found_by: live discovery
+    reason: Official code
+    community: []
+  checked_at: '2026-10-15T14:49:00Z'
+  cost_gross_usd: 0.2453
+  verdict:
+    urteil: teilweise
+    measured_mean: 0.819333
+    measured_std: 0.006506
+    seeds: 3
+    target: 0.8423
+    tolerance: 0.01
+    gesamtaussage: vorlaeufig
+    mode: nachbau_autorencode
+    graph_repairs: 0
+    fault_repairs: 0
+    run_dir: runs/disc_2410_09348_d8991277dd33d43f/20261015-153350
+  jury:
+    ready: false
+    reason: A full check takes about 80 minutes on CPU (each training run takes about 10 minutes), too long for a live check.
+  jury_override:
+    ready: false
+    reason: A full check takes about 80 minutes on CPU (each training run takes about 10 minutes), too long for a live check.
+    checked: '2026-10-15'
+  recorded:
+    date: '2026-10-15'
+    note: "Recorded run: 81.9% measured against the paper's 84.2%, a partial match with 3 seeds. A full check took about 80 minutes on CPU, so no new live check is offered."

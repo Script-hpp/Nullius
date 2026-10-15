@@ -170,5 +170,14 @@
   "seeds": 3,
   "catalog_id": "disc_2307_03756",
   "gesamtaussage": "vorlaeufig"
+ },
+ {
+  "id": "disc_2410_09348_d8991277dd33d43f--20261015-153350",
+  "paper_id": "disc_2410_09348_d8991277dd33d43f",
+  "title": "BANGS: Game-Theoretic Node Selection for Graph Self-Training",
+  "timestamp": "20261015-153350",
+  "mode": "nachbau_autorencode",
+  "catalog_id": "disc_2410_09348_d8991277dd33d43f",
+  "gesamtaussage": "vorlaeufig"
  }
 ]

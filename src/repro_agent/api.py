@@ -510,7 +510,9 @@ async def latest_discovery_replay():
 async def reproduction_eligibility():
     try:
         result = {entry["id"]: live_catalog.curated_offer(entry) for entry in cat.load_catalog(CATALOG_PATH)}
-        result.update({entry["id"]: live_catalog.offer(entry) for entry in live_catalog.load_entries()})
+        # A saved live find with a curated entry of the same id is judged by the curated entry (its lock stays).
+        result.update({entry["id"]: live_catalog.offer(entry) for entry in live_catalog.load_entries()
+                       if entry["id"] not in result})
         return sanitize(result)
     except (OSError, ValueError):
         raise HTTPException(503, detail="Check eligibility is unavailable.")

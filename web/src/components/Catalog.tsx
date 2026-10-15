@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle } from 'lucide-react'
+import { BookOpen, Code, CheckCircle2, CircleSlash, PlayCircle, Play, Loader2, Library, PauseCircle, History } from 'lucide-react'
 import { Badge, CARD, Chevron, ExtArrow, GoLink, ICON_MD, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { PaperHead } from './PaperHead'
@@ -13,7 +13,7 @@ import { startReproduction, useJobInfo, useLiveStatus, useReproductionEligibilit
 import { StartRefused, isPaused, pausedText, resumeText, statusFor } from '../livestatus'
 import { referenceShort } from '../referenceBench'
 import { loadIndex, type RunRef } from '../data'
-import { catalogFilterFromHash, matchesCatalogFilter, type CatalogFilter } from '../catalogFilter'
+import { catalogFilterFromHash, matchesCatalogFilter, recordedDate, type CatalogFilter } from '../catalogFilter'
 import { useCollectionPosition } from '../useCollectionPosition'
 
 const label = 'text-[10px] font-semibold uppercase tracking-widest text-muted'
@@ -53,6 +53,12 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
               {referenceShort(e.benchmark)} <GoLink href="#benchmark" className="relative z-10 text-fg-3 hover:text-fg-max">Benchmark results</GoLink>
             </p>
           )}
+        </div>
+      )}
+      {e.recorded && (
+        <div className="mt-3 space-y-1" data-testid="recorded-note">
+          <Badge tone="gray" icon={<History className="h-4 w-4 shrink-0" />} title="A finished check we ran earlier. It is shown as it was recorded; there is no new check to start.">Recorded {recordedDate(e.recorded.date)}</Badge>
+          <p className="m-0 text-[12px] leading-relaxed text-muted">{e.recorded.note}</p>
         </div>
       )}
       <div className="relative z-10"><PaperHead head={head} compact /></div>
@@ -95,8 +101,8 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
 
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-line/60 pt-3 text-[11px] leading-none">
         <span className={`${INLINE} text-fg-4`} title={e.jury ? translateJuryReason(e.jury.reason) : undefined}>
-          {e.jury?.ready && e.run_id ? <CheckCircle2 className={ICON_MD} /> : <CircleSlash className={ICON_MD} />}
-          {v && !e.run_id ? 'Evidence not published here' : e.jury ? (e.jury.ready ? 'Evidence available' : `Incomplete evidence: ${translateJuryReason(e.jury.reason)}`) : 'No evidence yet'}
+          {(e.jury?.ready || e.recorded) && e.run_id ? <CheckCircle2 className={ICON_MD} /> : <CircleSlash className={ICON_MD} />}
+          {v && !e.run_id ? 'Evidence not published here' : e.recorded && e.run_id ? 'Recorded evidence available' : e.jury ? (e.jury.ready ? 'Evidence available' : `Incomplete evidence: ${translateJuryReason(e.jury.reason)}`) : 'No evidence yet'}
         </span>
         <span className="flex flex-wrap items-center gap-4">
           <EvidenceLink entry={e}>View evidence</EvidenceLink>
