@@ -24,6 +24,7 @@ test('resume time only for the daily limit', () => {
 test('start errors: 503 and 429 are notices', () => {
   assert.deepEqual(startErrorText(503, { reason: 'budget_floor' }), { text: pausedText('budget_floor'), reason: 'budget_floor' })
   assert.equal(startErrorText(429, { reason: 'busy' }).reason, 'busy')
+  assert.equal(startErrorText(409, { detail: 'Same claim as an earlier find.' }).text, 'Same claim as an earlier find.')   // duplicate find refused with its reason
   assert.equal(startErrorText(429, { reason: 'daily_limit' }, 'search').text, pausedText('daily_limit', 'search'))
   assert.equal(startErrorText(503, {}).text, pausedText('budget_floor'))
   assert.equal(startErrorText(400, { detail: 'Not runnable: x' }).text, 'Not runnable: x')

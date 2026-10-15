@@ -49,7 +49,7 @@ export function startErrorText(status: number, body: unknown, target: 'check' | 
   if (reason) return { text: pausedText(reason, target), reason }
   if (status === 503 || status === 429) return { text: pausedText(status === 503 ? 'budget_floor' : 'daily_limit', target), reason: null }
   const detail = typeof b.detail === 'string' ? b.detail : ''
-  if (status === 400) return { text: detail || 'This entry cannot be run.', reason: null }
+  if (status === 400 || status === 409) return { text: detail || 'This entry cannot be run.', reason: null }   // 409: a duplicate find of an offered claim
   if (status === 404) return { text: 'The live backend does not know this entry.', reason: null }
   return { text: `The live backend answered with an error (${status}).`, reason: null }
 }
