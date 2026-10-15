@@ -28,7 +28,7 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
   const why = live.paused ? 'Live checks are paused' : live.busy ? 'Another run is active' : undefined
     const href = evidenceHref(e)
   return (
-    <article className={`relative flex h-full flex-col rounded-xl border border-line bg-surface p-6 ${CARD}`}>
+    <article className={`relative flex h-full min-w-0 flex-col rounded-xl border border-line bg-surface p-6 ${CARD}`}>
       <p className="m-0 mb-3 text-sm font-semibold text-fg">Dataset check: {e.task ?? e.dataset ?? 'Not specified'}</p>
       <div className="flex items-start justify-between gap-4">
         <h3 className="font-grotesk m-0 text-xl font-semibold leading-snug tracking-[-0.02em] text-fg">
@@ -56,12 +56,12 @@ function CatalogCard({ e, live, samePaper }: { e: CatalogEntry; live: LiveContro
         </div>
       )}
       {e.recorded && (
-        <div className="mt-3 space-y-1" data-testid="recorded-note">
+        <div className="mt-3 w-full min-w-0 max-w-full space-y-1 overflow-hidden" data-testid="recorded-note">
           <Badge tone="gray" icon={<History className="h-4 w-4 shrink-0" />} title="A finished check we ran earlier. It is shown as it was recorded; there is no new check to start.">Recorded {recordedDate(e.recorded.date)}</Badge>
-          <details className="group text-[12px] leading-relaxed text-muted">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
+          <details className="group min-w-0 text-[12px] leading-relaxed text-muted">
+            <summary className="flex min-w-0 cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
               <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span>{e.recorded.summary ?? e.recorded.note}</span>
+              <span className="min-w-0 flex-1 truncate" title={e.recorded.summary ?? e.recorded.note}>{e.recorded.summary ?? e.recorded.note}</span>
               <span className="shrink-0 text-fg-3 underline underline-offset-2 group-open:hidden">Details</span>
             </summary>
             <p className="m-0 mt-1 pl-5">{e.recorded.note}</p>

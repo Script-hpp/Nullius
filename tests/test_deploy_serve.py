@@ -1,5 +1,6 @@
 """deploy/serve.py: API plus statische Web-App in einem Prozess (Subprozess, damit die geteilte App der anderen Tests unberuehrt bleibt)."""
 
+import json
 import subprocess
 import sys
 import textwrap
@@ -88,4 +89,42 @@ def test_page_csp_hashes_inline_script_and_headers_reach_the_page(tmp_path):
     (dist / "data" / "index.json").write_text("[]")
     env = {"WEB_DIST": str(dist), "REPRO_EXPORT_DIR": str(tmp_path / "vol"), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(ROOT / "src")}
     res = subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, env=env, timeout=60)
+    assert res.returncode == 0 and "ok" in res.stdout, res.stderr[-800:]
+
+
+def test_seed_merges_new_image_runs_into_existing_volume_add_only(tmp_path):
+    src = textwrap.dedent("""
+        import json, sys
+        sys.path.insert(0, %r)
+        from pathlib import Path
+        import deploy.serve as s
+        img, vol = Path(sys.argv[1]), Path(sys.argv[2])
+        before = {p: p.read_bytes() for p in vol.rglob("*") if p.is_file()}
+        assert s.seed_export_dir(vol, img) is False
+        assert (vol / "bangs" / "T1" / "dossier.json").read_text() == "new"
+        idx = json.loads((vol / "index.json").read_text())
+        assert [r["id"] for r in idx] == ["old--T0", "live--T9", "bangs--T1"], idx
+        for p, data in before.items():
+            if p.name != "index.json":
+                assert p.read_bytes() == data
+        assert (vol / "old" / "T0" / "dossier.json").read_text() == "volume-old"   # volume copy wins over image copy
+        assert (vol / "live" / "T9" / "dossier.json").exists() and not (vol / "evil").exists()
+        snap = {p: p.read_bytes() for p in vol.rglob("*") if p.is_file()}
+        assert s.seed_export_dir(vol, img) is False     # idempotent
+        assert snap == {p: p.read_bytes() for p in vol.rglob("*") if p.is_file()}
+        print("ok")
+    """ % str(ROOT))
+    img, vol = tmp_path / "dist" / "data", tmp_path / "vol"
+    def run(base, pid, ts, text):
+        (base / pid / ts).mkdir(parents=True)
+        (base / pid / ts / "dossier.json").write_text(text)
+    ref = lambda p, t: {"id": f"{p}--{t}", "paper_id": p, "timestamp": t}
+    run(img, "old", "T0", "image-old"); run(img, "bangs", "T1", "new")
+    (img / "index.json").write_text(json.dumps([ref("old", "T0"), ref("bangs", "T1"), ref("../evil", "T1")]))
+    (img / "catalog.json").write_text(json.dumps([{"id": "x", "run_id": "bangs--T1"}]))
+    run(vol, "old", "T0", "volume-old"); run(vol, "live", "T9", "live")
+    (vol / "index.json").write_text(json.dumps([ref("old", "T0"), ref("live", "T9")]))
+    env = {"WEB_DIST": str(tmp_path / "dist"), "REPRO_EXPORT_DIR": str(vol), "PATH": "/usr/bin:/bin", "PYTHONPATH": str(ROOT / "src")}
+    (tmp_path / "dist" / "index.html").write_text("x")
+    res = subprocess.run([sys.executable, "-c", src, str(img), str(vol)], capture_output=True, text=True, env=env, timeout=60)
     assert res.returncode == 0 and "ok" in res.stdout, res.stderr[-800:]
