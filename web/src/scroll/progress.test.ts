@@ -1,55 +1,62 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { easeToward, sceneProgress, sceneTime, scrollLengthVh } from './progress.ts'
-import { FRAME_BG, SCENES, SCENE_IDS, paletteFor } from './scenes.ts'
+import { VISIBLE_AT, advance, isFinished, isVisibleEnough, playTime, stillTime } from './progress.ts'
+import { FRAME_BG, SCENES, SCENE_IDS, paletteFor, stillSrc } from './scenes.ts'
 import { PAL } from './palette.ts'
 
-test('scroll length follows the duration, bounded', () => {
-  assert.equal(scrollLengthVh(1000), 1.3)
-  assert.equal(scrollLengthVh(9000), 1.3)
-  assert.equal(scrollLengthVh(21000), 2)
-  assert.equal(scrollLengthVh(60000), 2)
+test('play time starts at start, runs in real time and holds the last frame', () => {
+  assert.equal(playTime(0, 2500, 21000), 2500)
+  assert.equal(playTime(1000, 2500, 21000), 3500)
+  assert.equal(playTime(-5, 2500, 21000), 2500)
+  assert.equal(playTime(99999, 2500, 21000), 21000)
 })
 
-test('progress is clamped and zero without scroll travel', () => {
-  assert.equal(sceneProgress(300, 2000, 800), 0)
-  assert.equal(sceneProgress(0, 2000, 800), 0)
-  assert.equal(sceneProgress(-600, 2000, 800), 0.5)
-  assert.equal(sceneProgress(-5000, 2000, 800), 1)
-  assert.equal(sceneProgress(-10, 800, 800), 0)
+test('finished only at the end', () => {
+  assert.equal(isFinished(20999, 21000), false)
+  assert.equal(isFinished(21000, 21000), true)
 })
 
-test('film time scrubs with progress and holds both ends', () => {
-  const o = { still: false }
-  assert.equal(sceneTime(0, 20000, o), 0)
-  assert.equal(sceneTime(0.04, 20000, o), 0)
-  assert.equal(sceneTime(0.5, 20000, o), 10000)
-  assert.ok(Math.abs(sceneTime(0.96, 20000, o) - 20000) < 1e-6)
-  assert.equal(sceneTime(1, 20000, o), 20000)
-  assert.equal(sceneTime(-1, 20000, o), 0)
-  assert.ok(sceneTime(0.3, 20000, o) < sceneTime(0.4, 20000, o))
+test('a tick advances while playing, stands still while paused, clamps at the end', () => {
+  assert.equal(advance(1000, 16, 9000, true), 1016)
+  assert.equal(advance(1000, 16, 9000, false), 1000)
+  assert.equal(advance(8995, 16, 9000, true), 9000)
+  assert.equal(advance(1000, 5000, 9000, true), 1100)   // a long gap is capped
+  assert.equal(advance(1000, -3, 9000, true), 1000)
 })
 
-test('reduced motion and phones show the poster frame whatever the progress', () => {
-  for (const p of [0, 0.5, 1]) assert.equal(sceneTime(p, 21000, { still: true, poster: 19500 }), 19500)
-  assert.equal(sceneTime(0.5, 9000, { still: true }), 8800)
-  assert.equal(sceneTime(0.5, 9000, { still: true, poster: 99999 }), 9000)
+test('pause and resume continue from where they stopped', () => {
+  let t = advance(0, 16, 9000, true)
+  t = advance(t, 16, 9000, false)
+  t = advance(t, 16, 9000, true)
+  assert.equal(t, 32)
 })
 
-test('easing moves towards the target and snaps', () => {
-  const a = easeToward(0, 1000, 16)
-  assert.ok(a > 0 && a < 1000)
-  assert.equal(easeToward(999.5, 1000, 16), 1000)
-  assert.equal(easeToward(500, 100, 0), 500)
-  assert.ok(easeToward(500, 100, 16) < 500)
+test('visibility threshold is about half the frame', () => {
+  assert.equal(VISIBLE_AT, 0.5)
+  assert.equal(isVisibleEnough(0.49), false)
+  assert.equal(isVisibleEnough(0.5), true)
+  assert.equal(isVisibleEnough(1), true)
 })
 
-test('every scene has a poster inside its duration and a plain description', () => {
+test('the still (reduced motion, phones) shows the poster frame', () => {
+  assert.equal(stillTime(21000, 19500), 19500)
+  assert.equal(stillTime(9000), 8800)
+  assert.equal(stillTime(9000, 99999), 9000)
+})
+
+test('every scene starts inside its duration, has a poster after it and a plain description', () => {
   for (const id of SCENE_IDS) {
     const s = SCENES[id]
-    assert.ok(s.poster > 0 && s.poster <= s.duration, id)
+    assert.ok(s.start >= 0 && s.start < s.duration, id)
+    assert.ok(s.poster > s.start && s.poster <= s.duration, id)
     assert.ok(s.label.length > 20 && s.caption.length > 20, id)
+    assert.ok(!/scroll/i.test(s.label + s.caption), id)
   }
+})
+
+test('stills are named by scene, kind and palette', () => {
+  assert.equal(stillSrc('opening', 'start', 'paper'), 'img/scenes/opening-start-paper.webp')
+  assert.equal(stillSrc('placebo', 'poster', 'night'), 'img/scenes/placebo-poster-night.webp')
 })
 
 test('dark mode forces the night palette, light mode keeps the shot palette', () => {

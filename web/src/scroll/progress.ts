@@ -1,30 +1,25 @@
-// Pure scroll maths for the landing scenes (tested in progress.test.ts).
+// Pure play-clock maths for the landing scenes (tested in progress.test.ts).
 
-// Scroll distance of a scene in viewport heights: a short accent, never a long sticky stretch (2 at most, 1.3 at least).
-export function scrollLengthVh(durationMs: number): number {
-  return Math.min(2, Math.max(1.3, durationMs / 10500))
+// Share of the frame that must be on screen before a shot plays.
+export const VISIBLE_AT = 0.5
+
+export const isVisibleEnough = (ratio: number): boolean => ratio >= VISIBLE_AT
+
+// Film time after `elapsed` ms of playing, from `start` to `duration`, then held on the last frame.
+export function playTime(elapsed: number, start: number, duration: number): number {
+  return Math.min(duration, Math.max(start, start + Math.max(0, elapsed)))
 }
 
-// 0..1 while the sticky stage is pinned: the section's top edge moves from 0 to -(height - viewport).
-export function sceneProgress(top: number, height: number, viewport: number): number {
-  const travel = height - viewport
-  if (!(travel > 0)) return 0
-  return Math.min(1, Math.max(0, -top / travel))
+export const isFinished = (t: number, duration: number): boolean => t >= duration
+
+// One rAF tick: the new film time after `dtMs` of real time. A paused clock stands still. dt is capped so a background tab or a
+// long frame does not skip a stretch of the film.
+export function advance(t: number, dtMs: number, duration: number, playing: boolean): number {
+  if (!playing) return t
+  return Math.min(duration, t + Math.min(100, Math.max(0, dtMs)))
 }
 
-// A short hold at both ends: the first frame is seen before the film moves, and the last frame stays while the page is about to release.
-const HOLD = 0.04
-
-// Film time for a scroll progress. Reduced motion (and phones) show the poster frame and never scrub.
-export function sceneTime(progress: number, duration: number, opts: { still: boolean; poster?: number }): number {
-  if (opts.still) return Math.min(duration, Math.max(0, opts.poster ?? duration - 200))
-  const p = Math.min(1, Math.max(0, (progress - HOLD) / (1 - 2 * HOLD)))
-  return p * duration
-}
-
-// Light easing of the shown time towards the scroll target, independent of the frame rate. Snaps when it is within 1 ms.
-export function easeToward(current: number, target: number, dtMs: number, tauMs = 110): number {
-  const diff = target - current
-  if (Math.abs(diff) < 1) return target
-  return current + diff * (1 - Math.exp(-Math.max(0, dtMs) / tauMs))
+// What the page shows for a scene that does not play: the poster frame (reduced motion, phones).
+export function stillTime(duration: number, poster?: number): number {
+  return Math.min(duration, Math.max(0, poster ?? duration - 200))
 }

@@ -237,6 +237,11 @@ details[open] > summary .nx-chev { transform: rotate(180deg); }
   .nx-rise { animation: none; }
 }
 
+/* Landing scene placeholder: a soft shimmer in the frame colour while neither the still nor the stage has arrived. */
+@keyframes scene-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.scene-shimmer::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, currentColor 7%, transparent), transparent); animation: scene-shimmer 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .scene-shimmer::after { animation: none; } }
+
 /* React Flow customization */
 .react-flow__attribution { display: none; }
 .react-flow { 

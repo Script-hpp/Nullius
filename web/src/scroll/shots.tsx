@@ -5,7 +5,7 @@ import { Camera, MONO, SERIF, Source, W, clamp, easeInOut, easeOut, easeOutBack,
 import type { StageData } from './data'
 import { SCENES, type SceneId } from './scenes'
 
-// The two film shots that play on the start page, scrubbed by scrolling. Ported from the film's stage (web/src/stage on branch Script-hpp/film,
+// The two film shots that play on the start page, autoplayed when in view. Ported from the film's stage (web/src/stage on branch Script-hpp/film,
 // shots 01-opening, 04-placebo). Every shot is a pure function of its time t in ms, and every number and claim on it is read from
 // the exported film run (data.ts). Changes against the film: the opening does not dissolve into the app window at its end (nothing follows it
 // here), the placebo is the film's shorter 9 s version, duration and poster come from scenes.ts.

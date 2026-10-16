@@ -1,14 +1,15 @@
 import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 import { prefersReducedMotion } from '../components/hero/config'
-import { easeToward, sceneProgress, sceneTime, scrollLengthVh } from './progress'
-import { FRAME_BG, SCENES, paletteFor, type SceneId } from './scenes'
+import { advance, isFinished, isVisibleEnough } from './progress'
+import { FRAME_BG, SCENES, paletteFor, stillSrc, type SceneId } from './scenes'
 
-// A film shot that plays on the page while you scroll. The section is tall; a 16:9 frame sticks to the screen and the scroll position inside the
-// section sets the film time (scrub: scrolling back plays it back). The stage code and its data are a separate chunk, fetched when the scene
-// comes within about half a screen of the viewport. Reduced motion and phones get the poster frame instead (a 1920x1080 frame on 358 px is too small to read moving).
+// A film shot that plays by itself once at least half of its frame is on screen, in real time, and then holds its last frame (a small control
+// pauses and replays it). Before the stage code has loaded the frame shows a pre-rendered still of the first frame, so it is never blank; the live
+// stage fades in over it after its first frame has painted. The stage chunk is requested well before the scene is reached.
+// Phones and reduced motion get the poster still and no autoplay: the 1920x1080 canvas on 358 px is too small to read moving text and chart labels.
 
 const SceneStage = lazy(() => import('./SceneStage'))
-const HEADER = 64   // px, the sticky site header (top-16)
 const PHONE = '(max-width: 639px)'
 
 function useMedia(query: string): boolean {
@@ -35,11 +36,12 @@ function useDark(): boolean {
   return dark
 }
 
-// a failed chunk or a rendering error leaves the empty frame, never a broken start page
-class Quiet extends Component<{ children: ReactNode }, { bad: boolean }> {
+// a failed chunk or a rendering error leaves the still, never a broken start page
+class Quiet extends Component<{ children: ReactNode; onBad: () => void }, { bad: boolean }> {
   state = { bad: false }
   static getDerivedStateFromError() { return { bad: true } }
-  render() { return this.state.bad ? <div className="absolute inset-0 grid place-items-center p-6 text-center text-[13px] text-muted">This animation could not be shown.</div> : this.props.children }
+  componentDidCatch() { this.props.onBad() }
+  render() { return this.state.bad ? null : this.props.children }
 }
 
 export function ScrollScene({ id }: { id: SceneId }) {
@@ -49,29 +51,45 @@ export function ScrollScene({ id }: { id: SceneId }) {
   const dark = useDark()
   const palette = paletteFor(meta.theme, dark)
 
-  const section = useRef<HTMLElement>(null)
-  const pin = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLDivElement>(null)
-  const [near, setNear] = useState(false)       // within about half a screen of the viewport: scroll is tracked
-  const [wanted, setWanted] = useState(false)   // has been near once: the stage chunk is requested
+  const [wanted, setWanted] = useState(false)     // the stage chunk is requested
+  const [visible, setVisible] = useState(false)   // at least half of the frame is on screen
+  const [ready, setReady] = useState(false)       // the stage has painted its first frame
+  const [broken, setBroken] = useState(false)
+  const [imgOk, setImgOk] = useState(false)
+  const [userPaused, setUserPaused] = useState(false)
   const [scale, setScale] = useState(0.5)
-  const [t, setT] = useState(() => sceneTime(0, meta.duration, { still, poster: meta.poster }))
-  const live = useRef({ cur: t, target: t, raf: 0, last: 0 })
+  const [t, setT] = useState(meta.start)
+  const clock = useRef({ raf: 0, last: 0, t: meta.start })
+  const onReady = useCallback(() => setReady(true), [])
+  const onBad = useCallback(() => setBroken(true), [])
 
-  // near the viewport
+  const ended = isFinished(t, meta.duration)
+  const playing = !still && ready && visible && !userPaused && !ended
+
+  // request the chunk well before the scene is reached (one screen ahead), but never during first paint: on a fresh load the page above is still
+  // laying out and the scene can sit near the top for a moment. So: a moment after load, or at once when the reader has already scrolled.
   useEffect(() => {
-    const el = section.current
-    if (!el || typeof IntersectionObserver === 'undefined') { setNear(true); setWanted(true); return }
-    // the chunk is requested only if the scene stays near for a moment: while the page above is still laying out it can be near for a frame
-    let timer = 0
-    const io = new IntersectionObserver(([e]) => {
-      setNear(e.isIntersecting)
-      clearTimeout(timer)
-      if (e.isIntersecting) timer = window.setTimeout(() => setWanted(true), 500)
-    }, { rootMargin: '60% 0px 60% 0px' })
+    if (still) return
+    const el = frame.current
+    let idle = 0, settled = false, near = false
+    const want = () => setWanted(true)
+    if (!el || typeof IntersectionObserver === 'undefined') { want(); return }
+    const io = new IntersectionObserver(([e]) => { near = e.isIntersecting; if (near && (settled || scrollY > 300)) want() }, { rootMargin: '100% 0px 100% 0px' })
     io.observe(el)
-    return () => { io.disconnect(); clearTimeout(timer) }
-  }, [])
+    const later = () => { idle = window.setTimeout(() => { settled = true; want() }, 1200) }
+    if (document.readyState === 'complete') later(); else addEventListener('load', later, { once: true })
+    return () => { io.disconnect(); clearTimeout(idle); removeEventListener('load', later) }
+  }, [still])
+
+  // visibility: play only while at least half of the frame is on screen
+  useEffect(() => {
+    const el = frame.current
+    if (still || !el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setVisible(isVisibleEnough(e.intersectionRatio)), { threshold: [0, 0.25, 0.5, 0.75, 1] })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [still])
 
   // frame size -> canvas scale
   useEffect(() => {
@@ -83,58 +101,57 @@ export function ScrollScene({ id }: { id: SceneId }) {
     return () => ro.disconnect()
   }, [])
 
-  const target = useCallback(() => {
-    const s = section.current, p = pin.current
-    if (!s || !p) return 0
-    const r = s.getBoundingClientRect()
-    return sceneTime(sceneProgress(r.top - HEADER, r.height, p.clientHeight), meta.duration, { still: false })
-  }, [meta.duration])
-
-  // scrub: scroll sets the target time, a rAF loop eases the shown time towards it and stops once it has arrived
+  // the play clock: real time, one rAF loop that exists only while playing
   useEffect(() => {
-    const L = live.current
-    if (still) { L.cur = L.target = sceneTime(0, meta.duration, { still: true, poster: meta.poster }); setT(L.cur); return }
-    if (!near) return
-    const frameTick = (now: number) => {
-      L.raf = 0
-      const dt = L.last ? Math.min(100, now - L.last) : 16
-      L.last = now
-      L.target = target()
-      L.cur = easeToward(L.cur, L.target, dt)
-      setT(L.cur)
-      if (L.cur !== L.target) L.raf = requestAnimationFrame(frameTick)
-      else L.last = 0
+    if (!playing) return
+    const C = clock.current
+    const tick = (now: number) => {
+      const dt = C.last ? now - C.last : 0
+      C.last = now
+      C.t = advance(C.t, dt, meta.duration, true)
+      setT(C.t)
+      if (!isFinished(C.t, meta.duration)) C.raf = requestAnimationFrame(tick)
     }
-    const kick = () => { if (!L.raf) L.raf = requestAnimationFrame(frameTick) }
-    kick()
-    addEventListener('scroll', kick, { passive: true })
-    addEventListener('resize', kick)
-    return () => { removeEventListener('scroll', kick); removeEventListener('resize', kick); if (L.raf) cancelAnimationFrame(L.raf); L.raf = 0; L.last = 0 }
-  }, [still, near, target, meta.duration, meta.poster])
+    C.last = 0
+    C.raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(C.raf); C.last = 0 }
+  }, [playing, meta.duration])
 
-  const lenVh = scrollLengthVh(meta.duration)
-  const sectionStyle = still ? undefined : { height: `calc(${(lenVh * 100).toFixed(0)}vh + 100vh - ${HEADER}px)` }
-  const pinClass = still ? 'py-4' : 'sticky top-16 flex h-[calc(100vh-4rem)] flex-col justify-center'
-  // the frame is as wide as the column allows, but never taller than the screen leaves room for (caption included)
-  const frameWidth = still ? '100%' : 'min(100%, calc((100vh - 4rem - 6.5rem) * 16 / 9))'
+  const replay = () => { clock.current.t = meta.start; setT(meta.start); setUserPaused(false) }
+  const control = ended ? { label: 'Replay the animation', icon: <RotateCcw size={16} aria-hidden />, act: replay }
+    : userPaused ? { label: 'Play the animation', icon: <Play size={16} aria-hidden />, act: () => setUserPaused(false) }
+    : { label: 'Pause the animation', icon: <Pause size={16} aria-hidden />, act: () => setUserPaused(true) }
+
+  // the still that matches what the stage shows first: the start frame while it plays, the poster frame when it does not
+  const kind = still ? 'poster' : 'start'
+  const live = !still && wanted && !broken
+  const showStage = live && ready
 
   return (
-    <section ref={section} data-scene={id} style={sectionStyle} className="relative mx-auto max-w-6xl px-6">
-      <div ref={pin} className={pinClass}>
-        <figure className="m-0 flex flex-col items-center">
-          <div ref={frame} role="img" aria-label={meta.label} style={{ width: frameWidth, aspectRatio: '16 / 9', background: FRAME_BG[palette] }}
-            className="relative overflow-hidden rounded-xl border border-line shadow-sm">
-            <div aria-hidden>
-              {wanted && (
-                <Quiet>
-                  <Suspense fallback={null}><SceneStage id={id} t={t} palette={palette} scale={scale} /></Suspense>
-                </Quiet>
-              )}
+    <section data-scene={id} className="relative mx-auto max-w-6xl px-6 py-4">
+      <figure className="m-0 flex flex-col items-center">
+        <div ref={frame} role="img" aria-label={meta.label} style={{ width: '100%', aspectRatio: '16 / 9', background: FRAME_BG[palette], color: palette === 'night' ? '#f1eee6' : '#151310' }}
+          className="relative overflow-hidden rounded-xl border border-line shadow-sm">
+          {!imgOk && <div aria-hidden className="scene-shimmer absolute inset-0 overflow-hidden" />}
+          <img key={`${kind}-${palette}`} src={stillSrc(id, kind, palette)} alt="" aria-hidden width={1200} height={675} decoding="async"
+            onLoad={() => setImgOk(true)} onError={() => setImgOk(false)}
+            className="absolute inset-0 h-full w-full select-none" draggable={false} />
+          {live && (
+            <div aria-hidden className="absolute inset-0 transition-opacity duration-200 motion-reduce:transition-none" style={{ opacity: showStage ? 1 : 0 }}>
+              <Quiet onBad={onBad}>
+                <Suspense fallback={null}><SceneStage id={id} t={t} palette={palette} scale={scale} onReady={onReady} /></Suspense>
+              </Quiet>
             </div>
-          </div>
-          <figcaption className="mt-3 max-w-2xl text-center text-[13px] leading-relaxed text-muted">{still ? '' : 'Scroll to play. '}{meta.caption}</figcaption>
-        </figure>
-      </div>
+          )}
+          {!still && showStage && (
+            <button type="button" onClick={control.act} aria-label={control.label} title={control.label}
+              className="absolute bottom-3 right-3 grid h-8 w-8 place-items-center rounded-full border border-line bg-surface/80 text-muted shadow-sm backdrop-blur transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current motion-reduce:transition-none">
+              {control.icon}
+            </button>
+          )}
+        </div>
+        <figcaption className="mt-3 max-w-2xl text-center text-[13px] leading-relaxed text-muted">{meta.caption}</figcaption>
+      </figure>
     </section>
   )
 }

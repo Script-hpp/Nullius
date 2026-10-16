@@ -20,10 +20,16 @@ function loadOnce(): Promise<StageData> {
   return data
 }
 
-export default function SceneStage({ id, t, palette, scale }: { id: SceneId; t: number; palette: Theme; scale: number }) {
+export default function SceneStage({ id, t, palette, scale, onReady }: { id: SceneId; t: number; palette: Theme; scale: number; onReady?: () => void }) {
   const [d, setD] = useState<StageData | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => { loadOnce().then(setD).catch(() => setFailed(true)) }, [])
+  // tell the page once the first frame is in the DOM and painted, so it can fade the stage in over the still
+  useEffect(() => {
+    if (!d || !onReady) return
+    const r = requestAnimationFrame(() => requestAnimationFrame(onReady))
+    return () => cancelAnimationFrame(r)
+  }, [d, onReady])
   const shot = SHOTS[id]
   const pal = PAL[palette]
   if (failed) return <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 15, color: '#8a857b', padding: 24, textAlign: 'center' }}>This animation could not load its data.</div>
