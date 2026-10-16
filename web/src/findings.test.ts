@@ -32,7 +32,7 @@ test('run links point at an exported run; hash routes are known; file links poin
       if (run) {
         assert.ok(readdirSync(new URL(`${run[1]}/`, data)).includes(run[2]), `${f.id}: run not exported`)
       } else if (l.href.startsWith('#')) {
-        assert.ok(['#/benchmark', '#benchmark', '#catalog'].includes(l.href), `${f.id}: unknown route ${l.href}`)
+        assert.ok(['#benchmark', '#catalog', '#discover', '#findings'].includes(l.href), `${f.id}: unknown route ${l.href}`)
       } else {
         assert.ok(l.repoPath && l.href.endsWith(l.repoPath), `${f.id}: external link needs repoPath`)
         assert.ok(existsSync(new URL(l.repoPath, repo)), `${f.id}: ${l.repoPath} missing`)

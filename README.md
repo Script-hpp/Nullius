@@ -56,7 +56,7 @@ While checking papers, we saw that the number in a paper is often not enough to 
 - **TSMixer (ETTh1):** the target was reached with a smaller model (1 mixer block, hidden size 128 instead of 6 and 512). We show this as target reached with a reduced model, not as reproduced.
 - **SARAF (ETTh1):** the method uses calendar features (hour, weekday, ...) that our earlier input to the generated code did not carry. With a human-written adapter around the unchanged authors' model core and the calendar data, the error was 0.3696 ± 0.0014 against the target 0.371. This is not an autonomous Nullius run. [Calendar check](docs/saraf_local_contract_verification_20261013.md).
 
-The findings page explains all of this in plain words, together with what checking taught us about building a checker: [nullius.akca.dev/#/findings](https://nullius.akca.dev/#/findings).
+The findings page explains all of this in plain words, together with what checking taught us about building a checker: [nullius.akca.dev/#findings](https://nullius.akca.dev/#findings).
 
 ## Checks you can open
 

@@ -12,7 +12,7 @@ const DISCOVER_TIP = 'Papers found live by Tavily'
 export const NAV_LINKS: { label: string; href: string; hash: string; title?: string }[] = [
   { label: 'Catalog', href: '#catalog', hash: 'catalog' },
   { label: 'Discover', href: '#discover', hash: 'discover', title: DISCOVER_TIP },
-  { label: 'Findings', href: '#/findings', hash: '/findings' },
+  { label: 'Findings', href: '#findings', hash: 'findings' },
   { label: 'Benchmark', href: '#benchmark', hash: 'benchmark' },
   { label: 'Runs', href: '#overview', hash: 'overview' },
 ]

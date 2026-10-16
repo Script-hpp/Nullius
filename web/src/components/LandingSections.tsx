@@ -205,7 +205,7 @@ export function Findings() {
         })}
       </ul>
       <p className="mb-0 mt-8">
-        <a href="#/findings" className="inline-flex items-center gap-2 rounded-full border border-fg px-5 py-2.5 text-sm font-medium text-fg no-underline transition-colors hover:bg-fg hover:text-bg">All findings <GoArrow className="h-4 w-4 shrink-0" /></a>
+        <a href="#findings" className="inline-flex items-center gap-2 rounded-full border border-fg px-5 py-2.5 text-sm font-medium text-fg no-underline transition-colors hover:bg-fg hover:text-bg">All findings <GoArrow className="h-4 w-4 shrink-0" /></a>
       </p>
     </Block>
   )

@@ -197,7 +197,7 @@ export const FINDINGS: Finding[] = [
       { label: 'Earlier versions', text: `Benchmark v2 and v3 gave ${FIGURES.placebo.v2[0]} of ${FIGURES.placebo.v2[1]} each.` },
     ],
     commits: [],
-    links: [{ href: '#/benchmark', label: 'Open the Benchmark' }],
+    links: [{ href: '#benchmark', label: 'Open the Benchmark' }],
   },
 ]
 
