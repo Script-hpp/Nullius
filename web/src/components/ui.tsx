@@ -84,7 +84,7 @@ export const TAB_BTN = 'inline-flex cursor-pointer items-center rounded-lg borde
 //                 the start page) and the certificate card on the start page, each of which is a single link. Children carry no transitions.
 export const CARD = 'nx-card'
 export const CARD_LIFT = 'nx-card-lift'
-export const LINK_TEXT = 'text-fg underline underline-offset-4 hover:text-fg-max'
+export const LINK_TEXT = 'text-fg-3 underline decoration-fg-4/50 underline-offset-4 transition-colors hover:text-fg hover:decoration-current'
 
 export function GoArrow({ className = ICON_MD }: { className?: string }) {
   return <ArrowRight className={`nx-arrow ${className}`} aria-hidden />
