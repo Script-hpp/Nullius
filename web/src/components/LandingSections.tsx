@@ -201,8 +201,8 @@ function TestLegend() {
   return (
     <ul className="m-0 mt-5 grid max-w-md list-none gap-2 p-0" aria-label="What this test checks">
       {rows.map((r) => (
-        <li key={r.what} className="flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2.5 text-[15px] text-fg">
-          <span className="w-28 shrink-0 text-fg-4">{r.what}</span>
+        <li key={r.what} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-line bg-surface px-3 py-2.5 text-[14px] text-fg sm:gap-x-3 sm:px-4 sm:text-[15px]">
+          <span className="w-[6.5rem] shrink-0 text-fg-4 sm:w-28">{r.what}</span>
           <span className="font-mono tabular-nums">{r.n}</span>
           <span aria-hidden className="text-subtle">&rarr;</span>
           <span className="font-medium">{r.out}</span>
