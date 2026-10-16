@@ -38,7 +38,7 @@ test('visibility threshold is about half the frame', () => {
   assert.equal(isVisibleEnough(1), true)
 })
 
-test('the still (reduced motion, phones) shows the poster frame', () => {
+test('the still (reduced motion) shows the poster frame', () => {
   assert.equal(stillTime(21000, 19500), 19500)
   assert.equal(stillTime(9000), 8800)
   assert.equal(stillTime(9000, 99999), 9000)
