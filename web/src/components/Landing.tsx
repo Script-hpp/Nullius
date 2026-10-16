@@ -3,11 +3,12 @@ import { ChevronDown, Play } from 'lucide-react'
 import { SiteHeader } from './Layout'
 import { GoLink } from './ui'
 import { SiteFooter } from './SiteFooter'
-import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
+import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, ProofMatrix, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 import { RecentChecks } from './RecentChecks'
 import { FilmButton } from './FilmModal'
+import { ScrollScene } from '../scroll/ScrollScene'
 
 // Start page: a full-screen hero with a handwritten motto that is drawn stroke by stroke (under a second), above one sentence, one button and one quiet link.
 // Further down it reads as one story while scrolling (see LandingSections). The certificate numbers come from the exported example run.
@@ -97,10 +98,14 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
       <Hero />
       <RecentChecks />
       <Problem run={run} />
+      <ScrollScene id="opening" />
       <Steps />
+      <ScrollScene id="triad" />
       <CertificatePreview run={run} />
       <TavilySection />
       <Proof />
+      <ScrollScene id="placebo" />
+      <ProofMatrix />
       <Lesson />
       <Limits />
       <TryIt />

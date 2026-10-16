@@ -10,7 +10,6 @@ import { statusFor } from '../livestatus'
 import { Matrix } from './TwoModes'
 import { Badge, Chevron, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
 import { Hint } from './Hint'
-import { ProofLoop } from './ProofLoop'
 import { measuredAttempts } from '../measurements'
 import { formatSpread } from '../metricFormat'
 
@@ -24,9 +23,9 @@ export const TIMELAPSE_RUN = `#/run/${FEATURED_RUN_ID}?play=1`
 const lead = 'font-grotesk m-0 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl'
 const body = 'm-0 max-w-2xl text-[16px] leading-relaxed text-fg-4'
 
-export function Block({ id, label, children }: { id?: string; label: string; children: ReactNode }) {
+export function Block({ id, label, flush, children }: { id?: string; label: string; flush?: boolean; children: ReactNode }) {
   return (
-    <section id={id} aria-label={label} className="mx-auto max-w-4xl scroll-mt-8 px-6 py-16 sm:py-24">
+    <section id={id} aria-label={label} className={`mx-auto max-w-4xl scroll-mt-8 px-6 ${flush ? 'pb-16 sm:pb-24' : 'py-16 sm:py-24'}`}>
       {children}
     </section>
   )
@@ -66,15 +65,16 @@ export function Problem({ run }: { run: RunData | null }) {
 
 const STEPS = [
   { title: 'Read', text: 'Read paper sources and quoted targets. Tavily researches repositories, setup details and repair hints at run time.' },
-  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run) and runs it in Nebius Sandboxes.' },
+  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run).' },
+  { title: 'Run', text: 'The code runs in Nebius Sandboxes, one branch per seed, without network.' },
   { title: 'Measure', text: 'An independent harness loads the true labels itself and scores the predictions.' },
 ]
 
 export function Steps() {
   return (
     <Block id="how" label="How Nullius works">
-      <h2 className={lead}>Read. Rebuild. Measure.</h2>
-      <ol className="m-0 mt-12 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-12">
+      <h2 className={lead}>Read. Rebuild. Run. Measure.</h2>
+      <ol className="m-0 mt-12 grid list-none gap-10 p-0 sm:grid-cols-2 md:grid-cols-4 md:gap-8">
         {STEPS.map((s) => (
           <li key={s.title}>
             <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg">{s.title}</h3>
@@ -123,6 +123,17 @@ export function CertificatePreview({ run }: { run: RunData | null }) {
   )
 }
 
+export function ProofMatrix() {
+  return (
+    <Block label="Proof, the two modes" flush>
+      <Matrix short />
+      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
+        Method fidelity not checked. <GoLink href="#benchmark">Full benchmark</GoLink>
+      </p>
+    </Block>
+  )
+}
+
 export function Proof() {
   const { placebo, reproducedAgree } = FIGURES
   const num = 'font-mono text-3xl font-light tracking-tight text-fg sm:text-4xl'
@@ -140,11 +151,6 @@ export function Proof() {
           <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">reproduced verdicts agree with the reference (post hoc)</p>
         </div>
       </div>
-      <ProofLoop />
-      <div className="mt-10"><Matrix short /></div>
-      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
-        Method fidelity not checked. <GoLink href="#benchmark">Full benchmark</GoLink>
-      </p>
     </Block>
   )
 }
