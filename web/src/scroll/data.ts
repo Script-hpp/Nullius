@@ -38,7 +38,13 @@ export function unitParts(claim: string) {
   return { model, data: parts.includes('etth1') ? 'ETTh1' : random ? 'Cora, random splits' : 'Cora' }
 }
 
-export async function loadStageData(): Promise<StageData> {
+let stagePromise: Promise<StageData> | null = null
+export function loadStageData(): Promise<StageData> {
+  if (!stagePromise) stagePromise = loadStageDataOnce().catch((e) => { stagePromise = null; throw e })
+  return stagePromise
+}
+
+async function loadStageDataOnce(): Promise<StageData> {
   const index = await loadIndex()
   const sums = await loadSummaries()
   const ref = index.find((r) => r.id === FILM_RUN)

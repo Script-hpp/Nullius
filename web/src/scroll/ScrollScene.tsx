@@ -67,11 +67,11 @@ export function ScrollScene({ id }: { id: SceneId }) {
     return () => { io.disconnect(); clearTimeout(idle); removeEventListener('load', later) }
   }, [still])
 
-  // visibility: play only while at least half of the frame is on screen
+  // visibility: play only while about 70% of the frame is on screen
   useEffect(() => {
     const el = frame.current
     if (still || !el || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver(([e]) => setVisible(isVisibleEnough(e.intersectionRatio)), { threshold: [0, 0.25, 0.5, 0.75, 1] })
+    const io = new IntersectionObserver(([e]) => setVisible(isVisibleEnough(e.intersectionRatio)), { threshold: [0, 0.25, 0.5, 0.7, 0.85, 1] })
     io.observe(el)
     return () => io.disconnect()
   }, [still])

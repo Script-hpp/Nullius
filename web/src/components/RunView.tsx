@@ -24,6 +24,7 @@ import { CertificateActions } from './CertificateActions'
 import { WhatIf } from './WhatIf'
 import { useHead } from '../useHead'
 import { headFromSummary } from '../paperhead'
+import { paperLabel } from '../paperLabel'
 import { getCatalogStatement, parseDate, resultSentence, showValue } from '../format'
 import { getText, loadRun, runDir, type Json, type RunData, type RunRef } from '../data'
 import { OVERALL, RESULT, catalogLabel, de2en, translateClaim } from '../labels'
@@ -166,8 +167,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           </div>
         </div>
         <header className="pb-6 pt-6 sm:pb-8 sm:pt-8">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {run.ref.paper_id} · {parseDate(run.ref.timestamp)}<Hint text={INFO} />
+          <div className="flex items-center gap-1.5 text-[12px] font-semibold tracking-[0.04em] text-muted">
+            {paperLabel(run.ref.paper_id)} · {parseDate(run.ref.timestamp)}<Hint text={INFO} />
           </div>
           <h1 className="font-grotesk m-0 mt-3 max-w-4xl text-3xl font-semibold leading-[1.08] text-fg sm:text-4xl">{run.ref.title}</h1>
           <PaperByline head={head} />

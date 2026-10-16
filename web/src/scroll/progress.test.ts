@@ -31,10 +31,10 @@ test('pause and resume continue from where they stopped', () => {
   assert.equal(t, 32)
 })
 
-test('visibility threshold is about half the frame', () => {
-  assert.equal(VISIBLE_AT, 0.5)
-  assert.equal(isVisibleEnough(0.49), false)
-  assert.equal(isVisibleEnough(0.5), true)
+test('visibility threshold is 70% of the frame', () => {
+  assert.equal(VISIBLE_AT, 0.7)
+  assert.equal(isVisibleEnough(0.69), false)
+  assert.equal(isVisibleEnough(0.7), true)
   assert.equal(isVisibleEnough(1), true)
 })
 

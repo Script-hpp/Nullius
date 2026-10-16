@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bug, Crop, FileText, GitCompare, Layers, Quote, Ruler, Scale, ScrollText, Search, SearchCheck, Shuffle, Users, Wrench, BookOpenText, type LucideIcon } from 'lucide-react'
+import { Check, Bug, Crop, FileText, GitCompare, Layers, Quote, Ruler, Scale, ScrollText, Search, SearchCheck, Shuffle, Users, Wrench, BookOpenText, type LucideIcon } from 'lucide-react'
 import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES, UNITS } from '../data/benchmark'
 import { heroCard, rampValue } from '../heroCard'
 import { prefersReducedMotion } from './hero/config'
@@ -12,6 +12,7 @@ import { useInView } from '../useInView'
 import { FEATURED_RUN_ID } from '../featured'
 import { loadIndex, loadRun, type RunData } from '../data'
 import { RESULT, TARGET_HINT, de2en } from '../labels'
+import { loadStageData, type StageData } from '../scroll/data'
 import { useLiveStatus } from '../live'
 import { statusFor } from '../livestatus'
 import { Badge, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
@@ -170,7 +171,7 @@ export function ProofNumbers() {
   const { placebo, withCode } = FIGURES
   const num = 'font-mono text-4xl font-light tracking-tight text-fg tabular-nums sm:text-5xl'
   const items = [
-    { n: `${placebo.v4[0]} of ${placebo.v4[1]}`, t: 'false claims accepted', s: 'planted on purpose' },
+    { n: `${placebo.v4[0]} of ${placebo.v4[1]}`, t: 'false claims accepted', s: 'planted on purpose, as in the test above' },
     { n: `${withCode.matched} of ${withCode.of}`, t: 'known results matched', s: 'paper + authors’ code, in-sample' },
     { n: `${HELD_OUT.matched} of ${HELD_OUT.of}`, t: 'on a held-out paper', s: 'not used to design the fixes' },
   ]
@@ -187,12 +188,43 @@ export function ProofNumbers() {
   )
 }
 
+// Two rows that say what the test below is: both outcomes are the right ones. Numbers come from the same run the scene plays.
+function TestLegend() {
+  const [d, setD] = useState<StageData | null>(null)
+  useEffect(() => { let on = true; loadStageData().then((x) => on && setD(x)).catch(() => {}); return () => { on = false } }, [])
+  if (!d?.placebo || !d.placeboVerdict) return null
+  const pct = (x: number) => `${(x * 100).toFixed(1)}%`
+  const rows = [
+    { what: 'Real claim', n: pct(d.claim.target), out: d.verdict.urteil === 'reproduziert' ? 'Reproduced' : 'Checked', note: null },
+    { what: 'Planted claim', n: pct(d.placebo.target), out: 'Rejected', note: 'correct' },
+  ]
+  return (
+    <ul className="m-0 mt-5 grid max-w-md list-none gap-2 p-0" aria-label="What this test checks">
+      {rows.map((r) => (
+        <li key={r.what} className="flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2.5 text-[15px] text-fg">
+          <span className="w-28 shrink-0 text-fg-4">{r.what}</span>
+          <span className="font-mono tabular-nums">{r.n}</span>
+          <span aria-hidden className="text-subtle">&rarr;</span>
+          <span className="font-medium">{r.out}</span>
+          <Check className="h-4 w-4 shrink-0 text-tone-green" strokeWidth={3} aria-hidden />
+          {r.note && <span className="text-[13px] font-medium text-tone-green">{r.note}</span>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function DoesItWork() {
   return (
-    <section id="proof" aria-label="Does it work?" className="scroll-mt-8 pt-14 sm:pt-20">
-      <div className="mx-auto max-w-4xl px-6"><h2 className={lead}>Does it work?</h2></div>
+    <section id="proof" aria-label="Can it be fooled?" className="scroll-mt-8 pt-14 sm:pt-20">
+      <div className="mx-auto max-w-4xl px-6">
+        <h2 className={lead}>Can it be fooled?</h2>
+        <p className={`${body} mt-3`}>In the same run we plant a false claim. Nullius has to reject it.</p>
+        <TestLegend />
+      </div>
       <div className="mt-6"><ScrollScene id="placebo" /></div>
       <div className="mx-auto max-w-4xl px-6 pt-6">
+        <p className="mb-5 mt-0 text-[14px] text-fg-4">Three small tests. The first is the one above.</p>
         <ProofNumbers />
         <p className="mb-0 mt-8 text-[14px] text-fg-4">Small tests, not a success rate. <GoLink href="#benchmark" className="ml-1">Benchmark</GoLink></p>
       </div>

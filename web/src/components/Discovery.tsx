@@ -26,6 +26,9 @@ const btn = 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounde
 
 const PURPOSE_TITLE: Record<string, string> = { find_papers: 'Find papers', read_paper: 'Read paper', find_code: 'Find code', community: 'Community' }
 
+// The search stops paying for reads after a few papers; say so as a plain note, not as a warning.
+export const plainNote = (m: string) => /^Max \d+ Tavily extracts reached\.?$/.test(m.trim()) ? `This search reads at most ${m.match(/\d+/)![0]} papers per run to save credits.` : m
+
 const fmtDate = (ts: number) => new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const fmtSec = (s: number) => `${Math.max(0, s).toFixed(1)}s`
 
@@ -591,7 +594,7 @@ export function Discovery() {
             <button onClick={() => startReplay()} className="text-fg-2 underline underline-offset-4 cursor-pointer hover:text-fg-max">Show recorded search instead</button>
           </div>
         )}
-        {[...new Set(view.notes.filter((note) => note.kind === 'warning').map((note) => note.message))].map((message, i) => <p key={i} className="mb-0 mt-3 text-[12px] text-tone-amber">{message}</p>)}
+        {[...new Set(view.notes.filter((note) => note.kind === 'warning').map((note) => plainNote(note.message)))].map((message, i) => <p key={i} className="mb-0 mt-3 text-[12px] text-muted">{message}</p>)}
       </div>
 
       {!events.length && mode === 'idle' ? (

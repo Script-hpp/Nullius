@@ -115,7 +115,7 @@ type MeasureProps = {
   dots: number            // how many seeds have landed (fractional: the last one is falling)
   axis: number; claimOn: number; bandOn: number; meanOn: number
   quote: string; byline: ReactNode; quoteOpacity: number
-  verdict?: { label: string; tone: 'green' | 'amber' | 'red'; on: number; sub: string; subOn: number }
+  verdict?: { label: string; tone: 'green' | 'amber' | 'red'; on: number; sub: string; subOn: number; caught?: boolean }
   oldVerdict?: { label: string; tone: 'green' | 'amber' | 'red'; on: number }
   axisCenter?: number      // the axis grows outward from this value instead of from the left
   claimLabelOn?: number    // the label can arrive later than the line (04-number flies it in)
@@ -193,7 +193,14 @@ function Measure({ d, pal, lo, hi, target, tol, dots, axis, claimOn, bandOn, mea
           <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 92, fontWeight: 650, letterSpacing: '-0.04em', color: tone(verdict.tone), opacity: verdict.on, transform: `translateY(${(1 - verdict.on) * 24}px)` }}>
             {verdict.tone === 'green' ? <Check size={78} strokeWidth={2.6} /> : <Cross size={78} strokeWidth={2.6} />} {verdict.label}
           </div>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 920, textAlign: 'center', fontSize: 26, color: pal.ink2, opacity: verdict.subOn }}>{verdict.sub}</div>
+          {verdict.caught && (
+            <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', opacity: verdict.subOn }}>
+              <div style={{ marginTop: 118, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 26px', borderRadius: 99, background: pal.greenSoft, color: pal.green, fontSize: 34, fontWeight: 650 }}>
+                <Check size={34} strokeWidth={3} /> Caught: the false claim was rejected. Correct.
+              </div>
+            </div>
+          )}
+          <div style={{ position: 'absolute', left: 0, right: 0, top: verdict.caught ? 984 : 920, textAlign: 'center', fontSize: 26, color: pal.ink2, opacity: verdict.subOn }}>{verdict.sub}</div>
         </>
       )}
     </>
@@ -244,7 +251,7 @@ const placebo: Shot = {
           byline={swap < 0.5 ? <>{d.byline} &middot; {d.claim.target_evidence?.table ?? d.claim.source}</> : <span style={{ color: pal.red }}>A wrong claim, planted on purpose.</span>}
           quoteOpacity={swap < 0.5 ? 1 - swap * 2 : 1}
           oldVerdict={{ ...oldV, on: 1 - easeInOut(ramp(t, P.verdictOut, 600)) }}
-          verdict={{ label: newV.label, tone: newV.tone, on: easeOut(ramp(t, P.reject, 600)), sub: same ? 'Same measurements. Wrong claim. Rejected.' : 'Wrong claim. Rejected.', subOn: fade(t, P.reject + 800, 600).opacity as number }} />
+          verdict={{ label: newV.label, tone: newV.tone, on: easeOut(ramp(t, P.reject, 600)), sub: same ? 'Same measurements. Wrong claim. Rejected.' : 'Wrong claim. Rejected.', subOn: fade(t, P.reject + 800, 600).opacity as number, caught: true }} />
         {/* the first frame equals the last frame of 04-number: its subtitle and source line fade out first */}
         <div style={{ position: 'absolute', left: 0, right: 0, top: 920, textAlign: 'center', fontSize: 26, color: pal.ink2, opacity: 1 - easeInOut(ramp(t, P.verdictOut, 600)) }}>with our setup &middot; target value reached &middot; method fidelity not checked</div>
         <div style={{ opacity: 1 - ramp(t, 300, 400) }}><Source t={1e9} pal={pal}>Real run, {day(d.retrievedAt)}: {d.seeds.length} seeds in Nebius Sandboxes, scored by our harness. Dots in the order the seeds finished.</Source></div>

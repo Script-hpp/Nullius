@@ -1,7 +1,7 @@
 // Pure play-clock maths for the landing scenes (tested in progress.test.ts).
 
 // Share of the frame that must be on screen before a shot plays.
-export const VISIBLE_AT = 0.5
+export const VISIBLE_AT = 0.7
 
 export const isVisibleEnough = (ratio: number): boolean => ratio >= VISIBLE_AT
 
