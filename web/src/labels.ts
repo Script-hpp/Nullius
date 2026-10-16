@@ -7,6 +7,10 @@ export const RESULT_CATALOG: Record<string, { label: string; tone: Tone }> = {
   'nicht reproduziert': { label: 'NOT REPRODUCED', tone: 'red' },
   'nicht reproduzierbar (Setup)': { label: 'SETUP NOT REPRODUCIBLE', tone: 'gray' },
   'Agenten-Fehler vermutet': { label: 'AGENT ERROR SUSPECTED', tone: 'violet' },
+  // Benchmark majority classes (scripts/eval_benchmark_v2.py): no verdict came out of a generation / the generations split with no two alike / a unit is not finished
+  'Ausfall': { label: 'FAILED RUN', tone: 'gray' },
+  'keine Mehrheit': { label: 'NO MAJORITY', tone: 'gray' },
+  'unvollstaendig': { label: 'INCOMPLETE', tone: 'gray' },
 }
 // Same wording for every run: "reproduced" means the target value was reached with our setup; method fidelity is not checked.
 export const RESULT = RESULT_CATALOG

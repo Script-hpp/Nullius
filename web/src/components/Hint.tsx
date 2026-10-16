@@ -16,7 +16,7 @@ export function Hint({ text }: { text: string }) {
     setOpen(on)
   }
   return (
-    <span className="relative inline-flex align-middle normal-case tracking-normal font-normal">
+    <span className="relative inline-flex items-center align-middle normal-case tracking-normal font-normal">
       <button ref={ref} type="button" aria-label={text} aria-expanded={open}
         onClick={(e) => { e.stopPropagation(); show(!open) }}
         onPointerEnter={(e) => { if (e.pointerType === 'mouse') show(true) }}

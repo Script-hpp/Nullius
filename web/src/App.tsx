@@ -5,7 +5,7 @@ import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { Landing } from './components/Landing'
 import { DATA_CHANGED } from './live'
-import { MethodInfo } from './components/CatalogBits'
+import { METHOD_NOTE, VerdictBadge } from './components/CatalogBits'
 import { NextStep, PageIntro } from './components/page'
 import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
@@ -115,8 +115,7 @@ function Home({ loaded }: { loaded: RunRef[] | null }) {
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 {v ? (
                   <>
-                    <Badge tone={res!.tone} title={resultHint(v.urteil)}>{res!.label}</Badge>
-                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <MethodInfo />}
+                    <VerdictBadge tone={res!.tone} title={resultHint(v.urteil)} hint={r.catalog_id && isPreliminary(r.gesamtaussage) ? METHOD_NOTE : undefined}>{res!.label}</VerdictBadge>
                   </>
                 ) : <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Evaluating...</span>}
               </div>

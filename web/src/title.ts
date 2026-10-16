@@ -2,7 +2,7 @@
 // Titles are shown as plain text: the math marks go, the content stays. Pure, tested in title.test.ts.
 
 const WRAPPERS = /\\(?:text|textbf|textit|textrm|mathrm|mathbf|mathit|mathcal|emph|operatorname)\s*\{([^{}]*)\}/g
-const SYMBOLS: Record<string, string> = { '\\times': '×', '\\cdot': '·', '\\%': '%', '\\&': '&', '\\_': '_', '\\#': '#', '\\$': '$', '\\to': '→', '\\rightarrow': '→', '\\ell': 'ℓ', '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\lambda': 'λ', '\\mu': 'μ', '\\sigma': 'σ', '\\pi': 'π', '\\ldots': '…', '\\dots': '…' }
+const SYMBOLS: Record<string, string> = { '\\times': '×', '\\cdot': '·', '\\%': '%', '\\&': '&', '\\_': '_', '\\#': '#', '\\$': '$', '\\to': ' to ', '\\rightarrow': ' to ', '\\ell': 'ℓ', '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\lambda': 'λ', '\\mu': 'μ', '\\sigma': 'σ', '\\pi': 'π', '\\ldots': '…', '\\dots': '…' }
 
 function mathToText(inner: string): string {
   let s = inner

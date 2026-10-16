@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from 'react'
 import { AlertCircle, Info } from 'lucide-react'
 import { Hint } from './Hint'
 import { Badge, GoArrow, ICON_MD, INLINE, toPercent } from './ui'
@@ -14,6 +15,17 @@ export function MethodInfo() {
   return <span className="relative z-10 inline-flex"><Hint text={METHOD_NOTE} /></span>
 }
 
+// One verdict label with its optional info icon. The icon sits 4-6 px from the label and is centred on the label's line box (one flex row,
+// so no baseline offsets); every verdict label on the site that carries an info icon uses this.
+export function VerdictBadge({ tone, title, hint, children }: { tone: ComponentProps<typeof Badge>['tone']; title?: string; hint?: string; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Badge tone={tone} title={title}>{children}</Badge>
+      {hint && <span className="relative z-10 inline-flex items-center"><Hint text={hint} /></span>}
+    </span>
+  )
+}
+
 // Result of a checked catalog entry: axis-1 verdict, overall statement, preliminary marker.
 export function CatalogVerdict({ entry }: { entry: CatalogEntry }) {
   const v = entry.verdict
@@ -22,8 +34,8 @@ export function CatalogVerdict({ entry }: { entry: CatalogEntry }) {
   const redundant = v.gesamtaussage === v.urteil || v.gesamtaussage === NOT_ASSESSABLE   // the badge already says it
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <Badge tone={r.tone} title={resultHint(v.urteil)}>{r.label}</Badge>
-      {isPreliminary(v.gesamtaussage) ? <MethodInfo /> : !redundant && <span className="text-[11px] text-muted">{OVERALL[v.gesamtaussage] ?? v.gesamtaussage}</span>}
+      <VerdictBadge tone={r.tone} title={resultHint(v.urteil)} hint={isPreliminary(v.gesamtaussage) ? METHOD_NOTE : undefined}>{r.label}</VerdictBadge>
+      {!isPreliminary(v.gesamtaussage) && !redundant && <span className="text-[11px] text-muted">{OVERALL[v.gesamtaussage] ?? v.gesamtaussage}</span>}
     </div>
   )
 }

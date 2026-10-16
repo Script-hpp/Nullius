@@ -130,8 +130,8 @@ export function ScrollScene({ id }: { id: SceneId }) {
           )}
           {!still && showStage && (
             <button type="button" onClick={control.act} aria-label={control.label} title={control.label}
-              className="group absolute bottom-0 right-0 grid h-11 w-11 place-items-center text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-current">
-              <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface/80 shadow-sm backdrop-blur transition-colors motion-reduce:transition-none sm:h-8 sm:w-8">{control.icon}</span>
+              className="group absolute bottom-0 right-0 grid h-11 w-11 cursor-pointer place-items-center text-muted transition-colors hover:text-fg motion-reduce:transition-none focus-visible:outline-none">
+              <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface/80 shadow-sm backdrop-blur transition-colors motion-reduce:transition-none group-hover:border-line-strong group-hover:bg-raised group-focus-visible:ring-2 group-focus-visible:ring-fg-3 sm:h-8 sm:w-8">{control.icon}</span>
             </button>
           )}
         </div>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { withArrows } from '../Arrows'
 
 // Plans use headings, lists, bold labels and inline code. Render those as React
 // elements; model output and HTML remain text, never executable markup.
@@ -6,8 +7,8 @@ function inline(text: string): ReactNode[] {
   return text.split(/(`[^`]+`|\*\*.+?\*\*|__.+?__)/g).map((part, i) => {
     if (part.startsWith('`') && part.endsWith('`')) return <code key={i} className="rounded bg-raised px-1 py-0.5 font-mono text-[11px] text-fg-2 [overflow-wrap:anywhere]">{part.slice(1, -1)}</code>
     if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))) return <strong key={i} className="font-semibold text-fg-2">{inline(part.slice(2, -2))}</strong>
-    return part
-  })
+    return withArrows(part, i)
+  }).flat()
 }
 
 export function PlanText({ lines }: { lines: string[] }) {

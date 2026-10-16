@@ -15,8 +15,9 @@ import { RESULT, TARGET_HINT, de2en } from '../labels'
 import { loadStageData, type StageData } from '../scroll/data'
 import { useLiveStatus } from '../live'
 import { statusFor } from '../livestatus'
-import { Badge, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
-import { Hint } from './Hint'
+import { VerdictBadge } from './CatalogBits'
+import { InlineArrow } from './Arrows'
+import { Disclosure, ExtLink, GoArrow, GoLink, LINK_TEXT } from './ui'
 import { measuredAttempts } from '../measurements'
 import { formatMetric } from '../metricFormat'
 
@@ -84,8 +85,9 @@ export function Steps() {
         {STEPS.map((s, i) => (
           <li key={s.title} className="flex flex-col rounded-xl border border-line bg-surface p-5 sm:p-6">
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><s.icon className="h-[18px] w-[18px]" aria-hidden /></span>
-              <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg"><span className="mr-2 font-mono text-[13px] font-normal text-muted">{i + 1}</span>{s.title}</h3>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-raised font-grotesk text-[15px] font-semibold leading-none text-fg tabular-nums" aria-hidden>{i + 1}</span>
+              <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg"><span className="sr-only">Step {i + 1}: </span>{s.title}</h3>
+              <s.icon className="ml-auto h-5 w-5 shrink-0 text-muted" aria-hidden />
             </div>
             <p className="mb-0 mt-4 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
           </li>
@@ -146,7 +148,7 @@ export function HeroCard({ run }: { run: RunData | null }) {
     <article className="nx-card-lift nx-rise relative rounded-2xl border border-line bg-surface p-6 text-left shadow-sm sm:p-8" aria-label="Example result">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Example check</span>
-        <span className="inline-flex items-center gap-1.5"><Badge tone={res.tone}>{res.label}</Badge><span className="relative z-10"><Hint text={TARGET_HINT} /></span></span>
+        <VerdictBadge tone={res.tone} hint={TARGET_HINT}>{res.label}</VerdictBadge>
       </div>
       <p className="font-grotesk mb-0 mt-5 text-lg font-semibold leading-snug tracking-[-0.02em] text-fg sm:text-xl">{card.line} <span className="font-sans text-[13px] font-normal tracking-normal text-muted">· {card.hint}</span></p>
       <dl className="m-0 mt-7 grid grid-cols-2 gap-6">
@@ -204,7 +206,7 @@ function TestLegend() {
         <li key={r.what} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-line bg-surface px-3 py-2.5 text-[14px] text-fg sm:gap-x-3 sm:px-4 sm:text-[15px]">
           <span className="w-[6.5rem] shrink-0 text-fg-4 sm:w-28">{r.what}</span>
           <span className="font-mono tabular-nums">{r.n}</span>
-          <span aria-hidden className="text-subtle">&rarr;</span>
+          <InlineArrow className="h-3.5 w-3.5" />
           <span className="font-medium">{r.out}</span>
           <Check className="h-4 w-4 shrink-0 text-tone-green" strokeWidth={3} aria-hidden />
           {r.note && <span className="text-[13px] font-medium text-tone-green">{r.note}</span>}
@@ -226,7 +228,7 @@ export function DoesItWork() {
       <div className="mx-auto max-w-4xl px-6 pt-6">
         <p className="mb-5 mt-0 text-[14px] text-fg-4">Three small tests. The first is the one above.</p>
         <ProofNumbers />
-        <p className="mb-0 mt-8 text-[14px] text-fg-4">Small tests, not a success rate. <GoLink href="#benchmark" className="ml-1">Benchmark</GoLink></p>
+        <p className="mb-0 mt-8 text-[14px] text-fg-4">Small tests, not a success rate. <GoLink href="#benchmark" className={`${LINK_TEXT} ml-1`}>Benchmark</GoLink></p>
       </div>
     </section>
   )
@@ -389,7 +391,7 @@ export function TryIt() {
           <a href="#catalog" className="nx-go inline-flex items-center gap-2 rounded-full bg-on-inverse px-6 py-3 text-sm font-medium text-inverse no-underline transition-opacity hover:opacity-85">
             Open the catalog <GoArrow className="h-4 w-4 shrink-0" />
           </a>
-          {discovery?.live && <><span className="text-[14px] opacity-75">or</span><GoLink href="#discover" className="text-[14px] text-on-inverse underline underline-offset-4">let Tavily find new papers</GoLink></>}
+          {discovery?.live && <><span className="text-[14px] opacity-75">or</span><GoLink href="#discover" className="text-[14px] text-on-inverse underline underline-offset-4 opacity-90 transition-opacity hover:opacity-100">let Tavily find new papers</GoLink></>}
         </div>
       </div>
     </Block>

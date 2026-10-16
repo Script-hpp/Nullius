@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, Loader2, Lock } from 'lucide-react'
-import { ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
+import { Disclosure, ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
 import { Hint } from './Hint'
+import { QuoteText } from './QuoteText'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
 import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../catalog'
 import { translateReason } from '../labels'
@@ -91,9 +92,10 @@ function QuoteView({ quote, target }: { quote?: string; target?: number }) {
   if (!cells) {
     const [b, n, a] = quoteExcerpt(quote, target)
     return (
-      <blockquote className="border-l-2 border-line pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">
-        {b}<span className="text-fg-strong font-semibold underline decoration-muted underline-offset-2">{n}</span>{a}
-      </blockquote>
+      <QuoteText quote={quote} target={target} fallback={
+        <blockquote className="border-l-2 border-line pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">
+          {b}<span className="text-fg-strong font-semibold underline decoration-muted underline-offset-2">{n}</span>{a}
+        </blockquote>} />
     )
   }
   const hi = <span className="text-fg-strong font-semibold underline decoration-muted underline-offset-2">{cells.cell[1]}</span>
@@ -639,11 +641,10 @@ export function Discovery() {
                   check={id && (p.catalogId || eligible) ? { eligibility: eligible, disabled: !!checkNotice || starting !== null, notice: checkNotice,
                     starting: starting === id, error: checkError?.id === id ? checkError.message : undefined, onRun: () => runClaim(id) } : undefined} />
               })}
-              {rejected.length > 0 && <details className="mt-4 border-t border-line pt-3">
-                <summary className="cursor-pointer text-[12px] text-muted">Papers outside the discovery criteria ({rejected.length})</summary>
-                <p className="text-[12px] leading-relaxed text-muted">No compatible claim was selected from these papers. This is a search-filter result, not an experiment verdict.</p>
+              {rejected.length > 0 && <Disclosure className="mt-4 border-t border-line pt-3" summary={`Papers outside the discovery criteria (${rejected.length})`} summaryClassName="text-[13px] text-muted hover:text-fg-3">
+                <p className="mb-0 mt-3 text-[12px] leading-relaxed text-muted">No compatible claim was selected from these papers. This is a search-filter result, not an experiment verdict.</p>
                 <div className="mt-3 space-y-3">{rejected.map((p) => <PaperCard key={p.id} p={p} active={false} />)}</div>
-              </details>}
+              </Disclosure>}
               {!papers.length && mode === 'live' && [0, 1].map((i) => (
                 <div key={i} aria-hidden className="rounded-xl border border-dashed border-line p-5 motion-safe:animate-pulse"><div className="h-3 w-2/3 rounded bg-raised" /><div className="mt-3 h-2.5 w-1/3 rounded bg-raised" /></div>
               ))}

@@ -44,7 +44,7 @@ export function spline(keys: number[][], t: number, ends: 'stop' | 'through' = '
 // Fade in while rising by `dist` px.
 export function rise(t: number, at: number, d = 700, dist = 24): CSSProperties {
   const p = easeOut(ramp(t, at, d))
-  return { opacity: p, transform: `translateY(${(1 - p) * dist}px)` }
+  return { opacity: p, transform: `translateY(${Math.round((1 - p) * dist)}px)` }
 }
 export const fade = (t: number, at: number, d = 600): CSSProperties => ({ opacity: easeInOut(ramp(t, at, d)) })
 // visible from `at`, gone after `until`
@@ -74,10 +74,11 @@ export function Source({ t, at = 600, pal, children }: { t: number; at?: number;
   )
 }
 
-// A slow push-in over the whole shot, like a camera on a slider.
-export function Camera({ t, dur, from = 1, to = 1.03, children }: { t: number; dur: number; from?: number; to?: number; children: ReactNode }) {
-  const s = lerp(from, to, easeInOut(clamp(t / dur)))
-  return <div style={{ position: 'absolute', inset: 0, transform: `scale(${s})`, transformOrigin: '50% 50%', willChange: 'transform', textRendering: 'geometricPrecision' }}>{children}</div>
+// The shot's framing. It is a fixed scale, not a slow push-in: scaling a layer that holds text by a fraction of a percent per frame makes the
+// browser re-rasterise every glyph at a new sub-pixel position each frame, and the text visibly shakes. A fixed scale keeps glyphs still.
+// `from`/`to` are kept so shots state their framing; the mid value is used.
+export function Camera({ from = 1, to = 1.03, children }: { t?: number; dur?: number; from?: number; to?: number; children: ReactNode }) {
+  return <div style={{ position: 'absolute', inset: 0, transform: `scale(${(from + to) / 2})`, transformOrigin: '50% 50%', backfaceVisibility: 'hidden' }}>{children}</div>
 }
 
 export const pct = (x: number, digits = 1) => `${(x * 100).toFixed(digits)}%`

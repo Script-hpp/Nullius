@@ -14,13 +14,12 @@ const verdictOf = (v: string) => de2en(RESULT, v)
 // One arm of one unit: the majority verdict and one small mark per generation.
 function ArmCell({ arm, reference }: { arm: BenchArm; reference: string }) {
   const agrees = arm.majority === reference
-  const r = RESULT[arm.majority]
   return (
     <div>
-      <div className="flex items-center gap-2">
-        {agrees ? <CheckCircle2 className="h-4 w-4 shrink-0 text-tone-green" aria-label="matches the reference" /> : <MinusCircle className="h-4 w-4 shrink-0 text-subtle" aria-label="does not match the reference" />}
-        <span className="text-[13px] font-medium text-fg">{r ? verdictOf(arm.majority).label : arm.majority || 'no majority'}</span>
-      </div>
+      <Badge tone={verdictOf(arm.majority || 'keine Mehrheit').tone}
+        icon={agrees ? <CheckCircle2 className="h-4 w-4 shrink-0 text-tone-green" aria-label="matches the reference" /> : <MinusCircle className="h-4 w-4 shrink-0 text-subtle" aria-label="does not match the reference" />}>
+        {verdictOf(arm.majority || 'keine Mehrheit').label}
+      </Badge>
       <div className="mt-1.5 flex flex-wrap gap-1" aria-label="verdict of each generation">
         {arm.verdicts.map((v, i) => <span key={i} title={RESULT[v] ? verdictOf(v).label : v} className={`inline-block h-2 w-2 rounded-full ${RESULT[v]?.tone === 'green' ? 'bg-tone-green-solid' : RESULT[v]?.tone === 'amber' ? 'bg-tone-amber-solid' : RESULT[v]?.tone === 'red' ? 'bg-tone-red-solid' : 'bg-line-stronger'}`} />)}
       </div>
@@ -36,7 +35,7 @@ function UnitRow({ u }: { u: BenchUnit }) {
         <div className="mt-1 max-w-xs text-[12px] leading-relaxed text-muted">{u.claim}</div>
       </td>
       <td className="py-5 pr-6 font-mono text-[13px] text-fg-3">{pct(u.target, u.metric)}</td>
-      <td className="py-5 pr-6"><Badge tone={RESULT[u.reference_verdict] ? verdictOf(u.reference_verdict).tone : 'gray'}>{RESULT[u.reference_verdict] ? verdictOf(u.reference_verdict).label : u.reference_verdict}</Badge></td>
+      <td className="py-5 pr-6"><Badge tone={verdictOf(u.reference_verdict).tone}>{verdictOf(u.reference_verdict).label}</Badge></td>
       <td className="py-5 pr-6"><ArmCell arm={u.arms.A} reference={u.reference_verdict} /></td>
       <td className="py-5 pr-6"><ArmCell arm={u.arms.B} reference={u.reference_verdict} /></td>
       <td className="py-5 text-[12px] leading-relaxed text-fg-4">

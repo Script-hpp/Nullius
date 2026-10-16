@@ -1,3 +1,4 @@
+import { QuoteText } from './QuoteText'
 import { formatMetric } from '../metricFormat'
 import { measuredAttempts } from '../measurements'
 import { AttemptChart } from './Gauge'
@@ -16,7 +17,7 @@ export function TargetEvidence({ claim, sources }: { claim: Json; sources?: Json
         <span className="font-mono text-lg font-semibold text-fg">{formatMetric(claim.metric, claim.target)} {claim.metric?.toUpperCase()}</span>
       </div>
       <p className="mb-3 mt-0 text-[13px] leading-relaxed text-fg-4">{source.extracted ? 'Target quotation extracted from the paper.' : 'Recorded target source. Automatic target verification did not complete; this does not confirm the target or its table column.'}</p>
-      {source.quote ? <blockquote className="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] leading-relaxed text-tone-amber-fg/90">“{source.quote}”</blockquote> : <p className="text-sm text-muted">No target quotation was recorded. Read the original source and the limitations of this check.</p>}
+      {source.quote ? <QuoteText quote={source.quote} fallback={<blockquote className="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border-l-2 border-tone-amber-solid/50 bg-tone-amber-solid/5 px-4 py-3 font-mono text-[12px] leading-relaxed text-tone-amber-fg/90">“{source.quote}”</blockquote>} /> : <p className="text-sm text-muted">No target quotation was recorded. Read the original source and the limitations of this check.</p>}
       <p className="mb-0 mt-3 text-[12px] leading-relaxed text-fg-4">
         {source.table && <>Recorded location: {source.table}. </>}
         {!source.table && source.recordedLocation && <>{source.recordedLocation}. </>}

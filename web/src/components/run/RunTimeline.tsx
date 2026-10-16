@@ -3,8 +3,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Box, CheckCircle2, ChevronDown, CircleDashed, Cpu, Loader2, Search, ShieldCheck, ArrowDown, Info } from 'lucide-react'
 import { AttemptChart } from '../Gauge'
 import { Hint } from '../Hint'
-import { Badge, Section } from '../ui'
-import { MethodInfo } from '../CatalogBits'
+import { Section } from '../ui'
+import { QuoteText } from '../QuoteText'
+import { METHOD_NOTE, VerdictBadge } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
 import { PlanText } from './PlanText'
 import { TavilyMark } from '../TavilyMark'
@@ -54,7 +55,7 @@ function useCode(hash: string, inline: string | undefined, loader?: (hash: strin
 
 export function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (hash: string) => Promise<string | null>; planFull?: string | null }) {
   const [all, setAll] = useState(false)
-  if (ex.kind === 'quote') return <blockquote className="mt-2 border-l-2 border-line-strong pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">{ex.quote}</blockquote>
+  if (ex.kind === 'quote') return <QuoteText quote={ex.quote} className="mt-2" fallback={<blockquote className="mt-2 border-l-2 border-line-strong pl-3 font-mono text-[11px] leading-relaxed text-muted break-words">{ex.quote}</blockquote>} />
   if (ex.kind === 'error') return <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-2.5 font-mono text-[11px] text-muted">{ex.text}</pre>
   if (ex.kind === 'setup') {
     return (
@@ -62,7 +63,7 @@ export function ExpandView({ ex, loader, planFull }: { ex: Expand; loader?: (has
         {ex.items.map((d, i) => (
           <li key={i} className="text-[12px] leading-relaxed text-fg-3">
             <span className="text-fg-2">{d.topic}</span>: {d.value} <span className="text-muted">({d.source})</span>
-            {d.quote && <span className="block border-l border-line pl-2 font-mono text-[10.5px] text-subtle break-words">“{d.quote}”</span>}
+            {d.quote && <QuoteText quote={d.quote} fallback={<span className="block border-l border-line pl-2 font-mono text-[10.5px] text-subtle break-words">“{d.quote}”</span>} />}
           </li>
         ))}
       </ul>
@@ -332,8 +333,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
               <div className="nx-card rounded-xl border border-line bg-panel/50 p-5">
                 <div className={label}>Result</div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <Badge tone={label_.tone} title={resultHint(String(verdict.urteil))}>{label_.label}</Badge>
-                  {isPreliminary(String(verdict.gesamt)) && <MethodInfo />}
+                  <VerdictBadge tone={label_.tone} title={resultHint(String(verdict.urteil))} hint={isPreliminary(String(verdict.gesamt)) ? METHOD_NOTE : undefined}>{label_.label}</VerdictBadge>
                 </div>
                 <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
                   Measured {fmtValue(m.metric, Number(verdict.mean))} ± {fmtValue(m.metric, Number(verdict.std))} against the claimed {fmtValue(m.metric, m.target, 2)} (tolerance ±{fmtValue(m.metric, m.tolerance, m.metric === 'accuracy' ? 1 : 3)}).
