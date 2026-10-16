@@ -54,6 +54,9 @@ While checking papers, we saw that the number in a paper is often not enough to 
 - **SparseTSF (ETTh1):** the authors' launch script for the linear variant does not set the model type, and the code default is the MLP variant. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.
 - **RLinear (ETTh1):** the input length 336 appears only in the caption of the claim table. The code default of 96 won, and the check measured 0.397 ± 0.013 against 0.366 (not reproduced). Nullius now reads table captions; whether the target is reached with that fix is untested. [Run record](docs/audits/rlinear_live_ba9fa94f_20261014.json).
 - **TSMixer (ETTh1):** the target was reached with a smaller model (1 mixer block, hidden size 128 instead of 6 and 512). We show this as target reached with a reduced model, not as reproduced.
+- **SARAF (ETTh1):** the method uses calendar features (hour, weekday, ...) that our earlier input to the generated code did not carry. With a human-written adapter around the unchanged authors' model core and the calendar data, the error was 0.3696 ± 0.0014 against the target 0.371. This is not an autonomous Nullius run. [Calendar check](docs/saraf_local_contract_verification_20261013.md).
+
+The findings page explains all of this in plain words, together with what checking taught us about building a checker: [nullius.akca.dev/#/findings](https://nullius.akca.dev/#/findings).
 
 ## Checks you can open
 

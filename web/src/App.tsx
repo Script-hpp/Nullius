@@ -9,6 +9,7 @@ import { PreliminaryChip } from './components/CatalogBits'
 import { NextStep, PageIntro } from './components/page'
 import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
+import { FindingsPage } from './components/FindingsPage'
 import { Contact } from './components/Contact'
 import { colorForTone, getDelta, parseDate, showValue } from './format'
 import { Badge, CARD_LIFT, Chevron } from './components/ui'
@@ -228,7 +229,7 @@ export default function App() {
   return (
     <Layout currentHash={hash}>
       <div className="py-6 min-h-screen bg-bg">
-        {hash === 'discover' ? <Discovery /> : hash.split('?')[0] === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null && !isHome ? <DelayedLoading /> : ref ? <RunView ref_={ref} initialTab={query.get('tab') ?? undefined} playTimelapse={query.get('play') === '1'} key={ref.id} /> : <Home loaded={runs} />}
+        {hash === 'discover' ? <Discovery /> : hash.split('?')[0] === 'catalog' ? <Catalog /> : hash === 'benchmark' ? <Benchmark /> : (hash === 'findings' || hash === '/findings') ? <FindingsPage /> : (hash === 'contact' || hash === '/contact') ? <Contact /> : live ? <LiveRun jobId={decodeURIComponent(live[1])} key={live[1]} /> : runs === null && !isHome ? <DelayedLoading /> : ref ? <RunView ref_={ref} initialTab={query.get('tab') ?? undefined} playTimelapse={query.get('play') === '1'} key={ref.id} /> : <Home loaded={runs} />}
       </div>
     </Layout>
   )
