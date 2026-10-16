@@ -53,7 +53,7 @@ export const FINDINGS: Finding[] = [
       { label: 'What the paper says', text: 'The results table lists four input lengths (90, 180, 360, 720). Target error (MSE): 0.372.' },
       { label: 'What actually ran', text: 'The authors’ start file for this data uses 360. Its batch size of 64 is doubled to an effective 128 by the code.' },
       { label: 'What we measured', text: 'With these settings, a live run without human edits measured 0.37203 ± 0.00005 over 3 seeds. An earlier live run with other settings measured about 0.70.' },
-      { label: 'Why it matters', text: 'Anyone who rebuilds from the table alone has to guess one of four columns, and a wrong guess nearly doubles the error.' },
+      { label: 'Why it matters', text: 'Anyone who rebuilds from the table alone has to guess the settings. In our earlier run, other settings nearly doubled the error.' },
       { label: 'What Nullius does now', text: 'It reads the start file and the paper’s source text, and checks the settings against the paper before any paid step.' },
     ],
     commits: ['be1a643'],
@@ -112,10 +112,10 @@ export const FINDINGS: Finding[] = [
     right: { label: 'Model that ran', value: '1 block', tone: 'amber' },
     details: [
       { label: 'What the paper says', text: 'Six building blocks, size 512, dropout 0.9. Target error (MSE): 0.361.' },
-      { label: 'What actually ran', text: 'The generated code cut blocks and size to a quarter for speed: 1 block, size 128.' },
+      { label: 'What actually ran', text: 'The generated code shrank the model for speed: 1 block instead of 6, size 128 instead of 512.' },
       { label: 'What we measured', text: '0.3624 ± 0.0003 over 3 seeds on 9 October. In the re-check of 14 October, a first try read the wrong defaults (dropout 0.05, size 64) because the paper’s settings table in the source was not read. With the right settings, each try took longer than 10 minutes on a CPU, so the check could not be finished within the budget.' },
       { label: 'Why it matters', text: 'A matching number can come from a different, smaller model. The label has to say so.' },
-      { label: 'What Nullius does now', text: 'It reads settings tables in the paper’s source and shows reduced models as such.' },
+      { label: 'What Nullius does now', text: 'It reads settings tables in the paper’s source. The catalog labels this run “target reached with a reduced model”.' },
     ],
     commits: [],
     links: [
