@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Bug, FileText, Quote, Search, Users } from 'lucide-react'
-import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES } from '../data/benchmark'
+import { Bug, Crop, FileText, GitCompare, Layers, Quote, Scale, Search, SearchCheck, Shuffle, Users, type LucideIcon } from 'lucide-react'
+import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES, UNITS } from '../data/benchmark'
+import { useCatalog, evidenceHref } from '../catalog'
+import { claimLine, juryEntries, splitFirstSentence } from '../landingBottom'
+import { useInView } from '../useInView'
 import { FEATURED_RUN_ID } from '../featured'
 import { loadIndex, loadRun, type RunData } from '../data'
 import { showValue } from '../format'
@@ -8,7 +11,7 @@ import { RESULT, de2en, resultHint, translateClaim } from '../labels'
 import { useLiveStatus } from '../live'
 import { statusFor } from '../livestatus'
 import { Matrix } from './TwoModes'
-import { Badge, Chevron, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
+import { Badge, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
 import { Hint } from './Hint'
 import { measuredAttempts } from '../measurements'
 import { formatSpread } from '../metricFormat'
@@ -154,12 +157,52 @@ export function Proof() {
   )
 }
 
+// One row of unit squares: filled = the majority verdict matched the reference. The squares fill in once, left to right, when the row scrolls into view.
+function UnitRow({ label, sub, key_, fill, matched, of }: { label: string; sub: string; key_: 'paperOnly' | 'withCode'; fill: string; matched: number; of: number }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 sm:grid-cols-[11rem_1fr_auto]">
+      <div>
+        <div className="text-[14px] font-semibold text-fg">{label}</div>
+        <div className="text-[12px] text-muted">{sub}</div>
+      </div>
+      <ul className="col-span-2 row-start-2 m-0 flex list-none gap-1.5 p-0 sm:col-span-1 sm:row-start-auto sm:gap-2" aria-label={`${matched} of ${of} units matched the reference verdict`} style={{ '--nx-fill': fill } as React.CSSProperties}>
+        {UNITS.map((u, i) => (
+          <li key={u.id} title={`${u.author} ${u.model}: ${u[key_] ? 'matched' : 'missed'}`} className="min-w-0 flex-1">
+            <div data-hit={u[key_]} className="nx-sq aspect-square w-full max-w-11 rounded-md border border-line-strong" style={{ '--nx-delay': `${i * 70}ms` } as React.CSSProperties} />
+          </li>
+        ))}
+      </ul>
+      <div className="col-start-2 row-start-1 font-mono text-2xl font-light tracking-tight text-fg sm:col-start-3 sm:text-right">{matched} of {of}</div>
+    </div>
+  )
+}
+
 export function Lesson() {
+  const [ref, seen] = useInView<HTMLDivElement>(0.35)
+  const { paperOnly, withCode } = FIGURES
   return (
     <Block id="lesson" label="Our own small bitter lesson">
-      <h2 className={lead}>Cleverness left {FIGURES.paperOnly.matched} of {FIGURES.paperOnly.of}. The authors&rsquo; code moved it.</h2>
+      <h2 className={lead}>Cleverness left {paperOnly.matched} of {paperOnly.of}. The authors&rsquo; code moved it.</h2>
       <p className={`${body} mt-6`}>
-        With the authors&rsquo; code, read as text and never run: {FIGURES.withCode.matched} of {FIGURES.withCode.of}. Held-out: {HELD_OUT.matched} of {HELD_OUT.of}. An observation, not a proof.
+        Same eight papers, two ways to rebuild them. The authors&rsquo; code is read as text and never run.
+      </p>
+      <div ref={ref} className={`${seen ? 'nx-in' : ''} mt-10 grid gap-8 rounded-2xl border border-line bg-surface p-5 sm:p-8`}>
+        <UnitRow label="Paper only" sub="what the paper states" key_="paperOnly" fill="var(--c-fg-4)" matched={paperOnly.matched} of={paperOnly.of} />
+        <UnitRow label="Paper and authors’ code" sub="plus the code, as text" key_="withCode" fill="var(--c-tone-green-solid)" matched={withCode.matched} of={withCode.of} />
+        <div className="border-t border-line pt-6 grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-3 sm:grid-cols-[11rem_1fr_auto]">
+          <div>
+            <div className="text-[14px] font-semibold text-fg">Held out</div>
+            <div className="text-[12px] text-muted">{HELD_OUT.author} {HELD_OUT.model}, not used to design the fixes</div>
+          </div>
+          <div className="col-span-2 row-start-2 flex items-center gap-3 sm:col-span-1 sm:row-start-auto">
+            <div title={`${HELD_OUT.author} ${HELD_OUT.model}: missed`} className="aspect-square w-9 rounded-md border border-dashed border-tone-red" />
+            <span className="text-[13px] text-fg-4">missed in both generations</span>
+          </div>
+          <div className="col-start-2 row-start-1 font-mono text-2xl font-light tracking-tight text-fg sm:col-start-3 sm:text-right">{HELD_OUT.matched} of {HELD_OUT.of}</div>
+        </div>
+      </div>
+      <p className="mb-0 mt-4 max-w-2xl text-[13px] leading-relaxed text-muted">
+        Filled square: the harness measurement matched the reference verdict. In-sample: the fixes were built after seeing these eight. An observation, not a proof.
       </p>
       <p className="mb-0 mt-4 text-[14px]">
         <ExtLink href={`${REPO_BLOB}/${SOURCES.readme}`}>The full lesson</ExtLink>
@@ -211,40 +254,79 @@ export function TavilySection() {
   )
 }
 
+const LIMIT_ICONS: Record<string, LucideIcon> = {
+  'In-sample': Layers,
+  'No "recall improved" claim': Scale,
+  'Generation variance': Shuffle,
+  'Different mode and models': GitCompare,
+  'Method fidelity not checked': SearchCheck,
+  [SCOPE_LIMIT.title]: Crop,
+}
+
 export function Limits() {
   const items = [...LIMITS, SCOPE_LIMIT]
+  const [ref, seen] = useInView<HTMLUListElement>(0.1)
   return (
     <Block id="limits" label="Limits">
-      <details>
-        <summary className="nx-summary flex cursor-pointer items-center justify-between gap-4">
-          <h2 className={lead}>What this does not show</h2>
-          <Chevron className="h-5 w-5 text-fg-4" />
-        </summary>
-        <ul className="m-0 mt-8 grid list-none gap-x-10 gap-y-6 p-0 md:grid-cols-2">
-          {items.map((l) => (
-            <li key={l.title}>
-              <h3 className="m-0 text-[14px] font-semibold text-fg">{l.title}</h3>
-              <p className="mb-0 mt-1 text-[14px] leading-relaxed text-fg-4">{l.text}</p>
+      <h2 className={lead}>Where the evidence stops.</h2>
+      <p className={`${body} mt-6`}>{items.length} things these numbers do not show. Stated up front, so you can weigh them.</p>
+      <ul ref={ref} className={`${seen ? 'nx-in' : ''} m-0 mt-10 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3`}>
+        {items.map((l, i) => {
+          const Icon = LIMIT_ICONS[l.title] ?? Scale
+          const { lead: first, rest } = splitFirstSentence(l.text)
+          return (
+            <li key={l.title} className="nx-reveal nx-card flex flex-col rounded-xl border border-line bg-surface p-5" style={{ '--nx-delay': `${i * 60}ms` } as React.CSSProperties}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><Icon className="h-4 w-4" aria-hidden /></span>
+                <h3 className="m-0 text-[14px] font-semibold leading-snug text-fg">{l.title}</h3>
+              </div>
+              <p className="mb-0 mt-3 text-[14px] leading-relaxed text-fg-4">{first}</p>
+              {rest && (
+                <Disclosure summary="More" className="mt-2" summaryClassName="text-[13px] text-muted hover:text-fg">
+                  <p className="mb-0 mt-2 text-[13px] leading-relaxed text-fg-4">{rest}</p>
+                </Disclosure>
+              )}
             </li>
-          ))}
-        </ul>
-      </details>
+          )
+        })}
+      </ul>
     </Block>
   )
 }
 
+// Closing call to action on an inverse band. Claim cards come from the exported catalog (jury-ready entries); if it fails to load the band still shows the button.
 // The Discover sentence appears only when the live API answers and discovery is open; on the static mirror it is left out.
 export function TryIt() {
   const { status } = useLiveStatus()
   const discovery = statusFor(status, 'discovery')
+  const picks = juryEntries(useCatalog())
+  const [ref, seen] = useInView<HTMLDivElement>(0.2)
   return (
-    <Block id="try" label="Try it">
-      <h2 className={lead}>Check a claim yourself.</h2>
-      <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-4">
-        <a href="#catalog" className="nx-go inline-flex items-center gap-2 rounded-full bg-inverse px-6 py-3 text-sm font-medium text-on-inverse no-underline transition-colors hover:bg-inverse-hover">
-          Open the catalog <GoArrow className="h-4 w-4 shrink-0" />
-        </a>
-        {discovery?.live && <><span className="text-[14px] text-fg-4">or</span><GoLink href="#discover" className="text-[14px] text-fg underline underline-offset-4 hover:text-fg-max">let Tavily find new papers</GoLink></>}
+    <Block id="try" label="Try it" flush>
+      <div ref={ref} className={`${seen ? 'nx-in' : ''} rounded-3xl bg-inverse px-5 py-12 text-on-inverse sm:px-12 sm:py-16`}>
+        <h2 className="font-grotesk m-0 max-w-3xl text-3xl font-semibold leading-snug tracking-[-0.03em] sm:text-4xl">Check a claim yourself.</h2>
+        <p className="mb-0 mt-4 max-w-xl text-[16px] leading-relaxed opacity-75">Pick a claim. Nullius rebuilds the experiment and measures it. Recorded results open without sign-in.</p>
+        {picks.length > 0 && (
+          <ul className="m-0 mt-10 grid list-none gap-3 p-0 md:grid-cols-3">
+            {picks.map((e, i) => {
+              const href = evidenceHref(e) ?? '#catalog'
+              return (
+                <li key={e.id} className="nx-reveal" style={{ '--nx-delay': `${i * 80}ms` } as React.CSSProperties}>
+                  <a href={href} className="nx-go group flex h-full flex-col justify-between gap-6 rounded-xl border border-on-inverse/20 p-5 text-on-inverse no-underline transition-colors hover:border-on-inverse/50 hover:bg-on-inverse/5">
+                    <span className="font-grotesk text-[17px] font-semibold leading-snug tracking-[-0.02em]">{claimLine(e)}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[13px] opacity-75 group-hover:opacity-100">{e.run_id ? 'Open the result' : 'Open in catalog'} <GoArrow className="h-4 w-4 shrink-0" /></span>
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-4">
+          <a href="#catalog" className="nx-go inline-flex items-center gap-2 rounded-full bg-on-inverse px-6 py-3 text-sm font-medium text-inverse no-underline transition-opacity hover:opacity-85">
+            Open the catalog <GoArrow className="h-4 w-4 shrink-0" />
+          </a>
+          {discovery?.live && <><span className="text-[14px] opacity-75">or</span><GoLink href="#discover" className="text-[14px] text-on-inverse underline underline-offset-4">let Tavily find new papers</GoLink></>}
+        </div>
       </div>
     </Block>
   )

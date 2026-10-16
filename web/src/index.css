@@ -313,3 +313,13 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 /* Film frames: the film has a light cream ground; in dark mode the picture is dimmed so it does not glare as a light box. */
 .film-frame video, .film-frame img { filter: brightness(0.82); }
 :root[data-theme='light'] .film-frame video, :root[data-theme='light'] .film-frame img { filter: none; }
+
+/* Lower landing page: unit squares fill and cards rise once when they enter the viewport (class .nx-in set by useInView). */
+.nx-sq { background: transparent; transition: background-color 380ms ease-out, border-color 380ms ease-out; transition-delay: var(--nx-delay, 0ms); }
+.nx-in .nx-sq[data-hit="true"] { background: var(--nx-fill, var(--c-fg-3)); border-color: var(--nx-fill, var(--c-fg-3)); }
+.nx-reveal { opacity: 0; translate: 0 12px; transition: opacity 420ms ease-out, translate 420ms ease-out; transition-delay: var(--nx-delay, 0ms); }
+.nx-in .nx-reveal, .nx-in.nx-reveal { opacity: 1; translate: 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .nx-sq { transition: none; }
+  .nx-reveal { opacity: 1; translate: none; transition: none; }
+}
