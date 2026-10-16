@@ -19,7 +19,7 @@ export function advance(t: number, dtMs: number, duration: number, playing: bool
   return Math.min(duration, t + Math.min(100, Math.max(0, dtMs)))
 }
 
-// What the page shows for a scene that does not play: the poster frame (reduced motion, phones).
+// What the page shows for a scene that does not play: the poster frame (reduced motion).
 export function stillTime(duration: number, poster?: number): number {
   return Math.min(duration, Math.max(0, poster ?? duration - 200))
 }

@@ -7,23 +7,9 @@ import { FRAME_BG, SCENES, paletteFor, stillSrc, type SceneId } from './scenes'
 // A film shot that plays by itself once at least half of its frame is on screen, in real time, and then holds its last frame (a small control
 // pauses and replays it). Before the stage code has loaded the frame shows a pre-rendered still of the first frame, so it is never blank; the live
 // stage fades in over it after its first frame has painted. The stage chunk is requested well before the scene is reached.
-// Phones and reduced motion get the poster still and no autoplay: the 1920x1080 canvas on 358 px is too small to read moving text and chart labels.
+// Phones play like desktop (the frame just scales down; the caption says what it shows). Only reduced motion keeps the poster still.
 
 const SceneStage = lazy(() => import('./SceneStage'))
-const PHONE = '(max-width: 639px)'
-
-function useMedia(query: string): boolean {
-  const [on, setOn] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches)
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return
-    const mq = matchMedia(query)
-    const f = () => setOn(mq.matches)
-    f()
-    mq.addEventListener('change', f)
-    return () => mq.removeEventListener('change', f)
-  }, [query])
-  return on
-}
 
 function useDark(): boolean {
   const read = () => document.documentElement.dataset.theme !== 'light'
@@ -46,8 +32,7 @@ class Quiet extends Component<{ children: ReactNode; onBad: () => void }, { bad:
 
 export function ScrollScene({ id }: { id: SceneId }) {
   const meta = SCENES[id]
-  const phone = useMedia(PHONE)
-  const still = phone || prefersReducedMotion()
+  const still = prefersReducedMotion()
   const dark = useDark()
   const palette = paletteFor(meta.theme, dark)
 
@@ -145,8 +130,8 @@ export function ScrollScene({ id }: { id: SceneId }) {
           )}
           {!still && showStage && (
             <button type="button" onClick={control.act} aria-label={control.label} title={control.label}
-              className="absolute bottom-3 right-3 grid h-8 w-8 place-items-center rounded-full border border-line bg-surface/80 text-muted shadow-sm backdrop-blur transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current motion-reduce:transition-none">
-              {control.icon}
+              className="group absolute bottom-0 right-0 grid h-11 w-11 place-items-center text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-current">
+              <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-surface/80 shadow-sm backdrop-blur transition-colors motion-reduce:transition-none sm:h-8 sm:w-8">{control.icon}</span>
             </button>
           )}
         </div>

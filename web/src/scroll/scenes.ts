@@ -9,7 +9,7 @@ export type SceneMeta = {
   theme: Theme        // the shot's own palette; the page forces night in dark mode
   duration: number    // ms of film
   start: number       // ms where playback begins: the first frame with content (the still shown before it is this frame)
-  poster: number      // ms of the still shown under reduced motion and on phones
+  poster: number      // ms of the still shown under reduced motion
   label: string       // aria-label: what the scene shows, one plain sentence
   caption: string     // visible caption under the scene
 }
