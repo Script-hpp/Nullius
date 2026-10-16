@@ -3,7 +3,7 @@ import { CARD_LIFT, Disclosure, GoArrow, GoLink } from './ui'
 import { evidenceHref, useCatalog } from '../catalog'
 
 // Curated examples outside the eight benchmark units. Measurements stay in the exported catalog.
-const examples = ['disc_2303_06053', 'disc_2405_00946']
+const examples = ['disc_2307_03756', 'disc_2501_01087']
 
 // flush: left-aligned in the page column (benchmark page); default: centered narrow column (start page).
 export function RecentChecks({ flush = false }: { flush?: boolean }) {
