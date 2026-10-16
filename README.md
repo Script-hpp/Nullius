@@ -7,11 +7,15 @@
 
 ### Here, the paper is the test suite.
 
-A machine learning paper makes a claim. Nullius writes an experiment, runs it in an isolated sandbox, and independently measures whether the target is reached.
+**The problem.** Many machine learning results are hard to reproduce, and checking one claim by hand can take days. In a 2016 *Nature* survey of 1,576 researchers, more than 70% said they had tried and failed to reproduce another scientist’s experiment.
+
+**Who it is for.** Reviewers, PhD students and ML teams who want to know whether a reported number holds before they build on it.
+
+**The idea.** The paper is the test suite. A paper states a target value. Nullius writes its own experiment, runs it in an isolated sandbox, and an independent harness measures whether the target is reached. We also plant a deliberately false claim next to real ones: in our benchmark, none of the 48 planted claims was accepted as reproduced.
 
 **NVIDIA Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily**
 
-[Try the demo](https://nullius.akca.dev/) · [Explore the evidence](#three-recent-checks) · [Run locally](#run-locally) · [How it works](#how-it-works) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
+[Try the demo](https://nullius.akca.dev/) · [Watch the film](VIDEO_URL_TBD) · [Evidence](#checks-you-can-open) · [Built on Nebius and NVIDIA](#built-on-nebius-and-nvidia) · [Run locally](#run-locally) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
 
 </div>
 
@@ -22,7 +26,14 @@ A machine learning paper makes a claim. Nullius writes an experiment, runs it in
 
 Built for the **Nebius × NVIDIA Global AI Hackathon**, Coding and Agentic Engineering, with Tavily for discovery and evidence research. *Nullius in verba* means “take nobody’s word for it.”
 
-**Publication status:** the [hosted demo](https://nullius.akca.dev/) is reachable (checked 12 Oct 2026). Recorded evidence is open without sign-in; fresh runs depend on live admission limits. The new submission video and Devpost entry are not published yet. You can also browse the stored [certificates](#three-recent-checks) here or preview the product locally without API keys.
+**Demo:** [nullius.akca.dev](https://nullius.akca.dev/), open without sign-in. Video: [VIDEO_URL_TBD](VIDEO_URL_TBD). Live runs cost real money, so the server admits a limited number per day; when a live run is not available, the page offers a labelled recorded replay of a real run.
+
+### Try it in two minutes
+
+1. Open the [demo](https://nullius.akca.dev/) and choose **Catalog**.
+2. Pick **FITS**, **Kipf GCN on Cora** or **GLinear**. These three are open for a fresh check.
+3. Start a check. A readiness check runs before any paid step, and the run ends in a verdict or an explained stop. Or press **Watch a check in 30 seconds** for a recorded replay with no waiting.
+4. Open **Discover** to let Tavily search for new papers on supported datasets.
 
 ## From a paper to a decision
 
@@ -35,29 +46,31 @@ Before you build on a reported result, check what you can reach with your setup.
 
 The result helps a reviewer, PhD student or ML team decide what to investigate before relying on a paper. We have not measured time savings or completed a user study.
 
-## Three recent checks
+## Checks you can open
 
-Three papers reached their fixed numerical targets on **ETTh1**, forecast horizon **96**, with **three seeds each** and tolerance **±0.01 MSE**. MSE is prediction error; lower is better.
+Three papers are open for a fresh check in the demo. Each ran with **three or more seeds** and a tolerance fixed before the run (**±0.01**: MSE for the two forecasting papers, accuracy for Kipf). Lower MSE is better; accuracy is the share of correct labels.
 
-| Paper | Paper claims | Nullius measured, mean ± std | Gross inference cost | Stored certificate |
-|---|---:|---:|---:|---|
-| **TSMixer** · Google | 0.361 | **0.3624 ± 0.0003** | $0.2354 | [Read evidence](web/public/data/disc_2303_06053/20261009-201230/zeugnis.md) |
-| **SparseTSF** | 0.359 | **0.3653 ± 0.0034** | $0.2035 | [Read evidence](web/public/data/disc_2405_00946/20261009-220822/zeugnis.md) |
-| **GLinear** | 0.3820 | **0.3796 ± 0.0003** | $0.2047 | [Read evidence](web/public/data/disc_2501_01087/20261010-161916/zeugnis.md) |
+| Paper | Dataset | Paper claims | Nullius measured, mean ± std | Seeds | Gross inference cost | Stored certificate |
+|---|---|---:|---:|---:|---:|---|
+| **FITS** (autonomous live run, 14 Oct 2026) | ETTh1, horizon 96 | 0.372 | **0.37203 ± 0.00005** | 3 | $0.3101 | [Read evidence](web/public/data/disc_2307_03756/20261014-080542/zeugnis.md) |
+| **Kipf & Welling GCN** | Cora | 0.815 | **0.8146 ± 0.0077** | 9 | $0.1884 | [Read evidence](web/public/data/disc_1609_02907/20261009-160716/zeugnis.md) |
+| **GLinear** | ETTh1, horizon 96 | 0.3820 | **0.3796 ± 0.0003** | 3 | $0.2047 | [Read evidence](web/public/data/disc_2501_01087/20261010-161916/zeugnis.md) |
 
-**Preliminary · method fidelity not checked.** These are manually selected examples after development, outside the eight development units. They are not a blind test or a general success rate. Costs include configured VAT; Tavily and sandbox costs are separate.
+**FITS is the strongest case.** The run started on the deployed server and ran without human edits: the specification matched the paper’s settings 9 of 9, and the three seeds landed within 0.0001 of the claim. [Run record](docs/audits/fits_live_a514edeb_20261014.json) · [what we fixed to get there](docs/fits_code_generation_fixes_20261014.md).
 
-TSMixer retains protocol and table-column warnings. GLinear’s target was checked manually before the run; automatic target extraction returned no JSON and automatic column assignment remained unchecked. Those warnings stay in its certificate. See the [GLinear completion record](docs/paper_candidates_20261010.md#abschluss-glinear), [catalog](benchmark/catalog.yaml), and stored dossiers and event logs beside each certificate.
+**Preliminary · method fidelity not checked.** “Reproduced” means the target number was reached with our setup, not that the method was verified. These are hand-picked examples after development, not a blind test or a general success rate. Costs include VAT; Tavily and sandbox costs are separate. The FITS certificate keeps a note that its table column was not checked; GLinear’s target was checked manually and its certificate lists the same kind of warnings. See the [GLinear completion record](docs/paper_candidates_20261010.md#abschluss-glinear) and the [catalog](benchmark/catalog.yaml).
 
-**Failed checks stay visible.** SL-GCN missed its target; HaKAN failed in setup. Acacia has no completed catalog verdict and remains unchecked. A miss can reflect an agent or setup weakness; it does not prove the paper wrong.
+**Other recorded results, with their notes.** TSMixer (0.3624 vs 0.361) was recorded with a smaller model than the paper (1 block, hidden size 128 instead of 6 and 512). SparseTSF (0.3653 vs 0.359) used the linear variant and input length 720; a new check is locked because the authors’ launch script does not name the variant. BANGS reached 0.819 against 0.842, a partial match that takes about 80 minutes on CPU. The site shows these as dated “Recorded” cards.
+
+**Failed checks stay visible.** SL-GCN missed its target (0.595 vs 0.829); HaKAN failed in setup. Acacia has no completed verdict. A miss can reflect an agent or setup weakness; it does not prove the paper wrong.
 
 ## The product
 
 **Overview → recorded check → source → generated code → measurements → PDF.** The main path works with stored evidence; you can inspect it without starting a paid experiment.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/img/readme-glinear-dark.jpg">
-  <img src="docs/img/readme-glinear.jpg" alt="GLinear evidence: claimed MSE 0.3820 beside measured MSE 0.3796, preliminary verdict and certificate export" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/readme-fits-dark.jpg">
+  <img src="docs/img/readme-fits.jpg" alt="FITS evidence page: claimed MSE 0.3720 beside measured 0.3720, verdict reproduced, method not verified, three live Tavily calls, certificate export" width="100%">
 </picture>
 
 | Page | What you can do |
@@ -68,7 +81,7 @@ TSMixer retains protocol and table-column warnings. GLinear’s target was check
 | **Live run** | Watch sources, plan, generated code, repairs and measurements arrive. A fresh run makes paid calls. |
 | **Evidence** | Inspect the claim, source quotations, code, branch tree and per-seed measurements; export a PDF certificate. |
 
-The **What-if** control changes the target, while measured predictions stay fixed. Result charts, seed measurements, replay and PDF use the selected attempts that contribute to the recorded verdict. Other candidates and repairs remain in the branch tree. Legacy runs without selection markers retain their recorded measured attempts. PDF export always uses the stored result, including its limitations.
+The **What-if** control changes the target, while measured predictions stay fixed. Charts, seed tables, replay and PDF show the attempts behind the verdict. Other candidates and repairs stay in the branch tree. PDF export always includes the stored result and its limitations.
 
 ## What we measured
 
@@ -111,16 +124,47 @@ flowchart LR
 
 | Component | Role |
 |---|---|
-| **Nemotron 3 Super on Token Factory** | Plans, writes and repairs code; extracts setup details. |
-| **Nemotron 3.5 Lightning on Token Factory** | Extracts target values. |
+| **Nemotron on Token Factory** | Plans, writes and repairs code; extracts setup details and targets. |
 | **Nebius Sandboxes** | Isolated execution, snapshot branches for attempts and seeds. |
-| **Tavily** | Search and Extract for discovery, source text, setup and errors; limited Crawl for community sources. |
+| **Tavily** | Discovery, source text, setup details, error search, community check. |
 | **Python / FastAPI** | Orchestration, recorded evidence, live events and admission controls. |
 | **React / Vite** | Product pages, replay, source inspection and PDF print preview. |
 
-Historical v2–v4 runs used Nemotron Ultra for planning before its removal on 9 Oct 2026; current runs use Super. Each run records the models it used.
+## Built on Nebius and NVIDIA
 
-Tavily sources carry mode, timestamp and SHA-256. Community findings are reported separately after the verdict; when a finding can be tested, it may become an additional measured experiment. These experiments do not change the original verdict. [Examples and the failed automatic `drop_last` search](docs/evaluation_notes.md#how-we-use-tavily).
+**How Nemotron is used.** Nemotron does the reading, writing and judging; it never runs code. Each role has its own model, set in `.env`:
+
+| Role | Model on Token Factory | Job |
+|---|---|---|
+| `code`, `extract`, `reasoning` | **Nemotron 3 Super** (`nemotron-3-super-120b-a12b`) | Writes the research plan, writes and repairs the experiment code, extracts setup details with word-for-word quotes, writes the final verdict text. |
+| `fast` | **Nemotron 3.5 Lightning** | Reads target values from tables and triages short outputs. |
+
+Nemotron 3 Ultra handled plan and verdict in benchmark v2–v4 until Token Factory removed it on 9 Oct 2026; Super has done all roles since. Each stored run records the models it used.
+
+**Where Token Factory helped.**
+- **One OpenAI-compatible endpoint, switched by `.env`.** We prototyped on free OpenRouter endpoints and moved to Token Factory by changing `LLM_PROVIDER` and the model IDs. The only provider-specific code is the LLM client (`src/repro_agent/llm.py`).
+- **Cost we could read per call.** The API returns `usage` including reasoning tokens. We log every call to `logs/costs.jsonl`, apply budget guards before each call (warning at 80%, stop at 95%) and enforce a per-run cap. Our log matched the console within rounding on 2 Oct 2026 ([feedback](docs/nebius_feedback.md), item E13).
+- **Cheap enough to measure.** A typical check costs about $0.2–0.3 gross (see the table above). A 48-run benchmark cost $3.60 (v2) and $3.10 (v3) gross, so every change to the agent could be tested against the full set.
+
+**Nebius services used.**
+- **Nebius Sandboxes** (`contree-sdk`): every experiment runs in a sandbox branch. One snapshot holds Python, the data and the harness; each attempt and each seed branches from it, so seeds run in parallel (up to 4 at a time by default; 20 parallel branches ran without error on 28 Sep 2026). Training runs without network access.
+- **Nebius Token Factory**: all model calls, as above.
+
+Our notes on what worked and what hurt, with evidence for each item: [Feedback on Token Factory, Sandboxes and Nemotron](docs/nebius_feedback.md).
+
+## Tavily at run time
+
+A normal run calls Tavily live, and each stored source carries its mode, timestamp and SHA-256:
+
+| Step | Tavily call | What it answers |
+|---|---|---|
+| Discovery | Search | Which new papers report a claim on a dataset we support? |
+| Claim source | Extract | What does the paper’s table say, and where? |
+| Setup details | Extract on the README and configs | Which hyperparameters and splits does the repository use? Each value needs a quote. |
+| Errors | Search with the error text | How do others fix this failure? |
+| Community check | Search, limited Crawl | What do issues and critiques say? Reported after the verdict; the verdict never changes. |
+
+In the FITS run above, the Evidence page shows “3 live Tavily calls” (the repository README and two error searches); its paper text came from a stored copy of the LaTeX source. We use Tavily as a product capability (finding and citing sources), not as a measured accuracy gain: our benchmark showed no reliable difference with or without it. [Examples and the failed automatic `drop_last` search](docs/evaluation_notes.md#how-we-use-tavily).
 
 ## Run locally
 
@@ -177,8 +221,11 @@ npm test
 
 - **Supported:** Cora (Planetoid and random splits), CiteSeer (Planetoid split), ETTh1 (forecast horizon 96). CPU experiments on small models. PubMed and other ETT datasets remain unreleased after reference validation misses: [validation results](benchmark/experiments/results/datasets_v2_validation.md).
 - **Unverified:** method fidelity, general performance on unseen papers and user time savings. Executing the authors’ own program is not a product mode.
-- **Live controls:** admission floors, daily/per-IP limits and recorded fallback exist. The 10 Oct production fix added shared per-job inference budgets, durable request reservations, Tavily credit reservations and cooperative timeout cancellation. Offline tests verify the controls; provider prices, actual balances, sandbox/hosting costs and spending from other machines remain outside that proof. [Cost-policy review](docs/cost_policy_review.md#production-fix--10-oct-after-review).
-- **Next:** one person tests the finished product. Their observations precede decisions about further live-demo steps and author outreach. [Test plan](docs/product_test_20261010.md). TimeBase, then SOFTS, remain candidates; no new paid paper runs are being started.
+- **Live controls:** admission floors, daily and per-IP limits, a per-run cost cap and the recorded fallback exist. Offline tests verify them; real provider prices, balances and hosting costs are outside that proof. [Cost-policy review](docs/cost_policy_review.md#production-fix--10-oct-after-review).
+
+### Where this goes next
+
+No promises, only direction: more datasets (each needs one task and one harness, built once), a check of whether the generated code follows the paper’s method, and a GPU tier for papers that CPU cannot run (one claim failed for that reason: its model needs a CUDA kernel library).
 
 ## Repository guide
 
