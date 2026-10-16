@@ -51,7 +51,7 @@ The result helps a reviewer, PhD student or ML team decide what to investigate b
 While checking papers, we saw that the number in a paper is often not enough to rebuild it. These are observations from our own checks, not statistics or a success rate.
 
 - **FITS (ETTh1):** the results table lists four input lengths (90, 180, 360, 720). The authors' launch script for ETTh1 uses 360, and its batch size of 64 is doubled to an effective 128 by the code. With the script's settings the autonomous live run measured 0.37203 ± 0.00005 against the target 0.372; an earlier live run with other settings measured about 0.70. [Run record](docs/audits/fits_live_a514edeb_20261014.json).
-- **SparseTSF (ETTh1):** the launch script, run as is, does not name the model variant and starts the MLP variant. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.
+- **SparseTSF (ETTh1):** the authors' launch script for the linear variant does not set the model type, and the code default is the MLP variant. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.
 - **RLinear (ETTh1):** the input length 336 appears only in the caption of the claim table. The code default of 96 won, and the check measured 0.397 ± 0.013 against 0.366 (not reproduced). Nullius now reads table captions; whether the target is reached with that fix is untested. [Run record](docs/audits/rlinear_live_ba9fa94f_20261014.json).
 - **TSMixer (ETTh1):** the target was reached with a smaller model (1 mixer block, hidden size 128 instead of 6 and 512). We show this as target reached with a reduced model, not as reproduced.
 

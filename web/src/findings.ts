@@ -35,9 +35,9 @@ export const FINDINGS: Finding[] = [
     paper: 'SparseTSF',
     dataset: 'ETTh1',
     title: 'The launch script, run as is, trains a different variant',
-    text: 'Without a model type the script starts the MLP variant, not the linear one. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.',
+    text: 'The authors’ launch script for the linear variant does not set the model type, and the code default is the MLP variant. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.',
     says: { label: 'Target (paper)', value: '0.359' },
-    found: { label: 'Script without model type', value: 'MLP variant' },
+    found: { label: 'Script, run as is', value: 'MLP variant' },
     link: { href: '#/run/disc_2405_00946--20261009-220822', label: 'Open the recorded check' },
   },
   {
