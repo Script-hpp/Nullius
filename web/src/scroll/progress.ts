@@ -1,8 +1,8 @@
 // Pure scroll maths for the landing scenes (tested in progress.test.ts).
 
-// Scroll distance of a scene in viewport heights: about one viewport per 6 s of film, never a trap (3.5 at most) and never too short.
+// Scroll distance of a scene in viewport heights: a short accent, never a long sticky stretch (2 at most, 1.3 at least).
 export function scrollLengthVh(durationMs: number): number {
-  return Math.min(3.5, Math.max(1.2, durationMs / 6000))
+  return Math.min(2, Math.max(1.3, durationMs / 10500))
 }
 
 // 0..1 while the sticky stage is pinned: the section's top edge moves from 0 to -(height - viewport).

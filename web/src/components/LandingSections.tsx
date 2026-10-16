@@ -65,16 +65,15 @@ export function Problem({ run }: { run: RunData | null }) {
 
 const STEPS = [
   { title: 'Read', text: 'Read paper sources and quoted targets. Tavily researches repositories, setup details and repair hints at run time.' },
-  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run).' },
-  { title: 'Run', text: 'The code runs in Nebius Sandboxes, one branch per seed, without network.' },
+  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run) and runs it in Nebius Sandboxes.' },
   { title: 'Measure', text: 'An independent harness loads the true labels itself and scores the predictions.' },
 ]
 
 export function Steps() {
   return (
     <Block id="how" label="How Nullius works">
-      <h2 className={lead}>Read. Rebuild. Run. Measure.</h2>
-      <ol className="m-0 mt-12 grid list-none gap-10 p-0 sm:grid-cols-2 md:grid-cols-4 md:gap-8">
+      <h2 className={lead}>Read. Rebuild. Measure.</h2>
+      <ol className="m-0 mt-12 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-12">
         {STEPS.map((s) => (
           <li key={s.title}>
             <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg">{s.title}</h3>

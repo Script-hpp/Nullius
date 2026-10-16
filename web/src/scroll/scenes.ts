@@ -2,7 +2,7 @@ import { PAL, type Theme } from './palette.ts'
 
 // What the landing scenes are, without any of the stage code, so the page can size and label a scene before its chunk has loaded.
 // duration/poster are the single source: shots.tsx takes them from here.
-export const SCENE_IDS = ['opening', 'triad', 'placebo'] as const
+export const SCENE_IDS = ['opening', 'placebo'] as const
 export type SceneId = (typeof SCENE_IDS)[number]
 
 export type SceneMeta = {
@@ -18,11 +18,6 @@ export const SCENES: Record<SceneId, SceneMeta> = {
     theme: 'paper', duration: 21000, poster: 19500,
     label: 'Animation, driven by scrolling: one claim from a paper among many other claims, then Nullius runs the experiment ten times and measures the result.',
     caption: 'One claim among many, then measured: the experiment is run ten times and the result is shown.',
-  },
-  triad: {
-    theme: 'night', duration: 15000, poster: 7500,
-    label: 'Animation, driven by scrolling: the four steps of a check, read, rebuild, run and measure, ending with ten sandboxes that each measure one seed.',
-    caption: 'Read the paper, rebuild the experiment, run it in ten sandboxes, measure with our own harness.',
   },
   placebo: {
     theme: 'paper', duration: 9000, poster: 8700,

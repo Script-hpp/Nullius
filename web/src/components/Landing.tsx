@@ -100,7 +100,6 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
       <Problem run={run} />
       <ScrollScene id="opening" />
       <Steps />
-      <ScrollScene id="triad" />
       <CertificatePreview run={run} />
       <TavilySection />
       <Proof />

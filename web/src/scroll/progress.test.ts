@@ -5,9 +5,10 @@ import { FRAME_BG, SCENES, SCENE_IDS, paletteFor } from './scenes.ts'
 import { PAL } from './palette.ts'
 
 test('scroll length follows the duration, bounded', () => {
-  assert.equal(scrollLengthVh(1000), 1.2)
-  assert.equal(scrollLengthVh(15000), 2.5)
-  assert.equal(scrollLengthVh(60000), 3.5)
+  assert.equal(scrollLengthVh(1000), 1.3)
+  assert.equal(scrollLengthVh(9000), 1.3)
+  assert.equal(scrollLengthVh(21000), 2)
+  assert.equal(scrollLengthVh(60000), 2)
 })
 
 test('progress is clamped and zero without scroll travel', () => {

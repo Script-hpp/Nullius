@@ -5,8 +5,8 @@ import { Camera, MONO, SERIF, Source, W, clamp, easeInOut, easeOut, easeOutBack,
 import type { StageData } from './data'
 import { SCENES, type SceneId } from './scenes'
 
-// The three film shots that play on the start page, scrubbed by scrolling. Ported from the film's stage (web/src/stage on branch Script-hpp/film,
-// shots 01-opening, 02-triad, 04-placebo). Every shot is a pure function of its time t in ms, and every number and claim on it is read from
+// The two film shots that play on the start page, scrubbed by scrolling. Ported from the film's stage (web/src/stage on branch Script-hpp/film,
+// shots 01-opening, 04-placebo). Every shot is a pure function of its time t in ms, and every number and claim on it is read from
 // the exported film run (data.ts). Changes against the film: the opening does not dissolve into the app window at its end (nothing follows it
 // here), the placebo is the film's shorter 9 s version, duration and poster come from scenes.ts.
 
@@ -253,81 +253,4 @@ const placebo: Shot = {
   },
 }
 
-
-// ---------- 02 Triad: Read. Rebuild. (Nemotron on Token Factory) Run. (ten sandboxes) Measure. ----------
-// video/score.py places its stabs on these times
-// on the spoken line (video/score.py, VO tri): Read with "Tavily reads", Rebuild with "Nemotron", Run with "Sandboxes run it", Measure with "measures"
-const TRIAD = { write: 3500, roles: 4100, run: 9000, wall: 9400, measure: 11800 }
-// the current product configuration (loop.product_kwargs, CLAUDE.md "Modus"): Super plans, writes and repairs; Lightning reads the
-// target value from the paper's tables (claims_source.py). The authors' repository is read in a snapshot of its own, never executed.
-const ROLES = [['Super', 'plans and writes its own experiment'], ['Lightning', 'reads the target from the tables']]
-const triad: Shot = {
-  id: 'triad', ...SCENES.triad,
-  render: (t, d, pal) => {
-    const { write: WRITE_AT, roles: ROLES_AT, run: RUN_AT, wall: WALL_AT, measure: MEASURE_AT } = TRIAD
-    const words = [
-      { w: 'Read.', who: "Tavily reads the paper and the authors' code", at: 0 },
-      { w: 'Rebuild.', who: 'NVIDIA Nemotron on Nebius Token Factory', at: WRITE_AT },
-      { w: 'Run.', who: 'Nebius Sandboxes', at: RUN_AT },
-      { w: 'Measure.', who: 'Our own harness', at: MEASURE_AT },
-    ]
-    const cur = [...words].reverse().find((x) => t >= x.at) ?? words[0]
-    const local = t - cur.at
-    const k = easeOut(ramp(local, 0, 380))
-    const wall = cur.w === 'Run.' ? easeInOut(ramp(t, WALL_AT, 500)) : 0
-    const roles = t >= WRITE_AT && t < RUN_AT ? easeInOut(ramp(t, ROLES_AT - 300, 600)) * (1 - easeInOut(ramp(t, RUN_AT - 450, 400))) : 0
-    const seeds = [...d.seeds].sort((a, b) => a.seed - b.seed)
-    const order = d.seeds.map((s) => s.seed)                 // completion order
-    const doneAt = (seed: number) => WALL_AT + 1400 + order.indexOf(seed) * 170
-    const cols = 5, tw = 330, th = 250, gx = 26, gy = 26
-    const x0 = (W - (cols * tw + (cols - 1) * gx)) / 2, y0 = 300
-    return (
-      <>
-        {/* the word: full size, or small at the top while the sandboxes run */}
-        <div style={{ position: 'absolute', left: 0, right: 0, top: lerp(380, 70, wall) - 170 * roles, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ fontSize: lerp(230, 96, wall), fontWeight: 600, letterSpacing: '-0.06em', lineHeight: 1, color: pal.ink, transform: `scale(${1.06 - 0.06 * k})`, opacity: 0.35 + 0.65 * k }}>{cur.w}</div>
-          <div style={{ marginTop: lerp(34, 14, wall), fontSize: lerp(36, 24, wall), fontWeight: 500, letterSpacing: '0.01em', color: pal.muted, opacity: easeOut(ramp(local, 160, 400)) }}>{cur.who}</div>
-        </div>
-        {/* who does what: one Nemotron model per role */}
-        {roles > 0 && (
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 620, opacity: roles }}>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
-              {ROLES.map(([m, what], i) => (
-                <div key={m} style={{ width: 470, padding: '24px 28px', borderRadius: 14, background: pal.card, border: `1px solid ${pal.line}`, ...rise(t, ROLES_AT + i * 380, 600, 18) }}>
-                  <div style={{ fontFamily: MONO, fontSize: 18, color: pal.muted, letterSpacing: '0.02em' }}>Nemotron</div>
-                  <div style={{ fontSize: 46, fontWeight: 600, letterSpacing: '-0.04em', color: pal.ink, marginTop: 4 }}>{m}</div>
-                  <div style={{ fontSize: 25, color: pal.ink2, marginTop: 8 }}>{what}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 34, textAlign: 'center', fontSize: 30, fontWeight: 500, color: pal.ink2, ...rise(t, ROLES_AT + 1100, 600, 10) }}>The authors&rsquo; code is read, <span style={{ color: pal.ink }}>never run.</span></div>
-          </div>
-        )}
-        {wall > 0 && seeds.map((s, i) => {
-          const at = WALL_AT + i * 40
-          const p = easeOut(ramp(t, at, 450))
-          const done = t >= doneAt(s.seed)
-          const lines = [`$ sandbox branch ${s.branch.replace(/^repro-branch-/, '')}`, 'network: off', `seed ${s.seed} · training…`, s.stdout ?? '']
-          const shown = lines.map((l, j) => typed(l, t, WALL_AT + 400 + i * 60 + j * 260, 70))
-          const x = x0 + (i % cols) * (tw + gx), y = y0 + Math.floor(i / cols) * (th + gy)
-          return (
-            <div key={s.seed} style={{ position: 'absolute', left: x, top: y, width: tw, height: th, borderRadius: 12, overflow: 'hidden', background: '#14130f', border: `1px solid ${done ? pal.green : '#2a2823'}`, opacity: p * wall, transform: `translateY(${(1 - p) * 30}px) scale(${0.94 + 0.06 * p})`, boxShadow: done ? '0 0 30px -8px rgba(52,211,153,0.45)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 14px', borderBottom: '1px solid #2a2823' }}>
-                {['#3a372f', '#3a372f', '#3a372f'].map((c, j) => <span key={j} style={{ width: 9, height: 9, borderRadius: 9, background: c }} />)}
-                <span style={{ marginLeft: 8, fontSize: 14, color: pal.muted }}>seed {s.seed}</span>
-              </div>
-              <pre style={{ margin: 0, padding: '12px 14px', fontFamily: MONO, fontSize: 14, lineHeight: 1.7, color: '#b9b5aa', whiteSpace: 'pre-wrap' }}>{shown.filter(Boolean).join('\n')}</pre>
-              <div style={{ position: 'absolute', left: 14, right: 14, bottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontFamily: MONO, color: pal.green, opacity: done ? 1 : 0, transform: `translateY(${done ? 0 : 8}px)` }}>
-                <span style={{ fontSize: 13 }}>harness, test set</span><span style={{ fontSize: 26 }}>{pct(s.value)}</span>
-              </div>
-            </div>
-          )
-        })}
-      </>
-    )
-  },
-}
-
-
-
-export const SHOTS: Record<SceneId, Shot> = { opening, triad, placebo }
+export const SHOTS: Record<SceneId, Shot> = { opening, placebo }
