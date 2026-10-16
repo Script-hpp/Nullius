@@ -1,6 +1,6 @@
 # Devpost submission — updated draft, 10 Oct 2026
 
-Unpublished English submission draft. Measurements come from stored production dossiers and evaluation reports. Demo reachable at https://nullius.akca.dev/ (checked 12 Oct 2026); submission video remains unpublished. Narrative matches [devpost_story.md](devpost_story.md) and [video_script.md](video_script.md).
+Unpublished English submission draft. Measurements come from stored production dossiers and evaluation reports. Demo reachable at https://nullius.akca.dev/ (checked 12 Oct 2026); submission video public on YouTube since 17 Oct 2026: https://www.youtube.com/watch?v=EaXo1DadUkU Narrative matches [devpost_story.md](devpost_story.md) and [video_script.md](video_script.md).
 
 ## Project name
 
@@ -81,7 +81,7 @@ Python, FastAPI, NVIDIA Nemotron 3.5 Lightning and Nemotron 3 Super, Nebius Toke
 |---|---|
 | Repository | https://github.com/Script-hpp/Nullius |
 | Demo | **https://nullius.akca.dev/** · reachability checked 12 Oct 2026; no fresh paid run started for that check. |
-| Video | Not uploaded. Current recording brief: [video_script.md](video_script.md). |
+| Video | **https://www.youtube.com/watch?v=EaXo1DadUkU** · public, 2:38, film v11 (17 Oct 2026). Recording brief: [video_script.md](video_script.md). |
 | Mirror | Not published. |
 
 ## Testing instructions for judges

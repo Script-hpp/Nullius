@@ -15,7 +15,7 @@
 
 **NVIDIA Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily**
 
-[Try the demo](https://nullius.akca.dev/) · [Watch the film](VIDEO_URL_TBD) · [Evidence](#checks-you-can-open) · [Built on Nebius and NVIDIA](#built-on-nebius-and-nvidia) · [Run locally](#run-locally) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
+[Try the demo](https://nullius.akca.dev/) · [Watch the film](https://www.youtube.com/watch?v=EaXo1DadUkU) · [Evidence](#checks-you-can-open) · [Built on Nebius and NVIDIA](#built-on-nebius-and-nvidia) · [Run locally](#run-locally) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 Built for the **Nebius × NVIDIA Global AI Hackathon**, Coding and Agentic Engineering, with Tavily for discovery and evidence research. *Nullius in verba* means “take nobody’s word for it.”
 
-**Demo:** [nullius.akca.dev](https://nullius.akca.dev/), open without sign-in. Video: [VIDEO_URL_TBD](VIDEO_URL_TBD). Live runs cost real money, so the server admits a limited number per day; when a live run is not available, the page offers a labelled recorded replay of a real run.
+**Demo:** [nullius.akca.dev](https://nullius.akca.dev/), open without sign-in. Video: [YouTube, 2:38](https://www.youtube.com/watch?v=EaXo1DadUkU). Live runs cost real money, so the server admits a limited number per day; when a live run is not available, the page offers a labelled recorded replay of a real run.
 
 ### Try it in two minutes
 
