@@ -7,7 +7,7 @@
 
 ### Here, the paper is the test suite.
 
-**The problem.** Many machine learning results are hard to reproduce, and checking one claim by hand can take days. In a 2016 *Nature* survey of 1,576 researchers, more than 70% said they had tried and failed to reproduce another scientist’s experiment.
+**The problem.** Many machine learning results are hard to reproduce, and checking one claim by hand can take days. In a [2016 *Nature* survey](https://www.nature.com/articles/533452a) of 1,576 researchers, more than 70% said they had tried and failed to reproduce another scientist’s experiment.
 
 **Who it is for.** Reviewers, PhD students and ML teams who want to know whether a reported number holds before they build on it.
 
