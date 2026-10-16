@@ -184,13 +184,13 @@ function Measure({ d, pal, lo, hi, target, tol, dots, axis, claimOn, bandOn, mea
       <div style={{ position: 'absolute', left: X(fullMean) - 1.5, top: 500, height: 140, width: 3, background: pal.green, opacity: meanOn }} />
       <div style={{ position: 'absolute', left: X(fullMean) - 200, width: 400, top: 690, textAlign: 'center', fontFamily: MONO, fontSize: 22, color: pal.green, opacity: meanOn }}>mean {pct(fullMean)} &plusmn; {(d.verdict.measured_std * 100).toFixed(1)}</div>
       {oldVerdict && (
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 92, fontWeight: 650, letterSpacing: '-0.04em', color: tone(oldVerdict.tone), opacity: oldVerdict.on, transform: `translateY(${Math.round((1 - oldVerdict.on) * -20)}px)` }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 92, fontWeight: 650, letterSpacing: '-0.04em', color: tone(oldVerdict.tone), opacity: oldVerdict.on, transform: `translateY(${(1 - oldVerdict.on) * -20}px)`, willChange: 'transform' }}>
           <Check size={78} strokeWidth={2.6} /> {oldVerdict.label}
         </div>
       )}
       {verdict && (
         <>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 92, fontWeight: 650, letterSpacing: '-0.04em', color: tone(verdict.tone), opacity: verdict.on, transform: `translateY(${Math.round((1 - verdict.on) * 24)}px)` }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, top: 790, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 92, fontWeight: 650, letterSpacing: '-0.04em', color: tone(verdict.tone), opacity: verdict.on, transform: `translateY(${(1 - verdict.on) * 24}px)`, willChange: 'transform' }}>
             {verdict.tone === 'green' ? <Check size={78} strokeWidth={2.6} /> : <Cross size={78} strokeWidth={2.6} />} {verdict.label}
           </div>
           {verdict.caught && (

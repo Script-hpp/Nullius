@@ -44,7 +44,8 @@ export function spline(keys: number[][], t: number, ends: 'stop' | 'through' = '
 // Fade in while rising by `dist` px.
 export function rise(t: number, at: number, d = 700, dist = 24): CSSProperties {
   const p = easeOut(ramp(t, at, d))
-  return { opacity: p, transform: `translateY(${Math.round((1 - p) * dist)}px)` }
+  // its own compositor layer: the browser then moves the finished text smoothly instead of snapping it to whole pixels on every repaint
+  return { opacity: p, transform: `translateY(${(1 - p) * dist}px)`, willChange: 'transform' }
 }
 export const fade = (t: number, at: number, d = 600): CSSProperties => ({ opacity: easeInOut(ramp(t, at, d)) })
 // visible from `at`, gone after `until`
