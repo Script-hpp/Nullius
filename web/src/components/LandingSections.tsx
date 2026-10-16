@@ -1,6 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { Bug, Crop, FileText, GitCompare, Layers, Quote, Scale, ScrollText, Search, SearchCheck, Shuffle, Users, type LucideIcon } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Bug, Crop, FileText, GitCompare, Layers, Quote, Ruler, Scale, ScrollText, Search, SearchCheck, Shuffle, Users, Wrench, BookOpenText, type LucideIcon } from 'lucide-react'
 import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES, UNITS } from '../data/benchmark'
+import { heroCard, rampValue } from '../heroCard'
+import { prefersReducedMotion } from './hero/config'
+import { ScrollScene } from '../scroll/ScrollScene'
 import { useCatalog, evidenceHref } from '../catalog'
 import { partA } from '../findings'
 import { Compare, FINDING_ICONS } from './FindingsPage'
@@ -8,15 +11,13 @@ import { claimLine, juryEntries, splitFirstSentence } from '../landingBottom'
 import { useInView } from '../useInView'
 import { FEATURED_RUN_ID } from '../featured'
 import { loadIndex, loadRun, type RunData } from '../data'
-import { showValue } from '../format'
-import { RESULT, de2en, resultHint, translateClaim } from '../labels'
+import { RESULT, TARGET_HINT, de2en } from '../labels'
 import { useLiveStatus } from '../live'
 import { statusFor } from '../livestatus'
-import { Matrix } from './TwoModes'
 import { Badge, Disclosure, ExtLink, GoArrow, GoLink } from './ui'
 import { Hint } from './Hint'
 import { measuredAttempts } from '../measurements'
-import { formatSpread } from '../metricFormat'
+import { formatMetric } from '../metricFormat'
 
 // The sections of the start page after the hero. They read as one story while scrolling: problem, how it works,
 // one real certificate, Tavily, proof and lesson, limits, try it. One thought per section, at most one link.
@@ -30,7 +31,7 @@ const body = 'm-0 max-w-2xl text-[16px] leading-relaxed text-fg-4'
 
 export function Block({ id, label, flush, children }: { id?: string; label: string; flush?: boolean; children: ReactNode }) {
   return (
-    <section id={id} aria-label={label} className={`mx-auto max-w-4xl scroll-mt-8 px-6 ${flush ? 'pb-16 sm:pb-24' : 'py-16 sm:py-24'}`}>
+    <section id={id} aria-label={label} className={`mx-auto max-w-4xl scroll-mt-8 px-6 ${flush ? 'pb-14 sm:pb-20' : 'py-14 sm:py-20'}`}>
       {children}
     </section>
   )
@@ -51,111 +52,142 @@ export function useFeatured(): RunData | null {
   return run
 }
 
-export function Problem({ run }: { run: RunData | null }) {
-  const claim = run?.dossier?.claims?.[0]
+export function Problem() {
   return (
-    <Block id="claim" label="The problem">
-      <div className="grid items-end gap-10 md:grid-cols-5">
-        <p className={`${lead} md:col-span-3`}>
-          A paper claims a number. Checking it costs days.
-        </p>
-        <div className="md:col-span-2 md:pl-6">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">{run?.ref.title ?? 'Paper'} reports</div>
-          <div className="mt-3 font-mono text-6xl font-light tracking-tight text-fg-3 sm:text-7xl">{claim ? showValue(claim.metric, claim.target) : ' '}</div>
-        </div>
-      </div>
-    </Block>
+    <section id="claim" aria-label="The problem" className="mx-auto max-w-4xl scroll-mt-8 px-6 pb-6 pt-14 sm:pt-20">
+      <h2 className={lead}>A paper claims a number. Checking it by hand takes days.</h2>
+    </section>
   )
 }
 
-const STEPS = [
-  { title: 'Read', text: 'Read paper sources and quoted targets. Tavily researches repositories, setup details and repair hints at run time.' },
-  { title: 'Rebuild', text: 'An agent writes its own version from the paper and the authors’ code (read, never run) and runs it in Nebius Sandboxes.' },
-  { title: 'Measure', text: 'An independent harness loads the true labels itself and scores the predictions.' },
+const STEPS: { title: string; icon: LucideIcon; text: string }[] = [
+  { title: 'Read', icon: BookOpenText, text: 'Tavily finds and reads the sources: paper, code, setup details.' },
+  { title: 'Rebuild', icon: Wrench, text: 'Nemotron on Nebius Token Factory writes the code. Nebius Sandboxes run it without internet.' },
+  { title: 'Measure', icon: Ruler, text: 'Our own independent checker loads the true labels and scores the result.' },
+]
+
+const TAVILY_ROLES = [
+  { icon: Search, title: 'Find papers', text: 'on supported benchmarks' },
+  { icon: Quote, title: 'Read the claim', text: 'LaTeX source (Tavily fallback)' },
+  { icon: FileText, title: 'Setup details', text: 'each with a quote' },
+  { icon: Bug, title: 'Error search', text: 'hints for the repair' },
+  { icon: Users, title: 'Community check', text: 'after the verdict' },
 ]
 
 export function Steps() {
   return (
     <Block id="how" label="How Nullius works">
       <h2 className={lead}>Read. Rebuild. Measure.</h2>
-      <ol className="m-0 mt-12 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-12">
-        {STEPS.map((s) => (
-          <li key={s.title}>
-            <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg">{s.title}</h3>
-            <p className="mb-0 mt-3 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
+      <ol className="m-0 mt-10 grid list-none gap-6 p-0 md:grid-cols-3 md:gap-8">
+        {STEPS.map((s, i) => (
+          <li key={s.title} className="flex flex-col rounded-xl border border-line bg-surface p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><s.icon className="h-[18px] w-[18px]" aria-hidden /></span>
+              <h3 className="font-grotesk m-0 text-xl font-semibold tracking-[-0.03em] text-fg"><span className="mr-2 font-mono text-[13px] font-normal text-muted">{i + 1}</span>{s.title}</h3>
+            </div>
+            <p className="mb-0 mt-4 text-[15px] leading-relaxed text-fg-4">{s.text}</p>
           </li>
         ))}
       </ol>
+      <Disclosure summary="How Tavily is used" className="mt-8 max-w-2xl">
+        <ol className="m-0 mt-4 grid list-none gap-3 p-0">
+          {TAVILY_ROLES.map((r) => (
+            <li key={r.title} className="flex items-start gap-4">
+              <r.icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-3" aria-hidden />
+              <p className="m-0 text-[15px] leading-relaxed text-fg-4"><span className="font-semibold text-fg">{r.title}</span> {r.text}</p>
+            </li>
+          ))}
+        </ol>
+        <ul className="m-0 mt-5 grid list-none gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
+          <li>A normal run calls Tavily live, with sources stored and hashed. The benchmark uses stored copies of Tavily results, because the key is scarce.</li>
+          <li>Tavily&rsquo;s effect on the benchmark is small (2 vs 1 of 8 units). Its role is discovery, traceable sources and findings that become measurements.</li>
+          <li>The community check never changes the verdict. Not every run finds something testable. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.</li>
+          <li>The last-batch note for ETTh1 (<span className="font-mono">drop_last</span>) is not a Tavily find. It is a fixed list from our own research; the search did not return it.</li>
+          <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
+        </ul>
+        <p className="mb-0 mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px]">
+          <GoLink href="#discover">Find new papers with Tavily</GoLink>
+          <ExtLink href={README_TAVILY}>How Nullius uses Tavily</ExtLink>
+        </p>
+      </Disclosure>
     </Block>
   )
 }
 
-// A real finished check as a small certificate. The whole card opens it.
-export function CertificatePreview({ run }: { run: RunData | null }) {
+// The result card of the hero: the featured run's own numbers. The measured value ramps up once when the card arrives (reduced motion: shown at once).
+function useRamp(target: number | undefined, ms = 800): number | undefined {
+  const [v, setV] = useState<number>(0)
+  const raf = useRef(0)
+  const still = prefersReducedMotion()
+  useEffect(() => {
+    if (target == null || still) return
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      setV(rampValue(target, now - t0, ms))
+      if (now - t0 < ms) raf.current = requestAnimationFrame(tick)
+    }
+    raf.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf.current)
+  }, [target, ms, still])
+  return still ? target : target == null ? undefined : v
+}
+
+export function HeroCard({ run }: { run: RunData | null }) {
+  const catalog = useCatalog()
   const claim = run?.dossier?.claims?.[0]
-  const v = run?.dossier?.verdicts?.[0]
-  if (!claim || !v) return <Block id="certificate" label="A real certificate"><h2 className={lead}>Every check ends in a certificate.</h2><div className="mt-10 h-48 rounded-2xl border border-line" aria-hidden /></Block>
-  const res = de2en(RESULT, v.urteil)
-  const seeds = new Set<number>(measuredAttempts(run!.dossier, claim.id).map((a) => a.seed)).size
-  const std = formatSpread(claim.metric, v.measured_std)
+  const seeds = claim ? new Set<number>(measuredAttempts(run!.dossier, claim.id).map((a) => a.seed)).size : 0
+  const card = heroCard(run, catalog?.find((e) => e.id === run?.ref.paper_id), seeds)
+  const shown = useRamp(card?.measuredValue)
+  if (!card || shown == null) return <div className="min-h-[19rem] rounded-2xl border border-line bg-surface" aria-hidden />
+  const res = de2en(RESULT, card.urteil)
   return (
-    <Block id="certificate" label="A real certificate">
-      <h2 className={lead}>Every check ends in a certificate.</h2>
-      <a href={EXAMPLE_RUN} className="nx-go group mt-10 block rounded-2xl border border-line bg-surface p-6 no-underline nx-card-lift sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Badge tone={res.tone} title={resultHint(v.urteil)}>{res.label}</Badge>
-          <span className="text-[12px] text-muted">Example run</span>
-        </div>
-        <p className="font-grotesk mb-0 mt-5 max-w-xl text-lg font-semibold leading-snug tracking-[-0.02em] text-fg">{translateClaim(claim.text)}</p>
-        <dl className="m-0 mt-8 grid grid-cols-2 gap-6">
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Claimed</dt>
-            <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-fg-3 sm:text-5xl">{showValue(claim.metric, claim.target)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Measured</dt>
-            <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-tone-green sm:text-5xl">{showValue(claim.metric, v.measured_mean)}</dd>
-            <div className="mt-1 font-mono text-[13px] text-fg-4">± {std} over {seeds} seeds</div>
-          </div>
-        </dl>
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-[13px] text-fg-4">
-          <span>Target value reached · method not verified.</span>
-          <span className="inline-flex items-center gap-1.5 text-fg-3 group-hover:text-fg">Open <GoArrow /></span>
-        </div>
-      </a>
-    </Block>
-  )
-}
-
-export function ProofMatrix() {
-  return (
-    <Block label="Proof, the two modes" flush>
-      <Matrix short />
-      <p className="mb-0 mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">
-        Method fidelity not checked. <GoLink href="#benchmark">Full benchmark</GoLink>
-      </p>
-    </Block>
-  )
-}
-
-export function Proof() {
-  const { placebo, reproducedAgree } = FIGURES
-  const num = 'font-mono text-3xl font-light tracking-tight text-fg sm:text-4xl'
-  return (
-    <Block id="proof" label="Proof">
-      <h2 className={lead}>Independent measurements. Tested with false targets.</h2>
-      <p className={`${body} mt-6`}>These controls describe benchmark v4, not a guarantee for other papers. Reaching a number does not verify the method.</p>
-      <div className="mt-10 grid gap-8 sm:grid-cols-2">
-        <div>
-          <div className={num}>{placebo.v4[0]} of {placebo.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">wrong claims reported as reproduced <Hint text={`Benchmark v4. The same check found ${placebo.v2[0]} of ${placebo.v2[1]} in v2 and in v3.`} /></p>
-        </div>
-        <div>
-          <div className={num}>{reproducedAgree.v4[0]} of {reproducedAgree.v4[1]}</div>
-          <p className="mb-0 mt-2 text-[14px] leading-snug text-fg-4">reproduced verdicts agree with the reference (post hoc)</p>
-        </div>
+    <article className="nx-card-lift nx-rise relative rounded-2xl border border-line bg-surface p-6 text-left shadow-sm sm:p-8" aria-label="Example result">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Example check</span>
+        <span className="inline-flex items-center gap-1.5"><Badge tone={res.tone}>{res.label}</Badge><span className="relative z-10"><Hint text={TARGET_HINT} /></span></span>
       </div>
-    </Block>
+      <p className="font-grotesk mb-0 mt-5 text-lg font-semibold leading-snug tracking-[-0.02em] text-fg sm:text-xl">{card.line}</p>
+      <dl className="m-0 mt-7 grid grid-cols-2 gap-6">
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Claimed</dt>
+          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-fg-3 sm:text-5xl">{card.claimed}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Measured</dt>
+          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-tone-green sm:text-5xl" aria-label={card.measured}>{formatMetric(card.metric, shown)}</dd>
+        </div>
+      </dl>
+      <p className="mb-0 mt-6 border-t border-line pt-4 text-[12px] leading-relaxed text-muted">{card.meta}</p>
+      <a href={EXAMPLE_RUN} className="nx-go mt-3 inline-flex items-center gap-1.5 text-[13px] text-fg-3 no-underline after:absolute after:inset-0 after:content-[''] hover:text-fg">See the evidence <GoArrow /></a>
+    </article>
+  )
+}
+
+export function DoesItWork() {
+  const { placebo, withCode } = FIGURES
+  const num = 'font-mono text-4xl font-light tracking-tight text-fg sm:text-5xl'
+  const items = [
+    { n: `${placebo.v4[0]} of ${placebo.v4[1]}`, t: 'false claims accepted', s: 'planted on purpose' },
+    { n: `${withCode.matched} of ${withCode.of}`, t: 'known results matched', s: 'paper + authors’ code, in-sample' },
+    { n: `${HELD_OUT.matched} of ${HELD_OUT.of}`, t: 'on a held-out paper', s: 'not used to design the fixes' },
+  ]
+  return (
+    <section id="proof" aria-label="Does it work?" className="scroll-mt-8 pt-14 sm:pt-20">
+      <div className="mx-auto max-w-4xl px-6"><h2 className={lead}>Does it work?</h2></div>
+      <div className="mt-6"><ScrollScene id="placebo" /></div>
+      <div className="mx-auto max-w-4xl px-6 pt-6">
+        <ul className="m-0 grid list-none gap-8 p-0 sm:grid-cols-3">
+          {items.map((it) => (
+            <li key={it.t} className="border-t border-line pt-5">
+              <div className={num}>{it.n}</div>
+              <p className="mb-0 mt-2 text-[15px] font-medium leading-snug text-fg">{it.t}</p>
+              <p className="mb-0 mt-1 text-[13px] leading-snug text-muted">{it.s}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="mb-0 mt-8 text-[14px] text-fg-4">Small tests, not a success rate. <GoLink href="#benchmark" className="ml-1">Benchmark</GoLink></p>
+      </div>
+    </section>
   )
 }
 
@@ -184,9 +216,7 @@ export function Findings() {
   return (
     <Block id="findings" label="What we found">
       <h2 className={lead}>The number in a paper is not enough to rebuild it.</h2>
-      <p className={`${body} mt-6`}>
-        Checking papers showed where the settings really live. Observations from our own checks, not a success rate.
-      </p>
+      <p className={`${body} mt-4`}>Observations from our own checks, not a success rate.</p>
       <ul ref={ref} className={`${seen ? 'nx-in' : ''} m-0 mt-10 grid list-none gap-3 p-0 sm:grid-cols-2`}>
         {partA.slice(0, 4).map((f, i) => {
           const Icon = FINDING_ICONS[f.id] ?? ScrollText
@@ -245,49 +275,6 @@ export function Lesson() {
   )
 }
 
-const TAVILY_ROLES = [
-  { icon: Search, title: 'Find papers', text: 'on supported benchmarks' },
-  { icon: Quote, title: 'Read the claim', text: 'LaTeX source (Tavily fallback)' },
-  { icon: FileText, title: 'Setup details', text: 'each with a quote' },
-  { icon: Bug, title: 'Error search', text: 'hints for the repair' },
-  { icon: Users, title: 'Community check', text: 'after the verdict' },
-]
-
-export function TavilySection() {
-  return (
-    <Block id="tavily" label="Tavily">
-      <h2 className={lead}>Tavily is the researcher.</h2>
-      <p className={`${body} mt-6`}>Live, with sources stored and hashed.</p>
-      <ol className="m-0 mt-8 grid list-none gap-3 p-0">
-        {TAVILY_ROLES.map((r) => (
-          <li key={r.title} className="flex items-start gap-4">
-            <r.icon className="mt-0.5 h-4 w-4 shrink-0 text-fg-3" aria-hidden />
-            <p className="m-0 text-[15px] leading-relaxed text-fg-4"><span className="font-semibold text-fg">{r.title}</span> {r.text}</p>
-          </li>
-        ))}
-      </ol>
-      <figure className="m-0 mt-8">
-        <img src="img/findings-experiments-dark.jpg" alt="Findings that became experiments: three Tavily findings, each with its sandbox experiment and measurement" className="logo-dark w-full rounded-xl border border-line" loading="lazy" />
-        <img src="img/findings-experiments-light.jpg" alt="" aria-hidden className="logo-light w-full rounded-xl border border-line" loading="lazy" />
-        <figcaption className="mt-3 text-[12px] leading-relaxed text-muted">Finding, experiment, measurement. Live DLinear run.</figcaption>
-      </figure>
-      <Disclosure summary="Details and limits" className="mt-8 max-w-2xl">
-        <ul className="m-0 mt-4 grid list-none gap-3 p-0 text-[14px] leading-relaxed text-fg-4">
-          <li>A normal run calls Tavily live. The benchmark uses stored copies of Tavily results, because the key is scarce.</li>
-          <li>Tavily&rsquo;s effect on the benchmark is small (2 vs 1 of 8 units). Its role is discovery, traceable sources and findings that become measurements.</li>
-          <li>The community check never changes the verdict. Not every run finds something testable. In a live DLinear run, a seed-dependence claim ran as five extra seeds and was refuted.</li>
-          <li>The last-batch note for ETTh1 (<span className="font-mono">drop_last</span>) is not a Tavily find. It is a fixed list from our own research; the search did not return it.</li>
-          <li>Not built: Tavily Research for citable sources, and possible explanations of a deviation as their own hypotheses.</li>
-        </ul>
-      </Disclosure>
-      <p className="mb-0 mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px]">
-        <GoLink href="#discover">Find new papers with Tavily</GoLink>
-        <ExtLink href={README_TAVILY}>How Nullius uses Tavily</ExtLink>
-      </p>
-    </Block>
-  )
-}
-
 const LIMIT_ICONS: Record<string, LucideIcon> = {
   'In-sample': Layers,
   'No "recall improved" claim': Scale,
@@ -297,33 +284,35 @@ const LIMIT_ICONS: Record<string, LucideIcon> = {
   [SCOPE_LIMIT.title]: Crop,
 }
 
+const LIMIT_CHIPS = ['Two datasets: Cora and ETTh1, CPU only', 'Method fidelity not checked', 'Small, in-sample evaluation']
+
 export function Limits() {
   const items = [...LIMITS, SCOPE_LIMIT]
   const [ref, seen] = useInView<HTMLUListElement>(0.1)
   return (
     <Block id="limits" label="Limits">
       <h2 className={lead}>Where the evidence stops.</h2>
-      <p className={`${body} mt-6`}>{items.length} things these numbers do not show. Stated up front, so you can weigh them.</p>
-      <ul ref={ref} className={`${seen ? 'nx-in' : ''} m-0 mt-10 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3`}>
-        {items.map((l, i) => {
-          const Icon = LIMIT_ICONS[l.title] ?? Scale
-          const { lead: first, rest } = splitFirstSentence(l.text)
-          return (
-            <li key={l.title} className="nx-reveal nx-card flex flex-col rounded-xl border border-line bg-surface p-5" style={{ '--nx-delay': `${i * 60}ms` } as React.CSSProperties}>
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><Icon className="h-4 w-4" aria-hidden /></span>
-                <h3 className="m-0 text-[14px] font-semibold leading-snug text-fg">{l.title}</h3>
-              </div>
-              <p className="mb-0 mt-3 text-[14px] leading-relaxed text-fg-4">{first}</p>
-              {rest && (
-                <Disclosure summary="More" className="mt-2" summaryClassName="text-[13px] text-muted hover:text-fg">
-                  <p className="mb-0 mt-2 text-[13px] leading-relaxed text-fg-4">{rest}</p>
-                </Disclosure>
-              )}
-            </li>
-          )
-        })}
+      <ul className="m-0 mt-8 flex list-none flex-wrap gap-3 p-0">
+        {LIMIT_CHIPS.map((c) => <li key={c} className="rounded-full border border-line-strong px-4 py-2 text-[14px] text-fg-3">{c}</li>)}
       </ul>
+      <Disclosure summary="All limits" className="mt-8">
+        <ul ref={ref} className={`${seen ? 'nx-in' : ''} m-0 mt-5 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3`}>
+          {items.map((l, i) => {
+            const Icon = LIMIT_ICONS[l.title] ?? Scale
+            const { lead: first, rest } = splitFirstSentence(l.text)
+            return (
+              <li key={l.title} className="nx-reveal nx-card flex flex-col rounded-xl border border-line bg-surface p-5" style={{ '--nx-delay': `${i * 60}ms` } as React.CSSProperties}>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><Icon className="h-4 w-4" aria-hidden /></span>
+                  <h3 className="m-0 text-[14px] font-semibold leading-snug text-fg">{l.title}</h3>
+                </div>
+                <p className="mb-0 mt-3 text-[14px] leading-relaxed text-fg-4">{first}</p>
+                {rest && <p className="mb-0 mt-2 text-[13px] leading-relaxed text-fg-4">{rest}</p>}
+              </li>
+            )
+          })}
+        </ul>
+      </Disclosure>
     </Block>
   )
 }

@@ -223,8 +223,8 @@ export default function App() {
   const isHome = !m   // every other non-special route falls through to Home
   
   if (hash === '' || hash === '/' || hash === '/jury') return <Landing />   // full-screen start page, no sidebar
-  if (hash === '/tavily') return <Landing scrollTo="tavily" />   // footer link: the Tavily section of the start page
-  if (hash === '/lesson') return <Landing scrollTo="lesson" />   // same page, opened on the bitter-lesson section
+  if (hash === '/tavily') return <Landing scrollTo="how" />   // footer link: the how-it-works section of the start page (Tavily details are behind its disclosure)
+  if (hash === '/lesson') return <Landing scrollTo="proof" />   // same page, opened on the "Does it work?" section
 
   return (
     <Layout currentHash={hash}>

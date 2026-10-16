@@ -3,6 +3,7 @@ import { Badge, Chevron, ExtLink, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { TwoModes } from './TwoModes'
 import { RecentChecks } from './RecentChecks'
+import { Lesson } from './LandingSections'
 import { NextStep, PageIntro } from './page'
 import { useBenchmark, type BenchArm, type BenchUnit, type BenchVersion } from '../benchmark'
 import { RESULT, de2en } from '../labels'
@@ -165,6 +166,7 @@ export function Benchmark() {
         : latest ? (
           <>
             <TwoModes />
+            <Lesson />
             <RecentChecks flush />
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
