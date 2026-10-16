@@ -319,6 +319,7 @@ h1 { font-family: 'Inter Tight Variable', 'Inter Tight', Inter, system-ui, sans-
 .film-frame video, .film-frame img { filter: brightness(0.82); }
 :root[data-theme='light'] .film-frame video, :root[data-theme='light'] .film-frame img { filter: none; }
 
+@media print { .nx-reveal { opacity: 1 !important; translate: none !important; transition: none !important; } }
 /* Lower landing page: unit squares fill and cards rise once when they enter the viewport (class .nx-in set by useInView). */
 .nx-sq { background: transparent; transition: background-color 380ms ease-out, border-color 380ms ease-out; transition-delay: var(--nx-delay, 0ms); }
 .nx-in .nx-sq[data-hit="true"] { background: var(--nx-fill, var(--c-fg-3)); border-color: var(--nx-fill, var(--c-fg-3)); }

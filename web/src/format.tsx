@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, HelpCircle, Info, XCircle } from 'lucide-rea
 import { formatMetric, formatSpread } from './metricFormat'
 import { NOT_ASSESSABLE, type Tone } from './labels'
 import type { Json } from './data'
+import { describeDiff } from './delta.ts'
 
 export function parseDate(ts: string) {
   const dateStr = ts.split('-')[0]
@@ -40,14 +41,11 @@ export function getDelta(measured: any, target: any, metric?: string) {
   const tVal = plain ? t : (t <= 2.0 && t > 0) ? t * 100 : t
   
   const diff = mVal - tVal
-  if (plain) {
-    if (Math.abs(diff) < 0.0005) return { text: '±0.000 vs. claimed', color: 'text-muted' }
-    return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(3)} vs. claimed`, color: diff > 0 ? 'text-tone-red' : 'text-tone-green' }
-  }
-  // percentage points, same wording as the catalog
-  if (Math.abs(diff) < 0.05) return { text: '±0.0 pp vs. claimed', color: 'text-muted' }
-  if (diff > 0) return { text: `+${diff.toFixed(1)} pp vs. claimed`, color: 'text-tone-green' }
-  return { text: `−${Math.abs(diff).toFixed(1)} pp vs. claimed`, color: 'text-tone-red' }
+  const d = describeDiff(diff, !plain)
+  if (d.match) return { text: d.text, color: 'text-muted' }
+  // an error metric: higher than claimed is worse; accuracy: lower than claimed is worse
+  const worse = plain ? d.sign > 0 : d.sign < 0
+  return { text: d.text, color: worse ? 'text-tone-red' : 'text-tone-green' }
 }
 
 // All runs: always "with our setup", never a verdict on the paper (method fidelity is not checked).

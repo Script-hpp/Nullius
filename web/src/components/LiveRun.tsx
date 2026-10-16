@@ -68,8 +68,8 @@ export function LiveRun({ jobId }: { jobId: string }) {
         </a>
       </div>
       <PageIntro kicker={`Live check${kind ? ` · ${kind}` : ''} · ${statusLabel}`} title={entry?.title ?? 'Reproduction run'} head={<PaperHead head={head} />}
-        what="You are watching one check as it happens. Our agent rebuilds the paper's experiment in isolated sandboxes while our harness measures the result."
-        look="The nine steps below fill in as they finish. Open the running step to see what happens in it and why it matters.">
+        sub="One check, live. The nine steps fill in as they finish."
+        about={<p className="m-0">Our agent rebuilds the paper’s experiment in isolated sandboxes while our harness measures the result. Open the running step to see what happens in it and why it matters.</p>}>
         <p className="mb-0 mt-8 flex items-center gap-3 text-[13px] text-fg-4">
           <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider ${stopped ? 'text-tone-amber' : bad ? 'text-tone-red' : status === 'finished' ? 'text-tone-green' : 'text-fg-3'}`}>
             {status === 'finished' ? <CheckCircle2 className="h-3.5 w-3.5" /> : bad ? <AlertCircle className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}

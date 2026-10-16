@@ -29,9 +29,10 @@ export const TIMELAPSE_RUN = `#/run/${FEATURED_RUN_ID}?play=1`
 const lead = 'font-grotesk m-0 max-w-3xl text-2xl font-semibold leading-snug tracking-[-0.03em] text-fg sm:text-3xl'
 const body = 'm-0 max-w-2xl text-[16px] leading-relaxed text-fg-4'
 
-export function Block({ id, label, flush, children }: { id?: string; label: string; flush?: boolean; children: ReactNode }) {
+export function Block({ id, label, flush, inPage, children }: { id?: string; label: string; flush?: boolean; inPage?: boolean; children: ReactNode }) {
+  // inPage: inside a page that already has its own column (benchmark page): no extra width cap or side padding
   return (
-    <section id={id} aria-label={label} className={`mx-auto max-w-4xl scroll-mt-8 px-6 ${flush ? 'pb-14 sm:pb-20' : 'py-14 sm:py-20'}`}>
+    <section id={id} aria-label={label} className={inPage ? 'scroll-mt-8 py-10 sm:py-14' : `mx-auto max-w-4xl scroll-mt-8 px-6 ${flush ? 'pb-14 sm:pb-20' : 'py-14 sm:py-20'}`}>
       {children}
     </section>
   )
@@ -146,15 +147,16 @@ export function HeroCard({ run }: { run: RunData | null }) {
         <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Example check</span>
         <span className="inline-flex items-center gap-1.5"><Badge tone={res.tone}>{res.label}</Badge><span className="relative z-10"><Hint text={TARGET_HINT} /></span></span>
       </div>
-      <p className="font-grotesk mb-0 mt-5 text-lg font-semibold leading-snug tracking-[-0.02em] text-fg sm:text-xl">{card.line}</p>
+      <p className="font-grotesk mb-0 mt-5 text-lg font-semibold leading-snug tracking-[-0.02em] text-fg sm:text-xl">{card.line} <span className="font-sans text-[13px] font-normal tracking-normal text-muted">· {card.hint}</span></p>
       <dl className="m-0 mt-7 grid grid-cols-2 gap-6">
         <div>
           <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Claimed</dt>
-          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-fg-3 sm:text-5xl">{card.claimed}</dd>
+          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-fg-3 tabular-nums sm:text-5xl">{card.claimed}</dd>
         </div>
         <div>
           <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Measured</dt>
-          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-tone-green sm:text-5xl" aria-label={card.measured}>{formatMetric(card.metric, shown)}</dd>
+          <dd className="m-0 mt-2 font-mono text-4xl font-light tracking-tight text-tone-green tabular-nums sm:text-5xl" aria-label={card.measured}>{formatMetric(card.metric, shown)}</dd>
+          {card.spread && <dd className="m-0 mt-1.5 font-mono text-[12px] text-muted">{card.spread} over seeds</dd>}
         </div>
       </dl>
       <p className="mb-0 mt-6 border-t border-line pt-4 text-[12px] leading-relaxed text-muted">{card.meta}</p>
@@ -163,28 +165,35 @@ export function HeroCard({ run }: { run: RunData | null }) {
   )
 }
 
-export function DoesItWork() {
+// The three plain numbers of "Does it work?", shared by the start page and the benchmark page. Small tests, never a success rate.
+export function ProofNumbers() {
   const { placebo, withCode } = FIGURES
-  const num = 'font-mono text-4xl font-light tracking-tight text-fg sm:text-5xl'
+  const num = 'font-mono text-4xl font-light tracking-tight text-fg tabular-nums sm:text-5xl'
   const items = [
     { n: `${placebo.v4[0]} of ${placebo.v4[1]}`, t: 'false claims accepted', s: 'planted on purpose' },
     { n: `${withCode.matched} of ${withCode.of}`, t: 'known results matched', s: 'paper + authors’ code, in-sample' },
     { n: `${HELD_OUT.matched} of ${HELD_OUT.of}`, t: 'on a held-out paper', s: 'not used to design the fixes' },
   ]
   return (
+    <ul className="m-0 grid list-none gap-8 p-0 sm:grid-cols-3" aria-label="Three small tests">
+      {items.map((it) => (
+        <li key={it.t} className="border-t border-line pt-5">
+          <div className={num}>{it.n}</div>
+          <p className="mb-0 mt-2 text-[15px] font-medium leading-snug text-fg">{it.t}</p>
+          <p className="mb-0 mt-1 text-[13px] leading-snug text-muted">{it.s}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function DoesItWork() {
+  return (
     <section id="proof" aria-label="Does it work?" className="scroll-mt-8 pt-14 sm:pt-20">
       <div className="mx-auto max-w-4xl px-6"><h2 className={lead}>Does it work?</h2></div>
       <div className="mt-6"><ScrollScene id="placebo" /></div>
       <div className="mx-auto max-w-4xl px-6 pt-6">
-        <ul className="m-0 grid list-none gap-8 p-0 sm:grid-cols-3">
-          {items.map((it) => (
-            <li key={it.t} className="border-t border-line pt-5">
-              <div className={num}>{it.n}</div>
-              <p className="mb-0 mt-2 text-[15px] font-medium leading-snug text-fg">{it.t}</p>
-              <p className="mb-0 mt-1 text-[13px] leading-snug text-muted">{it.s}</p>
-            </li>
-          ))}
-        </ul>
+        <ProofNumbers />
         <p className="mb-0 mt-8 text-[14px] text-fg-4">Small tests, not a success rate. <GoLink href="#benchmark" className="ml-1">Benchmark</GoLink></p>
       </div>
     </section>
@@ -241,11 +250,11 @@ export function Findings() {
   )
 }
 
-export function Lesson() {
+export function Lesson({ inPage = false }: { inPage?: boolean }) {
   const [ref, seen] = useInView<HTMLDivElement>(0.35)
   const { paperOnly, withCode } = FIGURES
   return (
-    <Block id="lesson" label="Our own small bitter lesson">
+    <Block id="lesson" label="Our own small bitter lesson" inPage={inPage}>
       <h2 className={lead}>Cleverness left {paperOnly.matched} of {paperOnly.of}. The authors&rsquo; code moved it.</h2>
       <p className={`${body} mt-6`}>
         Same eight papers, two ways to rebuild them. The authors&rsquo; code is read as text and never run.

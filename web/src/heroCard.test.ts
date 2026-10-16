@@ -8,16 +8,21 @@ const dir = new URL('../public/data/disc_2307_03756/20261014-080542/', import.me
 const dossier = JSON.parse(readFileSync(new URL('dossier.json', dir), 'utf8'))
 const catalog = JSON.parse(readFileSync(new URL('../public/data/catalog.json', import.meta.url), 'utf8'))
 const entry = catalog.find((e: { id: string }) => e.id === 'disc_2307_03756')
-const run = { ref: { title: 'FITS: Modeling Time Series with $10k$ Parameters', timestamp: FEATURED.split('--')[1] }, dossier }
+const events = readFileSync(new URL('events.jsonl', dir), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
+const run = { ref: { title: 'FITS: Modeling Time Series with $10k$ Parameters', timestamp: FEATURED.split('--')[1] }, dossier, events }
 
 test('card of the featured run carries the exported numbers', () => {
   const c = heroCard(run, entry, 3)!
   assert.equal(c.name, 'FITS')
-  assert.equal(c.line, 'FITS: forecast error 0.372 on ETTh1')
+  assert.equal(c.line, 'FITS · forecast error on ETTh1')
+  assert.equal(c.hint, 'lower is better')
+  assert.equal(c.spread, '± 0.00005')
   assert.equal(c.claimed, '0.3720')
   assert.equal(c.measured, '0.3720')
   assert.equal(c.urteil, 'reproduziert')
-  assert.equal(c.meta, '3 seeds · recorded 14 Oct 2026 · live Tavily calls · $0.31')
+  const calls = events.filter((e: { type: string }) => e.type === 'tavily_call').length
+  assert.ok(calls > 0)
+  assert.equal(c.meta, `3 seeds · recorded 14 Oct 2026 · ${calls} live Tavily ${calls === 1 ? 'call' : 'calls'} · $0.31`)
 })
 
 test('no claim or verdict gives no card', () => {

@@ -14,13 +14,13 @@ import { ScrollScene } from '../scroll/ScrollScene'
 function Hero({ run }: { run: ReturnType<typeof useFeatured> }) {
   // Text and buttons are on screen from the first paint; only the small lettering above the headline is animated.
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col justify-between gap-10 px-6 pb-8 pt-10 md:px-8 lg:pt-14">
+    <section className="mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-12 pt-10 md:px-8 lg:gap-14 lg:pb-10 lg:pt-14">
       <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
         <div>
           <WrittenText className="w-[132px] text-fg-4 sm:w-[160px]" />
-          <h1 className="font-grotesk m-0 mt-5 text-[2.5rem] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-[4.1rem]">
-            <span className="text-muted">Papers make claims.</span>{' '}
-            <span className="text-fg">We measure them.</span>
+          <h1 className="font-grotesk m-0 mt-5 text-[2.1rem] font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-[3.6rem]">
+            <span className="block whitespace-nowrap text-muted">Papers make claims.</span>
+            <span className="block whitespace-nowrap text-fg">We measure them.</span>
           </h1>
           <p className="mb-0 mt-6 max-w-lg text-balance text-base leading-relaxed text-fg-4 sm:text-lg">
             Before you build on a paper, Nullius rebuilds the experiment and measures the claim independently.

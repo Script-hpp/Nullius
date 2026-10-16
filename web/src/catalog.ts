@@ -3,6 +3,8 @@ import { getText, loadIndex } from './data'
 import type { ReferenceBenchmark } from './referenceBench'
 import { formatMetric, formatSpread } from './metricFormat'
 import { DATA_CHANGED } from './live'
+import { cleanTitle } from './title.ts'
+import { describeDiff } from './delta.ts'
 
 export type CatalogVerdict = {
   urteil: string
@@ -50,6 +52,7 @@ export function loadCatalog(): Promise<CatalogEntry[]> {
     const published = new Set(runs.map((r) => r.id))
     return (text ? JSON.parse(text) as CatalogEntry[] : []).map((entry) => ({
       ...entry,
+      title: cleanTitle(entry.title),
       // The catalog can contain checks whose artifacts have not been published in this build.
       run_id: entry.run_id && published.has(entry.run_id) ? entry.run_id : null,
     }))
@@ -99,10 +102,8 @@ export function fmtDelta(e: CatalogEntry): { text: string; sign: -1 | 0 | 1 } | 
   const v = e.verdict
   if (!v || v.measured_mean == null || v.target == null) return null
   const share = isShare(e.claim.metric)
-  const diff = (v.measured_mean - v.target) * (share ? 100 : 1)
-  const d = share ? 1 : 3
-  if (Math.abs(diff) < 0.5 * 10 ** -d) return { text: `±0.${'0'.repeat(d)}${share ? ' pp' : ''}`, sign: 0 }
-  return { text: `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(d)}${share ? ' pp' : ''}`, sign: diff > 0 ? 1 : -1 }
+  const { text, sign } = describeDiff((v.measured_mean - v.target) * (share ? 100 : 1), share)
+  return { text, sign }
 }
 
 export const evidenceHref = (e: CatalogEntry, view?: 'log' | 'replay') => (e.run_id ? `#/run/${e.run_id}${view === 'replay' ? '?play=1' : view === 'log' ? '?tab=log' : ''}` : null)

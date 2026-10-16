@@ -16,8 +16,8 @@ export function CertificateActions({ run }: { run: RunData }) {
     preview.focus()
     setNotice('Certificate opened. Choose “Save as PDF / Print” in the new tab.')
   }
-  return <section aria-label="Export this check" className="mb-7">
-    <button type="button" onClick={exportPdf} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[12px] font-medium text-fg hover:bg-raised/60"><Download className="h-3.5 w-3.5" />Export certificate (PDF)</button>
-    {notice && <p role="status" className="text-xs text-muted">{notice}</p>}
-  </section>
+  return <span className="inline-flex flex-col items-end gap-1">
+    <button type="button" onClick={exportPdf} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[12px] font-medium text-fg hover:bg-raised/60"><Download className="h-3.5 w-3.5" />Export PDF</button>
+    {notice && <span role="status" className="max-w-56 text-right text-xs text-muted">{notice}</span>}
+  </span>
 }

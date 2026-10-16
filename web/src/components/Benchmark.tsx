@@ -3,7 +3,7 @@ import { Badge, Chevron, ExtLink, INLINE } from './ui'
 import { Glossed } from './Glossed'
 import { TwoModes } from './TwoModes'
 import { RecentChecks } from './RecentChecks'
-import { Lesson } from './LandingSections'
+import { Lesson, ProofNumbers } from './LandingSections'
 import { NextStep, PageIntro } from './page'
 import { useBenchmark, type BenchArm, type BenchUnit, type BenchVersion } from '../benchmark'
 import { RESULT, de2en } from '../labels'
@@ -159,15 +159,21 @@ export function Benchmark() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Benchmark" title="Does it work?"
-        compact="Known results, one new paper and false targets answer different questions. Start with the three checks below."
-        what="Papers with known results: how often does Nullius agree?"
-        look={latest ? 'Start with target agreement, then inspect the false-target checks and recent catalog evidence.' : 'Results appear once the evaluation has run.'} />
+        sub="Three small tests with known answers. Not a success rate."
+        about={<p className="m-0">{latest ? 'Papers with known results: how often does Nullius agree? Start with the three numbers, then the false-target checks and recent catalog evidence.' : 'Results appear once the evaluation has run.'}</p>} />
       {bench === undefined ? <p className="text-muted">Loading benchmark results…</p>
         : latest ? (
           <>
-            <TwoModes />
-            <Lesson />
-            <RecentChecks flush />
+            <section aria-label="Three small tests" className="pb-4">
+              <ProofNumbers />
+              <p className="mb-0 mt-6 text-[14px] leading-relaxed text-fg-4">Small tests, not a success rate. A match checks the number, not the method.</p>
+            </section>
+            <div className="mt-6 border-t border-line"><Lesson inPage /></div>
+            <div className="border-t border-line"><RecentChecks flush /></div>
+            <details className="group mb-12 border-t border-line pt-5">
+              <summary className={`nx-summary ${INLINE} cursor-pointer text-[11px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-fg-3`}>All numbers, per mode and unit<Chevron className="h-3.5 w-3.5" /></summary>
+              <div className="mt-8"><TwoModes /></div>
+            </details>
             <section aria-label={`Benchmark ${latest.id}`}>
               <div className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Paper only: pre-registered evaluation · {latest.id}</div>
               <Tiles v={latest} />
@@ -199,7 +205,7 @@ export function Benchmark() {
             <p className="mb-0 mt-3 max-w-2xl text-[15px] leading-relaxed text-fg-4">No benchmark results are published on this site yet. Nothing here is estimated: the numbers appear when the evaluation has finished and was exported.</p>
           </section>
         )}
-      <div className="mt-16"><Method /></div>
+      <div className="mt-12"><Method /></div>
       <NextStep title="Check a paper yourself" text="Find new papers or open a checked one." label="Discover papers" href="#discover" />
     </main>
   )

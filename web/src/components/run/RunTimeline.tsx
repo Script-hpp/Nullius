@@ -4,7 +4,7 @@ import { ArrowRight, Box, CheckCircle2, ChevronDown, CircleDashed, Cpu, Loader2,
 import { AttemptChart } from '../Gauge'
 import { Hint } from '../Hint'
 import { Badge, Section } from '../ui'
-import { PreliminaryChip } from '../CatalogBits'
+import { MethodInfo } from '../CatalogBits'
 import { PythonCode } from './PythonCode'
 import { PlanText } from './PlanText'
 import { TavilyMark } from '../TavilyMark'
@@ -333,7 +333,7 @@ export function RunTimeline({ events, mode, running, lastReceived, embedded = fa
                 <div className={label}>Result</div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                   <Badge tone={label_.tone} title={resultHint(String(verdict.urteil))}>{label_.label}</Badge>
-                  {isPreliminary(String(verdict.gesamt)) && <PreliminaryChip />}
+                  {isPreliminary(String(verdict.gesamt)) && <MethodInfo />}
                 </div>
                 <p className="mt-2 text-[12px] leading-relaxed text-fg-3">
                   Measured {fmtValue(m.metric, Number(verdict.mean))} ± {fmtValue(m.metric, Number(verdict.std))} against the claimed {fmtValue(m.metric, m.target, 2)} (tolerance ±{fmtValue(m.metric, m.tolerance, m.metric === 'accuracy' ? 1 : 3)}).

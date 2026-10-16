@@ -35,7 +35,10 @@ import { formatSpread } from '../metricFormat'
 import { targetSource } from '../targetSource'
 import { SetupSources } from './SetupSources'
 import { runOrigin } from '../runNavigation'
-import { minutes, runTimings } from '../eta'
+import { runTimings } from '../eta'
+import { runFacts } from '../runFacts'
+import { measuredAttempts } from '../measurements'
+import { useCatalog } from '../catalog'
 import { eventsForClaim } from '../film'
 
 const reduceMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -60,6 +63,8 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const topRef = useRef<HTMLDivElement>(null)
   const filmRef = useRef<HTMLDivElement>(null)
   const stored = useHead(ref_.paper_id)
+  const catalog = useCatalog()
+  const catalogEntry = catalog?.find((c) => c.run_id === ref_.id)
   useEffect(() => { loadRun(ref_).then(setRun) }, [ref_])
   // ?play=1: bring the whole player into view once it is on the page
   // The scroll container is <main id="app-scroll"> (Layout), not the window; scrollIntoView finds it from the element.
@@ -123,6 +128,7 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
   const showMeasurements = () => goTab('code', { fold: 'f-seeds' })
   const origin = runOrigin(ref_.id)
   const duration = runTimings(run.events).total
+  const facts = runFacts({ seeds: new Set<number>(measuredAttempts(d, claim.id).map((a: Json) => a.seed)).size, seconds: duration, costUsd: catalogEntry?.cost_gross_usd })
 
   const onStep = (id: StepId) => {
     const flash = true
@@ -146,15 +152,18 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           plan={run.plan} finalCode={run.code} codeLoader={codeLoader} autoplay /></div>
       )}
       <div ref={topRef} className="scroll-mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 pt-6">
           <a href={origin.hash} className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted no-underline transition-colors hover:text-fg-2">
             <ArrowRight className="h-3.5 w-3.5 rotate-180" /> {origin.hash.startsWith('#catalog') ? 'Back to catalog' : 'Back to runs'}
           </a>
-          {run.events.length > 0 && !timelapse && (
-            <button type="button" onClick={() => setTimelapse(true)} className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-strong bg-transparent px-3.5 py-1.5 text-[12px] font-medium text-fg hover:bg-raised/60">
-              <Play className="h-3.5 w-3.5" />Play this check in 30 seconds
-            </button>
-          )}
+          <div className="flex flex-wrap items-start gap-3">
+            {v && <CertificateActions run={run} />}
+            {run.events.length > 0 && !timelapse && (
+              <button type="button" onClick={() => setTimelapse(true)} title="The 30-second replay compresses the whole run" className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-fg bg-inverse px-4 py-1.5 text-[12px] font-medium text-on-inverse hover:bg-inverse-hover">
+                <Play className="h-3.5 w-3.5" />Play in 30 seconds
+              </button>
+            )}
+          </div>
         </div>
         <header className="pb-6 pt-6 sm:pb-8 sm:pt-8">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -163,17 +172,10 @@ export function RunView({ ref_, initialTab, playTimelapse = false }: { ref_: Run
           <h1 className="font-grotesk m-0 mt-3 max-w-4xl text-3xl font-semibold leading-[1.08] text-fg sm:text-4xl">{run.ref.title}</h1>
           <PaperByline head={head} />
         </header>
-        <VerdictCard dossier={d} events={run.events} claim={claim} verdict={v} res={res} sentence={sentence} fmt={fmt} fmtSpread={fmtSpread} paperUrl={paperUrl}
+        <VerdictCard dossier={d} events={run.events} claim={claim} verdict={v} res={res} facts={facts} onEvidence={() => goTab('sources', { fold: 'f-target' })} fmt={fmt} fmtSpread={fmtSpread} paperUrl={paperUrl}
           fidelityUnchecked={fidelityUnchecked} gesamt={ref_.gesamtaussage} isCatalog={isCatalog} notes={notes} claimText={translateClaim(claim.text)} onLimits={() => goTab('limits')} onTavily={() => goTab('sources')} />
       </div>
 
-      {duration !== null && duration >= 0 && <p className="mb-4 mt-0 text-[12px] text-muted">Recorded check took {minutes(duration)}. The 30-second replay compresses this run; a new live check may take longer.</p>}
-      <nav aria-label="Inspect this check" className="mb-6 flex flex-wrap gap-3">
-        <button type="button" onClick={() => goTab('sources', { fold: 'f-target' })} className={TAB_BTN}>View sources &amp; setup</button>
-        <button type="button" onClick={showCode} className={TAB_BTN}>View generated code</button>
-        <button type="button" onClick={showMeasurements} className={TAB_BTN}>View measurements</button>
-      </nav>
-      {v && <CertificateActions run={run} />}
       <RunTabs tab={tab} onTab={(t) => goTab(t)} icons={ICONS} barRef={barRef} />
 
       <div ref={panelRef} role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={-1} className="scroll-mt-12 pt-10 outline-none">

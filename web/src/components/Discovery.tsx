@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, PauseCircle, Loader2 } from 'lucide-react'
+import { Activity, CheckCircle2, Check, ChevronDown, FileText, Play, RotateCcw, Search, XCircle, AlertCircle, BookOpen, Code, Sparkles, Loader2, Lock } from 'lucide-react'
 import { ExtArrow, ExtLink, ICON_MD, INLINE, Section } from './ui'
 import { Hint } from './Hint'
 import { CatalogVerdict, ClaimedMeasured, EvidenceLink } from './CatalogBits'
@@ -8,7 +8,7 @@ import { STATUS_TEXT, evidenceHref, useCatalog, type CatalogEntry } from '../cat
 import { translateReason } from '../labels'
 import { fetchJobInfo, startReproduction, useLiveStatus, useReproductionEligibility, type ReproductionEligibility } from '../live'
 import { TavilyMark } from './TavilyMark'
-import { isPaused, resumeText, startErrorText, statusFor } from '../livestatus'
+import { isPaused, startBlock, startErrorText, statusFor } from '../livestatus'
 import {
   deriveView, domainOf, formatMetric, humanReject, parseJsonl, parseLiveEvent, quoteCells, quoteExcerpt, shorten, stageLabel, benchmarkText, tickedRuntime, savedCheckForClaim,
   type DEvent, type DPaper, type DiscoveryView, type FeedCall,
@@ -132,12 +132,11 @@ function Funnel({ funnel, running }: { funnel: DiscoveryView['funnel']; running:
       {funnel.map((f, i) => (
         <div key={f.label}>
           <div className="flex items-baseline justify-between text-[12px]">
-            <span className="text-fg-4">{f.label}</span>
+            <span className="inline-flex items-center gap-1 text-fg-4">{f.label}<Hint text={`${FUNNEL_TEXT[i]}${f.note ? ` ${f.note}.` : ''}`} /></span>
             {running && f.value === 0
               ? <span aria-label="not computed yet" className="h-3.5 w-6 rounded bg-raised motion-safe:animate-pulse" />
               : <span className="font-mono text-fg-2">{f.value}</span>}
           </div>
-          <div className="mt-0.5 text-[11px] leading-relaxed text-muted">{FUNNEL_TEXT[i]}{f.note ? ` ${f.note}.` : ''}</div>
           <div className="mt-1.5 h-1.5 rounded-sm bg-raised">
             <motion.div className={`h-full rounded-sm ${i === funnel.length - 1 ? 'bg-tone-green-solid' : 'bg-fill-lo'}`}
               initial={{ width: '0%' }} animate={{ width: `${(f.value / max) * 100}%` }} transition={bar} />
@@ -265,12 +264,14 @@ function PaperCard({ p, active, entry, check }: { p: DPaper; active: boolean; en
             <span>Preparing the experiment: checking the target in the paper's table, reading the authors' code and the setup. A claim is offered for a check only when all of this holds.</span></p>
           : p.readiness?.state === 'blocked' || check.eligibility?.runnable === false ? <p className="m-0 text-[12px] leading-relaxed text-muted">
             <span className="font-medium text-fg-3">Not offered for a one-click check.</span> {translateReason((p.readiness?.state === 'blocked' ? p.readiness.reason : check.eligibility?.reason) ?? '')}</p>
-          : <>
+          : check.notice ? <>
+            <p role="status" className="m-0 flex items-start gap-2 text-[12px] leading-relaxed text-muted"><Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /><span>{check.notice}</span></p>
+            {entry?.run_id && <p className="mb-0 mt-2 text-[12px]"><EvidenceLink entry={entry}>Open the saved check</EvidenceLink></p>}
+          </> : <>
             <button onClick={check.onRun} disabled={check.disabled || check.starting} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
               {check.starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}Check this claim
             </button>
             <p className="mb-0 mt-2 text-[11px] leading-relaxed text-muted">New experiment · 3 seeds · can take tens of minutes. Unverified setup or table columns keep the conclusion provisional.</p>
-            {check.notice && <p role="status" className="mb-0 mt-2 text-[12px] text-muted">{check.notice}</p>}
           </>}
         {check.error && <p role="alert" className="mb-0 mt-2 text-[12px] text-tone-amber">{check.error}</p>}
       </div>}
@@ -354,7 +355,7 @@ export function Discovery() {
 
   const reset = () => { interacted.current = true; stop.current(); setEvents([]); setError(null); setRecorded(false); setReplaySource(null); setCheckError(null) }
 
-  const startReplay = useCallback(async () => {
+  const startReplay = useCallback(async (instant = false) => {
     reset()
     try {
       let all: DEvent[] = []
@@ -373,6 +374,11 @@ export function Discovery() {
       if (!all.length) throw new Error('empty')
       setRecorded(true)
       setReplaySource(source)
+      if (instant) {   // nothing was pressed: show the finished recording at once, never a "running" search
+        setEvents(all)
+        setMode(all.some((e) => e.type === 'error') ? 'failed' : 'done')
+        return
+      }
       setMode('replay')
       let i = 0
       let timer: number | undefined
@@ -464,7 +470,7 @@ export function Discovery() {
     let alive = true
     fetchJobInfo().then(async (info) => {
       if (!alive || interacted.current) return
-      if (info === null) { setOffline(true); startReplay(); return }
+      if (info === null) { setOffline(true); startReplay(true); return }
       try {
         const response = await fetch('/api/discover/candidates', { cache: 'no-store' })
         const saved = response.ok && response.headers.get('content-type')?.includes('json') ? await response.json() : []
@@ -477,7 +483,7 @@ export function Discovery() {
     })
     return () => { alive = false }
   }, [startReplay])
-  useEffect(() => { if (initialReady && paused && mode === 'idle' && !events.length) startReplay() }, [initialReady, paused, mode, events.length, startReplay])
+  useEffect(() => { if (initialReady && paused && mode === 'idle' && !events.length) startReplay(true) }, [initialReady, paused, mode, events.length, startReplay])
 
   const runClaim = async (id: string) => {
     setStarting(id); setCheckError(null)
@@ -490,12 +496,12 @@ export function Discovery() {
     } finally { setStarting(null) }
   }
   const repro = statusFor(liveStatus, 'reproduction')
-  const checkNotice = offline ? 'Live checks are not available on this site.'
-    : running || repro?.reason === 'busy' ? 'Another run is active. Wait for it to finish.'
-    : isPaused(repro) ? `Live checks are paused (${repro?.reason === 'daily_limit' ? 'daily limit' : 'budget limit'}). ${resumeText(repro?.reason, repro?.reset_at) ?? ''}` : undefined
-
+  const checkBlock = startBlock({ available: !offline, kind: repro, busy: running || repro?.reason === 'busy' })
+  const checkNotice = checkBlock.blocked ? checkBlock.long : undefined
+  const apiKnown = offline || initialReady   // before the first answer nothing is said about live access
+  const liveBlock = startBlock({ available: !offline, kind: disc, busy: disc?.reason === 'busy', target: 'search' })
   const toggle = (d: string) => setDatasets((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
-  const status = mode === 'saved' ? 'Saved claims' : running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? 'Finished' : 'Ready'
+  const status = mode === 'saved' ? 'Saved claims' : running ? 'Running' : mode === 'failed' ? (view.tavilyCalls ? 'Finished with errors' : 'Failed') : mode === 'done' ? (recorded ? 'Recorded search' : 'Finished') : 'Ready'
   const displayedError = error ?? view.notes.find((note) => note.kind === 'error')?.message
   const papers = [...view.papers].reverse()
   const candidates = papers.filter((p) => p.state === 'candidate')
@@ -507,52 +513,65 @@ export function Discovery() {
   return (
     <main className="mx-auto max-w-6xl px-4 md:px-8 pb-20">
       <PageIntro kicker="Discover" title="Find papers worth checking"
-        compact="Choose supported datasets, then watch a recorded search or start a live one."
-        what="Tavily finds papers with quoted claims on supported datasets. Discovery checks their sources and setup to find candidates for an experiment. Reproduction is a separate step."
-        look="Watch a recorded search or start a live one. Choose Check this claim to run a new experiment for a saved candidate and inspect its evidence." />
+        sub="Tavily searches for papers with a quotable claim. Watch the search."
+        about={<>
+          <p className="m-0">Discovery checks sources and setup to find candidates for an experiment. Reproduction is a separate step: choose Check this claim to run a new experiment for a saved candidate.</p>
+        </>} />
 
       <div className="nx-card mb-6 rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
-          <div>
-            <div className={label}>Benchmarks</div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-              {DATASETS.map((d) => (
-                <label key={d} className={`${INLINE} select-none rounded-lg border px-3 py-1.5 text-sm transition-colors ${running ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${datasets.includes(d) ? 'border-line-stronger bg-raised text-fg' : 'border-line text-fg-4 hover:border-line-strong hover:text-fg-3'} focus-within:outline focus-within:outline-1 focus-within:outline-zinc-500`}>
-                  <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="sr-only" />
-                  <Check className={`h-3.5 w-3.5 shrink-0 ${datasets.includes(d) ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
-                  {d}
-                </label>
-              ))}
+          {!liveBlock.blocked && (
+            <div>
+              <div className={label}>Benchmarks</div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                {DATASETS.map((d) => (
+                  <label key={d} className={`${INLINE} select-none rounded-lg border px-3 py-1.5 text-sm transition-colors ${running ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${datasets.includes(d) ? 'border-line-stronger bg-raised text-fg' : 'border-line text-fg-4 hover:border-line-strong hover:text-fg-3'} focus-within:outline focus-within:outline-1 focus-within:outline-zinc-500`}>
+                    <input type="checkbox" checked={datasets.includes(d)} onChange={() => toggle(d)} disabled={running} className="sr-only" />
+                    <Check className={`h-3.5 w-3.5 shrink-0 ${datasets.includes(d) ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
+                    {d}
+                  </label>
+                ))}
+              </div>
             </div>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {liveBlock.blocked ? (
+              <>
+                <button onClick={() => startReplay()} disabled={running} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+                  <RotateCcw className="w-4 h-4" />Replay recorded search
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={startLive} disabled={running || !datasets.length} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
+                  <Play className="w-4 h-4" />Start live search
+                </button>
+                <button onClick={() => startReplay()} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
+                  <RotateCcw className="w-4 h-4" />Replay recorded search
+                </button>
+              </>
+            )}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button onClick={startLive} disabled={running || !datasets.length || paused || offline || disc?.reason === 'busy'} className={`${btn} border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}>
-              <Play className="w-4 h-4" />Start live run
-            </button>
-            <button onClick={startReplay} disabled={running} className={`${btn} border-line text-fg-3 hover:bg-raised-2`}>
-              <RotateCcw className="w-4 h-4" />Replay recorded run
-            </button>
-          </div>
-          <div>
-            <div className={label}>Replay speed</div>
-            <div className="mt-2 flex gap-1">
-              {[1, 4].map((s) => (
-                <button key={s} onClick={() => setSpeed(s)}
-                  className={`px-3 py-1.5 font-mono text-xs rounded-md border cursor-pointer ${speed === s ? 'border-line-stronger text-fg' : 'border-line text-muted hover:text-fg-3'}`}>{s}x</button>
-              ))}
+          {(recorded || mode === 'replay') && (
+            <div>
+              <div className={label}>Replay speed</div>
+              <div className="mt-2 flex gap-1">
+                {[1, 4].map((s) => (
+                  <button key={s} onClick={() => setSpeed(s)} aria-pressed={speed === s}
+                    className={`px-3 py-1.5 font-mono text-xs rounded-md border cursor-pointer ${speed === s ? 'border-line-stronger text-fg' : 'border-line text-muted hover:text-fg-3'}`}>{s}x</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <p className="mb-0 mt-4 text-pretty text-[12px] leading-relaxed text-muted">
-          Search covers the selected datasets; this demo has no paper-URL input. A live run spends search and model calls, with one run at a time and a daily limit. Replay has no limit.
-        </p>
-        {paused && (
-          <p role="status" className="mb-0 mt-3 flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-fg-3">
-            <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <span>Live search is paused ({disc?.reason === 'daily_limit' ? 'daily limit' : 'budget limit'}). {resumeText(disc?.reason, disc?.reset_at)}</span>
+        {apiKnown && liveBlock.blocked && (
+          <p role="status" className="mb-0 mt-4 flex max-w-3xl items-start gap-2 text-[13px] leading-relaxed text-fg-3">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
+            <span>{liveBlock.long}</span>
           </p>
         )}
+        {!liveBlock.blocked && <p className="mb-0 mt-4 text-pretty text-[12px] leading-relaxed text-muted">A live search spends search and model calls: one at a time, with a daily limit. This demo has no paper-URL input.</p>}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line/60 pt-4 text-[12px] text-muted">
           <span role="status" className={`${INLINE} font-medium uppercase tracking-wider ${running ? 'text-tone-green' : 'text-fg-3'}`}>
             {running
@@ -560,34 +579,27 @@ export function Discovery() {
               : mode === 'failed' ? <XCircle className={`${ICON_MD} text-tone-red`} aria-hidden /> : mode === 'done' ? <CheckCircle2 className={ICON_MD} aria-hidden /> : <span className="h-2 w-2 rounded-full bg-line-stronger" aria-hidden />}
             {status}{running && mode === 'replay' && <span className="font-normal normal-case tracking-normal text-muted">· replay</span>}
           </span>
-          {mode !== 'saved' && <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>}
-          <span>Papers <span className="font-mono text-fg-3">{view.papers.length}</span></span>
-          <span>Candidates <span className="font-mono text-fg-3">{view.funnel[view.funnel.length - 1].value}</span></span>
+          {mode !== 'saved' && events.length > 0 && <span>Runtime <span className="font-mono text-fg-3">{fmtSec(runtime)}</span></span>}
+          {events.length > 0 && <span>Papers <span className="font-mono text-fg-3">{view.papers.length}</span></span>}
+          {events.length > 0 && <span>Candidates <span className="font-mono text-fg-3">{view.funnel[view.funnel.length - 1].value}</span></span>}
           {recorded && events.length > 0 && <span>{replaySource === 'server' ? 'Saved server search' : 'Demo recording'} from {fmtDate(events[0].ts)}</span>}
         </div>
 
-        {recorded && (offline || paused) && (
-          <p role="status" className="mb-0 mt-4 flex items-start gap-2 text-[13px] leading-relaxed text-fg-3">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-            <span>{offline ? 'Live search is not available on this site.' : 'Live search is paused.'} Showing {replaySource === 'server' ? 'the latest saved server search' : 'the bundled demo recording'}{events.length ? `, recorded ${fmtDate(events[0].ts)}` : ''}.</span>
-          </p>
-        )}
         {displayedError && (
           <div role="alert" className="mt-4 flex flex-wrap items-center gap-4 text-[13px] text-tone-amber">
             <span className="inline-flex items-center gap-2"><AlertCircle className="w-4 h-4" />{displayedError}</span>
-            <button onClick={startReplay} className="text-fg-2 underline underline-offset-4 cursor-pointer hover:text-fg-max">Show recorded run instead</button>
+            <button onClick={() => startReplay()} className="text-fg-2 underline underline-offset-4 cursor-pointer hover:text-fg-max">Show recorded search instead</button>
           </div>
         )}
-        {view.notes.filter((note) => note.kind === 'warning').map((note, i) => <p key={i} className="mb-0 mt-3 text-[12px] text-tone-amber">{note.message}</p>)}
+        {[...new Set(view.notes.filter((note) => note.kind === 'warning').map((note) => note.message))].map((message, i) => <p key={i} className="mb-0 mt-3 text-[12px] text-tone-amber">{message}</p>)}
       </div>
 
       {!events.length && mode === 'idle' ? (
         <div className="rounded-xl border border-line bg-surface p-8 text-center">
           <p className="font-grotesk m-0 text-2xl font-semibold tracking-[-0.03em] text-fg">Nothing has run yet</p>
           <p className="mx-auto mb-0 mt-3 max-w-xl text-[15px] leading-relaxed text-fg-4">
-            Start with the recorded run: on the left you will see every Tavily call as it happens, on the right the funnel from found papers down to checkable claims.
+            Replay the recorded search above: on the left you will see every Tavily call as it happens, on the right the funnel from found papers down to checkable claims.
           </p>
-          <button onClick={startReplay} className={`${btn} mt-6 border-transparent bg-inverse text-on-inverse hover:bg-inverse-hover`}><RotateCcw className="w-4 h-4" />Replay recorded run</button>
         </div>
       ) : (
       <div className="grid gap-6 lg:grid-cols-2 items-start">
@@ -601,7 +613,7 @@ export function Discovery() {
             <span>Model cost <span className="font-mono text-fg-3">${view.costUsd.toFixed(3)}</span></span>
           </div>
           <div className="space-y-3">
-            {running && <div aria-hidden className="h-[104px] rounded-xl border border-dashed border-line bg-panel/30 p-4 motion-safe:animate-pulse"><div className="h-2.5 w-24 rounded bg-raised" /><div className="mt-4 h-2.5 w-3/4 rounded bg-raised" /></div>}
+            {mode === 'live' && <div aria-hidden className="h-[104px] rounded-xl border border-dashed border-line bg-panel/30 p-4 motion-safe:animate-pulse"><div className="h-2.5 w-24 rounded bg-raised" /><div className="mt-4 h-2.5 w-3/4 rounded bg-raised" /></div>}
             <AnimatePresence initial={false}>
               {[...view.feed].reverse().map((c) => <FeedCard key={c.seq} call={c} recorded={recorded} />)}
             </AnimatePresence>
@@ -614,7 +626,7 @@ export function Discovery() {
             <Funnel funnel={view.funnel} running={running} />
           </Section>}
           <Section title="Claims to check" hint={`${candidates.length} found · ${papers.length} papers seen`}>
-            <p className="mb-4 text-[12px] leading-relaxed text-muted">These claims passed the discovery filters. Discovery reads the claims; Check this claim starts a separate experiment. Saved reproduction checks are available below each matching claim.</p>
+            <p className="mb-4 text-[12px] leading-relaxed text-muted">Claims that passed the filters. Check this claim starts a separate experiment.</p>
             <div className="space-y-3">
               {[...candidates, ...inProgress].map((p) => {
                 const entry = savedCheckForClaim(p, catalog ?? [])
@@ -629,7 +641,7 @@ export function Discovery() {
                 <p className="text-[12px] leading-relaxed text-muted">No compatible claim was selected from these papers. This is a search-filter result, not an experiment verdict.</p>
                 <div className="mt-3 space-y-3">{rejected.map((p) => <PaperCard key={p.id} p={p} active={false} />)}</div>
               </details>}
-              {!papers.length && running && [0, 1].map((i) => (
+              {!papers.length && mode === 'live' && [0, 1].map((i) => (
                 <div key={i} aria-hidden className="rounded-xl border border-dashed border-line p-5 motion-safe:animate-pulse"><div className="h-3 w-2/3 rounded bg-raised" /><div className="mt-3 h-2.5 w-1/3 rounded bg-raised" /></div>
               ))}
               {!candidates.length && !inProgress.length && !running && <p className="text-[13px] text-subtle">No compatible claim was selected in this search. The filter details above explain why.</p>}

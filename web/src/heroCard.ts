@@ -6,7 +6,9 @@ import { formatMetric } from './metricFormat.ts'
 export type HeroCard = {
   metric: string | undefined
   name: string          // short method name, "FITS"
-  line: string          // plain-words claim, "FITS: forecast error 0.372 on ETTh1"
+  line: string          // what is measured, "FITS · forecast error on ETTh1"
+  hint: string          // "lower is better"
+  spread: string | null // "± 0.00005", the spread of the measured value over seeds
   claimed: string
   measured: string
   measuredValue: number
@@ -15,7 +17,7 @@ export type HeroCard = {
 }
 
 type Claim = { metric?: string; target?: number }
-type Verdict = { urteil?: string; measured_mean?: number }
+type Verdict = { urteil?: string; measured_mean?: number; measured_std?: number | null }
 type Source = { kind?: string; mode?: string }
 type Entry = { claim?: { method?: string }; dataset?: string; cost_gross_usd?: number | null } | undefined
 
@@ -32,7 +34,7 @@ export function recordedDate(ts: string | undefined): string | null {
 const errorWord = (metric: string | undefined) => (metric === 'accuracy' ? 'accuracy' : metric === 'mae' ? 'forecast error (MAE)' : 'forecast error')
 
 export function heroCard(
-  run: { ref: { title?: string; timestamp?: string }; dossier?: { claims?: Claim[]; verdicts?: Verdict[]; attempts?: { seed?: number; measured?: number | null }[]; sources?: Source[] } } | null,
+  run: { ref: { title?: string; timestamp?: string }; events?: { type?: string }[]; dossier?: { claims?: Claim[]; verdicts?: Verdict[]; attempts?: { seed?: number; measured?: number | null }[]; sources?: Source[] } } | null,
   entry: Entry,
   seeds: number,
 ): HeroCard | null {
@@ -42,22 +44,33 @@ export function heroCard(
   const name = entry?.claim?.method ?? run!.ref.title?.split(':')[0]?.trim() ?? 'Paper'
   const where = entry?.dataset ? ` on ${entry.dataset}` : ''
   const target = formatMetric(claim.metric, claim.target)
-  const said = claim.metric === 'accuracy' ? target : String(claim.target)   // the paper's own digits: 0.372, not 0.3720
   const parts: string[] = [`${seeds} seeds`]
   const date = recordedDate(run!.ref.timestamp)
   if (date) parts.push(`recorded ${date}`)
-  if (run!.dossier?.sources?.some((s) => s.mode === 'live')) parts.push('live Tavily calls')
+  const live = run!.dossier?.sources?.some((s) => s.mode === 'live')
+  const calls = run!.events?.filter((e) => e.type === 'tavily_call').length   // undefined: events not loaded, so no count
+  if (calls) parts.push(`${calls} ${live ? 'live ' : ''}Tavily ${calls === 1 ? 'call' : 'calls'}`)
+  else if (live && calls === undefined) parts.push('live Tavily calls')
   if (entry?.cost_gross_usd != null) parts.push(`$${entry.cost_gross_usd.toFixed(2)}`)
+  const share = claim.metric === 'accuracy'
   return {
     metric: claim.metric,
     name,
-    line: claim.metric === 'accuracy' ? `${name}: ${said} ${errorWord(claim.metric)}${where}` : `${name}: ${errorWord(claim.metric)} ${said}${where}`,
+    line: `${name} · ${errorWord(claim.metric)}${where}`,
+    hint: share ? 'higher is better' : 'lower is better',
+    spread: v.measured_std == null ? null : `± ${spreadText(v.measured_std, share)}`,
     claimed: target,
     measured: formatMetric(claim.metric, v.measured_mean),
     measuredValue: v.measured_mean,
     urteil: v.urteil,
     meta: parts.join(' · '),
   }
+}
+
+// Two significant digits for a small spread (0.000046 -> 0.00005), one decimal for percent points.
+function spreadText(std: number, share: boolean): string {
+  if (share) return (std * 100).toFixed(1)
+  return std > 0 && std < 0.001 ? std.toPrecision(1) : std.toFixed(4)
 }
 
 // Value shown `elapsed` ms into a `duration` ms ease-out ramp from 0 to `target` (decimals kept, unlike countAt).

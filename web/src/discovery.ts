@@ -1,3 +1,4 @@
+import { cleanTitle } from './title.ts'
 import type { Json } from './data'
 import type { CatalogEntry } from './catalog'
 
@@ -281,6 +282,7 @@ export function deriveView(events: DEvent[]): DiscoveryView {
   }
 
   for (const p of papers.values()) if (p.title.startsWith('arXiv:') && titles.has(p.id)) p.title = titles.get(p.id)!
+  for (const p of papers.values()) p.title = cleanTitle(p.title)
 
   // Found = unique arXiv ids of the paper searches only (repo and community searches excluded); older recordings: all ids seen.
   const found = Math.max(foundIds.size, seen.size)

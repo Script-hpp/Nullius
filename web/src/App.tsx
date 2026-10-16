@@ -5,7 +5,7 @@ import { Catalog } from './components/Catalog'
 import { LiveRun } from './components/LiveRun'
 import { Landing } from './components/Landing'
 import { DATA_CHANGED } from './live'
-import { PreliminaryChip } from './components/CatalogBits'
+import { MethodInfo } from './components/CatalogBits'
 import { NextStep, PageIntro } from './components/page'
 import { RunView } from './components/RunView'
 import { Benchmark } from './components/Benchmark'
@@ -77,9 +77,11 @@ function Home({ loaded }: { loaded: RunRef[] | null }) {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
       <PageIntro kicker="Runs" title="Finished checks"
-        compact="Compare claimed and measured values, then open a check for sources, code and measurements."
-        what="An independent harness measures whether each target is reached. Method fidelity is not verified. In benchmark v4, none of 48 deliberately false targets was confirmed; that is a result of that evaluation, not a guarantee for new papers. Each card is one paper claim; older runs fold out below it."
-        look="Compare Claimed and Measured on any card. Open a card to see the evidence behind its verdict." />
+        sub="Every finished check, claimed against measured. Open one for its evidence."
+        about={<>
+          <p className="m-0">An independent harness measures whether each target is reached. Each card is one paper claim; older runs fold out below it.</p>
+          <p className="m-0">In benchmark v4, none of 48 deliberately false targets was confirmed. That is a result of that evaluation, not a guarantee for new papers.</p>
+        </>} />
       <Counters items={[
         { label: 'Runs', value: runs.length }, { label: 'Reproduced', value: ready ? reproduced.length : 0, tone: 'green' },
         { label: 'Partially', value: ready ? partial : 0, tone: 'amber' }, { label: 'Papers', value: papers },
@@ -87,7 +89,7 @@ function Home({ loaded }: { loaded: RunRef[] | null }) {
 
       <div className="mb-6 mt-14 flex items-baseline justify-between gap-4">
         <h2 className="m-0 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">All checks</h2>
-        <span className="text-[12px] text-muted">Measured with our setup. Method fidelity not checked.</span>
+        <span className="text-[12px] text-muted">Measured with our setup. The paper’s method is not checked.</span>
       </div>
 
       {!ready && (
@@ -114,7 +116,7 @@ function Home({ loaded }: { loaded: RunRef[] | null }) {
                 {v ? (
                   <>
                     <Badge tone={res!.tone} title={resultHint(v.urteil)}>{res!.label}</Badge>
-                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <PreliminaryChip />}
+                    {r.catalog_id && isPreliminary(r.gesamtaussage) && <MethodInfo />}
                   </>
                 ) : <span className="text-[10px] font-semibold uppercase tracking-widest text-muted">Evaluating...</span>}
               </div>

@@ -1,3 +1,5 @@
+import { cleanTitle } from './title.ts'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Json = any
 
@@ -21,7 +23,7 @@ export async function getText(path: string, fresh = false): Promise<string | nul
 
 export async function loadIndex(): Promise<RunRef[]> {
   const t = await getText('index.json', true)
-  return t ? (JSON.parse(t) as RunRef[]) : []
+  return t ? (JSON.parse(t) as RunRef[]).map((r) => ({ ...r, title: cleanTitle(r.title) })) : []   // titles are plain text, never raw LaTeX
 }
 
 // Ohne events.jsonl (ältere Läufe): Ereignisse aus dem Dossier ableiten, damit die Wiedergabe trotzdem funktioniert.
