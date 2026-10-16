@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Bug, Crop, FileText, GitCompare, Layers, Quote, Scale, Search, SearchCheck, Shuffle, Users, type LucideIcon } from 'lucide-react'
+import { Bug, Crop, FileText, GitCompare, Layers, Quote, Ruler, Scale, ScrollText, Search, SearchCheck, Shuffle, SlidersHorizontal, Users, Minimize2, type LucideIcon } from 'lucide-react'
 import { FIGURES, HELD_OUT, LIMITS, README_TAVILY, REPO_BLOB, SCOPE_LIMIT, SOURCES, UNITS } from '../data/benchmark'
 import { useCatalog, evidenceHref } from '../catalog'
+import { FINDINGS } from '../findings'
 import { claimLine, juryEntries, splitFirstSentence } from '../landingBottom'
 import { useInView } from '../useInView'
 import { FEATURED_RUN_ID } from '../featured'
@@ -174,6 +175,54 @@ function UnitRow({ label, sub, key_, fill, matched, of }: { label: string; sub: 
       </ul>
       <div className="col-start-2 row-start-1 font-mono text-2xl font-light tracking-tight text-fg sm:col-start-3 sm:text-right">{matched} of {of}</div>
     </div>
+  )
+}
+
+const FINDING_ICONS: Record<string, LucideIcon> = {
+  fits: SlidersHorizontal,
+  sparsetsf: GitCompare,
+  rlinear: Ruler,
+  tsmixer: Minimize2,
+}
+
+export function Findings() {
+  const [ref, seen] = useInView<HTMLUListElement>(0.1)
+  return (
+    <Block id="findings" label="What we found">
+      <h2 className={lead}>The number in a paper is not enough to rebuild it.</h2>
+      <p className={`${body} mt-6`}>
+        Checking papers showed where the settings really live. Four observations from our own checks, not a success rate.
+      </p>
+      <ul ref={ref} className={`${seen ? 'nx-in' : ''} m-0 mt-10 grid list-none gap-3 p-0 sm:grid-cols-2`}>
+        {FINDINGS.map((f, i) => {
+          const Icon = FINDING_ICONS[f.id] ?? ScrollText
+          const external = f.link.href.startsWith('http')
+          return (
+            <li key={f.id} className="nx-reveal nx-card flex flex-col rounded-xl border border-line bg-surface p-5" style={{ '--nx-delay': `${i * 60}ms` } as React.CSSProperties}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-raised text-fg-3"><Icon className="h-4 w-4" aria-hidden /></span>
+                <div className="min-w-0">
+                  <div className="text-[12px] text-muted">{f.paper} &middot; {f.dataset}</div>
+                  <h3 className="m-0 text-[14px] font-semibold leading-snug text-fg">{f.title}</h3>
+                </div>
+              </div>
+              <p className="mb-0 mt-3 text-[14px] leading-relaxed text-fg-4">{f.text}</p>
+              <dl className="m-0 mt-4 grid grid-cols-2 gap-3 rounded-lg bg-raised p-3">
+                {[f.says, f.found].map((c) => (
+                  <div key={c.label} className="min-w-0">
+                    <dt className="text-[11px] leading-snug text-muted">{c.label}</dt>
+                    <dd className="m-0 mt-0.5 font-mono text-[13px] leading-snug text-fg">{c.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mb-0 mt-auto pt-4 text-[14px]">
+                {external ? <ExtLink href={f.link.href}>{f.link.label}</ExtLink> : <GoLink href={f.link.href}>{f.link.label}</GoLink>}
+              </p>
+            </li>
+          )
+        })}
+      </ul>
+    </Block>
   )
 }
 

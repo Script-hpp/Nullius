@@ -3,7 +3,7 @@ import { ChevronDown, Play } from 'lucide-react'
 import { SiteHeader } from './Layout'
 import { GoLink } from './ui'
 import { SiteFooter } from './SiteFooter'
-import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, ProofMatrix, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
+import { TIMELAPSE_RUN, Problem, Steps, CertificatePreview, Proof, ProofMatrix, Findings, Lesson, TavilySection, Limits, TryIt, useFeatured } from './LandingSections'
 import { WrittenText } from './hero/WrittenText'
 import { prefersReducedMotion } from './hero/config'
 import { RecentChecks } from './RecentChecks'
@@ -105,6 +105,7 @@ export function Landing({ scrollTo }: { scrollTo?: string }) {
       <Proof />
       <ScrollScene id="placebo" />
       <ProofMatrix />
+      <Findings />
       <Lesson />
       <Limits />
       <TryIt />
