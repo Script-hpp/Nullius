@@ -571,7 +571,7 @@ Statische React-App (Vite, Tailwind, Recharts, React Flow, Framer Motion), keine
 - [ ] Datensätze v2 (`datasets-v2`) in Arbeit (Stand 2026-10-07)
 - [ ] **Film neu rendern:** Film v8 zeigt in Szene 3 das Zugangscode-Feld und passt nicht mehr zur offenen Demo; neues Skript `docs/video_script.md`, Regie `docs/video_director.md` anpassen (Reviewer-Session)
 - [ ] **Limits in zwei Stufen** (Nutzer setzt die Variablen in Coolify und deployt neu; Begründung und Rechnung `docs/deploy.md`, „Limits bis 15.12.“): bis 2026-11-30 `MAX_DAILY_REPRO_JOBS=1`, `MAX_DAILY_JOBS=1`; **ab 2026-12-01** (Bewertung 01.–15.12.) `MAX_DAILY_REPRO_JOBS=3`. Nicht während eines laufenden Jobs deployen
-- [ ] Nutzer: Deployment und Demo-URL, Repo öffentlich, Video auf YouTube hochladen, Devpost-Formular füllen (Entwurf `docs/devpost_submission.md`; Demo-URL und Video-Link noch `TBD`, kein Zugangscode), Feedback-Feld aus `docs/nebius_feedback.md`
+- [ ] Nutzer: Devpost-Formular füllen (Text `docs/devpost_submission.md`, Stand 17.10.; Galeriebilder `docs/img/devpost/`), Feedback-Feld aus `docs/nebius_feedback.md`. Erledigt: Deployment, Demo-URL, Repo öffentlich, Video öffentlich auf YouTube (17.10.)
 
 ## Projektstruktur (tatsächlich)
 
