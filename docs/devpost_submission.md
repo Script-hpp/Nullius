@@ -23,6 +23,8 @@ https://www.youtube.com/watch?v=EaXo1DadUkU
 
 ## About the project
 
+Paste everything from "### Inspiration" down to the end of "### What's next" into the field (Devpost Markdown: headings, bold, italics, lists and links; no tables).
+
 ### Inspiration
 
 *Nullius in verba* is the motto of the Royal Society: take nobody's word for it. In a 2016 *Nature* survey of 1,576 researchers, more than 70% said they had tried and failed to reproduce another scientist's experiment. Checking one machine-learning claim by hand can take days.
@@ -42,20 +44,18 @@ To make sure Nullius cannot simply agree with every paper, we plant a deliberate
 
 Three checks you can open, or start fresh, in the demo:
 
-| Paper | Paper claims | Nullius measured | Seeds |
-|---|---:|---:|---:|
-| FITS (forecast error, ETTh1) | 0.372 | 0.37203 ± 0.00005 | 3 |
-| Kipf & Welling GCN (accuracy, Cora) | 0.815 | 0.8146 ± 0.0077 | 9 |
-| GLinear (forecast error, ETTh1) | 0.3820 | 0.3796 ± 0.0003 | 3 |
+- **FITS** (forecast error, ETTh1): paper 0.372, Nullius measured **0.37203 ± 0.00005** (3 seeds)
+- **Kipf & Welling GCN** (accuracy, Cora): paper 0.815, Nullius measured **0.8146 ± 0.0077** (9 seeds)
+- **GLinear** (forecast error, ETTh1): paper 0.3820, Nullius measured **0.3796 ± 0.0003** (3 seeds)
 
 FITS is the strongest case: it ran on the public server without human edits, and all three seeds landed within 0.0001 of the claim, for $0.31 of inference. “Reproduced” here means the target number was reached with our setup; the method itself is not verified. These are examples, not a success rate.
 
 ### What checking real papers taught us
 
-The number in a paper is often not enough to rebuild it. Nullius surfaces this as findings (https://nullius.akca.dev/#findings):
+The number in a paper is often not enough to rebuild it. Nullius surfaces this as findings ([see the Findings page](https://nullius.akca.dev/#findings)):
 
 - **FITS:** the results table lists four input lengths; the authors' launch script uses 360. With the script's settings our error matched the paper; with other settings it nearly doubled.
-- **SparseTSF:** since a code change in March 2026, the authors' launch scripts for the linear model silently train the MLP variant. We reported it to the authors: https://github.com/lss-1138/SparseTSF/issues/16
+- **SparseTSF:** since a code change in March 2026, the authors' launch scripts for the linear model silently train the MLP variant. We [reported it to the authors](https://github.com/lss-1138/SparseTSF/issues/16).
 - **RLinear:** a key setting appears only in a table caption. Our run missed it and did not reach the target; we show that miss openly.
 - **TSMixer:** a matching number can come from a smaller model than the paper's. We label that “target reached with a reduced model”, not “reproduced”.
 
@@ -110,4 +110,12 @@ Use the “Devpost text field” section at the end of [nebius_feedback.md](nebi
 
 ## Gallery images
 
-Screenshots for the gallery (3:2, taken from the live site): `docs/img/devpost/`.
+Screenshots for the gallery (3:2, taken from the live site): `docs/img/devpost/`. Captions (max. 140 characters), in this order:
+
+0. `0-thumbnail.png` (only if there is no separate thumbnail field): Nullius checks machine-learning papers by rebuilding the experiment and measuring the claim.
+1. `1-home.png`: Papers make claims. We measure them. Example: FITS claims a forecast error of 0.372; Nullius measured 0.3720.
+2. `2-fits-evidence.png`: A finished check: claim, measurement, sources, generated code and per-seed values, exportable as a PDF certificate.
+3. `3-catalog.png`: The catalog: papers we checked, what each paper claims and what Nullius measured. Failed checks stay visible.
+4. `4-findings.png`: What checking real papers taught us: key settings often hide in launch scripts, captions or code defaults.
+5. `5-fooled.png`: Can it be fooled? We plant a false claim (88%) in the same run. Nullius rejects it: the measured 81.5% does not match.
+6. `6-benchmark.png`: Small tests with known answers: 0 of 48 planted false claims accepted. Not a success rate.
