@@ -225,7 +225,7 @@ def test_curated_live_checks_only_for_featured_entries_of_the_real_catalog():
     offered = {i for i, o in offers.items() if o["runnable"]}
     assert offered == {"disc_1609_02907", "disc_2307_03756", "disc_2501_01087"}
     assert "10-minute CPU limit" in offers["disc_2303_06053"]["reason"]          # TSMixer: recorded result stays, no live re-run
-    assert "does not name the model variant" in offers["disc_2405_00946"]["reason"]   # SparseTSF
+    assert "did not name the model variant" in offers["disc_2405_00946"]["reason"]   # SparseTSF
     assert "80 minutes" in offers["disc_2410_09348_d8991277dd33d43f"]["reason"]      # BANGS: recorded result, no live re-run
     unchecked = next(i for i, e in ((e["id"], e) for e in cat.load_catalog()) if e.get("status") == cat.UNCHECKED and offers[i]["reason"] == live_catalog.CURATED_NOT_OFFERED)
     assert unchecked

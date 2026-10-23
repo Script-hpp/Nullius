@@ -697,10 +697,10 @@ candidates:
     run_dir: runs/disc_2405_00946/20261009-220822
   jury:
     ready: false
-    reason: "A new live check is locked: the authors' launch script does not name the model variant (linear or MLP), so the check stops instead of guessing."
+    reason: "A new live check is locked: until the authors' fix of 22 Oct 2026, their launch script did not name the model variant (linear or MLP), so the check stopped instead of guessing. Not re-checked since the fix."
   jury_override:
     ready: false
-    reason: "A new live check is locked: the authors' launch script does not name the model variant (linear or MLP), so the check stops instead of guessing."
+    reason: "A new live check is locked: until the authors' fix of 22 Oct 2026, their launch script did not name the model variant (linear or MLP), so the check stopped instead of guessing. Not re-checked since the fix."
     checked: '2026-10-14'
     evidence: docs/audits/catalog_regression_local_20261014.json
   recorded:
