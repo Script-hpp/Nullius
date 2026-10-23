@@ -46,7 +46,7 @@ function FilmModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div ref={box} role="dialog" aria-modal="true" aria-label="Nullius film" className="film-frame w-full max-w-5xl overflow-hidden rounded-xl border border-line bg-surface shadow-2xl">
         <div className="flex items-center justify-between px-4 py-2.5">
-          <span className="text-[13px] text-fg-4">Nullius film · {durationLabel(FILM_SECONDS)} · music, no narration</span>
+          <span className="text-[13px] text-fg-4">Nullius film · {durationLabel(FILM_SECONDS)} · voice-over and music</span>
           <button ref={closeBtn} type="button" onClick={onClose} aria-label="Close film" className="cursor-pointer rounded-md border-0 bg-transparent p-1 text-fg-4 hover:text-fg">
             <X className="h-5 w-5" aria-hidden />
           </button>
