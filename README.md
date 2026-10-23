@@ -15,7 +15,7 @@
 
 **NVIDIA Nemotron · Nebius Token Factory · Nebius Sandboxes · Tavily**
 
-[Try the demo](https://nullius.akca.dev/) · [Watch the film](https://www.youtube.com/watch?v=EaXo1DadUkU) · [Evidence](#checks-you-can-open) · [Built on Nebius and NVIDIA](#built-on-nebius-and-nvidia) · [Run locally](#run-locally) · [Evaluation](#what-we-measured) · [MIT licence](LICENSE)
+[Try the demo](https://nullius.akca.dev/) · [Watch the film](https://www.youtube.com/watch?v=EaXo1DadUkU) · [Evidence](#checks-you-can-open) · [Built on Nebius and NVIDIA](#built-on-nebius-and-nvidia) · [Run locally](#run-locally) · [Evaluation](#what-we-measured) · [Limitations](#limitations) · [MIT licence](LICENSE)
 
 </div>
 
@@ -51,7 +51,7 @@ The result helps a reviewer, PhD student or ML team decide what to investigate b
 While checking papers, we saw that the number in a paper is often not enough to rebuild it. These are observations from our own checks, not statistics or a success rate.
 
 - **FITS (ETTh1):** the results table lists four input lengths (90, 180, 360, 720). The authors' launch script for ETTh1 uses 360, and its batch size of 64 is doubled to an effective 128 by the code. With the script's settings the autonomous live run measured 0.37203 ± 0.00005 against the target 0.372; an earlier live run with other settings measured about 0.70. [Run record](docs/audits/fits_live_a514edeb_20261014.json).
-- **SparseTSF (ETTh1):** the authors' launch script for the linear variant does not set the model type, and the code default is the MLP variant. The recorded run used the linear variant and reached the target. A new check would have to guess the variant, so it is locked.
+- **SparseTSF (ETTh1):** since a code change in March 2026, the authors' launch scripts for the linear variant did not set the model type, and the code default was the MLP variant. Our readiness check stopped instead of guessing. We [reported it](https://github.com/lss-1138/SparseTSF/issues/16); the maintainers confirmed it and fixed all 16 linear scripts within a week ([#17](https://github.com/lss-1138/SparseTSF/pull/17), merged 22 Oct 2026). The recorded run used the linear variant and reached the target; the entry stays locked until it is checked again with the fixed scripts.
 - **RLinear (ETTh1):** the input length 336 appears only in the caption of the claim table. The code default of 96 won, and the check measured 0.397 ± 0.013 against 0.366 (not reproduced). Nullius now reads table captions; whether the target is reached with that fix is untested. [Run record](docs/audits/rlinear_live_ba9fa94f_20261014.json).
 - **TSMixer (ETTh1):** the target was reached with a smaller model (1 mixer block, hidden size 128 instead of 6 and 512). We show this as target reached with a reduced model, not as reproduced.
 - **SARAF (ETTh1):** the method uses calendar features (hour, weekday, ...) that our earlier input to the generated code did not carry. With a human-written adapter around the unchanged authors' model core and the calendar data, the error was 0.3696 ± 0.0014 against the target 0.371. This is not an autonomous Nullius run. [Calendar check](docs/saraf_local_contract_verification_20261013.md).
@@ -72,7 +72,7 @@ Three papers are open for a fresh check in the demo. Each ran with **three or mo
 
 **Preliminary · method fidelity not checked.** “Reproduced” means the target number was reached with our setup, not that the method was verified. These are hand-picked examples after development, not a blind test or a general success rate. Costs include VAT; Tavily and sandbox costs are separate. The FITS certificate keeps a note that its table column was not checked; GLinear’s target was checked manually and its certificate lists the same kind of warnings. See the [GLinear completion record](docs/paper_candidates_20261010.md#abschluss-glinear) and the [catalog](benchmark/catalog.yaml).
 
-**Other recorded results, with their notes.** TSMixer (0.3624 vs 0.361) was recorded with a smaller model than the paper (1 block, hidden size 128 instead of 6 and 512). SparseTSF (0.3653 vs 0.359) used the linear variant and input length 720; a new check is locked because the authors’ launch script does not name the variant. BANGS reached 0.819 against 0.842, a partial match that takes about 80 minutes on CPU. The site shows these as dated “Recorded” cards.
+**Other recorded results, with their notes.** TSMixer (0.3624 vs 0.361) was recorded with a smaller model than the paper (1 block, hidden size 128 instead of 6 and 512). SparseTSF (0.3653 vs 0.359) used the linear variant and input length 720; a new check stays locked until it is re-run with the authors’ fixed launch scripts (see above). BANGS reached 0.819 against 0.842, a partial match that takes about 80 minutes on CPU. The site shows these as dated “Recorded” cards.
 
 **Failed checks stay visible.** SL-GCN missed its target (0.595 vs 0.829); HaKAN failed in setup. Acacia has no completed verdict. A miss can reflect an agent or setup weakness; it does not prove the paper wrong.
 
@@ -97,21 +97,14 @@ The **What-if** control changes the target, while measured predictions stay fixe
 
 ## What we measured
 
-Each evaluation answers a different question. We report the counts separately.
+Two evaluations, reported separately and never pooled:
 
 | Evaluation | Observed result | What the count means |
 |---|---|---|
-| **Paper and authors’ code: development** | **7/8** | Development units matching the reference verdict; **in-sample**, after fixes were designed using those units. Includes agreement with a partial reference verdict. |
-| **Same evaluation: RLinear held-out** | **0/1** | Separate paper excluded from the design of those fixes; reference verdict missed. |
-| **Same evaluation: planted controls** | **0/9 confirmed** | Eight rejected; one without a verdict after a setup failure. |
-| **Earlier paper-only v4** | **2/8** with Tavily; **1/8** without | Majority verdicts matching the reference, three generations per unit and arm, 48 runs. |
-| **v4 planted controls** | **0/48 confirmed** | Deliberately false targets; a negative control within this benchmark. |
+| **Planted false claims** (benchmark v4) | **0 of 48 accepted** | A deliberately false target next to each real claim; none was reported as reproduced (also 0 of 48 in v2 and v3). |
+| **Rebuild from paper and authors’ code** | **7 of 8** development units, **0 of 1** held-out | Agreement with our reference verdicts. The 7 of 8 is **in-sample**: fixes were designed using those units, and it includes agreement with one partial reference verdict. The one paper kept out of that design (RLinear) missed. |
 
-In v4, all **7 target-reached verdicts** for real claims agreed with our reference solution (post hoc, small sample). This does not establish a universal precision guarantee. The authors’-code run used different models and counting rules and stored source fixtures; **do not pool the counts or claim a measured Tavily accuracy gain**. The pre-registered rule for claiming a recall improvement required the RLinear held-out check to pass, and it did not.
-
-“Target reached” describes the numerical result with our setup. **Method fidelity is not checked**, and overall conclusions remain provisional. Our checker missed three calibration thresholds (5/10, 7/10, 8/11); we report those failures too.
-
-[Author-code evaluation](benchmark/experiments/results/recall_cg_v1.md) · [Benchmark v4](benchmark/experiments/results/benchmark_v4.md) · [Benchmark history](docs/benchmark_history.md) · [Detailed evaluation and research notes](docs/evaluation_notes.md)
+“Target reached” describes the numerical result with our setup; **method fidelity is not checked** (see [Limitations](#limitations)). The earlier paper-only results (2 of 8 with Tavily, 1 of 8 without), the 0 of 9 planted controls of the authors’-code run and all rules fixed before each run are in the [detailed evaluation notes](docs/evaluation_notes.md) · [author-code evaluation](benchmark/experiments/results/recall_cg_v1.md) · [benchmark v4](benchmark/experiments/results/benchmark_v4.md) · [benchmark history](docs/benchmark_history.md).
 
 ## Our own small bitter lesson
 
@@ -166,17 +159,17 @@ Our notes on what worked and what hurt, with evidence for each item: [Feedback o
 
 ## Tavily at run time
 
-A normal run calls Tavily live, and each stored source carries its mode, timestamp and SHA-256:
+**Discover is what makes the product possible:** Tavily searches for new papers that report a claim on a dataset we support, so the catalog is not limited to papers we picked by hand. A normal check then calls Tavily live again, and each stored source carries its mode, timestamp and SHA-256:
 
 | Step | Tavily call | What it answers |
 |---|---|---|
-| Discovery | Search | Which new papers report a claim on a dataset we support? |
+| **Discover** | Search | Which new papers report a claim on a dataset we support? |
 | Claim source | Extract | What does the paper’s table say, and where? |
 | Setup details | Extract on the README and configs | Which hyperparameters and splits does the repository use? Each value needs a quote. |
 | Errors | Search with the error text | How do others fix this failure? |
 | Community check | Search, limited Crawl | What do issues and critiques say? Reported after the verdict; the verdict never changes. |
 
-In the FITS run above, the Evidence page shows “3 live Tavily calls” (the repository README and two error searches); its paper text came from a stored copy of the LaTeX source. We use Tavily as a product capability (finding and citing sources), not as a measured accuracy gain: our benchmark showed no reliable difference with or without it. [Examples and the failed automatic `drop_last` search](docs/evaluation_notes.md#how-we-use-tavily).
+In the FITS run above, the Evidence page shows “3 live Tavily calls” (the repository README and two error searches); its paper text came from a stored copy of the LaTeX source. [Examples and the failed automatic `drop_last` search](docs/evaluation_notes.md#how-we-use-tavily). We present Tavily as a product capability (finding and citing sources), not as an accuracy gain; see [Limitations](#limitations).
 
 ## Run locally
 
@@ -229,13 +222,18 @@ npm run lint
 npm test
 ```
 
-## Scope and next steps
+## Limitations
 
-- **Supported:** Cora (Planetoid and random splits), CiteSeer (Planetoid split), ETTh1 (forecast horizon 96). CPU experiments on small models. PubMed and other ETT datasets remain unreleased after reference validation misses: [validation results](benchmark/experiments/results/datasets_v2_validation.md).
-- **Unverified:** method fidelity, general performance on unseen papers and user time savings. Executing the authors’ own program is not a product mode.
-- **Live controls:** admission floors, daily and per-IP limits, a per-run cost cap and the recorded fallback exist. Offline tests verify them; real provider prices, balances and hosting costs are outside that proof. [Cost-policy review](docs/cost_policy_review.md#production-fix--10-oct-after-review).
+All in one place, so the sections above can stay short:
 
-### Where this goes next
+- **Method fidelity is not checked.** “Reproduced” means the target number was reached with our setup. Our automatic check of whether the code implements the paper’s method missed its calibration threshold three times (5/10, 7/10, 8/11), so every verdict is labelled provisional. For graph models, an ablation without edges can still show that the graph was not used.
+- **No general success rate.** The open checks are hand-picked examples after development. The 7 of 8 development agreement is in-sample, and the one held-out paper (RLinear) missed.
+- **Tavily is not an accuracy gain.** In benchmark v4, agreement with and without Tavily (2 vs 1 of 8) showed no reliable difference.
+- **Supported data only.** Cora (Planetoid and random splits), CiteSeer (Planetoid split), ETTh1 (forecast horizon 96); CPU experiments on small models. Each new dataset needs one task and one harness. PubMed and other ETT datasets remain unreleased after reference validation misses: [validation results](benchmark/experiments/results/datasets_v2_validation.md).
+- **No user study.** We have not measured time savings. Executing the authors’ own program is not a product mode.
+- **Live controls are tested offline.** Admission floors, daily and per-IP limits, a per-run cost cap and the recorded fallback exist; real provider prices, balances and hosting costs are outside that proof. [Cost-policy review](docs/cost_policy_review.md#production-fix--10-oct-after-review).
+
+## Where this goes next
 
 No promises, only direction: more datasets (each needs one task and one harness, built once), a check of whether the generated code follows the paper’s method, and a GPU tier for papers that CPU cannot run (one claim failed for that reason: its model needs a CUDA kernel library).
 
